@@ -1,8 +1,7 @@
 import { promises as fs } from 'fs';
 // @ts-ignore
 import Papa from 'papaparse';
-import { db, products, students } from 'lib/db';
-
+import { db, students } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
