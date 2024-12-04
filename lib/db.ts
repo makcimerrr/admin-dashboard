@@ -2,71 +2,162 @@ import 'server-only';
 
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
-import {
-  pgTable,
-  text,
-  numeric,
-  integer,
-  timestamp,
-  pgEnum,
-  serial
-} from 'drizzle-orm/pg-core';
-import { count, eq, ilike } from 'drizzle-orm';
+import { pgTable, text, timestamp, pgEnum, serial, integer } from 'drizzle-orm/pg-core';
+import { count, eq, ilike, or, and, SQL } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
-export const statusEnum = pgEnum('status', ['active', 'inactive', 'archived']);
+export const promosEnum = pgEnum('promos', [
+  'P1 2022',
+  'P1 2023',
+  'P2 2023',
+  'P1 2024'
+]);
 
-export const products = pgTable('products', {
+export const students = pgTable('students', {
   id: serial('id').primaryKey(),
-  imageUrl: text('image_url').notNull(),
-  name: text('name').notNull(),
-  status: statusEnum('status').notNull(),
-  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
-  stock: integer('stock').notNull(),
-  availableAt: timestamp('available_at').notNull()
+  last_name: text('last_name').notNull(),
+  first_name: text('first_name').notNull(),
+  login: text('login').notNull(),
+  promos: text('promos').notNull(), // Utilisation d'une énumération appropriée ou d'une simple chaîne pour les promos
+  availableAt: timestamp('available_at').notNull(),
 });
 
-export type SelectProduct = typeof products.$inferSelect;
-export const insertProductSchema = createInsertSchema(products);
+export const studentProjects = pgTable('student_projects', {
+  id: serial('id').primaryKey(),
+  student_id: integer('student_id').references(() => students.id), // Lien vers la table students
+  project_name: text('project_name').notNull(),
+  progress_status: text('progress_status').notNull(),
+  delay_level: text('delay_level').notNull()
+});
 
-export async function getProducts(
+export type SelectStudent = {
+  // Colonnes de students
+  id: number;
+  last_name: string;
+  first_name: string;
+  login: string;
+  promos: string;
+  availableAt: Date;
+
+  // Colonnes de studentProjects
+  project_name: string | null; // Si la colonne peut être null
+  progress_status: string | null;
+  delay_level: string | null;
+};
+
+export const insertStudentSchema = createInsertSchema(students);
+
+export async function getStudents(
   search: string,
-  offset: number
+  offset: number,
+  promo: string
 ): Promise<{
-  products: SelectProduct[];
+  students: SelectStudent[];
   newOffset: number | null;
-  totalProducts: number;
+  currentOffset: number | null;
+  previousOffset: number | null;
+  totalStudents: number;
 }> {
-  // Always search the full table, not per page
-  if (search) {
+  const studentsPerPage = 5; // Nombre d'étudiants par page
+
+  // Construire la condition pour le filtre de la promo
+  let promoFilter = promo ? eq(students.promos, promo as 'P1 2022' | 'P1 2023' | 'P2 2023' | 'P1 2024') : null;
+
+  // Construire la condition pour la recherche par nom, login
+  let searchQuery = search ? `%${search}%` : null;
+  let searchFilter = searchQuery
+    ? or(
+      ilike(students.login, searchQuery),
+      ilike(students.first_name, searchQuery),
+      ilike(students.last_name, searchQuery)
+    )
+    : null;
+
+  // Si une promo et une recherche sont spécifiées, combiner les filtres
+  let finalFilter = promoFilter && searchFilter
+    ? and(promoFilter, searchFilter)
+    : promoFilter || searchFilter; // Si l'un ou l'autre est null, utiliser l'autre
+
+  // Si aucun filtre n'est appliqué, on renvoie tous les étudiants avec pagination
+  if (!finalFilter) {
+    const totalStudents = await db.select({ count: count() }).from(students);
+    const moreStudents = await db
+      .select({
+        id: students.id,
+        last_name: students.last_name,
+        first_name: students.first_name,
+        login: students.login,
+        promos: students.promos,
+        availableAt: students.availableAt,
+        project_name: studentProjects.project_name,
+        progress_status: studentProjects.progress_status,
+        delay_level: studentProjects.delay_level,
+      })
+      .from(students)
+      .leftJoin(studentProjects, eq(students.id, studentProjects.student_id)) // Jointure avec student_projects
+      .limit(studentsPerPage)
+      .offset(offset);
+
+    const newOffset =
+      moreStudents.length >= studentsPerPage ? offset + studentsPerPage : null;
+    const previousOffset =
+      offset >= studentsPerPage ? offset - studentsPerPage : null;
+
     return {
-      products: await db
-        .select()
-        .from(products)
-        .where(ilike(products.name, `%${search}%`))
-        .limit(1000),
-      newOffset: null,
-      totalProducts: 0
+      students: moreStudents,
+      currentOffset: offset,
+      newOffset: newOffset,
+      previousOffset: previousOffset,
+      totalStudents: totalStudents[0].count
     };
   }
 
-  if (offset === null) {
-    return { products: [], newOffset: null, totalProducts: 0 };
-  }
+  // Si un filtre est appliqué, faire la recherche avec pagination
+  const studentsResult = await db
+    .select({
+      id: students.id,
+      last_name: students.last_name,
+      first_name: students.first_name,
+      login: students.login,
+      promos: students.promos,
+      availableAt: students.availableAt,
+      project_name: studentProjects.project_name,
+      progress_status: studentProjects.progress_status,
+      delay_level: studentProjects.delay_level,
+    })
+    .from(students)
+    .leftJoin(studentProjects, eq(students.id, studentProjects.student_id)) // Jointure avec student_projects
+    .where(finalFilter)
+    .limit(studentsPerPage) // Limiter à 5 résultats par page
+    .offset(offset);
 
-  let totalProducts = await db.select({ count: count() }).from(products);
-  let moreProducts = await db.select().from(products).limit(5).offset(offset);
-  let newOffset = moreProducts.length >= 5 ? offset + 5 : null;
+  const totalStudents = await db
+    .select({ count: count() })
+    .from(students)
+    .where(finalFilter);
+
+  // Calculer le nouveau offset pour la prochaine page
+  const newOffset =
+    studentsResult.length >= studentsPerPage
+      ? offset + studentsPerPage
+      : null;
+
+  // Calculer l'offset précédent
+  const previousOffset =
+    offset >= studentsPerPage ? offset - studentsPerPage : null;
 
   return {
-    products: moreProducts,
+    students: studentsResult,
     newOffset,
-    totalProducts: totalProducts[0].count
+    previousOffset,
+    currentOffset: offset,
+    totalStudents: totalStudents[0].count
   };
 }
 
-export async function deleteProductById(id: number) {
-  await db.delete(products).where(eq(products.id, id));
+export async function deleteStudentById(id: number) {
+  console.log('Suppression de l\'étudiant avec l\'ID:', id);
+  // await db.delete(students).where(eq(students.id, id));
 }
