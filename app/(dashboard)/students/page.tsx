@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { StudentsTable } from '../students-table';
 
 export default async function StudentsPage(props: {
-  searchParams: { q?: string; offset?: string; promo?: string };
+  searchParams: { q?: string | undefined; offset?: string | undefined; promo?: string | undefined; };
 }) {
   // Attendre que les searchParams soient disponibles
   const { q = '', offset = '0', promo = '' } = await props.searchParams;
