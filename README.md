@@ -35,8 +35,8 @@ To get started, ensure you have the following installed:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/admin-panel-dashboard.git
-   cd admin-panel-dashboard
+   git clone https://github.com/makcimerrr/admin-dashboard.git
+   cd admin-dashboard
    ```
 
 2. Install dependencies:
