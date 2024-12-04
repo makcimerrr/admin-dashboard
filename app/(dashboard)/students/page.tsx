@@ -3,7 +3,7 @@ import { getStudents } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { StudentsTable } from '../students-table';
 
-type StudentsPageProps = {
+interface StudentsPageProps {
   searchParams: {
     q?: string;
     offset?: string;
@@ -15,7 +15,6 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   const { q = '', offset = '0', promo = '' } = searchParams;
   const search = q;
   const offsetNumber = Number(offset);
-
 
   // Appel au backend pour récupérer les données des étudiants
   const { students, newOffset, totalStudents, previousOffset, currentOffset } =
