@@ -10,11 +10,24 @@ export function SearchInput() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
+  // Fonction pour récupérer les paramètres existants dans l'URL (promo)
+  const getPromoFromUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('promo') || ''; // Retourne la promo existante ou une chaîne vide si aucune promo n'est sélectionnée
+  };
+
   function searchAction(formData: FormData) {
     let value = formData.get('q') as string;
+    let promo = getPromoFromUrl();  // Récupérer la promo actuelle depuis l'URL
     let params = new URLSearchParams({ q: value });
+
+    // Si une promo est sélectionnée, l'ajouter aux paramètres
+    if (promo) {
+      params.set('promo', promo);
+    }
+
     startTransition(() => {
-      router.replace(`/?${params.toString()}`);
+      router.replace(`/students/?${params.toString()}`);
     });
   }
 
