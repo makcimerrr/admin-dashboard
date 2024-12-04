@@ -7,7 +7,7 @@ export default async function StudentsPage(props: {
   searchParams: { q?: string | undefined; offset?: string | undefined; promo?: string | undefined; };
 }) {
   // Attendre que les searchParams soient disponibles
-  const { q = '', offset = '0', promo = '' } = await props.searchParams;
+  const { q = '', offset = '0', promo = '' } = props.searchParams;
 
   // Convertir l'offset en nombre
   const search = q;
