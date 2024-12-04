@@ -1,0 +1,118 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getStudents } from '@/lib/db';
+import { Button } from '@/components/ui/button';
+import { StudentsTable } from '../students-table';
+
+export default async function StudentsPage(props: {
+  searchParams: { q?: string; offset?: string; promo?: string };
+}) {
+  // Attendre que les searchParams soient disponibles
+  const { q = '', offset = '0', promo = '' } = await props.searchParams;
+
+  // Convertir l'offset en nombre
+  const search = q;
+  const offsetNumber = Number(offset);
+
+  // Appel au backend pour récupérer les données des étudiants
+  const { students, newOffset, totalStudents, previousOffset, currentOffset } =
+    await getStudents(search, offsetNumber, promo);
+
+  return (
+    <Tabs value={promo || 'all'}>
+      <div className="flex items-center">
+        <TabsList>
+          <TabsTrigger value="all">
+            <a href={`/students?q=${search}&offset=${0}`} className="">
+              All
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value="P1 2022">
+            <a href={`/students?q=${search}&offset=${0}&promo=P1+2022`} className="">
+              P1 2022
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value="P1 2023">
+            <a href={`/students?q=${search}&offset=${0}&promo=P1+2023`} className="">
+              P1 2023
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value="P2 2023">
+            <a href={`/students?q=${search}&offset=${0}&promo=P2+2023`} className="">
+              P2 2023
+            </a>
+          </TabsTrigger>
+          <TabsTrigger value="P1 2024">
+            <a href={`/students?q=${search}&offset=${0}&promo=P1+2024`} className="">
+              P1 2024
+            </a>
+          </TabsTrigger>
+        </TabsList>
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" className="h-8 gap-1">
+            Export
+          </Button>
+          <Button size="sm" className="h-8 gap-1">
+            Add Student
+          </Button>
+        </div>
+      </div>
+
+      {/* Contenus des onglets pour chaque promo */}
+      <TabsContent value="all">
+        <StudentsTable
+          students={students}
+          currentOffset={currentOffset ?? 0}
+          newOffset={newOffset}
+          totalStudents={totalStudents}
+          previousOffset={previousOffset}
+          search={search}
+          promo={promo}
+        />
+      </TabsContent>
+      <TabsContent value="P1 2022">
+        <StudentsTable
+          students={students}
+          currentOffset={currentOffset ?? 0}
+          newOffset={newOffset}
+          totalStudents={totalStudents}
+          previousOffset={previousOffset}
+          search={search}
+          promo="P1 2022"
+        />
+      </TabsContent>
+      <TabsContent value="P1 2023">
+        <StudentsTable
+          students={students}
+          currentOffset={currentOffset ?? 0}
+          newOffset={newOffset}
+          totalStudents={totalStudents}
+          previousOffset={previousOffset}
+          search={search}
+          promo="P1 2023"
+        />
+      </TabsContent>
+      <TabsContent value="P2 2023">
+        <StudentsTable
+          students={students}
+          currentOffset={currentOffset ?? 0}
+          newOffset={newOffset}
+          totalStudents={totalStudents}
+          previousOffset={previousOffset}
+          search={search}
+          promo="P2 2023"
+        />
+      </TabsContent>
+      <TabsContent value="P1 2024">
+        <StudentsTable
+          students={students}
+          currentOffset={currentOffset ?? 0}
+          newOffset={newOffset}
+          totalStudents={totalStudents}
+          previousOffset={previousOffset}
+          search={search}
+          promo="P1 2024"
+        />
+      </TabsContent>
+    </Tabs>
+  );
+}
