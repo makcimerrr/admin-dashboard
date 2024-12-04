@@ -1,10 +1,11 @@
 'use server';
 
-import { deleteProductById } from '@/lib/db';
+import { deleteStudentById } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 
-export async function deleteProduct(formData: FormData) {
-  // let id = Number(formData.get('id'));
-  // await deleteProductById(id);
-  // revalidatePath('/');
+export async function deleteStudent(formData: FormData) {
+  let id = Number(formData.get('id'));
+  await deleteStudentById(id);
+  console.log('Suppression de l\'étudiant avec l\'ID:', id);
+  revalidatePath('/');
 }
