@@ -4,15 +4,12 @@ import { Button } from '@/components/ui/button';
 import { StudentsTable } from '../students-table';
 
 interface StudentsPageProps {
-  searchParams: {
-    q?: string;
-    offset?: string;
-    promo?: string;
-  };
+  searchParams: Promise<Record<string, string | undefined>>;
 }
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
-  const { q = '', offset = '0', promo = '' } = searchParams;
+  const resolvedParams = await searchParams;
+  const { q = '', offset = '0', promo = '' } = resolvedParams;
   const search = q;
   const offsetNumber = Number(offset);
 
@@ -60,7 +57,6 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         </div>
       </div>
 
-      {/* Contenus des onglets pour chaque promo */}
       <TabsContent value="all">
         <StudentsTable
           students={students}
