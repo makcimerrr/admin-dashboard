@@ -3,7 +3,7 @@ import 'server-only';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { pgTable, text, timestamp, pgEnum, serial, integer } from 'drizzle-orm/pg-core';
-import { count, eq, ilike, or, and, SQL } from 'drizzle-orm';
+import { count, eq, ilike, or, and } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
@@ -60,7 +60,7 @@ export async function getStudents(
   previousOffset: number | null;
   totalStudents: number;
 }> {
-  const studentsPerPage = 5; // Nombre d'étudiants par page
+  const studentsPerPage = 20; // Nombre d'étudiants par page
 
   // Construire la condition pour le filtre de la promo
   let promoFilter = promo ? eq(students.promos, promo as 'P1 2022' | 'P1 2023' | 'P2 2023' | 'P1 2024') : null;
@@ -160,4 +160,33 @@ export async function getStudents(
 export async function deleteStudentById(id: number) {
   console.log('Suppression de l\'étudiant avec l\'ID:', id);
   // await db.delete(students).where(eq(students.id, id));
+}
+
+export async function updateStudentProject(login: string, project_name: string, project_status: string) {
+  // Get the student ID from the login
+  const student = await db
+    .select({ id: students.id })
+    .from(students)
+    .where(eq(students.login, login))
+    .limit(1);  // Removed .run()
+
+  // Check if the student exists
+  if (!student || student.length === 0) {
+    throw new Error(`Student with login "${login}" not found.`);
+  }
+
+  // Get the student ID
+  const studentId = student[0].id;
+
+  // Update the project details in the studentProjects table
+  await db
+    .update(studentProjects)
+    .set({
+      project_name,
+      progress_status: project_status,
+      delay_level: 'en retard' // Example default value, can be customized
+    })
+    .where(eq(studentProjects.student_id, studentId));  // Removed .run()
+
+  console.log(`Project for student ${login} has been updated.`);
 }
