@@ -161,6 +161,7 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
       await fetchPromotionProgress(eventId);
     }
     setLoading(false);
+    window.location.reload(); // Actualisation de la page après la mise à jour
   };
 
   return (
