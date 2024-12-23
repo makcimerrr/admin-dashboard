@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getStudents } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { StudentsTable } from '../students-table';
+import Update from '@/components/update';
 
 interface StudentsPageProps {
   searchParams: Promise<Record<string, string | undefined>>;
@@ -13,10 +14,24 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   const search = q;
   const offsetNumber = Number(offset);
 
+  console.log('Promo:', promo);
+
+  // Mapping promo to eventId
+  const promoEventIds: Record<string, number> = {
+    'P1 2022': 32,
+    'P1 2023': 148,
+    'P2 2023': 216,
+    'P1 2024': 303,
+  };
+
+  // EventId for the selected promo
+  const eventId: string = String(promoEventIds[promo] || '');
+
   // Appel au backend pour récupérer les données des étudiants
   const { students, newOffset, totalStudents, previousOffset, currentOffset } =
     await getStudents(search, offsetNumber, promo);
 
+  // @ts-ignore
   return (
     <Tabs value={promo || 'all'}>
       <div className="flex items-center">
@@ -54,6 +69,12 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           <Button size="sm" className="h-8 gap-1">
             Add Student
           </Button>
+          {/* Conditionally passing eventId to Update component */}
+          {promo === "" ? (
+            <Update eventId="all" />
+          ) : (
+            <Update eventId={eventId} />
+          )}
         </div>
       </div>
 

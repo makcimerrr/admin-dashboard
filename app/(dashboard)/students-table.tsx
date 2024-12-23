@@ -40,7 +40,7 @@ export function StudentsTable({
   promo: string;
 }) {
   const router = useRouter();
-  const studentsPerPage = 5;
+  const studentsPerPage = 20;
 
   /*useEffect(() => {
     console.log('Frontend - Offset actuel:', currentOffset);
