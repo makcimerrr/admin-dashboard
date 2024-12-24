@@ -3,6 +3,14 @@ import { getStudents } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { StudentsTable } from '../students-table';
 import Update from '@/components/update';
+import promos from 'config/promoConfig.json' assert { type: 'json' }; // Import tel quel du tableau
+
+interface Promo {
+  key: string;
+  eventId: number;
+  title: string;
+}
+
 
 interface StudentsPageProps {
   searchParams: Promise<Record<string, string | undefined>>;
@@ -16,61 +24,40 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
   console.log('Promo:', promo);
 
-  // Mapping promo to eventId
-  const promoEventIds: Record<string, number> = {
-    'P1 2022': 32,
-    'P1 2023': 148,
-    'P2 2023': 216,
-    'P1 2024': 303,
-  };
-
-  // EventId for the selected promo
-  const eventId: string = String(promoEventIds[promo] || '');
+  // Trouver la promo sélectionnée
+  const selectedPromo = promos.find((p) => p.key === promo);
+  const eventId: string = selectedPromo ? String(selectedPromo.eventId) : '';
 
   // Appel au backend pour récupérer les données des étudiants
   const { students, newOffset, totalStudents, previousOffset, currentOffset } =
     await getStudents(search, offsetNumber, promo);
 
-  // @ts-ignore
   return (
     <Tabs value={promo || 'all'}>
       <div className="flex items-center">
         <TabsList>
           <TabsTrigger value="all">
             <a href={`/students?q=${search}&offset=${0}`} className="">
-              All
+              Toutes les promotions
             </a>
           </TabsTrigger>
-          <TabsTrigger value="P1 2022">
-            <a href={`/students?q=${search}&offset=${0}&promo=P1+2022`} className="">
-              P1 2022
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value="P1 2023">
-            <a href={`/students?q=${search}&offset=${0}&promo=P1+2023`} className="">
-              P1 2023
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value="P2 2023">
-            <a href={`/students?q=${search}&offset=${0}&promo=P2+2023`} className="">
-              P2 2023
-            </a>
-          </TabsTrigger>
-          <TabsTrigger value="P1 2024">
-            <a href={`/students?q=${search}&offset=${0}&promo=P1+2024`} className="">
-              P1 2024
-            </a>
-          </TabsTrigger>
+          {promos.map(({ key, title }) => (
+            <TabsTrigger key={key} value={key}>
+              <a href={`/students?q=${search}&offset=${0}&promo=${encodeURIComponent(key)}`} className="">
+                {title}
+              </a>
+            </TabsTrigger>
+          ))}
         </TabsList>
         <div className="ml-auto flex items-center gap-2">
           <Button size="sm" variant="outline" className="h-8 gap-1">
-            Export
+            Exporter
           </Button>
           <Button size="sm" className="h-8 gap-1">
-            Add Student
+            Ajouter un étudiant
           </Button>
           {/* Conditionally passing eventId to Update component */}
-          {promo === "" ? (
+          {promo === '' ? (
             <Update eventId="all" />
           ) : (
             <Update eventId={eventId} />
@@ -89,50 +76,19 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           promo={promo}
         />
       </TabsContent>
-      <TabsContent value="P1 2022">
-        <StudentsTable
-          students={students}
-          currentOffset={currentOffset ?? 0}
-          newOffset={newOffset}
-          totalStudents={totalStudents}
-          previousOffset={previousOffset}
-          search={search}
-          promo="P1 2022"
-        />
-      </TabsContent>
-      <TabsContent value="P1 2023">
-        <StudentsTable
-          students={students}
-          currentOffset={currentOffset ?? 0}
-          newOffset={newOffset}
-          totalStudents={totalStudents}
-          previousOffset={previousOffset}
-          search={search}
-          promo="P1 2023"
-        />
-      </TabsContent>
-      <TabsContent value="P2 2023">
-        <StudentsTable
-          students={students}
-          currentOffset={currentOffset ?? 0}
-          newOffset={newOffset}
-          totalStudents={totalStudents}
-          previousOffset={previousOffset}
-          search={search}
-          promo="P2 2023"
-        />
-      </TabsContent>
-      <TabsContent value="P1 2024">
-        <StudentsTable
-          students={students}
-          currentOffset={currentOffset ?? 0}
-          newOffset={newOffset}
-          totalStudents={totalStudents}
-          previousOffset={previousOffset}
-          search={search}
-          promo="P1 2024"
-        />
-      </TabsContent>
+      {promos.map(({ key, title }) => (
+        <TabsContent key={key} value={key}>
+          <StudentsTable
+            students={students}
+            currentOffset={currentOffset ?? 0}
+            newOffset={newOffset}
+            totalStudents={totalStudents}
+            previousOffset={previousOffset}
+            search={search}
+            promo={key}
+          />
+        </TabsContent>
+      ))}
     </Tabs>
   );
 }
