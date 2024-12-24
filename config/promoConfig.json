@@ -2,21 +2,53 @@
   {
     "key": "P1 2022",
     "eventId": 32,
-    "title": "Promotion 1 - Année 2022"
+    "title": "Promotion 1 - Année 2022",
+    "dates": {
+      "start": "2022-06-07",
+      "piscine-js-start": "NaN",
+      "piscine-js-end": "NaN",
+      "piscine-rust-start": "NaN",
+      "piscine-rust-end": "NaN",
+      "end": "2024-06-07"
+    }
   },
   {
     "key": "P1 2023",
     "eventId": 148,
-    "title": "Promotion 1 - Année 2023"
+    "title": "Promotion 1 - Année 2023",
+    "dates": {
+      "start": "2023-05-22",
+      "piscine-js-start": "2023-11-27",
+      "piscine-js-end": "2023-12-18",
+      "piscine-rust-start": "2024-07-01",
+      "piscine-rust-end": "2024-07-31",
+      "end": "2025-05-21"
+    }
   },
   {
     "key": "P2 2023",
     "eventId": 216,
-    "title": "Promotion 2 - Année 2023"
+    "title": "Promotion 2 - Année 2023",
+    "dates": {
+      "start": "2023-11-06",
+      "piscine-js-start": "2024-05-23",
+      "piscine-js-end": "2024-06-03",
+      "piscine-rust-start": "NaN",
+      "piscine-rust-end": "NaN",
+      "end": "2025-11-05"
+    }
   },
   {
     "key": "P1 2024",
     "eventId": 303,
-    "title": "Promotion 1 - Année 2024"
+    "title": "Promotion 1 - Année 2024",
+    "dates": {
+      "start": "2024-06-03",
+      "piscine-js-start": "NaN",
+      "piscine-js-end": "NaN",
+      "piscine-rust-start": "NaN",
+      "piscine-rust-end": "NaN",
+      "end": "2026-06-03"
+    }
   }
 ]

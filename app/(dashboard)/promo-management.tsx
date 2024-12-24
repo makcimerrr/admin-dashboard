@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import PromoTable from './promo-table';
+import Modal from '@/components/ui/modal'; // Import du modal
 import initialPromos from 'config/promoConfig.json';
 import { toast } from 'react-hot-toast';
 
@@ -11,29 +12,54 @@ interface Promo {
   key: string;
   eventId: number;
   title: string;
+  dates: {
+    start: string;
+    'piscine-js-start': string;
+    'piscine-js-end': string;
+    'piscine-rust-start': string;
+    'piscine-rust-end': string;
+    end: string;
+  };
 }
 
 export default function PromoManager() {
   const [promos, setPromos] = useState<Promo[]>(initialPromos);
-  const [newPromo, setNewPromo] = useState({ key: '', eventId: '', title: '' });
+  const [newPromo, setNewPromo] = useState<Promo>({
+    key: '',
+    eventId: 0,
+    title: '',
+    dates: {
+      start: '',
+      'piscine-js-start': '',
+      'piscine-js-end': '',
+      'piscine-rust-start': '',
+      'piscine-rust-end': '',
+      end: ''
+    }
+  });
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState<string | null>(null);
   const [deletionToast, setDeletionToast] = useState<string | undefined>(undefined);
 
   const handleAdd = async () => {
-    if (!newPromo.key || !newPromo.eventId || !newPromo.title) {
-      toast.error('Tous les champs doivent être remplis.');
+    if (
+      !newPromo.key ||
+      !newPromo.eventId ||
+      !newPromo.title ||
+      !newPromo.dates.start ||
+      !newPromo.dates.end
+    ) {
+      toast.error('Certains champs obligatoires sont manquants (clé, ID, titre, début ou fin).');
       return;
     }
+
+    // console.log(newPromo);
 
     try {
       const response = await fetch('/api/promos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: newPromo.key,
-          eventId: Number(newPromo.eventId),
-          title: newPromo.title,
-        }),
+        body: JSON.stringify(newPromo),
       });
 
       if (!response.ok) {
@@ -43,24 +69,34 @@ export default function PromoManager() {
       }
 
       toast.success('Promotion ajoutée avec succès.');
-      setPromos((prev) => [...prev, { ...newPromo, eventId: Number(newPromo.eventId) }]);
-      setNewPromo({ key: '', eventId: '', title: '' });
+      setPromos((prev) => [...prev, newPromo]);
+      setNewPromo({
+        key: '',
+        eventId: 0,
+        title: '',
+        dates: {
+          start: '',
+          'piscine-js-start': '',
+          'piscine-js-end': '',
+          'piscine-rust-start': '',
+          'piscine-rust-end': '',
+          end: ''
+        }
+      });
     } catch (error) {
       console.error('Erreur lors de l\'ajout :', error);
       toast.error('Impossible d’ajouter la promotion. Veuillez réessayer.');
     }
   };
 
-  // Fonction de suppression, déclenche le toast loading
   const handleDelete = (key: string) => {
     setIsConfirmingDelete(key);
     const confirmationToastId = toast.loading('Confirmer la suppression...', {
-      duration: Infinity, // Durée infinie pour qu'il reste affiché jusqu'à confirmation
+      duration: Infinity,
     });
     setDeletionToast(confirmationToastId);
   };
 
-  // Confirmation de la suppression
   const confirmDelete = async (key: string) => {
     try {
       const response = await fetch('/api/promos', {
@@ -75,23 +111,27 @@ export default function PromoManager() {
         return;
       }
 
-      // Mettre à jour l'état promos avec la promo supprimée
       setPromos((prev) => prev.filter((promo) => promo.key !== key));
       toast.success('Promotion supprimée avec succès.');
-      setIsConfirmingDelete(null); // Reset confirmation
+      setIsConfirmingDelete(null);
     } catch (error) {
       console.error('Erreur lors de la suppression :', error);
       toast.error('Impossible de supprimer la promotion. Veuillez réessayer.');
     } finally {
-      toast.dismiss(deletionToast); // Fermer le toast de confirmation
+      toast.dismiss(deletionToast);
     }
   };
 
-  // Annuler la suppression
   const cancelDelete = () => {
     setIsConfirmingDelete(null);
-    toast.dismiss(deletionToast); // Fermer le toast de confirmation
+    toast.dismiss(deletionToast);
   };
+
+  // Ouverture du modal
+  const openModal = () => setIsModalOpen(true);
+
+  // Fermeture du modal
+  const closeModal = () => setIsModalOpen(false);
 
   return (
     <div className="p-6">
@@ -105,13 +145,15 @@ export default function PromoManager() {
           type="number"
           placeholder="ID de l'événement"
           value={newPromo.eventId}
-          onChange={(e) => setNewPromo((prev) => ({ ...prev, eventId: e.target.value }))}
+          onChange={(e) => setNewPromo((prev) => ({ ...prev, eventId: Number(e.target.value) }))}
         />
         <Input
-          placeholder="Titre (e.g., Promotion 1 - Année 2024)"
+          placeholder="Titre"
           value={newPromo.title}
           onChange={(e) => setNewPromo((prev) => ({ ...prev, title: e.target.value }))}
         />
+        <Button onClick={openModal}>Configurer les Dates</Button> {/* Ouvre le modal pour la gestion des dates */}
+
         <Button onClick={handleAdd}>Ajouter</Button>
       </div>
 
@@ -122,6 +164,81 @@ export default function PromoManager() {
         cancelDelete={cancelDelete}
         confirmDelete={confirmDelete}
       />
+
+      {/* Modal des dates */}
+      <Modal isOpen={isModalOpen} onClose={closeModal}>
+        <div>
+          <div className="mb-4">
+            <label>Date de début</label>
+            <Input
+              type="date"
+              value={newPromo.dates.start}
+              onChange={(e) => setNewPromo((prev) => ({
+                ...prev,
+                dates: { ...prev.dates, start: e.target.value }
+              }))}
+            />
+          </div>
+          <div className="mb-4">
+            <label>Piscine JS Start (optionnel)</label>
+            <Input
+              type="date"
+              value={newPromo.dates['piscine-js-start']}
+              onChange={(e) => setNewPromo((prev) => ({
+                ...prev,
+                dates: { ...prev.dates, 'piscine-js-start': e.target.value }
+              }))}
+            />
+          </div>
+          <div className="mb-4">
+            <label>Piscine JS End (optionnel)</label>
+            <Input
+              type="date"
+              value={newPromo.dates['piscine-js-end']}
+              onChange={(e) => setNewPromo((prev) => ({
+                ...prev,
+                dates: { ...prev.dates, 'piscine-js-end': e.target.value }
+              }))}
+            />
+          </div>
+          <div className="mb-4">
+            <label>Piscine Rust Start (optionnel)</label>
+            <Input
+              type="date"
+              value={newPromo.dates['piscine-rust-start']}
+              onChange={(e) => setNewPromo((prev) => ({
+                ...prev,
+                dates: { ...prev.dates, 'piscine-rust-start': e.target.value }
+              }))}
+            />
+          </div>
+          <div className="mb-4">
+            <label>Piscine Rust End (optionnel)</label>
+            <Input
+              type="date"
+              value={newPromo.dates['piscine-rust-end']}
+              onChange={(e) => setNewPromo((prev) => ({
+                ...prev,
+                dates: { ...prev.dates, 'piscine-rust-end': e.target.value }
+              }))}
+            />
+          </div>
+          <div className="mb-4">
+            <label>Date de fin</label>
+            <Input
+              type="date"
+              value={newPromo.dates.end}
+              onChange={(e) => setNewPromo((prev) => ({
+                ...prev,
+                dates: { ...prev.dates, end: e.target.value }
+              }))}
+            />
+          </div>
+          <div className="flex justify-end mt-4">
+            <Button onClick={closeModal}>Fermer</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -9,3 +9,4 @@ export async function deleteStudent(formData: FormData) {
   console.log('Suppression de l\'étudiant avec l\'ID:', id);
   revalidatePath('/');
 }
+
