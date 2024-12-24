@@ -8,7 +8,8 @@ import { createInsertSchema } from 'drizzle-zod';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
-export const promosEnum = pgEnum('promos', [
+export const
+  promosEnum = pgEnum('promos', [
   'P1 2022',
   'P1 2023',
   'P2 2023',

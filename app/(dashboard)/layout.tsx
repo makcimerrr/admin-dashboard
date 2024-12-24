@@ -19,6 +19,7 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { Analytics } from '@vercel/analytics/react';
+import { Toaster } from 'react-hot-toast'; // Import du Toaster
 import { User } from './user';
 import { VercelLogo } from '@/components/icons';
 import Providers from './providers';
@@ -33,6 +34,8 @@ export default function DashboardLayout({
 }) {
   return (
     <Providers>
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+
       <main className="flex min-h-screen w-full flex-col bg-muted/40">
         <DesktopNav />
         <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
@@ -76,10 +79,11 @@ function DesktopNav() {
           <Bookmark className="h-5 w-5" />
         </NavItem>
 
-        {/*<NavItem href="/customers" label="Customers">
+        <NavItem href="/promos" label="Promos">
           <Users2 className="h-5 w-5" />
-        </NavItem>*/}
+        </NavItem>
 
+        {/*En développement...*/}
         <NavItem href="#" label="Analytics">
           <LineChart className="h-5 w-5" />
         </NavItem>
