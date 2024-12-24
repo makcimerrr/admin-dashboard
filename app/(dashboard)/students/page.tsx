@@ -37,15 +37,25 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       <div className="flex items-center">
         <TabsList>
           <TabsTrigger value="all">
-            <a href={`/students?q=${search}&offset=${0}`} className="">
-              Toutes les promotions
-            </a>
+            <div className="relative group">
+              <a
+                href={`/students?q=${search}&offset=${0}`}
+                className="transition-all duration-300 hover:text-blue-600"
+              >
+                Toutes les promotions
+              </a>
+            </div>
           </TabsTrigger>
           {promos.map(({ key, title }) => (
             <TabsTrigger key={key} value={key}>
-              <a href={`/students?q=${search}&offset=${0}&promo=${encodeURIComponent(key)}`} className="">
-                {title}
-              </a>
+              <div className="relative group">
+                <a
+                  href={`/students?q=${search}&offset=${0}&promo=${encodeURIComponent(key)}`}
+                  className="transition-all duration-300 hover:text-blue-600"
+                >
+                  {key}
+                </a>
+              </div>
             </TabsTrigger>
           ))}
         </TabsList>
