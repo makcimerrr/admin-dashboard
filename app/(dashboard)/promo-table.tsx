@@ -4,6 +4,14 @@ interface Promo {
   key: string;
   eventId: number;
   title: string;
+  dates: {
+    start: string;
+    'piscine-js-start': string;
+    'piscine-js-end': string;
+    'piscine-rust-start': string;
+    'piscine-rust-end': string;
+    end: string;
+  };
 }
 
 interface PromoTableProps {
@@ -19,37 +27,56 @@ export default function PromoTable({ promos, onDelete, isConfirmingDelete, cance
     <div className="overflow-auto">
       <table className="w-full text-sm">
         <thead>
-        <tr className="bg-gray-100">
-          <th className="p-2 text-left">Clé</th>
-          <th className="p-2 text-left">ID</th>
-          <th className="p-2 text-left">Titre</th>
-          <th className="p-2 text-left">Actions</th>
-        </tr>
+          <tr className="bg-gray-100">
+            <th className="p-2 text-left">Clé</th>
+            <th className="p-2 text-left">ID</th>
+            <th className="p-2 text-left">Titre</th>
+            <th className="p-2 text-left">Date de début</th>
+            <th className="p-2 text-left">Date de fin</th>
+            <th className="p-2 text-left">Piscine JS</th>
+            <th className="p-2 text-left">Piscine RUST</th>
+            <th className="p-2 text-left">Actions</th>
+          </tr>
         </thead>
         <tbody>
-        {promos.map((promo) => (
-          <tr key={promo.key} className="border-t">
-            <td className="p-2">{promo.key}</td>
-            <td className="p-2">{promo.eventId}</td>
-            <td className="p-2">{promo.title}</td>
-            <td className="p-2">
-              {isConfirmingDelete === promo.key ? (
-                <div className="flex gap-2">
-                  <Button variant="destructive" size="sm" onClick={() => confirmDelete(promo.key)}>
-                    Confirmer
+          {promos.map((promo) => (
+            <tr key={promo.key} className="border-t">
+              <td className="p-2">{promo.key}</td>
+              <td className="p-2">{promo.eventId}</td>
+              <td className="p-2">{promo.title}</td>
+
+              <td className="p-2">{promo.dates.start}</td>
+              <td className="p-2">{promo.dates.end}</td>
+
+              <td className="p-2">{promo.dates['piscine-js-start']} - {promo.dates['piscine-js-end']}</td>
+              <td className="p-2">{promo.dates['piscine-rust-start']} - {promo.dates['piscine-rust-end']}</td>
+
+              <td className="p-2">
+                {isConfirmingDelete === promo.key ? (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => confirmDelete(promo.key)}
+                    >
+                      Confirmer
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={cancelDelete}>
+                      Annuler
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onDelete(promo.key)}
+                  >
+                    Supprimer
                   </Button>
-                  <Button variant="outline" size="sm" onClick={cancelDelete}>
-                    Annuler
-                  </Button>
-                </div>
-              ) : (
-                <Button variant="destructive" size="sm" onClick={() => onDelete(promo.key)}>
-                  Supprimer
-                </Button>
-              )}
-            </td>
-          </tr>
-        ))}
+                )}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
