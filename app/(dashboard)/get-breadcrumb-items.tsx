@@ -20,7 +20,7 @@ export function DashboardBreadcrumb() {
     '/': 'Dashboard',
     '/students': 'Students',
     '/settings': 'Settings',
-    '/promos': 'Promos',
+    '/config': 'Configuration',
   };
 
   // Divise le chemin en segments
