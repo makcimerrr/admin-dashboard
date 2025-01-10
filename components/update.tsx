@@ -2,9 +2,17 @@
 
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'react-hot-toast';
 
 interface UpdateProps {
   eventId: string;
+}
+
+interface Promotion {
+  eventId: string; // Utilisation de l'eventId
+  key: string;
+  title: string;
+  dates: { start: string; end: string };
 }
 
 const PromotionProgress = ({ eventId }: UpdateProps) => {
@@ -12,26 +20,46 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingDots, setLoadingDots] = useState<string>('.');
 
-  const projectsList = [
-    'Go-reloaded',
-    'Ascii-art',
-    'Ascii-art-web',
-    'Groupie-tracker',
-    'Lem-in',
-    'Forum',
-    'Make-your-game',
-    'Real-Time-Forum',
-    'GraphQL',
-    'Smart-Road',
-    'Filler',
-    'Mini-Framework',
-    'Bomberman-Dom',
-    'RT',
-    'Multiplayer-FPS',
-    '0-shell'
-  ];
+  const [promoEventIds, setPromoEventIds] = useState<string[]>([]); // Stocke dynamiquement les IDs des promotions récupérés depuis l'API
 
-  const promoEventIds = ['32', '148', '216', '303'];
+  const projectsList: any[] = [];
+
+  async function fetchProjets() {
+    try {
+      const response = await fetch('/api/projects');
+      if (!response.ok) {
+        throw new Error('Unable to fetch projects');
+      }
+
+      const data = await response.json();
+      Object.keys(data).forEach(category => {
+        // Si la catégorie existe et a des projets, ajouter leurs noms à projectsList
+        if (Array.isArray(data[category])) {
+          projectsList.push(...data[category].map(project => project.name));
+        }
+      });
+    } catch (error) {
+      toast.error('Impossible de récupérer les projets.');
+      throw error;  // Assure de sortir en cas d'erreur
+    }
+  }
+
+  // Récupérer dynamiquement les promotions via l'API
+  const fetchPromotions = async () => {
+    try {
+      const response = await fetch('/api/promos'); // Chemin API pour récupérer les promotions
+      if (!response.ok) {
+        throw new Error('Unable to fetch promotions');
+      }
+      const data = await response.json();
+      // Extraire les eventId de chaque promotion pour utiliser dans la logique
+      setPromoEventIds(data.promos.map((promo: Promotion) => promo.eventId)); // Utiliser l'eventId de la promo
+    } catch (error) {
+      toast.error('Impossible de récupérer les promotions.');
+    }
+  };
+
+  //const promoEventIds = ['32', '148', '216', '303'];
   const cache = new Map<
     string,
     { lastActiveProject: string; status: string }
@@ -97,6 +125,9 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
       const response = await fetch(
         `http://localhost:3010/promotion-progress/${eventId}`
       );
+      if (!response.ok) {
+        throw new Error(`Erreur lors de la récupération des données pour l'événement ${eventId}`);
+      }
       const data = await response.json();
 
       const userProjects: { [key: string]: any[] } = {};
@@ -134,14 +165,13 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
                 project_status: status
               })
             });
-            console.log(`Project for user ${login} has been updated.`);
           } catch (error) {
-            console.error(`Error updating project for ${login}:`, error);
+            toast.error(`Erreur de mise à jour du projet pour ${login}.`);
           }
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des données:', error);
+      toast.error(`Impossible de récupérer les informations de progression pour la promotion avec l'id : ${eventId}.`);
     } finally {
       return currentStudentCount;
     }
@@ -149,19 +179,36 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
 
   const handleUpdate = async () => {
     setLoading(true); // Indique que le chargement commence
-    if (eventId === 'all') {
-      console.log('Updating all promos:', promoEventIds);
-      await Promise.all(
+
+    try {
+      // Appel de fetchProjets
+      await fetchProjets(); // Récupère les projets
+      await fetchPromotions(); // Récupère les promotions
+
+      // On passe à Promise.allSettled pour gérer les erreurs sans arrêter tout le processus
+      const results = await Promise.allSettled(
         promoEventIds.map(async (promoId) => {
-          await fetchPromotionProgress(promoId); // Mettre à jour progressivement
+          try {
+            await fetchPromotionProgress(promoId);
+          } catch (error) {
+            toast.error(`Erreur de mise à jour pour la promo ${promoId}`);
+          }
         })
       );
-    } else {
-      console.log('Updating promo:', eventId);
-      await fetchPromotionProgress(eventId);
+      // Gérer le statut final
+      results.forEach((result) => {
+        if (result.status === 'rejected') {
+          console.error('Une erreur est survenue lors de la mise à jour:', result.reason);
+          toast.error('Une erreur est survenue lors de la mise à jour:', result.reason);
+        }
+      });
+
+      setLoading(false);
+    } catch (error) {
+      // Si une erreur survient pendant l'appel principal, la notification toast apparaîtra ici
+      setLoading(false);
+      toast.error(`Impossible de mettre à jour les promotions. Erreur liée à l'événement ${eventId}`);
     }
-    setLoading(false);
-    window.location.reload(); // Actualisation de la page après la mise à jour
   };
 
   return (
@@ -185,48 +232,6 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
           'Exécuter'
         )}
       </Button>
-      <style jsx>{`
-        .loading-text {
-          display: flex;
-          align-items: center;
-        }
-
-        .wave {
-          display: flex;
-          justify-content: space-between;
-          width: 1.5rem;
-          margin-left: 0.5rem;
-        }
-
-        .wave span {
-          display: inline-block;
-          font-size: 1.5rem;
-          animation: wave 1.5s infinite;
-        }
-
-        .wave span:nth-child(1) {
-          animation-delay: 0s;
-        }
-
-        .wave span:nth-child(2) {
-          animation-delay: 0.2s;
-        }
-
-        .wave span:nth-child(3) {
-          animation-delay: 0.4s;
-        }
-
-        @keyframes wave {
-          0%,
-          60%,
-          100% {
-            transform: translateY(0);
-          }
-          30% {
-            transform: translateY(-10px);
-          }
-        }
-      `}</style>
     </div>
   );
 };
