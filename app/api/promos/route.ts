@@ -18,6 +18,22 @@ function isDateInRange(date: string, start: string, end: string): boolean {
   return d >= new Date(start) && d <= new Date(end);
 }
 
+export async function GET(req: Request) {
+  try {
+    // Retrieve existing promotions
+    const promos = getExistingPromos();
+
+    // Send the promotions as a response
+    return NextResponse.json({ promos }, { status: 200 });
+  } catch (error) {
+    console.error('Erreur lors de la récupération des promos :', error);
+    return NextResponse.json(
+      { error: 'Erreur interne lors de la récupération des promotions.' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const newPromo = await req.json();
