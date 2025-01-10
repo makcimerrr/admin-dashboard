@@ -3,7 +3,9 @@ import { getStudents } from '@/lib/db';
 import { Button } from '@/components/ui/button';
 import { StudentsTable } from '../students-table';
 import Update from '@/components/update';
-import promos from 'config/promoConfig.json' assert { type: 'json' }; // Import tel quel du tableau
+import promos from 'config/promoConfig.json' assert { type: 'json' };
+import ClientImport from '@/components/clien-import';
+import AddStudent from '@/components/add-student'; // Import tel quel du tableau
 
 interface Promo {
   key: string;
@@ -60,12 +62,8 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           ))}
         </TabsList>
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" className="h-8 gap-1">
-            Exporter
-          </Button>
-          <Button size="sm" className="h-8 gap-1">
-            Ajouter un étudiant
-          </Button>
+          <ClientImport />
+          <AddStudent />
           {/* Conditionally passing eventId to Update component */}
           {promo === '' ? (
             <Update eventId="all" />
