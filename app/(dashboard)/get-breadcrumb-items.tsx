@@ -19,9 +19,8 @@ export function DashboardBreadcrumb() {
   const pathMap: { [key: string]: string } = {
     '/': 'Dashboard',
     '/students': 'Students',
-    '/customers': 'Customers',
-    '/orders': 'Orders',
     '/settings': 'Settings',
+    '/promos': 'Promos',
   };
 
   // Divise le chemin en segments
