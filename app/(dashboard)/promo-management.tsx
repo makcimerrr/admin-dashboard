@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import PromoTable from './promo-table';
-import Modal from '@/components/ui/modal'; // Import du modal
-import initialPromos from 'config/promoConfig.json';
+import Modal from '@/components/ui/modal';
 import { toast } from 'react-hot-toast';
 
 interface Promo {
@@ -23,7 +22,7 @@ interface Promo {
 }
 
 export default function PromoManager() {
-  const [promos, setPromos] = useState<Promo[]>(initialPromos);
+  const [promos, setPromos] = useState<Promo[]>([]);
   const [newPromo, setNewPromo] = useState<Promo>({
     key: '',
     eventId: 0,
@@ -41,6 +40,26 @@ export default function PromoManager() {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState<string | null>(null);
   const [deletionToast, setDeletionToast] = useState<string | undefined>(undefined);
 
+  // Fetch promotions on component mount
+  useEffect(() => {
+    async function fetchPromos() {
+      try {
+        const response = await fetch('/api/promos'); // Use the GET endpoint
+        if (!response.ok) {
+          throw new Error('Unable to fetch promotions');
+        }
+
+        const data = await response.json();
+        setPromos(data.promos); // Assuming the response contains an array of promos
+      } catch (error) {
+        console.error('Error fetching promotions:', error);
+        toast.error('Impossible de récupérer les promotions.');
+      }
+    }
+
+    fetchPromos();
+  }, []);
+
   const handleAdd = async () => {
     if (
       !newPromo.key ||
@@ -52,8 +71,6 @@ export default function PromoManager() {
       toast.error('Certains champs obligatoires sont manquants (clé, ID, titre, début ou fin).');
       return;
     }
-
-    // console.log(newPromo);
 
     try {
       const response = await fetch('/api/promos', {
@@ -127,10 +144,7 @@ export default function PromoManager() {
     toast.dismiss(deletionToast);
   };
 
-  // Ouverture du modal
   const openModal = () => setIsModalOpen(true);
-
-  // Fermeture du modal
   const closeModal = () => setIsModalOpen(false);
 
   return (
@@ -152,8 +166,7 @@ export default function PromoManager() {
           value={newPromo.title}
           onChange={(e) => setNewPromo((prev) => ({ ...prev, title: e.target.value }))}
         />
-        <Button onClick={openModal}>Configurer les Dates</Button> {/* Ouvre le modal pour la gestion des dates */}
-
+        <Button onClick={openModal}>Configurer les Dates</Button>
         <Button onClick={handleAdd}>Ajouter</Button>
       </div>
 
