@@ -76,11 +76,11 @@ function DesktopNav() {
         </NavItem>*/}
 
         <NavItem href="/students" label="Students">
-          <Bookmark className="h-5 w-5" />
+          <Users2 className="h-5 w-5" />
         </NavItem>
 
-        <NavItem href="/promos" label="Promos">
-          <Users2 className="h-5 w-5" />
+        <NavItem href="/config" label="Configuration">
+          <PanelLeft className="h-5 w-5" />
         </NavItem>
 
         {/*En développement...*/}

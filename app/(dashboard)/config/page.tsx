@@ -2,7 +2,7 @@ import PromoManager from '../promo-management';
 import HolidayManager from '../holiday-management';
 import ProjectManager from '../project-management';
 
-export default function PromoPage() {
+export default function ConfigPage() {
   return (
     <div className="p-6">
       <h1 className="text-xl font-bold mb-4">Gestion des Promotions</h1>
