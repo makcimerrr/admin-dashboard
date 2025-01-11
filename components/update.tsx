@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
+import LastUpdate from '@/components/last-update';
 
 interface UpdateProps {
   eventId: string;
@@ -19,6 +20,10 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingDots, setLoadingDots] = useState<string>('.');
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null); // State pour la dernière mise à jour
+  const [updates, setUpdates] = useState<
+    { last_update: string; event_id: string }[]
+  >([]);
 
   const projectsList: any[] = [];
 
@@ -125,7 +130,9 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
         `http://localhost:3010/promotion-progress/${eventId}`
       );
       if (!response.ok) {
-        throw new Error(`Erreur lors de la récupération des données pour l'événement ${eventId}`);
+        throw new Error(
+          `Erreur lors de la récupération des données pour l'événement ${eventId}`
+        );
       }
       const data = await response.json();
 
@@ -170,7 +177,9 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
         }
       }
     } catch (error) {
-      toast.error(`Impossible de récupérer les informations de progression pour la promotion avec l'id : ${eventId}.`);
+      toast.error(
+        `Impossible de récupérer les informations de progression pour la promotion avec l'id : ${eventId}.`
+      );
     } finally {
       return currentStudentCount;
     }
@@ -203,9 +212,27 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
 
       results.forEach((result) => {
         if (result.status === 'rejected') {
-          console.error('Une erreur est survenue lors de la mise à jour:', result.reason);
-          toast.error('Une erreur est survenue lors de la mise à jour:', result.reason);
+          console.error(
+            'Une erreur est survenue lors de la mise à jour:',
+            result.reason
+          );
+          toast.error(
+            'Une erreur est survenue lors de la mise à jour:',
+            result.reason
+          );
         }
+      });
+
+      // Créer l'update dans la base de données
+      const updateMessage =
+        eventId === 'all'
+          ? 'Mise à jour de toutes les promotions.'
+          : `Mise à jour pour la promo ${eventId}`;
+
+      await fetch('/api/last_update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, message: updateMessage })
       });
 
       toast.success('La mise à jour a été effectuée avec succès !');
@@ -214,12 +241,43 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
     } catch (error) {
       // Si une erreur survient pendant l'appel principal, la notification toast apparaîtra ici
       setLoading(false);
-      toast.error(`Impossible de mettre à jour les promotions. Erreur liée à l'événement ${eventId}`);
+      toast.error(
+        `Impossible de mettre à jour les promotions. Erreur liée à l'événement ${eventId}`
+      );
     }
   };
 
+  useEffect(() => {
+    async function fetchUpdates() {
+      try {
+        const response = await fetch('/api/last_update');
+        if (!response.ok) {
+          throw new Error('Impossible de récupérer les mises à jour');
+        }
+        const data = await response.json();
+        setUpdates(data); // Stocke toutes les mises à jour
+
+        // Filtrage des résultats pour trouver celui correspondant à l'eventId
+        const filteredUpdate = data.find(
+          (update: { event_id: string }) => update.event_id === eventId
+        );
+
+        if (filteredUpdate) {
+          setLastUpdate(filteredUpdate.last_update); // Met à jour la dernière mise à jour trouvée
+        }
+      } catch (error) {
+        toast.error(
+          'Impossible de récupérer les données de mise à jour via lAPI.'
+        );
+        console.error(error);
+      }
+    }
+
+    fetchUpdates();
+  }, [eventId]);
+
   return (
-    <div>
+    <div className="flex items-center space-x-4">
       <Button
         size="sm"
         className="h-8 gap-1"
@@ -239,47 +297,51 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
           'Exécuter'
         )}
       </Button>
+      {/* Affichage de la mise à jour à côté du bouton */}
+      <div className="text-sm text-gray-600">
+        <LastUpdate lastUpdate={lastUpdate} eventId={eventId} />
+      </div>
       <style jsx>{`
-        .loading-text {
-          display: flex;
-          align-items: center;
-        }
-
-        .wave {
-          display: flex;
-          justify-content: space-between;
-          width: 1.5rem;
-          margin-left: 0.5rem;
-        }
-
-        .wave span {
-          display: inline-block;
-          font-size: 1.5rem;
-          animation: wave 1.5s infinite;
-        }
-
-        .wave span:nth-child(1) {
-          animation-delay: 0s;
-        }
-
-        .wave span:nth-child(2) {
-          animation-delay: 0.2s;
-        }
-
-        .wave span:nth-child(3) {
-          animation-delay: 0.4s;
-        }
-
-        @keyframes wave {
-          0%,
-          60%,
-          100% {
-            transform: translateY(0);
+          .loading-text {
+              display: flex;
+              align-items: center;
           }
-          30% {
-            transform: translateY(-10px);
+
+          .wave {
+              display: flex;
+              justify-content: space-between;
+              width: 1.5rem;
+              margin-left: 0.5rem;
           }
-        }
+
+          .wave span {
+              display: inline-block;
+              font-size: 1.5rem;
+              animation: wave 1.5s infinite;
+          }
+
+          .wave span:nth-child(1) {
+              animation-delay: 0s;
+          }
+
+          .wave span:nth-child(2) {
+              animation-delay: 0.2s;
+          }
+
+          .wave span:nth-child(3) {
+              animation-delay: 0.4s;
+          }
+
+          @keyframes wave {
+              0%,
+              60%,
+              100% {
+                  transform: translateY(0);
+              }
+              30% {
+                  transform: translateY(-10px);
+              }
+          }
       `}</style>
     </div>
   );
