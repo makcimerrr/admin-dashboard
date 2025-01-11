@@ -191,3 +191,42 @@ export async function updateStudentProject(login: string, project_name: string, 
 
   console.log(`Project for student ${login} has been updated.`);
 }
+
+export const updates = pgTable('updates', {
+  id: serial('id').primaryKey(),
+  last_update: timestamp('last_update').notNull(),
+  event_id: text('event_id').notNull()
+});
+
+// Typage pour les résultats renvoyés
+export interface Update {
+  last_update: Date;
+  event_id: string;
+}
+/**
+ * Mettre à jour la date de `last_update` dans la table `updates`.
+ */
+export async function updateLastUpdate(eventId: string) {
+  const now = new Date();
+  await db.insert(updates).values({ last_update: now, event_id: eventId });
+  // console.log('Last update time has been set to:', now, 'for event ID:', eventId);
+  return { last_update: now, event_id: eventId }; // Retourne la date mise à jour avec l'event_id
+}
+
+/**
+ * Récupérer la dernière date de mise à jour depuis la table `updates`.
+ */
+
+
+// Fonction pour obtenir toutes les mises à jour
+export async function getAllUpdates(): Promise<Update[]> {
+  const updatesList = await db
+    .select({ lastUpdate: updates.last_update, eventId: updates.event_id })
+    .from(updates);
+
+  // Transforme les résultats pour respecter la structure
+  return updatesList.map(update => ({
+    last_update: update.lastUpdate,
+    event_id: update.eventId,
+  }));
+}
