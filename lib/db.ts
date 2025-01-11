@@ -3,7 +3,7 @@ import 'server-only';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { pgTable, text, timestamp, pgEnum, serial, integer } from 'drizzle-orm/pg-core';
-import { count, eq, ilike, or, and } from 'drizzle-orm';
+import { count, eq, ilike, or, and, sql } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
@@ -216,13 +216,14 @@ export async function updateLastUpdate(eventId: string) {
 /**
  * Récupérer la dernière date de mise à jour depuis la table `updates`.
  */
-
-
-// Fonction pour obtenir toutes les mises à jour
 export async function getAllUpdates(): Promise<Update[]> {
   const updatesList = await db
-    .select({ lastUpdate: updates.last_update, eventId: updates.event_id })
-    .from(updates);
+    .select({
+      eventId: updates.event_id,
+      lastUpdate: sql<Date>`MAX(${updates.last_update})`.as('lastUpdate'),
+    })
+    .from(updates)
+    .groupBy(updates.event_id);
 
   // Transforme les résultats pour respecter la structure
   return updatesList.map(update => ({
