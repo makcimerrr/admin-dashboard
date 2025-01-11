@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface LastUpdateProps {
   lastUpdate: string | null;
@@ -8,7 +8,10 @@ interface LastUpdateProps {
 const getTimeAgo = (time: string): string => {
   const now = new Date();
   const updatedTime = new Date(time);
-  const diff = Math.floor((now.getTime() - updatedTime.getTime()) / 1000); // Différence en secondes
+
+  // Corriger le décalage horaire si nécessaire
+  const timeOffset = now.getTimezoneOffset() * 60 * 1000; // Décalage en millisecondes
+  const diff = Math.floor((now.getTime() - updatedTime.getTime() + timeOffset) / 1000); // Différence ajustée
 
   const minutes = Math.floor(diff / 60);
   const hours = Math.floor(diff / 3600);
@@ -21,11 +24,31 @@ const getTimeAgo = (time: string): string => {
 };
 
 const LastUpdate = ({ lastUpdate, eventId }: LastUpdateProps) => {
+  const [timeAgo, setTimeAgo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lastUpdate) return;
+
+    // Fonction pour recalculer le temps écoulé
+    const updateTimeAgo = () => {
+      setTimeAgo(getTimeAgo(lastUpdate));
+    };
+
+    // Mettre à jour immédiatement
+    updateTimeAgo();
+
+    // Mettre à jour chaque seconde
+    const interval = setInterval(updateTimeAgo, 1000);
+
+    // Nettoyer l'intervalle à la destruction du composant
+    return () => clearInterval(interval);
+  }, [lastUpdate]);
+
   return (
     <div className="mt-2 text-sm text-gray-600">
       {lastUpdate ? (
         <p>
-          Dernière mise à jour pour la promo {eventId} : {getTimeAgo(lastUpdate)}
+          Dernière mise à jour pour la promo {eventId} : {timeAgo}
         </p>
       ) : (
         <p>Aucune mise à jour pour cette promotion.</p>
