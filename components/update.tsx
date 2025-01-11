@@ -189,6 +189,10 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
     setLoading(true); // Indique que le chargement commence
 
     try {
+      const response = await fetch('/api/timeline_project');
+      if (!response.ok) {
+        toast.error('Erreur lors de la mise à jour du status des promos.');
+      }
       // Si eventId est 'all', récupérer toutes les promotions
       await fetchProjets(); // Récupère les projets
 
