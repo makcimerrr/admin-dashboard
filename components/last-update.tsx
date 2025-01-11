@@ -51,7 +51,11 @@ const LastUpdate = ({ lastUpdate, eventId }: LastUpdateProps) => {
           Dernière mise à jour pour la promo {eventId} : {timeAgo}
         </p>
       ) : (
-        <p>Aucune mise à jour pour cette promotion.</p>
+        eventId === 'all' ? (
+          <p>Aucune mise à jour pour toutes les promos.</p>
+        ) : (
+        <p>Aucune mise à jour pour la promo {eventId}.</p>
+        )
       )}
     </div>
   );
