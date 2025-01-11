@@ -7,6 +7,7 @@ import LastUpdate from '@/components/last-update';
 
 interface UpdateProps {
   eventId: string;
+  onUpdate: () => void;
 }
 
 interface Promotion {
@@ -16,7 +17,7 @@ interface Promotion {
   dates: { start: string; end: string };
 }
 
-const PromotionProgress = ({ eventId }: UpdateProps) => {
+const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingDots, setLoadingDots] = useState<string>('.');
@@ -240,6 +241,8 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
       });
 
       toast.success('La mise à jour a été effectuée avec succès !');
+      onUpdate(); // Appel de la fonction onUpdate pour rafraîchir les données des étudiants
+      await refreshLastUpdate(); // Rafraîchir la dernière mise à jour
       setTotalStudents(null);
       setLoading(false);
     } catch (error) {
@@ -250,7 +253,24 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
       );
     }
   };
+  // Fonction pour mettre à jour la dernière mise à jour
+  const refreshLastUpdate = async () => {
+    try {
+      const response = await fetch('/api/last_update');
+      if (!response.ok) {
+        throw new Error('Impossible de récupérer les mises à jour');
+      }
+      const data = await response.json();
+      // Filtrage des résultats pour trouver celui correspondant à l'eventId
+      const filteredUpdate = data.find((update: { event_id: string }) => update.event_id === eventId);
 
+      if (filteredUpdate) {
+        setLastUpdate(filteredUpdate.last_update); // Met à jour la dernière mise à jour trouvée
+      }
+    } catch (error) {
+      toast.error('Impossible de récupérer les données de mise à jour.');
+    }
+  };
   useEffect(() => {
     async function fetchUpdates() {
       try {
@@ -277,7 +297,11 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
       }
     }
 
-    fetchUpdates();
+    fetchUpdates().then(r => r);
+  }, [eventId]);
+
+  useEffect(() => {
+    refreshLastUpdate().then(r => r);
   }, [eventId]);
 
   return (
@@ -306,46 +330,46 @@ const PromotionProgress = ({ eventId }: UpdateProps) => {
         <LastUpdate lastUpdate={lastUpdate} eventId={eventId} />
       </div>
       <style jsx>{`
-          .loading-text {
-              display: flex;
-              align-items: center;
-          }
+        .loading-text {
+          display: flex;
+          align-items: center;
+        }
 
-          .wave {
-              display: flex;
-              justify-content: space-between;
-              width: 1.5rem;
-              margin-left: 0.5rem;
-          }
+        .wave {
+          display: flex;
+          justify-content: space-between;
+          width: 1.5rem;
+          margin-left: 0.5rem;
+        }
 
-          .wave span {
-              display: inline-block;
-              font-size: 1.5rem;
-              animation: wave 1.5s infinite;
-          }
+        .wave span {
+          display: inline-block;
+          font-size: 1.5rem;
+          animation: wave 1.5s infinite;
+        }
 
-          .wave span:nth-child(1) {
-              animation-delay: 0s;
-          }
+        .wave span:nth-child(1) {
+          animation-delay: 0s;
+        }
 
-          .wave span:nth-child(2) {
-              animation-delay: 0.2s;
-          }
+        .wave span:nth-child(2) {
+          animation-delay: 0.2s;
+        }
 
-          .wave span:nth-child(3) {
-              animation-delay: 0.4s;
-          }
+        .wave span:nth-child(3) {
+          animation-delay: 0.4s;
+        }
 
-          @keyframes wave {
-              0%,
-              60%,
-              100% {
-                  transform: translateY(0);
-              }
-              30% {
-                  transform: translateY(-10px);
-              }
+        @keyframes wave {
+          0%,
+          60%,
+          100% {
+            transform: translateY(0);
           }
+          30% {
+            transform: translateY(-10px);
+          }
+        }
       `}</style>
     </div>
   );
