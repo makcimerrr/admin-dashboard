@@ -1,8 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getStudents } from '@/lib/db';
-import { Button } from '@/components/ui/button';
 import { StudentsTable } from '../students-table';
-import Update from '@/components/update';
 import promos from 'config/promoConfig.json' assert { type: 'json' };
 import ClientImport from '@/components/clien-import';
 import AddStudent from '@/components/add-student'; // Import tel quel du tableau
@@ -64,12 +62,6 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         <div className="ml-auto flex items-center gap-2">
           <ClientImport />
           <AddStudent />
-          {/* Conditionally passing eventId to Update component */}
-          {promo === '' ? (
-            <Update eventId="all" />
-          ) : (
-            <Update eventId={eventId} />
-          )}
         </div>
       </div>
 
@@ -82,6 +74,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           previousOffset={previousOffset}
           search={search}
           promo={promo}
+          eventId={"all"}
         />
       </TabsContent>
       {promos.map(({ key, title }) => (
@@ -94,6 +87,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             previousOffset={previousOffset}
             search={search}
             promo={key}
+            eventId={String(promos.find((p) => p.key === key)?.eventId)}
           />
         </TabsContent>
       ))}
