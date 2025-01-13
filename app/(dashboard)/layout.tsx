@@ -83,6 +83,10 @@ function DesktopNav() {
           <PanelLeft className="h-5 w-5" />
         </NavItem>
 
+        <NavItem href="/01deck" label="01Deck">
+          <Bookmark className="h-5 w-5" />
+        </NavItem>
+
         {/*En développement...*/}
         <NavItem href="#" label="Analytics">
           <LineChart className="h-5 w-5" />
@@ -132,32 +136,34 @@ function MobileNav() {
             Dashboard
           </Link>
           <Link
-            href="#"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            Orders
-          </Link>
-          <Link
-            href="/products"
-            className="flex items-center gap-4 px-2.5 text-foreground"
-          >
-            <Package className="h-5 w-5" />
-            Products
-          </Link>
-          <Link
-            href="/customers"
+            href="/students"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <Users2 className="h-5 w-5" />
-            Customers
+            Students
           </Link>
+          <Link
+            href="/config"
+            className="flex items-center gap-4 px-2.5 text-foreground"
+          >
+            <PanelLeft className="h-5 w-5" />
+            Configuration
+          </Link>
+          <Link
+            href="/01deck"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <Bookmark className="h-5 w-5" />
+            01Deck
+          </Link>
+
+          {/*En développement...*/}
           <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <LineChart className="h-5 w-5" />
-            Settings
+            Analytics
           </Link>
         </nav>
       </SheetContent>
