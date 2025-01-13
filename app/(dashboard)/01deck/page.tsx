@@ -43,14 +43,20 @@ const AdminScreen: React.FC = () => {
   });
 
   // Suivre l'état de l'authentification
+  const [isNotified, setIsNotified] = useState(false);
+
   useEffect(() => {
-    onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
+
+      if (currentUser && !isNotified) {
         toast.success(`Bienvenue, ${currentUser.displayName}!`);
+        setIsNotified(true); // Marque la notification comme affichée
       }
     });
-  }, [auth]);
+
+    return () => unsubscribe(); // Nettoyage à la fin
+  }, [auth, isNotified]);
 
   // Fonction pour se connecter avec Google
   const handleGoogleSignIn = async () => {
