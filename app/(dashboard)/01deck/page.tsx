@@ -108,6 +108,37 @@ const AdminScreen: React.FC = () => {
       return;
     }
 
+    // Vérification des champs requis
+    const isCardValid = () => {
+      if (!formData.name.trim()) return false;
+
+      switch (selectedType) {
+        case 'complement':
+          return formData.definition.trim() && formData.answer.trim();
+        case 'definition':
+          return formData.answer.trim() && formData.explanation.trim();
+        case 'graphique':
+          return (
+            formData.options.trim() &&
+            formData.correctOptionIndex &&
+            !isNaN(parseInt(formData.correctOptionIndex)) &&
+            formData.explanation.trim()
+          );
+        case 'trou':
+          return (
+            formData.sentence.trim() &&
+            formData.answers.trim()
+          );
+        default:
+          return false;
+      }
+    };
+
+    if (!isCardValid()) {
+      toast.error('Veuillez remplir tous les champs requis avant de soumettre.');
+      return;
+    }
+
     try {
       const cardId = formatCardId(nextId); // Format l'ID en "card_001", "card_002", ...
 
@@ -119,11 +150,13 @@ const AdminScreen: React.FC = () => {
         hints: formData.hints.split(',').map((hint) => hint.trim()),
         options: formData.options.split(';').map((option) => option.trim()),
         correctOptionIndex: parseInt(formData.correctOptionIndex) || null,
-        answers: formData.answers.split(',').map((answer) => answer.trim())
+        answers: formData.answers.split(',').map((answer) => answer.trim()),
       };
 
       await setDoc(doc(db, 'cards', cardId), cardData);
       toast.success('Carte créée avec succès ! 🎉');
+
+      // Réinitialisation du formulaire
       setFormData({
         name: '',
         definition: '',
@@ -134,7 +167,7 @@ const AdminScreen: React.FC = () => {
         explanation: '',
         imageUrl: '',
         sentence: '',
-        answers: ''
+        answers: '',
       });
       fetchNextId(); // Récupère l'ID suivant pour la prochaine carte
     } catch (error: any) {
