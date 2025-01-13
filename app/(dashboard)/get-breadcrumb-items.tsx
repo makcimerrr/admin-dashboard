@@ -21,6 +21,7 @@ export function DashboardBreadcrumb() {
     '/students': 'Students',
     '/settings': 'Settings',
     '/config': 'Configuration',
+    '/01deck': '01Deck',
   };
 
   // Divise le chemin en segments
