@@ -4,6 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 import LastUpdate from '@/components/last-update';
+import promotions from '../config/promoConfig.json';
+import promoStatus from '../config/promoStatus.json';
+import allProjects from '../config/projects.json';
 
 interface UpdateProps {
   eventId: string;
@@ -22,6 +25,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingDots, setLoadingDots] = useState<string>('.');
   const [lastUpdate, setLastUpdate] = useState<string | null>(null); // State pour la dernière mise à jour
+  const [allUpdate, setAllUpdate] = useState<string | null>(null);
+
   const [updates, setUpdates] = useState<
     { last_update: string; event_id: string }[]
   >([]);
@@ -126,6 +131,20 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const fetchPromotionProgress = async (eventId: string) => {
     setLoading(true);
     let currentStudentCount = 0; // Compteur pour les étudiants dans cette promo
+
+    // Trouver la promotion liée à l'eventId
+    const promotion = promotions.find(
+      (promo) => promo.eventId === Number(eventId)
+    );
+    if (!promotion) return;
+
+    const promotionTitle = promotion.key;
+    if (!promotionTitle || !(promotionTitle in promoStatus)) return;
+
+    // Projet lié à la promotion
+    const promoProject =
+      promoStatus[promotionTitle as keyof typeof promoStatus];
+
     try {
       const response = await fetch(
         `http://localhost:3010/promotion-progress/${eventId}`
@@ -161,6 +180,41 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           userProjects[login]
         );
 
+        let delayLevel = '';
+
+        try {
+          if (promoProject.toLowerCase() === "fin") {
+            if (activeProject.toLowerCase() === "spécialité") {
+              delayLevel = 'bien';
+            } else {
+              delayLevel = 'en retard';
+            }
+          } else if (activeProject.toLowerCase() == "spécialité") {
+            if (promoProject.toLowerCase() === "spécialité") {
+              delayLevel = 'bien';
+            } else if (promoProject.toLowerCase() === "fin") {
+              delayLevel = 'bien';
+            } else {
+              delayLevel = 'en avance';
+            }
+          } else {
+            // Logic normale pour calculer le delayLevel pour les projets autres que 'Fin'
+            const promoIndex = findProjectIndex(allProjects, promoProject); // Trouve l'indice du projet promo
+            const studentIndex = findProjectIndex(allProjects, activeProject); // Trouve l'indice du projet étudiant
+
+            if (studentIndex > promoIndex) {
+              delayLevel = 'en avance';
+            } else if (studentIndex < promoIndex) {
+              delayLevel = 'en retard';
+            } else {
+              delayLevel = 'bien';
+            }
+          }
+        } catch (err) {
+          console.error(`Erreur lors du calcul du delayLevel pour ${login}:`, err);
+          delayLevel = 'inconnu'; // En cas d'erreur, retourner "inconnu"
+        }
+
         if (shouldUpdate(login, activeProject, status)) {
           try {
             await fetch('/api/update_project', {
@@ -169,7 +223,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
               body: JSON.stringify({
                 login,
                 project_name: activeProject,
-                project_status: status
+                project_status: status,
+                delay_level: delayLevel // Valeur brut, a modifier
               })
             });
           } catch (error) {
@@ -186,6 +241,25 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     }
   };
 
+  const findProjectIndex = (
+    allProjects: any,
+    projectName: string
+  ): number => {
+    let globalIndex = 0; // Compteur global pour l'indice
+    for (const track in allProjects) {
+      const trackProjects = allProjects[track]; // Liste des projets dans une track
+      for (const project of trackProjects) {
+        if (project.name === projectName) {
+          return globalIndex; // Retourne l'indice global
+        }
+        globalIndex++; // Augmente l'indice pour chaque projet
+      }
+    }
+    throw new Error(
+      `Projet "${projectName}" introuvable dans la liste des projets.`
+    );
+  };
+
   const handleUpdate = async () => {
     setLoading(true); // Indique que le chargement commence
 
@@ -194,7 +268,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       if (!response.ok) {
         toast.error('Erreur lors de la mise à jour du status des promos.');
       }
-      // Si eventId est 'all', récupérer toutes les promotions
+
       await fetchProjets(); // Récupère les projets
 
       let promoIds = [eventId]; // Utilisation de eventId par défaut
@@ -262,16 +336,24 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       }
       const data = await response.json();
       // Filtrage des résultats pour trouver celui correspondant à l'eventId
-      const filteredUpdate = data.find((update: { event_id: string }) => update.event_id === eventId);
+      const filteredUpdate = data.find(
+        (update: { event_id: string }) => update.event_id === eventId
+      );
 
       if (filteredUpdate) {
         setLastUpdate(filteredUpdate.last_update); // Met à jour la dernière mise à jour trouvée
       }
+
+      const allUpdate = data.find(
+        (update: { event_id: string }) => update.event_id === 'all'
+      );
+
+      setAllUpdate(allUpdate.last_update);
     } catch (error) {
       toast.error('Impossible de récupérer les données de mise à jour.');
     }
   };
-  useEffect(() => {
+  /*useEffect(() => {
     async function fetchUpdates() {
       try {
         const response = await fetch('/api/last_update');
@@ -297,11 +379,11 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       }
     }
 
-    fetchUpdates().then(r => r);
-  }, [eventId]);
+    fetchUpdates().then((r) => r);
+  }, [eventId]);*/
 
   useEffect(() => {
-    refreshLastUpdate().then(r => r);
+    refreshLastUpdate().then((r) => r);
   }, [eventId]);
 
   return (
@@ -327,7 +409,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       </Button>
       {/* Affichage de la mise à jour à côté du bouton */}
       <div className="text-sm text-gray-600">
-        <LastUpdate lastUpdate={lastUpdate} eventId={eventId} />
+        <LastUpdate lastUpdate={lastUpdate} eventId={eventId} allUpdate={allUpdate} />
       </div>
       <style jsx>{`
         .loading-text {
