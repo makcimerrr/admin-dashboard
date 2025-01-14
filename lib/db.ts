@@ -163,7 +163,7 @@ export async function deleteStudentById(id: number) {
   // await db.delete(students).where(eq(students.id, id));
 }
 
-export async function updateStudentProject(login: string, project_name: string, project_status: string) {
+export async function updateStudentProject(login: string, project_name: string, project_status: string, delay_level: string) {
   // Get the student ID from the login
   const student = await db
     .select({ id: students.id })
@@ -185,7 +185,7 @@ export async function updateStudentProject(login: string, project_name: string, 
     .set({
       project_name,
       progress_status: project_status,
-      delay_level: 'en retard' // Example default value, can be customized
+      delay_level: delay_level
     })
     .where(eq(studentProjects.student_id, studentId));  // Removed .run()
 

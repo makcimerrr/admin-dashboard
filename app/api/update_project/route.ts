@@ -3,10 +3,10 @@ import { updateStudentProject } from '@/lib/db'; // Assuming this is where your 
 
 export async function POST(req: Request) {
   try {
-    const { login, project_name, project_status } = await req.json();
+    const { login, project_name, project_status, delay_level } = await req.json();
 
     // Call the function to update the project status
-    await updateStudentProject(login, project_name, project_status);
+    await updateStudentProject(login, project_name, project_status, delay_level);
 
     return NextResponse.json({ message: 'Project updated successfully' });
   } catch (error) {
