@@ -3,15 +3,17 @@ import React, { useEffect, useState } from 'react';
 interface LastUpdateProps {
   lastUpdate: string | null;
   eventId: string;
+  allUpdate?: string | null; // Prop pour la dernière mise à jour de la promo 'all'
 }
 
 const getTimeAgo = (time: string): string => {
   const now = new Date();
   const updatedTime = new Date(time);
 
-  // Corriger le décalage horaire si nécessaire
   const timeOffset = now.getTimezoneOffset() * 60 * 1000; // Décalage en millisecondes
-  const diff = Math.floor((now.getTime() - updatedTime.getTime() + timeOffset) / 1000); // Différence ajustée
+  const diff = Math.floor(
+    (now.getTime() - updatedTime.getTime() + timeOffset) / 1000
+  ); // Différence ajustée
 
   const minutes = Math.floor(diff / 60);
   const hours = Math.floor(diff / 3600);
@@ -23,39 +25,68 @@ const getTimeAgo = (time: string): string => {
   return `${diff} seconde${diff > 1 ? 's' : ''} ago`;
 };
 
-const LastUpdate = ({ lastUpdate, eventId }: LastUpdateProps) => {
+const LastUpdate = ({ lastUpdate, eventId, allUpdate }: LastUpdateProps) => {
   const [timeAgo, setTimeAgo] = useState<string | null>(null);
+  const [timeAgoAll, setTimeAgoAll] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!lastUpdate) return;
-
-    // Fonction pour recalculer le temps écoulé
-    const updateTimeAgo = () => {
+    if (lastUpdate) {
+      // Recalculer le temps écoulé pour la promo actuelle
       setTimeAgo(getTimeAgo(lastUpdate));
-    };
+    }
 
-    // Mettre à jour immédiatement
-    updateTimeAgo();
+    if (allUpdate) {
+      // Recalculer le temps écoulé pour la promo 'all'
+      setTimeAgoAll(getTimeAgo(allUpdate));
+    }
 
-    // Mettre à jour chaque seconde
-    const interval = setInterval(updateTimeAgo, 1000);
+    const interval = setInterval(() => {
+      if (lastUpdate) setTimeAgo(getTimeAgo(lastUpdate));
+      if (allUpdate) setTimeAgoAll(getTimeAgo(allUpdate));
+    }, 1000);
 
-    // Nettoyer l'intervalle à la destruction du composant
-    return () => clearInterval(interval);
-  }, [lastUpdate]);
+    return () => clearInterval(interval); // Nettoyer à la destruction du composant
+  }, [lastUpdate, allUpdate]);
+
+  const compareUpdates = () => {
+    if (lastUpdate && allUpdate) {
+      const lastUpdateTime = new Date(lastUpdate).getTime();
+      const allUpdateTime = new Date(allUpdate).getTime();
+      return lastUpdateTime > allUpdateTime ? 'lastUpdate' : 'allUpdate';
+    }
+    return lastUpdate ? 'lastUpdate' : allUpdate ? 'allUpdate' : null;
+  };
+
+  const updateType = compareUpdates();
 
   return (
     <div className="mt-2 text-sm text-gray-600">
-      {lastUpdate ? (
-        <p>
-          Dernière mise à jour pour la promo {eventId} : {timeAgo}
-        </p>
+      {eventId !== 'all' ? (
+        <>
+          {updateType === 'lastUpdate' ? (
+            <p>
+              Dernière mise à jour pour la promo {eventId} : {timeAgo}
+            </p>
+          ) : (
+            <>
+              {updateType === 'allUpdate' ? (
+                <p>
+                  Dernière mise à jour pour toutes les promos : {timeAgoAll}
+                </p>
+              ) : (
+                <p>Aucune mise à jour pour la promo {eventId}.</p>
+              )}
+            </>
+          )}
+        </>
       ) : (
-        eventId === 'all' ? (
-          <p>Aucune mise à jour pour toutes les promos.</p>
-        ) : (
-        <p>Aucune mise à jour pour la promo {eventId}.</p>
-        )
+        <>
+          {updateType === 'allUpdate' ? (
+            <p>Dernière mise à jour pour toutes les promos : {timeAgoAll}</p>
+          ) : (
+            <p>Aucune mise à jour pour toutes les promos.</p>
+          )}
+        </>
       )}
     </div>
   );
