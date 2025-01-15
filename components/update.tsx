@@ -147,7 +147,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
     try {
       const response = await fetch(
-        `http://localhost:3010/promotion-progress/${eventId}`
+        `https://api-01-edu.vercel.app/promotion-progress/${eventId}`
       );
       if (!response.ok) {
         throw new Error(
@@ -183,16 +183,16 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
         let delayLevel = '';
 
         try {
-          if (promoProject.toLowerCase() === "fin") {
-            if (activeProject.toLowerCase() === "spécialité") {
+          if (promoProject.toLowerCase() === 'fin') {
+            if (activeProject.toLowerCase() === 'spécialité') {
               delayLevel = 'bien';
             } else {
               delayLevel = 'en retard';
             }
-          } else if (activeProject.toLowerCase() == "spécialité") {
-            if (promoProject.toLowerCase() === "spécialité") {
+          } else if (activeProject.toLowerCase() == 'spécialité') {
+            if (promoProject.toLowerCase() === 'spécialité') {
               delayLevel = 'bien';
-            } else if (promoProject.toLowerCase() === "fin") {
+            } else if (promoProject.toLowerCase() === 'fin') {
               delayLevel = 'bien';
             } else {
               delayLevel = 'en avance';
@@ -211,7 +211,10 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
             }
           }
         } catch (err) {
-          console.error(`Erreur lors du calcul du delayLevel pour ${login}:`, err);
+          console.error(
+            `Erreur lors du calcul du delayLevel pour ${login}:`,
+            err
+          );
           delayLevel = 'inconnu'; // En cas d'erreur, retourner "inconnu"
         }
 
@@ -229,22 +232,19 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
             });
           } catch (error) {
             toast.error(`Erreur de mise à jour du projet pour ${login}.`);
+            throw error;
           }
         }
       }
     } catch (error) {
       toast.error(
-        `Impossible de récupérer les informations de progression pour la promotion avec l'id : ${eventId}.`
+        `Erreur lors de la récupération des données pour l'événement ${eventId}. Voici l'erreur: ${error}`
       );
-    } finally {
-      return currentStudentCount;
+      throw error;
     }
   };
 
-  const findProjectIndex = (
-    allProjects: any,
-    projectName: string
-  ): number => {
+  const findProjectIndex = (allProjects: any, projectName: string): number => {
     let globalIndex = 0; // Compteur global pour l'indice
     for (const track in allProjects) {
       const trackProjects = allProjects[track]; // Liste des projets dans une track
@@ -266,7 +266,9 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     try {
       const response = await fetch('/api/timeline_project');
       if (!response.ok) {
-        toast.error('Erreur lors de la mise à jour du status des promos.');
+        toast.error('Erreur lors de la mise à jour du statut des promos.');
+        setLoading(false);
+        return;
       }
 
       await fetchProjets(); // Récupère les projets
@@ -278,31 +280,41 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
         promoIds = await fetchPromotions(); // Récupère les IDs des promotions
       }
 
-      // Utiliser eventId ou les promoIds si plusieurs promotions
       const results = await Promise.allSettled(
-        promoIds.map(async (promoId) => {
-          try {
-            await fetchPromotionProgress(promoId);
-          } catch (error) {
-            toast.error(`Erreur de mise à jour pour la promo ${promoId}`);
-          }
-        })
+        promoIds.map((promoId) =>
+          fetchPromotionProgress(promoId).catch((error) => {
+            console.error(
+              `Erreur détectée dans handleUpdate pour la promotion ${promoId}:`,
+              error
+            );
+            throw error; // Propager l'erreur à Promise.allSettled
+          })
+        )
       );
 
-      results.forEach((result) => {
-        if (result.status === 'rejected') {
-          console.error(
-            'Une erreur est survenue lors de la mise à jour:',
-            result.reason
-          );
-          toast.error(
-            'Une erreur est survenue lors de la mise à jour:',
-            result.reason
-          );
-        }
-      });
+      // Analyse des résultats
+      const succeeded = results.filter((r) => r.status === 'fulfilled');
+      const failed = results.filter((r) => r.status === 'rejected');
 
-      // Créer l'update dans la base de données
+      if (failed.length > 0) {
+        toast.error(
+          `${failed.length} mise(s) à jour ont échoué. Veuillez vérifier.`
+        );
+      }
+
+      // Empêche de continuer si au moins une erreur a eu lieu
+      if (failed.length > 0) {
+        setLoading(false);
+        return; // Arrête l'exécution ici en cas d'erreurs
+      }
+
+      if (succeeded.length > 0) {
+        toast.success(
+          `${succeeded.length} mise(s) à jour ont été effectuées avec succès.`
+        );
+      }
+
+      // Créer l'update dans la base de données si tout s'est bien passé
       const updateMessage =
         eventId === 'all'
           ? 'Mise à jour de toutes les promotions.'
@@ -353,34 +365,6 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       toast.error('Impossible de récupérer les données de mise à jour.');
     }
   };
-  /*useEffect(() => {
-    async function fetchUpdates() {
-      try {
-        const response = await fetch('/api/last_update');
-        if (!response.ok) {
-          throw new Error('Impossible de récupérer les mises à jour');
-        }
-        const data = await response.json();
-        setUpdates(data); // Stocke toutes les mises à jour
-
-        // Filtrage des résultats pour trouver celui correspondant à l'eventId
-        const filteredUpdate = data.find(
-          (update: { event_id: string }) => update.event_id === eventId
-        );
-
-        if (filteredUpdate) {
-          setLastUpdate(filteredUpdate.last_update); // Met à jour la dernière mise à jour trouvée
-        }
-      } catch (error) {
-        toast.error(
-          'Impossible de récupérer les données de mise à jour via lAPI.'
-        );
-        console.error(error);
-      }
-    }
-
-    fetchUpdates().then((r) => r);
-  }, [eventId]);*/
 
   useEffect(() => {
     refreshLastUpdate().then((r) => r);
@@ -409,7 +393,11 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       </Button>
       {/* Affichage de la mise à jour à côté du bouton */}
       <div className="text-sm text-gray-600">
-        <LastUpdate lastUpdate={lastUpdate} eventId={eventId} allUpdate={allUpdate} />
+        <LastUpdate
+          lastUpdate={lastUpdate}
+          eventId={eventId}
+          allUpdate={allUpdate}
+        />
       </div>
       <style jsx>{`
         .loading-text {
@@ -456,5 +444,4 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     </div>
   );
 };
-
 export default PromotionProgress;
