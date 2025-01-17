@@ -448,10 +448,13 @@ const AdminScreen: React.FC = () => {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
               >
-                <option value="Gestion de Projet Agile">Gestion de Projet Agile</option>
+                <option value="Gestion de Projet Agile">
+                  Gestion de Projet Agile
+                </option>
                 <option value="Conception">Conception</option>
                 <option value="Maquettage">Maquettage</option>
                 <option value="Développement">Développement</option>
+                <option value="Versionning et Travail en Groupe">Versionning et Travail en Groupe</option>
               </select>
               <label className="text-gray-700">Nom de la carte</label>
               <input
