@@ -120,9 +120,9 @@ const AdminScreen: React.FC = () => {
 
       switch (selectedType) {
         case 'complement':
-          return formData.definition.trim() && formData.answer.trim();
+          return formData.definition.trim() && formData.answer.trim() && formData.hints.trim();
         case 'definition':
-          return formData.answer.trim() && formData.explanation.trim();
+          return formData.options.trim() && formData.explanation.trim() && !isNaN(parseInt(formData.correctOptionIndex));
         case 'graphique':
           return (
             formData.options.trim() &&
@@ -133,7 +133,8 @@ const AdminScreen: React.FC = () => {
         case 'trou':
           return (
             formData.sentence.trim() &&
-            formData.answers.trim()
+            formData.answers.trim() &&
+            formData.hints.trim()
           );
         default:
           return false;
@@ -336,7 +337,14 @@ const AdminScreen: React.FC = () => {
         {selectedType === 'definition' && (
           <div>
             <p className="text-sm text-gray-600">
-              <strong>Réponse:</strong> {formData.answer || 'Aucune réponse'}
+              <strong>Options:</strong>{' '}
+              {formData.options
+                ? formData.options.split(';').join(', ')
+                : 'Aucune option'}
+            </p>
+            <p className="text-sm text-gray-600">
+              <strong>Index de la bonne réponse:</strong>{' '}
+                {formData.correctOptionIndex || 'Pas de réponse spécifiée'}
             </p>
             <p className="text-sm text-gray-600">
               <strong>Explication:</strong>{' '}
@@ -364,7 +372,7 @@ const AdminScreen: React.FC = () => {
             </p>
             <p className="text-sm text-gray-600">
               <strong>Image:</strong>
-              { formData.imageUrl ? (
+              {formData.imageUrl ? (
                 <img
                   src={formData.imageUrl}
                   alt="Image de la carte"
