@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Trash } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export function StudentsTable({
   students,
@@ -60,7 +61,8 @@ export function StudentsTable({
   const [totalStudentsState, setTotalStudentsState] = useState(totalStudents);
   const [currentOffsetState, setCurrentOffsetState] = useState(currentOffset);
   const [newOffsetState, setNewOffsetState] = useState(newOffset);
-  const [previousOffsetState, setPreviousOffsetState] = useState(previousOffset);
+  const [previousOffsetState, setPreviousOffsetState] =
+    useState(previousOffset);
 
   const [isLoading, setIsLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState<{
@@ -178,15 +180,29 @@ export function StudentsTable({
   };
 
   const requestStatus = (status: string) => {
-
+    const query = new URLSearchParams(searchParams.toString());
     if (status === '') {
-      const query = new URLSearchParams(searchParams.toString());
       query.delete('status');
       router.push(`${pathname}?${query.toString()}`, { scroll: false });
       return;
+    } else if (status === query.get('status')) {
+      toast.error('Ce critère est déjà sélectionné !');
+      return;
     }
-    const query = new URLSearchParams(searchParams.toString());
     query.set('status', status);
+    router.push(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+  const requestDelayLevel = (delay_level: string) => {
+    const query = new URLSearchParams(searchParams.toString());
+    if (delay_level === '') {
+      query.delete('delay_level');
+      router.push(`${pathname}?${query.toString()}`, { scroll: false });
+      return;
+    } else if (delay_level === query.get('delay_level')) {
+      toast.error('Ce critère est déjà sélectionné !');
+      return;
+    }
+    query.set('delay_level', delay_level);
     router.push(`${pathname}?${query.toString()}`, { scroll: false });
   };
   const clearFilters = () => {
@@ -194,6 +210,7 @@ export function StudentsTable({
     query.delete('filter');
     query.delete('direction');
     query.delete('status');
+    query.delete('delay_level');
     router.push(`${pathname}?${query.toString()}`, { scroll: false });
   };
 
@@ -211,17 +228,90 @@ export function StudentsTable({
             <Update eventId={eventId} onUpdate={handleUpdate} />
           )}
         </div>
-        <div className="flex justify-end items-center">
+        <div className="flex justify-end space-x-4 items-center">
+          {/* Dropdown Menu for Select Status */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="btn">Select Status</DropdownMenuTrigger>
-            <DropdownMenuContent className="z-50">
-              <DropdownMenuItem onSelect={() => requestStatus("")}>All</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => requestStatus("audit")}>Audit</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => requestStatus("working")}>Working</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => requestStatus("without group")}>Without Group</DropdownMenuItem>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default" size="sm" className="text-white">
+                Select Status
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="z-50 bg-white rounded-md shadow-lg border border-gray-200 mt-2 w-44">
+              <DropdownMenuItem
+                onSelect={() => requestStatus('')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                All
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => requestStatus('audit')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                Audit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => requestStatus('working')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                Working
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => requestStatus('without group')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                Without Group
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={clearFilters} variant="ghost" size="sm">
+
+          {/* Dropdown Menu for Select Delay Level */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default" size="sm" className="text-white">
+                Select Delay Level
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="z-50 bg-white rounded-md shadow-lg border border-gray-200 mt-2 w-44">
+              <DropdownMenuItem
+                onSelect={() => requestDelayLevel('')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                All
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => requestDelayLevel('bien')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                Bien
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => requestDelayLevel('en retard')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                En Retard
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => requestDelayLevel('en avance')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                En Avance
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => requestDelayLevel('spécialité')}
+                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
+              >
+                Spécialité
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Clear Filters Button */}
+          <Button
+            onClick={clearFilters}
+            variant="ghost"
+            size="sm"
+            className="bg-transparent text-gray-600 hover:text-gray-800 border-none focus:outline-none"
+          >
             <Trash className="inline h-4 w-4" />
           </Button>
         </div>
@@ -360,7 +450,10 @@ export function StudentsTable({
             <strong>
               {currentOffsetState !== null ? currentOffsetState + 1 : 0}-
               {currentOffsetState !== null
-                ? Math.min(currentOffsetState + studentsPerPage, totalStudentsState)
+                ? Math.min(
+                    currentOffsetState + studentsPerPage,
+                    totalStudentsState
+                  )
                 : 0}
             </strong>{' '}
             of <strong>{totalStudentsState}</strong> students
