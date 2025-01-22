@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TableHead,
   TableRow,
@@ -27,6 +27,13 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Update from '@/components/update';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
+import { Trash } from 'lucide-react';
 
 export function StudentsTable({
   students,
@@ -50,7 +57,12 @@ export function StudentsTable({
   const router = useRouter();
   const studentsPerPage = 20;
   const [studentsList, setStudentsList] = useState<SelectStudent[]>(students);
-  const [isLoading, setIsLoading] = useState(false); // Pour gérer l'état de chargement
+  const [totalStudentsState, setTotalStudentsState] = useState(totalStudents);
+  const [currentOffsetState, setCurrentOffsetState] = useState(currentOffset);
+  const [newOffsetState, setNewOffsetState] = useState(newOffset);
+  const [previousOffsetState, setPreviousOffsetState] = useState(previousOffset);
+
+  const [isLoading, setIsLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState<{
     key: keyof SelectStudent | null;
     direction: 'asc' | 'desc';
@@ -62,7 +74,25 @@ export function StudentsTable({
     setStudentsList(students);
   }, [students]);
 
-  // Fetch students when URL changes
+  useEffect(() => {
+    const filter = searchParams.get('filter') as keyof SelectStudent | null;
+    const direction = searchParams.get('direction') as 'asc' | 'desc' | null;
+
+    if (filter && direction) {
+      setSortConfig({ key: filter, direction });
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const status = searchParams.get('status');
+    if (status) {
+      const selectElement = document.querySelector('select');
+      if (selectElement) {
+        selectElement.value = status;
+      }
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     const fetchFilteredStudents = async () => {
       setIsLoading(true);
@@ -73,6 +103,10 @@ export function StudentsTable({
         if (!response.ok) throw new Error('Failed to fetch students');
         const data = await response.json();
         setStudentsList(data.students);
+        setTotalStudentsState(data.totalStudents);
+        setCurrentOffsetState(data.currentOffset);
+        setNewOffsetState(data.newOffset);
+        setPreviousOffsetState(data.previousOffset);
       } catch (error) {
         console.error('Error fetching students:', error);
       } finally {
@@ -84,13 +118,13 @@ export function StudentsTable({
   }, [searchParams]);
 
   const handleUpdate = async () => {
-    setIsLoading(true); // Activer le chargement
+    setIsLoading(true);
     try {
       await fetchStudents();
     } catch (error) {
       console.error('Erreur lors de la mise à jour des étudiants:', error);
     } finally {
-      setIsLoading(false); // Désactiver le chargement même en cas d'erreur
+      setIsLoading(false);
     }
   };
 
@@ -108,7 +142,7 @@ export function StudentsTable({
       }
 
       const data = await response.json();
-      setStudentsList(data.students); // Mise à jour des étudiants
+      setStudentsList(data.students);
     } catch (error) {
       console.error('Erreur lors de la récupération des étudiants:', error);
     }
@@ -116,21 +150,20 @@ export function StudentsTable({
 
   const prevPage = () => {
     if (previousOffset !== null) {
-      const query = new URLSearchParams(searchParams.toString()); // Copier les paramètres existants
-      query.set('offset', String(previousOffset)); // Mettre à jour l'offset
+      const query = new URLSearchParams(searchParams.toString());
+      query.set('offset', String(previousOffset));
       router.push(`/students?${query.toString()}`, { scroll: false });
     }
   };
 
   const nextPage = () => {
     if (newOffset !== null) {
-      const query = new URLSearchParams(searchParams.toString()); // Copier les paramètres existants
-      query.set('offset', String(newOffset)); // Mettre à jour l'offset
+      const query = new URLSearchParams(searchParams.toString());
+      query.set('offset', String(newOffset));
       router.push(`/students?${query.toString()}`, { scroll: false });
     }
   };
 
-  // Update URL with sort
   const requestSort = (key: keyof SelectStudent) => {
     const direction =
       sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
@@ -141,6 +174,26 @@ export function StudentsTable({
     query.set('filter', key);
     query.set('direction', direction);
 
+    router.push(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+
+  const requestStatus = (status: string) => {
+
+    if (status === '') {
+      const query = new URLSearchParams(searchParams.toString());
+      query.delete('status');
+      router.push(`${pathname}?${query.toString()}`, { scroll: false });
+      return;
+    }
+    const query = new URLSearchParams(searchParams.toString());
+    query.set('status', status);
+    router.push(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+  const clearFilters = () => {
+    const query = new URLSearchParams(searchParams.toString());
+    query.delete('filter');
+    query.delete('direction');
+    query.delete('status');
     router.push(`${pathname}?${query.toString()}`, { scroll: false });
   };
 
@@ -157,6 +210,20 @@ export function StudentsTable({
           ) : (
             <Update eventId={eventId} onUpdate={handleUpdate} />
           )}
+        </div>
+        <div className="flex justify-end items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="btn">Select Status</DropdownMenuTrigger>
+            <DropdownMenuContent className="z-50">
+              <DropdownMenuItem onSelect={() => requestStatus("")}>All</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestStatus("audit")}>Audit</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestStatus("working")}>Working</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestStatus("without group")}>Without Group</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={clearFilters} variant="ghost" size="sm">
+            <Trash className="inline h-4 w-4" />
+          </Button>
         </div>
       </CardHeader>
 
@@ -291,12 +358,12 @@ export function StudentsTable({
           <div className="text-xs text-muted-foreground">
             Showing{' '}
             <strong>
-              {currentOffset !== null ? currentOffset + 1 : 0}-
-              {currentOffset !== null
-                ? Math.min(currentOffset + studentsPerPage, totalStudents)
+              {currentOffsetState !== null ? currentOffsetState + 1 : 0}-
+              {currentOffsetState !== null
+                ? Math.min(currentOffsetState + studentsPerPage, totalStudentsState)
                 : 0}
             </strong>{' '}
-            of <strong>{totalStudents}</strong> students
+            of <strong>{totalStudentsState}</strong> students
           </div>
 
           <div className="flex">
@@ -304,7 +371,7 @@ export function StudentsTable({
               onClick={prevPage}
               variant="ghost"
               size="sm"
-              disabled={previousOffset === null}
+              disabled={previousOffsetState === null}
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
               Prev
@@ -313,7 +380,7 @@ export function StudentsTable({
               onClick={nextPage}
               variant="ghost"
               size="sm"
-              disabled={newOffset === null}
+              disabled={newOffsetState === null}
             >
               Next
               <ChevronRight className="ml-2 h-4 w-4" />
