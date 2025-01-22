@@ -13,6 +13,7 @@ export async function GET(request: Request) {
     const filter = url.searchParams.get('filter') || ''; // Colonne à trier (par défaut '')
     const direction = url.searchParams.get('direction') || 'asc'; // Direction du tri (par défaut 'asc')
     const status = url.searchParams.get('status') || ''; // Statut (par défaut '')
+    const delayLevel = url.searchParams.get('delay_level') || ''; // Niveau de retard (par défaut '')
     // Appel à la fonction getStudents dans la base de données
     const {
       students,
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
       totalStudents,
       previousOffset,
       currentOffset
-    } = await getStudents(search, offsetNumber, promo, filter, direction, status);
+    } = await getStudents(search, offsetNumber, promo, filter, direction, status, delayLevel);
 
     // Envoi des résultats sous forme JSON
     return NextResponse.json({

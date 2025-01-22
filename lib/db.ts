@@ -56,7 +56,8 @@ export async function getStudents(
   promo: string,
   filter: string,
   direction: string,
-  status: string | null
+  status: string | null,
+  delayLevel: string | null
 ): Promise<{
   students: SelectStudent[];
   newOffset: number | null;
@@ -71,6 +72,7 @@ export async function getStudents(
 
   // Filtre par statut
   const statusFilter = status ? eq(studentProjects.progress_status, status) : null;
+  const delayLevelFilter = delayLevel ? eq(studentProjects.delay_level, delayLevel) : null;
 
   // Filtre de recherche
   let searchQuery = search ? `%${search}%` : null;
@@ -85,7 +87,7 @@ export async function getStudents(
     : null;
 
   // Combinaison des filtres (promo, recherche, status)
-  const filters = [promoFilter, searchFilter, statusFilter].filter((filter) => filter != null);
+  const filters = [promoFilter, searchFilter, statusFilter, delayLevelFilter].filter((filter) => filter != null);
   let finalFilter: SQL<unknown> | undefined = filters.length > 0 ? and(...filters) : undefined;
 
   const allowedFilters = [
