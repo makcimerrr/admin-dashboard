@@ -3,7 +3,7 @@ import 'server-only';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { pgTable, text, timestamp, pgEnum, serial, integer } from 'drizzle-orm/pg-core';
-import { count, eq, ilike, or, and, sql } from 'drizzle-orm';
+import { count, eq, ilike, or, and, sql, desc, asc } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
@@ -53,7 +53,9 @@ export const insertStudentSchema = createInsertSchema(students);
 export async function getStudents(
   search: string,
   offset: number,
-  promo: string
+  promo: string,
+  filter: string,
+  direction: string
 ): Promise<{
   students: SelectStudent[];
   newOffset: number | null;
@@ -63,60 +65,41 @@ export async function getStudents(
 }> {
   const studentsPerPage = 20; // Nombre d'étudiants par page
 
-  // Construire la condition pour le filtre de la promo
+  // Construire le filtre de promo
   let promoFilter = promo ? eq(students.promos, promo as 'P1 2022' | 'P1 2023' | 'P2 2023' | 'P1 2024') : null;
 
-  // Construire la condition pour la recherche par nom, login
+  // Construire le filtre de recherche
   let searchQuery = search ? `%${search}%` : null;
   let searchFilter = searchQuery
     ? or(
       ilike(students.login, searchQuery),
       ilike(students.first_name, searchQuery),
-      ilike(students.last_name, searchQuery)
+      ilike(students.last_name, searchQuery),
+      ilike(studentProjects.project_name, searchQuery),
+      ilike(studentProjects.progress_status, searchQuery)
     )
     : null;
 
-  // Si une promo et une recherche sont spécifiées, combiner les filtres
+  // Combiner promoFilter et searchFilter
   let finalFilter = promoFilter && searchFilter
     ? and(promoFilter, searchFilter)
-    : promoFilter || searchFilter; // Si l'un ou l'autre est null, utiliser l'autre
+    : promoFilter || searchFilter;
 
-  // Si aucun filtre n'est appliqué, on renvoie tous les étudiants avec pagination
-  if (!finalFilter) {
-    const totalStudents = await db.select({ count: count() }).from(students);
-    const moreStudents = await db
-      .select({
-        id: students.id,
-        last_name: students.last_name,
-        first_name: students.first_name,
-        login: students.login,
-        promos: students.promos,
-        availableAt: students.availableAt,
-        project_name: studentProjects.project_name,
-        progress_status: studentProjects.progress_status,
-        delay_level: studentProjects.delay_level,
-      })
-      .from(students)
-      .leftJoin(studentProjects, eq(students.id, studentProjects.student_id)) // Jointure avec student_projects
-      .limit(studentsPerPage)
-      .offset(offset);
+  // Liste des colonnes autorisées pour le tri
+  const allowedFilters = [
+    'last_name',
+    'first_name',
+    'login',
+    'promos',
+    'project_name',
+    'progress_status',
+    'delay_level',
+    'availableAt',
+  ];
+  const orderByColumn = allowedFilters.includes(filter) ? filter : null;
 
-    const newOffset =
-      moreStudents.length >= studentsPerPage ? offset + studentsPerPage : null;
-    const previousOffset =
-      offset >= studentsPerPage ? offset - studentsPerPage : null;
-
-    return {
-      students: moreStudents,
-      currentOffset: offset,
-      newOffset: newOffset,
-      previousOffset: previousOffset,
-      totalStudents: totalStudents[0].count
-    };
-  }
-
-  // Si un filtre est appliqué, faire la recherche avec pagination
-  const studentsResult = await db
+  // Requête principale
+  const studentsQuery = db
     .select({
       id: students.id,
       last_name: students.last_name,
@@ -129,32 +112,54 @@ export async function getStudents(
       delay_level: studentProjects.delay_level,
     })
     .from(students)
-    .leftJoin(studentProjects, eq(students.id, studentProjects.student_id)) // Jointure avec student_projects
-    .where(finalFilter)
-    .limit(studentsPerPage) // Limiter à 5 résultats par page
+    .leftJoin(studentProjects, eq(students.id, studentProjects.student_id));
+
+  // Ajouter les filtres
+  if (finalFilter) {
+    studentsQuery.where(finalFilter);
+  }
+
+  // Ajouter le tri si applicable
+  if (orderByColumn) {
+    const columnToOrder =
+      orderByColumn in students
+        ? (students as any)[orderByColumn]
+        : (studentProjects as any)[orderByColumn];
+
+    if (columnToOrder) {
+      studentsQuery.orderBy(
+        direction === 'desc' ? desc(columnToOrder) : asc(columnToOrder)
+      );
+    }
+  }
+
+  // Exécuter la requête paginée
+  const studentsResult = await studentsQuery
+    .limit(studentsPerPage)
     .offset(offset);
 
-  const totalStudents = await db
-    .select({ count: count() })
-    .from(students)
-    .where(finalFilter);
+  // Compter le total avec les filtres
+  const totalQuery = db.select({ count: count() }).from(students);
 
-  // Calculer le nouveau offset pour la prochaine page
+  // Ajouter le filtre si nécessaire pour compter les étudiants
+  if (finalFilter) {
+    totalQuery.where(finalFilter);
+  }
+
+  const totalStudents = await totalQuery;
+
+  // Calculer les nouveaux offsets pour la pagination
   const newOffset =
-    studentsResult.length >= studentsPerPage
-      ? offset + studentsPerPage
-      : null;
-
-  // Calculer l'offset précédent
+    studentsResult.length >= studentsPerPage ? offset + studentsPerPage : null;
   const previousOffset =
     offset >= studentsPerPage ? offset - studentsPerPage : null;
 
   return {
     students: studentsResult,
+    currentOffset: offset,
     newOffset,
     previousOffset,
-    currentOffset: offset,
-    totalStudents: totalStudents[0].count
+    totalStudents: totalStudents[0].count,
   };
 }
 

@@ -7,12 +7,19 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
 
     // Extraire les paramètres depuis l'URL
-    const search = url.searchParams.get('q') || '';  // Valeur par défaut: ''
-    const offsetNumber = parseInt(url.searchParams.get('offset') || '0', 10);  // Valeur par défaut: 0
-    const promo = url.searchParams.get('promo') || '';  // Valeur par défaut: ''
-
+    const search = url.searchParams.get('q') || ''; // Rechercher par mot-clé (par défaut '')
+    const offsetNumber = parseInt(url.searchParams.get('offset') || '0', 10); // Pagination (par défaut 0)
+    const promo = url.searchParams.get('promo') || ''; // Promo (par défaut '')
+    const filter = url.searchParams.get('filter') || ''; // Colonne à trier (par défaut '')
+    const direction = url.searchParams.get('direction') || 'asc'; // Direction du tri (par défaut 'asc')
     // Appel à la fonction getStudents dans la base de données
-    const { students, newOffset, totalStudents, previousOffset, currentOffset } = await getStudents(search, offsetNumber, promo);
+    const {
+      students,
+      newOffset,
+      totalStudents,
+      previousOffset,
+      currentOffset
+    } = await getStudents(search, offsetNumber, promo, filter, direction);
 
     // Envoi des résultats sous forme JSON
     return NextResponse.json({
@@ -24,6 +31,10 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     // Gestion des erreurs éventuelles
-    return NextResponse.json({ message: 'Error retrieving students', error: error }, { status: 500 });
+    console.error('Error retrieving students:', error);
+    return NextResponse.json(
+      { message: 'Error retrieving students', error: error },
+      { status: 500 }
+    );
   }
 }
