@@ -30,7 +30,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
   // Appel au backend pour récupérer les données des étudiants
   const { students, newOffset, totalStudents, previousOffset, currentOffset } =
-    await getStudents(search, offsetNumber, promo);
+    await getStudents(search, offsetNumber, promo, '', '', null);
 
   return (
     <Tabs value={promo || 'all'}>

@@ -3,7 +3,7 @@ import 'server-only';
 import { neon } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-http';
 import { pgTable, text, timestamp, pgEnum, serial, integer } from 'drizzle-orm/pg-core';
-import { count, eq, ilike, or, and, sql, desc, asc } from 'drizzle-orm';
+import { count, eq, ilike, or, and, sql, desc, asc, SQLWrapper, SQL } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
@@ -55,7 +55,8 @@ export async function getStudents(
   offset: number,
   promo: string,
   filter: string,
-  direction: string
+  direction: string,
+  status: string | null
 ): Promise<{
   students: SelectStudent[];
   newOffset: number | null;
@@ -63,12 +64,15 @@ export async function getStudents(
   previousOffset: number | null;
   totalStudents: number;
 }> {
-  const studentsPerPage = 20; // Nombre d'étudiants par page
+  const studentsPerPage = 20;
 
-  // Construire le filtre de promo
+  // Filtrage par promo
   let promoFilter = promo ? eq(students.promos, promo as 'P1 2022' | 'P1 2023' | 'P2 2023' | 'P1 2024') : null;
 
-  // Construire le filtre de recherche
+  // Filtre par statut
+  const statusFilter = status ? eq(studentProjects.progress_status, status) : null;
+
+  // Filtre de recherche
   let searchQuery = search ? `%${search}%` : null;
   let searchFilter = searchQuery
     ? or(
@@ -80,12 +84,10 @@ export async function getStudents(
     )
     : null;
 
-  // Combiner promoFilter et searchFilter
-  let finalFilter = promoFilter && searchFilter
-    ? and(promoFilter, searchFilter)
-    : promoFilter || searchFilter;
+  // Combinaison des filtres (promo, recherche, status)
+  const filters = [promoFilter, searchFilter, statusFilter].filter((filter) => filter != null);
+  let finalFilter: SQL<unknown> | undefined = filters.length > 0 ? and(...filters) : undefined;
 
-  // Liste des colonnes autorisées pour le tri
   const allowedFilters = [
     'last_name',
     'first_name',
@@ -98,7 +100,7 @@ export async function getStudents(
   ];
   const orderByColumn = allowedFilters.includes(filter) ? filter : null;
 
-  // Requête principale
+  // Requête pour récupérer les étudiants avec les filtres et la jointure
   const studentsQuery = db
     .select({
       id: students.id,
@@ -114,12 +116,12 @@ export async function getStudents(
     .from(students)
     .leftJoin(studentProjects, eq(students.id, studentProjects.student_id));
 
-  // Ajouter les filtres
+  // Appliquer les filtres sur la liste des étudiants
   if (finalFilter) {
     studentsQuery.where(finalFilter);
   }
 
-  // Ajouter le tri si applicable
+  // Appliquer le tri, si spécifié
   if (orderByColumn) {
     const columnToOrder =
       orderByColumn in students
@@ -133,15 +135,18 @@ export async function getStudents(
     }
   }
 
-  // Exécuter la requête paginée
+  // Récupérer les résultats paginés
   const studentsResult = await studentsQuery
     .limit(studentsPerPage)
     .offset(offset);
 
-  // Compter le total avec les filtres
-  const totalQuery = db.select({ count: count() }).from(students);
+  // Requête de comptage des étudiants avec les mêmes filtres appliqués
+  const totalQuery = db
+    .select({ count: count() })
+    .from(students)
+    .leftJoin(studentProjects, eq(students.id, studentProjects.student_id));
 
-  // Ajouter le filtre si nécessaire pour compter les étudiants
+  // Ajouter le même filtre que pour la récupération des étudiants
   if (finalFilter) {
     totalQuery.where(finalFilter);
   }
