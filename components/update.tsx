@@ -109,7 +109,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
     // Vérification si le dernier projet de la liste est celui de l'étudiant et qu'il est "finished"
     if (lastFinishedProject === projectsList[projectsList.length - 1]) {
-      return { activeProject: lastFinishedProject, status: 'spécialité' };
+      return { activeProject: lastFinishedProject, status: 'finished', delay_level: 'spécialité' };
     }
 
     return { activeProject: activeProject || 'Spécialité', status };
