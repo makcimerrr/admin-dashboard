@@ -67,7 +67,7 @@ export function StudentsTable({
   const [isLoading, setIsLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState<{
     key: keyof SelectStudent | null;
-    direction: 'asc' | 'desc';
+    direction: 'asc' | 'desc' | null;
   }>({ key: null, direction: 'asc' });
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -212,6 +212,7 @@ export function StudentsTable({
     query.delete('status');
     query.delete('delay_level');
     router.push(`${pathname}?${query.toString()}`, { scroll: false });
+    setSortConfig({ key: null, direction: null });
   };
 
   return (
