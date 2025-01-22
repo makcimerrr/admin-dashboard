@@ -109,7 +109,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
     // Vérification si le dernier projet de la liste est celui de l'étudiant et qu'il est "finished"
     if (lastFinishedProject === projectsList[projectsList.length - 1]) {
-      return { activeProject: lastFinishedProject, status: 'finished', delay_level: 'spécialité' };
+      return { activeProject: lastFinishedProject, status: 'finished'};
     }
 
     return { activeProject: activeProject || 'Spécialité', status };
@@ -188,6 +188,9 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
         let delayLevel = '';
 
         try {
+          if (activeProject.toLowerCase() === projectsList[projectsList.length - 1].toLowerCase() && status === 'finished') {
+           delayLevel = 'spécialité';
+          }
           if (promoProject.toLowerCase() === 'fin') {
             if (activeProject.toLowerCase() === 'spécialité') {
               delayLevel = 'bien';
