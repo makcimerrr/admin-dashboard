@@ -72,7 +72,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   //const promoEventIds = ['32', '148', '216', '303'];
   const cache = new Map<
     string,
-    { lastActiveProject: string; status: string }
+    { lastActiveProject: string; status: string; delayLevel: string }
   >();
 
   // Animation des trois petits points
@@ -107,6 +107,11 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       }
     }
 
+    // Vérification si le dernier projet de la liste est celui de l'étudiant et qu'il est "finished"
+    if (lastFinishedProject === projectsList[projectsList.length - 1]) {
+      return { activeProject: lastFinishedProject, status: 'finished' };
+    }
+
     return { activeProject: activeProject || 'Spécialité', status };
   };
 
@@ -114,17 +119,23 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const shouldUpdate = (
     login: string,
     currentActiveProject: string,
-    status: string
+    status: string,
+    delayLevel: string
   ) => {
     const cached = cache.get(login);
     if (
       cached &&
       cached.lastActiveProject === currentActiveProject &&
-      cached.status === status
+      cached.status === status &&
+      cached.delayLevel === delayLevel
     ) {
       return false;
     }
-    cache.set(login, { lastActiveProject: currentActiveProject, status });
+    cache.set(login, {
+      lastActiveProject: currentActiveProject,
+      status,
+      delayLevel
+    });
     return true;
   };
 
@@ -184,18 +195,11 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
         try {
           if (promoProject.toLowerCase() === 'fin') {
-            if (activeProject.toLowerCase() === 'spécialité') {
-              delayLevel = 'bien';
+            if (activeProject.toLowerCase() === projectsList[projectsList.length - 1].toLowerCase() &&
+              status === 'finished') {
+              delayLevel = 'spécialité';
             } else {
               delayLevel = 'en retard';
-            }
-          } else if (activeProject.toLowerCase() == 'spécialité') {
-            if (promoProject.toLowerCase() === 'spécialité') {
-              delayLevel = 'bien';
-            } else if (promoProject.toLowerCase() === 'fin') {
-              delayLevel = 'bien';
-            } else {
-              delayLevel = 'en avance';
             }
           } else {
             // Logic normale pour calculer le delayLevel pour les projets autres que 'Fin'
@@ -210,6 +214,13 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
               delayLevel = 'bien';
             }
           }
+          if (
+            activeProject.toLowerCase() ===
+              projectsList[projectsList.length - 1].toLowerCase() &&
+            status === 'finished'
+          ) {
+            delayLevel = 'spécialité';
+          }
         } catch (err) {
           console.error(
             `Erreur lors du calcul du delayLevel pour ${login}:`,
@@ -217,8 +228,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           );
           delayLevel = 'inconnu'; // En cas d'erreur, retourner "inconnu"
         }
-
-        if (shouldUpdate(login, activeProject, status)) {
+        if (shouldUpdate(login, activeProject, status, delayLevel)) {
           try {
             await fetch('/api/update_project', {
               method: 'POST',
