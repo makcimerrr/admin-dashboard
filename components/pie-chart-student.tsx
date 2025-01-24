@@ -25,55 +25,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-const desktopData = [
-  { month: "january", desktop: 186, fill: "var(--color-january)" },
-  { month: "february", desktop: 305, fill: "var(--color-february)" },
-  { month: "march", desktop: 237, fill: "var(--color-march)" },
-  { month: "april", desktop: 173, fill: "var(--color-april)" },
-  { month: "may", desktop: 209, fill: "var(--color-may)" },
+
+const delayLevelData = [
+  { level: "bien", count: 186, fill: "var(--color-bien)" },
+  { level: "retard", count: 305, fill: "var(--color-retard)" },
+  { level: "avance", count: 237, fill: "var(--color-avance)" },
+  { level: "spécialité", count: 173, fill: "var(--color-spécialité)" },
 ]
 
 const chartConfig = {
-  visitors: {
-    label: "Visitors",
-  },
-  desktop: {
-    label: "Desktop",
-  },
-  mobile: {
-    label: "Mobile",
-  },
-  january: {
-    label: "January",
+  bien: {
+    label: "Bien",
     color: "hsl(var(--chart-1))",
   },
-  february: {
-    label: "February",
+  retard: {
+    label: "En Retard",
     color: "hsl(var(--chart-2))",
   },
-  march: {
-    label: "March",
+  avance: {
+    label: "En Avance",
     color: "hsl(var(--chart-3))",
   },
-  april: {
-    label: "April",
+  spécialité: {
+    label: "Spécialité",
     color: "hsl(var(--chart-4))",
-  },
-  may: {
-    label: "May",
-    color: "hsl(var(--chart-5))",
   },
 } satisfies ChartConfig
 
 export function Component() {
   const id = "pie-interactive"
-  const [activeMonth, setActiveMonth] = React.useState(desktopData[0].month)
+  const [activeLevel, setActiveLevel] = React.useState(delayLevelData[0].level)
 
   const activeIndex = React.useMemo(
-    () => desktopData.findIndex((item) => item.month === activeMonth),
-    [activeMonth]
+    () => delayLevelData.findIndex((item) => item.level === activeLevel),
+    [activeLevel]
   )
-  const months = React.useMemo(() => desktopData.map((item) => item.month), [])
+  const levels = React.useMemo(() => delayLevelData.map((item) => item.level), [])
 
   return (
     <Card data-chart={id} className="flex flex-col">
@@ -81,17 +68,17 @@ export function Component() {
       <CardHeader className="flex-row items-start space-y-0 pb-0">
         <div className="grid gap-1">
           <CardTitle>Pie Chart - Interactive</CardTitle>
-          <CardDescription>January - June 2024</CardDescription>
+          <CardDescription>Delay Levels</CardDescription>
         </div>
-        <Select value={activeMonth} onValueChange={setActiveMonth}>
+        <Select value={activeLevel} onValueChange={setActiveLevel}>
           <SelectTrigger
             className="ml-auto h-7 w-[130px] rounded-lg pl-2.5"
             aria-label="Select a value"
           >
-            <SelectValue placeholder="Select month" />
+            <SelectValue placeholder="Select level" />
           </SelectTrigger>
           <SelectContent align="end" className="rounded-xl">
-            {months.map((key) => {
+            {levels.map((key) => {
               const config = chartConfig[key as keyof typeof chartConfig]
 
               if (!config) {
@@ -131,9 +118,9 @@ export function Component() {
               content={<ChartTooltipContent hideLabel />}
             />
             <Pie
-              data={desktopData}
-              dataKey="desktop"
-              nameKey="month"
+              data={delayLevelData}
+              dataKey="count"
+              nameKey="level"
               innerRadius={60}
               strokeWidth={5}
               activeIndex={activeIndex}
@@ -166,14 +153,14 @@ export function Component() {
                           y={viewBox.cy}
                           className="fill-foreground text-3xl font-bold"
                         >
-                          {desktopData[activeIndex].desktop.toLocaleString()}
+                          {delayLevelData[activeIndex].count.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground"
                         >
-                          Visitors
+                          Students
                         </tspan>
                       </text>
                     )
