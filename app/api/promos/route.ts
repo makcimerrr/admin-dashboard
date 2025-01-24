@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { addPromotion } from '@/lib/db';
 
 const promoFilePath = path.join(process.cwd(), 'config', 'promoConfig.json');
 
@@ -107,6 +108,16 @@ export async function POST(req: Request) {
     if (errorMessages.length > 0) {
       return NextResponse.json(
         { error: errorMessages.join(' ') },
+        { status: 400 }
+      );
+    }
+
+    // Ajout de la promotion après validation dans la base de données
+    const dbResult = await addPromotion(eventId, key);
+
+    if (dbResult.includes('existe déjà')) {
+      return NextResponse.json(
+        { error: `Une promotion avec cet ID ou ce titre existe déjà dans la base de données.` },
         { status: 400 }
       );
     }
