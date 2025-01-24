@@ -88,7 +88,7 @@ function DesktopNav() {
         </NavItem>
 
         {/*En développement...*/}
-        <NavItem href="#" label="Analytics">
+        <NavItem href="/analytics" label="Analytics">
           <LineChart className="h-5 w-5" />
         </NavItem>
       </nav>
