@@ -38,7 +38,7 @@ export const promotions = pgTable('promotions', {
   name: text('name').unique().notNull() // Nom unique de la promo (clé utilisée dans la référence)
 });
 
-export const delayStatus = pgTable('delay_status', {
+export const delayStatus = pgTable('delays_status', {
   id: serial('id').primaryKey(), // Clé primaire auto-incrémentée
   promoId: text('promo_id')
     .notNull()
@@ -171,17 +171,7 @@ export async function getStudents(
   const studentsPerPage = 20;
 
   // Filtrage par promo
-  // Recherche de la promo dans la table promotions
-  const promoExists = await db
-    .select()
-    .from(promotions)
-    .where(eq(promotions.name, promo))
-    .limit(1)
-    .execute();
-
-  // Si la promo existe, effectuer la vérification sur la table students
-  let promoFilter =
-    promoExists.length > 0 ? eq(students.promoName, promo) : null;
+  let promoFilter = promo ? eq(students.promoName, promo) : null;
 
   // Filtre par statut
   const statusFilter = status
@@ -283,6 +273,157 @@ export async function getStudents(
     studentsResult.length >= studentsPerPage ? offset + studentsPerPage : null;
   const previousOffset =
     offset >= studentsPerPage ? offset - studentsPerPage : null;
+
+  // Mise à jour ou insertion dans delay_status pour chaque promo si promo est vide
+  if (!promo) {
+    // Récupérer toutes les promotions
+    const allPromos = await db.select().from(promotions);
+
+    for (const promo of allPromos) {
+      const promoId = promo.promoId;
+      const promoFilter = eq(students.promoName, promo.name);
+
+      // Vérifier si une mise à jour récente existe
+      const lastUpdateRecord = await db
+        .select({ lastUpdate: delayStatus.lastUpdate })
+        .from(delayStatus)
+        .where(eq(delayStatus.promoId, promoId))
+        .orderBy(desc(delayStatus.lastUpdate))
+        .limit(1)
+        .execute();
+
+      const lastUpdate = lastUpdateRecord[0]?.lastUpdate || null;
+
+      // Vérifier si une mise à jour a déjà été effectuée dans les 24 dernières heures
+      if (
+        lastUpdate &&
+        new Date().getTime() - new Date(lastUpdate).getTime() <
+          24 * 60 * 60 * 1000
+      ) {
+        continue; // Passer à la prochaine promotion
+      }
+
+      // Obtenir les comptages groupés par `delay_level`
+      const delayCounts = await db
+        .select({
+          delay_level: studentProjects.delay_level,
+          count: count()
+        })
+        .from(students)
+        .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
+        .where(promoFilter)
+        .groupBy(studentProjects.delay_level)
+        .execute();
+
+      // Construire les valeurs de comptage
+      const countsMap = delayCounts.reduce(
+        (acc, row) => {
+          if (row.delay_level === 'bien') acc.goodLateCount = row.count;
+          else if (row.delay_level === 'en retard') acc.lateCount = row.count;
+          else if (row.delay_level === 'en avance')
+            acc.advanceLateCount = row.count;
+          else if (row.delay_level === 'spécialité')
+            acc.specialityCount = row.count;
+          return acc;
+        },
+        {
+          goodLateCount: 0,
+          lateCount: 0,
+          advanceLateCount: 0,
+          specialityCount: 0
+        }
+      );
+
+      // Insérer ou mettre à jour les données dans delayStatus
+      await db.insert(delayStatus).values({
+        promoId,
+        lateCount: countsMap.lateCount,
+        goodLateCount: countsMap.goodLateCount,
+        advanceLateCount: countsMap.advanceLateCount,
+        specialityCount: countsMap.specialityCount,
+        lastUpdate: new Date()
+      });
+    }
+  } else {
+    // Nouvelle logique pour une promotion spécifique
+    const promoFilter = eq(students.promoName, promo);
+
+    // Récupérer l'ID de la promo
+    const promoRecord = await db
+      .select({ promoId: promotions.promoId })
+      .from(promotions)
+      .where(eq(promotions.name, promo))
+      .limit(1)
+      .execute();
+
+    if (promoRecord.length === 0) {
+      console.error(`Promotion "${promo}" non trouvée.`);
+    } else {
+      const promoId = promoRecord[0].promoId;
+
+      // Vérifier la dernière mise à jour pour la promo
+      const lastUpdateRecord = await db
+        .select({ lastUpdate: delayStatus.lastUpdate })
+        .from(delayStatus)
+        .where(eq(delayStatus.promoId, promoId))
+        .orderBy(desc(delayStatus.lastUpdate))
+        .limit(1)
+        .execute();
+
+      const lastUpdate = lastUpdateRecord[0]?.lastUpdate || null;
+
+      // Continuer seulement si aucune mise à jour récente n'existe
+      if (
+        lastUpdate &&
+        new Date().getTime() - new Date(lastUpdate).getTime() <
+          24 * 60 * 60 * 1000
+      ) {
+        console.log(`Mise à jour ignorée pour la promo ${promo}.`);
+      } else {
+        const delayCounts = await db
+          .select({
+            delay_level: studentProjects.delay_level,
+            count: count()
+          })
+          .from(students)
+          .leftJoin(
+            studentProjects,
+            eq(students.id, studentProjects.student_id)
+          )
+          .where(promoFilter)
+          .groupBy(studentProjects.delay_level)
+          .execute();
+
+        const countsMap = delayCounts.reduce(
+          (acc, row) => {
+            if (row.delay_level === 'bien') acc.goodLateCount = row.count;
+            else if (row.delay_level === 'en retard') acc.lateCount = row.count;
+            else if (row.delay_level === 'en avance')
+              acc.advanceLateCount = row.count;
+            else if (row.delay_level === 'spécialité')
+              acc.specialityCount = row.count;
+            return acc;
+          },
+          {
+            goodLateCount: 0,
+            lateCount: 0,
+            advanceLateCount: 0,
+            specialityCount: 0
+          }
+        );
+
+        // Insérer les données dans delayStatus
+        await db.insert(delayStatus).values({
+          promoId,
+          lateCount: countsMap.lateCount,
+          goodLateCount: countsMap.goodLateCount,
+          advanceLateCount: countsMap.advanceLateCount,
+          specialityCount: countsMap.specialityCount,
+          lastUpdate: new Date()
+        });
+      }
+    }
+  }
 
   return {
     students: studentsResult,
