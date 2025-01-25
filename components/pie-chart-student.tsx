@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { use, useEffect } from 'react';
 
 interface DelayData {
   level: string;
@@ -42,11 +43,13 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
   const id = 'pie-interactive';
   const [activeLevel, setActiveLevel] = React.useState<string | null>(null);
   const [delayLevelData, setDelayLevelData] = React.useState<DelayData[]>([]);
-  const [chartConfig, setChartConfig] = React.useState<ChartConfig | null>(null);
+  const [chartConfig, setChartConfig] = React.useState<ChartConfig | null>(
+    null
+  );
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const fetchData = React.useCallback(async () => {
+  async function fetchData() {
     try {
       setLoading(true);
       setError(null);
@@ -69,12 +72,25 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
       const data: DelayData[] = [
         { level: 'bien', count: goodLateCount, fill: 'var(--color-bien)' },
         { level: 'retard', count: lateCount, fill: 'var(--color-retard)' },
-        { level: 'avance', count: advanceLateCount, fill: 'var(--color-avance)' },
-        { level: 'spécialité', count: specialityCount, fill: 'var(--color-spécialité)' }
+        {
+          level: 'avance',
+          count: advanceLateCount,
+          fill: 'var(--color-avance)'
+        },
+        {
+          level: 'spécialité',
+          count: specialityCount,
+          fill: 'var(--color-spécialité)'
+        }
       ];
 
       setDelayLevelData(data);
-      setActiveLevel(data[0]?.level || null);
+
+      const highestLevel = data.reduce((prev, current) => {
+        return prev.count > current.count ? prev : current;
+      }, data[0]);
+
+      setActiveLevel(highestLevel.level);
 
       const chartConfig = {
         bien: {
@@ -93,19 +109,23 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
           label: 'Spécialité',
           color: 'hsl(var(--chart-4))'
         }
-      };
+      } satisfies ChartConfig;
 
       setChartConfig(chartConfig);
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Une erreur est survenue');
+      setError(
+        error instanceof Error ? error.message : 'Une erreur est survenue'
+      );
     } finally {
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false);
+      }, 1000);
     }
-  }, [keyPromo]);
+  }
 
-  React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => {
+    fetchData().then(r => r);
+  }, []);
 
   const activeIndex = React.useMemo(
     () => delayLevelData.findIndex((item) => item.level === activeLevel),
@@ -213,9 +233,9 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
               strokeWidth={5}
               activeIndex={activeIndex}
               activeShape={({
-                              outerRadius = 0,
-                              ...props
-                            }: PieSectorDataItem) => (
+                outerRadius = 0,
+                ...props
+              }: PieSectorDataItem) => (
                 <g>
                   <Sector {...props} outerRadius={outerRadius + 10} />
                   <Sector
