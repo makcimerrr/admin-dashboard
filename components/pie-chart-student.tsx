@@ -1,76 +1,160 @@
-"use client"
+'use client';
 
-import * as React from "react"
-import { Label, Pie, PieChart, Sector } from "recharts"
-import { PieSectorDataItem } from "recharts/types/polar/Pie"
+import * as React from 'react';
+import { Label, Pie, PieChart, Sector } from 'recharts';
+import { PieSectorDataItem } from 'recharts/types/polar/Pie';
 
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+  CardTitle
+} from '@/components/ui/card';
 import {
   ChartConfig,
   ChartContainer,
   ChartStyle,
   ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
+  ChartTooltipContent
+} from '@/components/ui/chart';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  SelectValue
+} from '@/components/ui/select';
 
-const delayLevelData = [
-  { level: "bien", count: 186, fill: "var(--color-bien)" },
-  { level: "retard", count: 305, fill: "var(--color-retard)" },
-  { level: "avance", count: 237, fill: "var(--color-avance)" },
-  { level: "spécialité", count: 173, fill: "var(--color-spécialité)" },
-]
+interface DelayData {
+  level: string;
+  count: number;
+  fill: string;
+}
 
-const chartConfig = {
-  bien: {
-    label: "Bien",
-    color: "hsl(var(--chart-1))",
-  },
-  retard: {
-    label: "En Retard",
-    color: "hsl(var(--chart-2))",
-  },
-  avance: {
-    label: "En Avance",
-    color: "hsl(var(--chart-3))",
-  },
-  spécialité: {
-    label: "Spécialité",
-    color: "hsl(var(--chart-4))",
-  },
-} satisfies ChartConfig
+interface PieChartProps {
+  title?: string;
+  keyPromo?: string;
+  eventID?: number;
+}
 
-export function Component() {
-  const id = "pie-interactive"
-  const [activeLevel, setActiveLevel] = React.useState(delayLevelData[0].level)
+export function Component({ title, eventID, keyPromo }: PieChartProps) {
+  const id = 'pie-interactive';
+  const [activeLevel, setActiveLevel] = React.useState<string | null>(null);
+  const [delayLevelData, setDelayLevelData] = React.useState<DelayData[]>([]);
+  const [chartConfig, setChartConfig] = React.useState<ChartConfig | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const fetchData = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`/api/delay-status?promoId=${eventID}`);
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des données');
+      }
+      const { lateCount, goodLateCount, advanceLateCount, specialityCount } =
+        await response.json();
+
+      if (
+        lateCount === undefined ||
+        goodLateCount === undefined ||
+        advanceLateCount === undefined ||
+        specialityCount === undefined
+      ) {
+        throw new Error('Les données sont incomplètes ou absentes.');
+      }
+
+      const data: DelayData[] = [
+        { level: 'bien', count: goodLateCount, fill: 'var(--color-bien)' },
+        { level: 'retard', count: lateCount, fill: 'var(--color-retard)' },
+        { level: 'avance', count: advanceLateCount, fill: 'var(--color-avance)' },
+        { level: 'spécialité', count: specialityCount, fill: 'var(--color-spécialité)' }
+      ];
+
+      setDelayLevelData(data);
+      setActiveLevel(data[0]?.level || null);
+
+      const chartConfig = {
+        bien: {
+          label: 'Bien',
+          color: 'hsl(var(--chart-1))'
+        },
+        retard: {
+          label: 'En Retard',
+          color: 'hsl(var(--chart-2))'
+        },
+        avance: {
+          label: 'En Avance',
+          color: 'hsl(var(--chart-3))'
+        },
+        spécialité: {
+          label: 'Spécialité',
+          color: 'hsl(var(--chart-4))'
+        }
+      };
+
+      setChartConfig(chartConfig);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
+    }
+  }, [keyPromo]);
+
+  React.useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const activeIndex = React.useMemo(
     () => delayLevelData.findIndex((item) => item.level === activeLevel),
-    [activeLevel]
-  )
-  const levels = React.useMemo(() => delayLevelData.map((item) => item.level), [])
+    [activeLevel, delayLevelData]
+  );
+  const levels = React.useMemo(
+    () => delayLevelData.map((item) => item.level),
+    [delayLevelData]
+  );
+
+  if (loading) {
+    return (
+      <Card className="flex items-center justify-center h-64">
+        <p className="text-lg font-medium text-muted-foreground animate-pulse">
+          Chargement des données...
+        </p>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="flex items-center justify-center h-64">
+        <p className="text-lg font-medium text-red-500">
+          Erreur : {error}. Veuillez réessayer.
+        </p>
+      </Card>
+    );
+  }
+
+  if (delayLevelData.length === 0) {
+    return (
+      <Card className="flex items-center justify-center h-64">
+        <p className="text-lg font-medium text-muted-foreground">
+          Aucune donnée disponible pour la promotion spécifiée.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card data-chart={id} className="flex flex-col">
-      <ChartStyle id={id} config={chartConfig} />
+      <ChartStyle id={id} config={chartConfig ?? {}} />
       <CardHeader className="flex-row items-start space-y-0 pb-0">
         <div className="grid gap-1">
-          <CardTitle>Pie Chart - Interactive</CardTitle>
-          <CardDescription>Delay Levels</CardDescription>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>Delay Levels of {keyPromo}</CardDescription>
         </div>
-        <Select value={activeLevel} onValueChange={setActiveLevel}>
+        <Select value={activeLevel || ''} onValueChange={setActiveLevel}>
           <SelectTrigger
             className="ml-auto h-7 w-[130px] rounded-lg pl-2.5"
             aria-label="Select a value"
@@ -79,10 +163,14 @@ export function Component() {
           </SelectTrigger>
           <SelectContent align="end" className="rounded-xl">
             {levels.map((key) => {
-              const config = chartConfig[key as keyof typeof chartConfig]
+              if (!chartConfig) {
+                return null;
+              }
+
+              const config = chartConfig[key as keyof typeof chartConfig];
 
               if (!config) {
-                return null
+                return null;
               }
 
               return (
@@ -95,13 +183,13 @@ export function Component() {
                     <span
                       className="flex h-3 w-3 shrink-0 rounded-sm"
                       style={{
-                        backgroundColor: `var(--color-${key})`,
+                        backgroundColor: `var(--color-${key})`
                       }}
                     />
                     {config?.label}
                   </div>
                 </SelectItem>
-              )
+              );
             })}
           </SelectContent>
         </Select>
@@ -109,7 +197,7 @@ export function Component() {
       <CardContent className="flex flex-1 justify-center pb-0">
         <ChartContainer
           id={id}
-          config={chartConfig}
+          config={chartConfig ?? {}}
           className="mx-auto aspect-square w-full max-w-[300px]"
         >
           <PieChart>
@@ -140,7 +228,7 @@ export function Component() {
             >
               <Label
                 content={({ viewBox }) => {
-                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                  if (viewBox && 'cx' in viewBox && 'cy' in viewBox) {
                     return (
                       <text
                         x={viewBox.cx}
@@ -153,7 +241,7 @@ export function Component() {
                           y={viewBox.cy}
                           className="fill-foreground text-3xl font-bold"
                         >
-                          {delayLevelData[activeIndex].count.toLocaleString()}
+                          {delayLevelData[activeIndex]?.count?.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
@@ -163,7 +251,7 @@ export function Component() {
                           Students
                         </tspan>
                       </text>
-                    )
+                    );
                   }
                 }}
               />
@@ -172,7 +260,7 @@ export function Component() {
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }
 
-export default Component
+export default Component;
