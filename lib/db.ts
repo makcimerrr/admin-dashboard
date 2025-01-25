@@ -69,6 +69,43 @@ export const studentProjects = pgTable('student_projects', {
   delay_level: text('delay_level').notNull()
 });
 
+export async function getDelayStatus(promoId: string): Promise<{
+  lateCount: number;
+  goodLateCount: number;
+  advanceLateCount: number;
+  specialityCount: number;
+}> {
+  try {
+    // Récupérer les données de delayStatus en fonction du promoId
+    const delayStatusData = await db
+      .select({
+        lateCount: delayStatus.lateCount,
+        goodLateCount: delayStatus.goodLateCount,
+        advanceLateCount: delayStatus.advanceLateCount,
+        specialityCount: delayStatus.specialityCount
+      })
+      .from(delayStatus)
+      .where(eq(delayStatus.promoId, promoId))
+      .execute();
+
+    // Vérifier si un résultat a été trouvé
+    if (delayStatusData.length === 0) {
+      throw new Error(`Aucun statut de retard trouvé pour la promotion avec l'ID "${promoId}".`);
+    }
+
+    // Retourner les valeurs du premier résultat trouvé
+    return {
+      lateCount: delayStatusData[0].lateCount || 0,
+      goodLateCount: delayStatusData[0].goodLateCount || 0,
+      advanceLateCount: delayStatusData[0].advanceLateCount || 0,
+      specialityCount: delayStatusData[0].specialityCount || 0
+    };
+  } catch (error) {
+    console.error('Erreur lors de la recherche des compteurs de retard:', error);
+    throw new Error('Impossible de trouver les compteurs de retard.');
+  }
+}
+
 /**
  * Ajoute une promotion à la base de données.
  * @param promoId - ID unique de la promotion.
@@ -96,8 +133,8 @@ export async function addPromotion(
 
     return `Promotion "${name}" (ID: ${promoId}) ajoutée avec succès.`;
   } catch (error) {
-    console.error("Erreur lors de l'ajout de la promotion:", error);
-    throw new Error("Impossible d'ajouter la promotion.");
+    console.error('Erreur lors de l\'ajout de la promotion:', error);
+    throw new Error('Impossible d\'ajouter la promotion.');
   }
 }
 
@@ -185,12 +222,12 @@ export async function getStudents(
   let searchQuery = search ? `%${search}%` : null;
   let searchFilter = searchQuery
     ? or(
-        ilike(students.login, searchQuery),
-        ilike(students.first_name, searchQuery),
-        ilike(students.last_name, searchQuery),
-        ilike(studentProjects.project_name, searchQuery),
-        ilike(studentProjects.progress_status, searchQuery)
-      )
+      ilike(students.login, searchQuery),
+      ilike(students.first_name, searchQuery),
+      ilike(students.last_name, searchQuery),
+      ilike(studentProjects.project_name, searchQuery),
+      ilike(studentProjects.progress_status, searchQuery)
+    )
     : null;
 
   // Combinaison des filtres (promo, recherche, status)
@@ -298,7 +335,7 @@ export async function getStudents(
       if (
         lastUpdate &&
         new Date().getTime() - new Date(lastUpdate).getTime() <
-          24 * 60 * 60 * 1000
+        24 * 60 * 60 * 1000
       ) {
         continue; // Passer à la prochaine promotion
       }
@@ -376,7 +413,7 @@ export async function getStudents(
       if (
         lastUpdate &&
         new Date().getTime() - new Date(lastUpdate).getTime() <
-          24 * 60 * 60 * 1000
+        24 * 60 * 60 * 1000
       ) {
         console.log(`Mise à jour ignorée pour la promo ${promo}.`);
       } else {
@@ -435,7 +472,7 @@ export async function getStudents(
 }
 
 export async function deleteStudentById(id: number) {
-  console.log("Suppression de l'étudiant avec l'ID:", id);
+  console.log('Suppression de l\'étudiant avec l\'ID:', id);
   // await db.delete(students).where(eq(students.id, id));
 }
 
