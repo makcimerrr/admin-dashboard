@@ -107,15 +107,7 @@ function DesktopNav() {
           <TooltipContent side="right">Settings</TooltipContent>
         </Tooltip>
 
-        {/* Intégration du composant DarkModeToggle */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger><DarkModeToggle /></TooltipTrigger>
-            <TooltipContent>
-              <p>Toggle dark mode</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <DarkModeToggle />
 
       </nav>
     </aside>
