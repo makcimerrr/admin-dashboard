@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
 import { toast } from 'react-hot-toast';
+import { DatePickerDemo } from '@/components/date-picker';
 
 interface Holiday {
   name: string;
   start: string;
   end: string;
 }
+
 interface DateRange {
   start: string;
   end: string;
@@ -25,38 +27,52 @@ export default function HolidayManager() {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Ensure holidays are fetched correctly from the API or initial data.
   useEffect(() => {
     const fetchHolidays = async () => {
       try {
         const response = await fetch('/api/holidays');
         const data = await response.json();
         if (data.success && data.data) {
-          const holidaysArray = Object.entries(data.data).map(([name, dates]) => {
-            const dateRanges = dates as DateRange[];
-            return {
-              name,
-              start: dateRanges[0].start,
-              end: dateRanges[0].end,
-            };
-          });
+          const holidaysArray = Object.entries(data.data).map(
+            ([name, dates]) => {
+              const dateRanges = dates as DateRange[];
+              return {
+                name,
+                start: dateRanges[0].start,
+                end: dateRanges[0].end,
+              };
+            }
+          );
           setHolidays(holidaysArray);
-        } else {
-          console.error('Failed to fetch holidays');
         }
       } catch (error) {
-        console.error('Error fetching holidays:', error);
+        console.error('Erreur lors de la récupération des vacances :', error);
       }
     };
 
     fetchHolidays();
-  }, []); // Run only once on component mount.
+  }, []);
 
   const handleAddHoliday = async () => {
     const { name, start, end } = newHoliday;
 
     if (!name || !start || !end) {
       toast.error('Veuillez remplir tous les champs.');
+      return;
+    }
+
+    if (holidays.some((holiday) => holiday.name === name)) {
+      toast.error('Une vacance avec ce nom existe deja.');
+      return;
+    }
+
+    if (start >= end) {
+      toast.error('La date de fin doit venir apres la date de debut.');
+      return;
+    }
+
+    if (new Date(start).getTime() - new Date(end).getTime() < 0) {
+      toast.error('La date de fin doit venir apres la date de debut.');
       return;
     }
 
@@ -102,18 +118,30 @@ export default function HolidayManager() {
 
   return (
     <div className="p-6">
-      <Button onClick={() => setIsModalOpen(true)}>Ajouter une Vacance</Button>
+      <h1 className="text-3xl font-semibold text-gray-900 mb-6">Gestion des Vacances</h1>
 
-      <ul className="mt-4">
+      <Button
+        onClick={() => setIsModalOpen(true)}
+        className="bg-primary text-white font-semibold py-2 px-6 rounded-lg hover:bg-primary-dark transition duration-200 mb-6"
+      >
+        Ajouter une Vacance
+      </Button>
+
+      <ul className="space-y-6">
         {holidays.map(({ name, start, end }) => (
-          <li key={name} className="mb-2 flex items-center justify-between">
-            <div>
-              <strong>{name}</strong>: {start} - {end}
+          <li
+            key={name}
+            className="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all"
+          >
+            <div className="text-lg font-medium text-gray-800">
+              <strong>{name}</strong> : {start} - {end}
             </div>
+
             <Button
               variant="destructive"
               size="sm"
               onClick={() => handleDeleteHoliday(name)}
+              className="text-sm text-red-200 hover:text-red-800 transition-colors"
             >
               Supprimer
             </Button>
@@ -121,13 +149,28 @@ export default function HolidayManager() {
         ))}
       </ul>
 
-      {/* Modal pour ajouter une vacance */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div>
-          <h3 className="text-lg font-bold mb-4">Ajouter une Vacance</h3>
-          <div className="mb-4">
-            <label>Nom</label>
+      {/* Modal */}
+      <Modal isOpen={isModalOpen}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">Ajouter une Vacance</h3>
+          <button
+            onClick={() => setIsModalOpen(false)}
+            className="text-gray-600 hover:text-gray-900"
+            aria-label="Fermer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium">
+              Nom
+            </label>
             <Input
+              id="name"
               placeholder="Nom des vacances (e.g., Été 2025)"
               value={newHoliday.name}
               onChange={(e) =>
@@ -135,39 +178,45 @@ export default function HolidayManager() {
               }
             />
           </div>
-          <div className="mb-4">
-            <label>Date de début</label>
-            <Input
-              type="date"
-              value={newHoliday.start}
-              onChange={(e) =>
-                setNewHoliday((prev) => ({ ...prev, start: e.target.value }))
-              }
+          <div>
+            <label htmlFor="start" className="block text-sm font-medium">
+              Date de début
+            </label>
+            <DatePickerDemo
+              value={newHoliday.start} // Date initiale
+              onChange={(date) => setNewHoliday((prev) => ({ ...prev, start: date }))}
+              id="start-date-picker"
             />
           </div>
-          <div className="mb-4">
-            <label>Date de fin</label>
-            <Input
-              type="date"
-              value={newHoliday.end}
-              onChange={(e) =>
-                setNewHoliday((prev) => ({ ...prev, end: e.target.value }))
-              }
+          <div>
+            <label htmlFor="end" className="block text-sm font-medium">
+              Date de fin
+            </label>
+            <DatePickerDemo
+              value={newHoliday.end} // Date initiale
+              onChange={(date) => setNewHoliday((prev) => ({ ...prev, end: date }))}
+              id="end-date-picker"
             />
           </div>
-          <div className="flex justify-end">
-            <Button
-              onClick={() => {
-                handleAddHoliday();
-                setIsModalOpen(false);
-              }}
-            >
-              Ajouter
-            </Button>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-              Annuler
-            </Button>
-          </div>
+        </div>
+
+        <div className="flex justify-end space-x-4 mt-6">
+          <Button
+            onClick={() => {
+              handleAddHoliday();
+              setIsModalOpen(false);
+            }}
+            className="bg-primary text-white"
+          >
+            Ajouter
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setIsModalOpen(false)}
+            className="text-gray-600"
+          >
+            Annuler
+          </Button>
         </div>
       </Modal>
     </div>
