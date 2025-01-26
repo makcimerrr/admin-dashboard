@@ -53,7 +53,7 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/delay-status?promoId=${eventID}`);
+      const response = await fetch(`/api/delay-status?action=status&promoId=${eventID}`);
       if (!response.ok) {
         throw new Error('Erreur lors de la récupération des données');
       }
