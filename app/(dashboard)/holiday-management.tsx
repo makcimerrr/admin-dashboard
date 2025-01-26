@@ -118,22 +118,22 @@ export default function HolidayManager() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-semibold text-gray-900 mb-6">Gestion des Vacances</h1>
+      <h1 className="text-3xl font-semibold mb-6">Gestion des Vacances</h1>
 
       <Button
         onClick={() => setIsModalOpen(true)}
-        className="bg-primary text-white font-semibold py-2 px-6 rounded-lg hover:bg-primary-dark transition duration-200 mb-6"
+        className="bg-primary font-semibold py-2 px-6 rounded-lg hover:bg-primary-dark transition duration-200 mb-6"
       >
         Ajouter une Vacance
       </Button>
 
-      <ul className="space-y-6">
+      <ul className="mt-4 space-y-4">
         {holidays.map(({ name, start, end }) => (
           <li
             key={name}
-            className="flex justify-between items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all"
+            className="flex justify-between items-center p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm hover:shadow-md transition-all"
           >
-            <div className="text-lg font-medium text-gray-800">
+            <div className="text-lg font-medium">
               <strong>{name}</strong> : {start} - {end}
             </div>
 
@@ -206,14 +206,13 @@ export default function HolidayManager() {
               handleAddHoliday();
               setIsModalOpen(false);
             }}
-            className="bg-primary text-white"
+            className="bg-primary"
           >
             Ajouter
           </Button>
           <Button
             variant="secondary"
             onClick={() => setIsModalOpen(false)}
-            className="text-gray-600"
           >
             Annuler
           </Button>

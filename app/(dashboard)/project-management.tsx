@@ -138,11 +138,11 @@ export default function ProjectsManager() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-semibold text-gray-900 mb-6">Gestion des Projets</h1>
+      <h1 className="text-3xl font-semibold mb-6">Gestion des Projets</h1>
 
       <Button
         onClick={() => setIsModalOpen(true)}
-        className="bg-primary text-white font-semibold py-2 px-4 rounded-lg hover:bg-primary-dark transition duration-200"
+        className="bg-primary font-semibold py-2 px-4 rounded-lg hover:bg-primary-dark transition duration-200"
       >
         Ajouter un Projet
       </Button>
@@ -150,14 +150,14 @@ export default function ProjectsManager() {
       <div className="mt-8">
         {Object.entries(projectsByTech).map(([tech, projects]) => (
           <div key={tech} className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-800">{tech}</h2>
+            <h2 className="text-2xl font-semibold">{tech}</h2>
             <ul className="mt-4 space-y-4">
               {projects.map(({ id, name, project_time_week }, index) => (
                 <li
                   key={id}
-                  className="p-4 bg-white rounded-lg shadow-md flex items-center justify-between hover:bg-gray-50 transition-all"
+                  className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-md flex items-center justify-between hover:bg-gray-50 transition-all"
                 >
-                  <div className="text-lg font-medium text-gray-800">
+                  <div className="text-lg font-medium">
                     <strong>{name}</strong> ({project_time_week} semaines)
                   </div>
 
