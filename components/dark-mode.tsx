@@ -1,47 +1,59 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { Toggle } from "@/components/ui/toggle"; // Assurez-vous que votre toggle est déjà configuré
-import {Sun, Moon} from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { Toggle } from '@/components/ui/toggle'; // Assurez-vous que votre toggle est déjà configuré
+import { Sun, Moon } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
 
 const DarkModeToggle = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Charger la préférence de mode sombre depuis le localStorage lors du premier rendu
   useEffect(() => {
-    const savedMode = localStorage.getItem("darkMode") === "true";
-    setIsDarkMode(savedMode);
-    if (savedMode) {
-      document.documentElement.classList.add("dark");
+    // Vérification du mode sombre dans le localStorage côté client
+    const storedDarkMode = localStorage.getItem('darkMode');
+    if (storedDarkMode === 'true') {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
     } else {
-      document.documentElement.classList.remove("dark");
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
     }
-  }, []);
+  }, []); // S'exécute une seule fois après le rendu initial
 
-  // Fonction pour basculer entre mode clair et sombre
-  const handleToggle = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    localStorage.setItem("darkMode", newMode.toString());
-    if (newMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+  const toggleDarkMode = () => {
+    setIsDarkMode((prevMode) => !prevMode);
   };
 
+  useEffect(() => {
+    // Sauvegarder la préférence de l'utilisateur dans le localStorage
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
   return (
-    <Toggle
-      onPressedChange={handleToggle}
-      pressed={isDarkMode}
-      className="w-9 h-9 flex items-center justify-center rounded-lg"
-    >
-      {isDarkMode ? (
-        <Sun className="w-5 h-5" />
-      ) : (
-        <Moon className="w-5 h-5" />
-      )}
-    </Toggle>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Toggle onClick={toggleDarkMode} className="p-2">
+          {isDarkMode ? (
+            <Sun className="w-5 h-5" />
+          ) : (
+            <Moon className="w-5 h-5" />
+          )}
+          <span className="sr-only">Dark Mode</span>
+        </Toggle>
+      </TooltipTrigger>
+      <TooltipContent side="right">Dark Mode</TooltipContent>
+    </Tooltip>
   );
 };
 
