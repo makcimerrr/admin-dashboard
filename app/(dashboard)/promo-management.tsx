@@ -151,7 +151,7 @@ export default function PromoManager() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-semibold text-gray-900 mb-6">Gestion des Promotions</h1>
+      <h1 className="text-3xl font-semibold mb-6">Gestion des Promotions</h1>
       <div className="flex gap-6 mb-6">
         <div className="flex-1">
           <Input
@@ -160,7 +160,7 @@ export default function PromoManager() {
             onChange={(e) =>
               setNewPromo((prev) => ({ ...prev, key: e.target.value }))
             }
-            className="border border-gray-300 p-3 rounded-md w-full focus:ring-2 focus:ring-primary transition"
+            className="border p-3 rounded-md w-full focus:ring-2 focus:ring-primary transition"
           />
         </div>
         <div className="flex-1">
@@ -171,7 +171,7 @@ export default function PromoManager() {
             onChange={(e) =>
               setNewPromo((prev) => ({ ...prev, eventId: Number(e.target.value) }))
             }
-            className="border border-gray-300 p-3 rounded-md w-full focus:ring-2 focus:ring-primary transition"
+            className="border p-3 rounded-md w-full focus:ring-2 focus:ring-primary transition"
           />
         </div>
         <div className="flex-1">
@@ -181,13 +181,13 @@ export default function PromoManager() {
             onChange={(e) =>
               setNewPromo((prev) => ({ ...prev, title: e.target.value }))
             }
-            className="border border-gray-300 p-3 rounded-md w-full focus:ring-2 focus:ring-primary transition"
+            className="border p-3 rounded-md w-full focus:ring-2 focus:ring-primary transition"
           />
         </div>
 
         <Button
           onClick={openModal}
-          className="px-6 py-3 text-white bg-primary rounded-md hover:bg-primary-dark focus:ring-2 focus:ring-primary transition"
+          className="px-6 py-3 bg-primary rounded-md hover:bg-primary-dark focus:ring-2 focus:ring-primary transition"
         >
           Configurer les Dates
         </Button>
@@ -283,7 +283,7 @@ export default function PromoManager() {
           </div>
           <div className="flex justify-end mt-4 space-x-4">
             <Button onClick={handleAdd}>Ajouter</Button>
-            <Button onClick={() => setIsModalOpen(false)}>Fermer</Button>
+            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Annuler</Button>
           </div>
         </div>
       </Modal>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import { notif } from 'react-hot-toast';
 import {
   getFirestore,
   collection,
@@ -18,6 +18,25 @@ import {
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { useToast } from "@/components/hooks/use-toast"
 
 const AdminScreen: React.FC = () => {
   const db = getFirestore(firebaseApp); // Firestore Initialization
@@ -45,12 +64,18 @@ const AdminScreen: React.FC = () => {
   // Suivre l'état de l'authentification
   const [isNotified, setIsNotified] = useState(false);
 
+  const { toast } = useToast()
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
 
       if (currentUser && !isNotified) {
-        toast.success(`Bienvenue, ${currentUser.displayName}!`);
+        notif.success(`Bienvenue, ${currentUser.displayName}!`);
+        toast({
+          title: "Scheduled: Catch up",
+          description: "Friday, February 10, 2023 at 5:57 PM",
+        })
         setIsNotified(true); // Marque la notification comme affichée
       }
     });
@@ -63,7 +88,7 @@ const AdminScreen: React.FC = () => {
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      toast.error('Erreur lors de la connexion : ' + error.message);
+      notif.error('Erreur lors de la connexion : ' + error.message);
     }
   };
 
@@ -71,9 +96,9 @@ const AdminScreen: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      toast.success('Vous êtes déconnecté !');
+      notif.success('Vous êtes déconnecté !');
     } catch (error: any) {
-      toast.error('Erreur lors de la déconnexion : ' + error.message);
+      notif.error('Erreur lors de la déconnexion : ' + error.message);
     }
   };
 
@@ -97,7 +122,7 @@ const AdminScreen: React.FC = () => {
       const newId = querySnapshot.size + 1;
       setNextId(newId); // Met à jour le prochain ID
     } catch (error) {
-      toast.error("Erreur lors de la récupération de l'ID.");
+      notif.error("Erreur lors de la récupération de l'ID.");
     }
   };
 
@@ -110,7 +135,7 @@ const AdminScreen: React.FC = () => {
     e.preventDefault();
 
     if (!user) {
-      toast.error('Vous devez être connecté pour créer une carte.');
+      notif.error('Vous devez être connecté pour créer une carte.');
       return;
     }
 
@@ -120,9 +145,17 @@ const AdminScreen: React.FC = () => {
 
       switch (selectedType) {
         case 'complement':
-          return formData.definition.trim() && formData.answer.trim() && formData.hints.trim();
+          return (
+            formData.definition.trim() &&
+            formData.answer.trim() &&
+            formData.hints.trim()
+          );
         case 'definition':
-          return formData.options.trim() && formData.explanation.trim() && !isNaN(parseInt(formData.correctOptionIndex));
+          return (
+            formData.options.trim() &&
+            formData.explanation.trim() &&
+            !isNaN(parseInt(formData.correctOptionIndex))
+          );
         case 'graphique':
           return (
             formData.options.trim() &&
@@ -142,7 +175,9 @@ const AdminScreen: React.FC = () => {
     };
 
     if (!isCardValid()) {
-      toast.error('Veuillez remplir tous les champs requis avant de soumettre.');
+      notif.error(
+        'Veuillez remplir tous les champs requis avant de soumettre.'
+      );
       return;
     }
 
@@ -157,11 +192,11 @@ const AdminScreen: React.FC = () => {
         hints: formData.hints.split(',').map((hint) => hint.trim()),
         options: formData.options.split(';').map((option) => option.trim()),
         correctOptionIndex: parseInt(formData.correctOptionIndex) || null,
-        answers: formData.answers.split(',').map((answer) => answer.trim()),
+        answers: formData.answers.split(',').map((answer) => answer.trim())
       };
 
       await setDoc(doc(db, 'cards', cardId), cardData);
-      toast.success('Carte créée avec succès ! 🎉');
+      notif.success('Carte créée avec succès ! 🎉');
 
       // Réinitialisation du formulaire
       setFormData({
@@ -174,11 +209,11 @@ const AdminScreen: React.FC = () => {
         explanation: '',
         imageUrl: '',
         sentence: '',
-        answers: '',
+        answers: ''
       });
       fetchNextId(); // Récupère l'ID suivant pour la prochaine carte
     } catch (error: any) {
-      toast.error('Erreur lors de la création : ' + error.message);
+      notif.error('Erreur lors de la création : ' + error.message);
     }
   };
 
@@ -187,30 +222,28 @@ const AdminScreen: React.FC = () => {
       case 'complement':
         return (
           <>
-            <label className="text-gray-700">Définition</label>
-            <textarea
+            <Label className="">Définition</Label>
+            <Textarea
               name="definition"
               value={formData.definition}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
+              className="w-full p-2 border  rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
               placeholder="Entrez la définition..."
             />
-            <label className="text-gray-700">Réponse</label>
-            <input
+            <Label className="">Réponse</Label>
+            <Input
               name="answer"
               value={formData.answer}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
+              className="w-full p-2 border  rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
               placeholder="Entrez la réponse..."
             />
-            <label className="text-gray-700">
-              Indices (séparés par des virgules)
-            </label>
-            <input
+            <Label className="">Indices (séparés par des virgules)</Label>
+            <Input
               name="hints"
               value={formData.hints}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
+              className="w-full p-2 border  rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
               placeholder="Exemple : indice1, indice2"
             />
           </>
@@ -219,10 +252,10 @@ const AdminScreen: React.FC = () => {
       case 'graphique':
         return (
           <>
-            <label className="block text-gray-700 font-bold">
+            <Label className="block  font-bold">
               Options (séparées par des ;)
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               name="options"
               value={formData.options}
               onChange={handleInputChange}
@@ -230,10 +263,10 @@ const AdminScreen: React.FC = () => {
               placeholder="Exemple : option1;option2"
             />
 
-            <label className="block text-gray-700 font-bold">
+            <Label className="block  font-bold">
               Index de la bonne réponse
-            </label>
-            <input
+            </Label>
+            <Input
               type="number"
               name="correctOptionIndex"
               value={formData.correctOptionIndex}
@@ -242,8 +275,8 @@ const AdminScreen: React.FC = () => {
               placeholder="Index de 0 à N"
             />
 
-            <label className="block text-gray-700 font-bold">Explication</label>
-            <textarea
+            <Label className="block  font-bold">Explication</Label>
+            <Textarea
               name="explanation"
               value={formData.explanation}
               onChange={handleInputChange}
@@ -253,10 +286,8 @@ const AdminScreen: React.FC = () => {
 
             {selectedType === 'graphique' && (
               <>
-                <label className="block text-gray-700 font-bold">
-                  URL de l'image
-                </label>
-                <input
+                <Label className="block  font-bold">URL de l'image</Label>
+                <Input
                   name="imageUrl"
                   value={formData.imageUrl}
                   onChange={handleInputChange}
@@ -270,34 +301,30 @@ const AdminScreen: React.FC = () => {
       case 'trou':
         return (
           <>
-            <label className="text-gray-700">
+            <Label className="">
               Phrase avec des trous (indiquez {`{}`} pour les trous)
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               name="sentence"
               value={formData.sentence}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
+              className="w-full p-2 border  rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
               placeholder="Entrez la phrase contenant des trous..."
             />
-            <label className="text-gray-700">
-              Réponses (séparées par des virgules)
-            </label>
-            <input
+            <Label className="">Réponses (séparées par des virgules)</Label>
+            <Input
               name="answers"
               value={formData.answers}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
+              className="w-full p-2 border  rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
               placeholder="Exemple : reponse1, reponse2"
             />
-            <label className="text-gray-700">
-              Indices (séparés par des virgules)
-            </label>
-            <input
+            <Label className="">Indices (séparés par des virgules)</Label>
+            <Input
               name="hints"
               value={formData.hints}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
+              className="w-full p-2 border  rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
               placeholder="Exemple : indice1, indice2"
             />
           </>
@@ -309,53 +336,53 @@ const AdminScreen: React.FC = () => {
 
   const renderCardPreview = () => {
     return (
-      <div className="bg-gray-100 p-4 rounded-lg mt-8 shadow-lg w-full">
-        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+      <Card className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mt-8 shadow-lg w-full">
+        <CardTitle className="text-xl font-semibold mb-2">
           {formData.name || 'Nom de la carte'}
-        </h3>
+        </CardTitle>
 
         {/* Complément */}
         {selectedType === 'complement' && (
-          <div>
-            <p className="text-sm text-gray-600">
+          <CardContent>
+            <p className="text-sm ">
               <strong>Définition:</strong>{' '}
               {formData.definition || 'Aucune définition'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm ">
               <strong>Réponse:</strong> {formData.answer || 'Aucune réponse'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm ">
               <strong>Indices:</strong>{' '}
               {formData.hints
                 ? formData.hints.split(',').join(', ')
                 : 'Aucun indice'}
             </p>
-          </div>
+          </CardContent>
         )}
 
         {/* Définition */}
         {selectedType === 'definition' && (
-          <div>
-            <p className="text-sm text-gray-600">
+          <CardContent>
+            <p className="text-sm">
               <strong>Options:</strong>{' '}
               {formData.options
                 ? formData.options.split(';').join(', ')
                 : 'Aucune option'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm">
               <strong>Index de la bonne réponse:</strong>{' '}
-                {formData.correctOptionIndex || 'Pas de réponse spécifiée'}
+              {formData.correctOptionIndex || 'Pas de réponse spécifiée'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm">
               <strong>Explication:</strong>{' '}
               {formData.explanation || 'Aucune explication'}
             </p>
-          </div>
+          </CardContent>
         )}
 
         {/* Graphique */}
         {selectedType === 'graphique' && (
-          <div>
+          <CardContent>
             <p className="text-sm text-gray-600">
               <strong>Options:</strong>{' '}
               {formData.options
@@ -382,12 +409,12 @@ const AdminScreen: React.FC = () => {
                 'Aucune image'
               )}
             </p>
-          </div>
+          </CardContent>
         )}
 
         {/* Trou */}
         {selectedType === 'trou' && (
-          <div>
+          <CardContent>
             <p className="text-sm text-gray-600">
               <strong>Phrase avec des trous:</strong>{' '}
               {formData.sentence || 'Aucune phrase définie'}
@@ -404,90 +431,95 @@ const AdminScreen: React.FC = () => {
                 ? formData.hints.split(',').join(', ')
                 : 'Aucun indice'}
             </p>
-          </div>
+          </CardContent>
         )}
-      </div>
+      </Card>
     );
   };
 
   return (
-    <div className="flex flex-col justify-center items-center p-6">
-      {!user ? (
-        <>
-          <button
-            onClick={handleGoogleSignIn}
-            className="bg-black text-white py-3 px-6 rounded-full text-lg shadow-lg hover:bg-gray-900 transition duration-300"
-          >
-            Connexion avec Google
-          </button>
-        </>
-      ) : (
-        <>
-          <div className="flex justify-between w-full max-w-3xl mb-6">
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Bienvenue, {user.displayName}
-            </h1>
-            <button
-              onClick={handleSignOut}
-              className="text-red-500 underline hover:text-red-700"
-            >
-              Déconnexion
-            </button>
-          </div>
-          <div className="bg-white shadow-xl rounded-lg p-8 max-w-3xl w-full">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-              Créer une carte
-            </h2>
-            <form onSubmit={handleSubmit}>
-              <label className="text-gray-700">Type de carte</label>
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
-              >
-                <option value="complement">Complément</option>
-                <option value="definition">Définition</option>
-                <option value="graphique">Graphique</option>
-                <option value="trou">Trou</option>
-              </select>
-              <label className="text-gray-700">Catégorie</label>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
-              >
-                <option value="Gestion de Projet Agile">
-                  Gestion de Projet Agile
-                </option>
-                <option value="Conception">Conception</option>
-                <option value="Maquettage">Maquettage</option>
-                <option value="Développement">Développement</option>
-                <option value="Versionning et Travail en Groupe">Versionning et Travail en Groupe</option>
-              </select>
-              <label className="text-gray-700">Nom de la carte</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black-500"
-                placeholder="Entrez le nom de la carte..."
-              />
-              {renderFields()}
-              <div className="flex justify-center mt-4">
-                <button
-                  type="submit"
-                  className="bg-black text-white py-2 px-6 rounded-lg hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-black-500 transition duration-300"
-                >
-                  Enregistrer
-                </button>
+    <Card>
+      <CardHeader>
+        <CardTitle>01Deck</CardTitle>
+        <CardDescription>Create educational cards for the mobile app.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col justify-center items-center p-6">
+          {!user ? (
+            <>
+              <Button variant="default" onClick={handleGoogleSignIn}>
+                Connexion avec Google
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between w-full max-w-3xl mb-6">
+                <h1 className="text-2xl font-semibold">
+                  Bienvenue, {user.displayName}
+                </h1>
+                <Button onClick={handleSignOut} variant="destructive">
+                  Déconnexion
+                </Button>
               </div>
-            </form>
-            {renderCardPreview()}
-          </div>
-        </>
-      )}
-    </div>
+              <div className="bg-white dark:bg-gray-900 shadow-xl rounded-lg p-8 max-w-3xl w-full">
+                <h2 className="text-2xl font-semibold mb-4">Créer une carte</h2>
+                <form onSubmit={handleSubmit}>
+                  <Label>Type de carte</Label>
+                  <Select
+                    value={selectedType}
+                    onValueChange={(e) => setSelectedType(e)}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="complement">Complément</SelectItem>
+                      <SelectItem value="definition">Définition</SelectItem>
+                      <SelectItem value="graphique">Graphique</SelectItem>
+                      <SelectItem value="trou">Trou</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Label>Catégorie</Label>
+                  <Select
+                    value={selectedCategory}
+                    onValueChange={(e) => setSelectedCategory(e)}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Catégorie" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Conception">Conception</SelectItem>
+                      <SelectItem value="Maquettage">Maquettage</SelectItem>
+                      <SelectItem value="Développement">
+                        Développement
+                      </SelectItem>
+                      <SelectItem value="Versionning et Travail en Groupe">
+                        Versionning et Travail en Groupe
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Label>Nom de la carte</Label>
+                  <Input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="Entrez le nom de la carte..."
+                  />
+                  {renderFields()}
+                  <div className="flex justify-center mt-4">
+                    <Button type="submit" variant="outline">
+                      Enregistrer
+                    </Button>
+                  </div>
+                </form>
+                {renderCardPreview()}
+              </div>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
