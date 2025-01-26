@@ -69,6 +69,22 @@ export const studentProjects = pgTable('student_projects', {
   delay_level: text('delay_level').notNull()
 });
 
+export async function getAverageDelaysByMonth(promoId: string) {
+  let result;
+  return (result = await db
+    .select({
+      month: sql`DATE_TRUNC('month', ${delayStatus.lastUpdate})`.as('month'),
+      avgLateCount: sql`AVG(${delayStatus.lateCount})`.as('avgLateCount'),
+      avgGoodLateCount: sql`AVG(${delayStatus.goodLateCount})`.as(
+        'avgGoodLateCount'
+      )
+    })
+    .from(delayStatus)
+    .where(sql`${delayStatus.promoId} = ${promoId}`)
+    .groupBy(sql`DATE_TRUNC('month', ${delayStatus.lastUpdate})`)
+    .orderBy(sql`DATE_TRUNC('month', ${delayStatus.lastUpdate})`));
+}
+
 export async function getDelayStatus(promoId: string): Promise<{
   lateCount: number;
   goodLateCount: number;
@@ -90,7 +106,9 @@ export async function getDelayStatus(promoId: string): Promise<{
 
     // Vérifier si un résultat a été trouvé
     if (delayStatusData.length === 0) {
-      throw new Error(`Aucun statut de retard trouvé pour la promotion avec l'ID "${promoId}".`);
+      throw new Error(
+        `Aucun statut de retard trouvé pour la promotion avec l'ID "${promoId}".`
+      );
     }
 
     // Retourner les valeurs du premier résultat trouvé
@@ -101,7 +119,10 @@ export async function getDelayStatus(promoId: string): Promise<{
       specialityCount: delayStatusData[0].specialityCount || 0
     };
   } catch (error) {
-    console.error('Erreur lors de la recherche des compteurs de retard:', error);
+    console.error(
+      'Erreur lors de la recherche des compteurs de retard:',
+      error
+    );
     throw new Error('Impossible de trouver les compteurs de retard.');
   }
 }
@@ -133,8 +154,39 @@ export async function addPromotion(
 
     return `Promotion "${name}" (ID: ${promoId}) ajoutée avec succès.`;
   } catch (error) {
-    console.error('Erreur lors de l\'ajout de la promotion:', error);
-    throw new Error('Impossible d\'ajouter la promotion.');
+    console.error("Erreur lors de l'ajout de la promotion:", error);
+    throw new Error("Impossible d'ajouter la promotion.");
+  }
+}
+
+/**
+ * Supprime une promotion de la base de données.
+ * @param key - Clé de la promotion.
+ * @returns Un message de succès ou une erreur si la promo n'existe pas.
+ */
+export async function deletePromotion(key: string): Promise<string> {
+  try {
+    // Vérifier si la promotion existe
+    const existingPromo = await db
+      .select()
+      .from(promotions)
+      .where(eq(promotions.name, key))
+      .execute();
+
+    if (existingPromo.length === 0) {
+      return `La promotion avec le nom "${key}" n'existe pas.`;
+    }
+
+    // Supprimer la promotion
+    await db
+      .delete(promotions)
+      .where(eq(promotions.name, key))
+      .execute();
+
+    return `Promotion "${key}" supprimée avec succès.`;
+  } catch (error) {
+    console.error('Erreur lors de la suppression de la promotion:', error);
+    throw new Error('Impossible de supprimer la promotion.');
   }
 }
 
@@ -222,12 +274,12 @@ export async function getStudents(
   let searchQuery = search ? `%${search}%` : null;
   let searchFilter = searchQuery
     ? or(
-      ilike(students.login, searchQuery),
-      ilike(students.first_name, searchQuery),
-      ilike(students.last_name, searchQuery),
-      ilike(studentProjects.project_name, searchQuery),
-      ilike(studentProjects.progress_status, searchQuery)
-    )
+        ilike(students.login, searchQuery),
+        ilike(students.first_name, searchQuery),
+        ilike(students.last_name, searchQuery),
+        ilike(studentProjects.project_name, searchQuery),
+        ilike(studentProjects.progress_status, searchQuery)
+      )
     : null;
 
   // Combinaison des filtres (promo, recherche, status)
@@ -335,7 +387,7 @@ export async function getStudents(
       if (
         lastUpdate &&
         new Date().getTime() - new Date(lastUpdate).getTime() <
-        24 * 60 * 60 * 1000
+          24 * 60 * 60 * 1000
       ) {
         continue; // Passer à la prochaine promotion
       }
@@ -413,7 +465,7 @@ export async function getStudents(
       if (
         lastUpdate &&
         new Date().getTime() - new Date(lastUpdate).getTime() <
-        24 * 60 * 60 * 1000
+          24 * 60 * 60 * 1000
       ) {
         console.log(`Mise à jour ignorée pour la promo ${promo}.`);
       } else {
@@ -472,7 +524,7 @@ export async function getStudents(
 }
 
 export async function deleteStudentById(id: number) {
-  console.log('Suppression de l\'étudiant avec l\'ID:', id);
+  console.log("Suppression de l'étudiant avec l'ID:", id);
   // await db.delete(students).where(eq(students.id, id));
 }
 
