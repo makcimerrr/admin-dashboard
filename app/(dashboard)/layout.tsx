@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Tooltip,
-  TooltipContent,
+  TooltipContent, TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { Analytics } from '@vercel/analytics/react';
@@ -26,6 +26,7 @@ import Providers from './providers';
 import { NavItem } from './nav-item';
 import { SearchInput } from './search';
 import { DashboardBreadcrumb } from './get-breadcrumb-items';
+import DarkModeToggle from '@/components/dark-mode';
 
 export default function DashboardLayout({
   children
@@ -105,6 +106,17 @@ function DesktopNav() {
           </TooltipTrigger>
           <TooltipContent side="right">Settings</TooltipContent>
         </Tooltip>
+
+        {/* Intégration du composant DarkModeToggle */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger><DarkModeToggle /></TooltipTrigger>
+            <TooltipContent>
+              <p>Toggle dark mode</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
       </nav>
     </aside>
   );
