@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { notif } from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 import {
   getFirestore,
   collection,
@@ -64,18 +64,18 @@ const AdminScreen: React.FC = () => {
   // Suivre l'état de l'authentification
   const [isNotified, setIsNotified] = useState(false);
 
-  const { toast } = useToast()
+  /*const { toast } = useToast()*/
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
 
       if (currentUser && !isNotified) {
-        notif.success(`Bienvenue, ${currentUser.displayName}!`);
-        toast({
+        toast.success(`Bienvenue, ${currentUser.displayName}!`);
+        /*toast({
           title: "Scheduled: Catch up",
           description: "Friday, February 10, 2023 at 5:57 PM",
-        })
+        })*/
         setIsNotified(true); // Marque la notification comme affichée
       }
     });
@@ -88,7 +88,7 @@ const AdminScreen: React.FC = () => {
     try {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      notif.error('Erreur lors de la connexion : ' + error.message);
+      toast.error('Erreur lors de la connexion : ' + error.message);
     }
   };
 
@@ -96,9 +96,9 @@ const AdminScreen: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      notif.success('Vous êtes déconnecté !');
+      toast.success('Vous êtes déconnecté !');
     } catch (error: any) {
-      notif.error('Erreur lors de la déconnexion : ' + error.message);
+      toast.error('Erreur lors de la déconnexion : ' + error.message);
     }
   };
 
@@ -122,7 +122,7 @@ const AdminScreen: React.FC = () => {
       const newId = querySnapshot.size + 1;
       setNextId(newId); // Met à jour le prochain ID
     } catch (error) {
-      notif.error("Erreur lors de la récupération de l'ID.");
+      toast.error("Erreur lors de la récupération de l'ID.");
     }
   };
 
@@ -135,7 +135,7 @@ const AdminScreen: React.FC = () => {
     e.preventDefault();
 
     if (!user) {
-      notif.error('Vous devez être connecté pour créer une carte.');
+      toast.error('Vous devez être connecté pour créer une carte.');
       return;
     }
 
@@ -175,7 +175,7 @@ const AdminScreen: React.FC = () => {
     };
 
     if (!isCardValid()) {
-      notif.error(
+      toast.error(
         'Veuillez remplir tous les champs requis avant de soumettre.'
       );
       return;
@@ -196,7 +196,7 @@ const AdminScreen: React.FC = () => {
       };
 
       await setDoc(doc(db, 'cards', cardId), cardData);
-      notif.success('Carte créée avec succès ! 🎉');
+      toast.success('Carte créée avec succès ! 🎉');
 
       // Réinitialisation du formulaire
       setFormData({
@@ -213,7 +213,7 @@ const AdminScreen: React.FC = () => {
       });
       fetchNextId(); // Récupère l'ID suivant pour la prochaine carte
     } catch (error: any) {
-      notif.error('Erreur lors de la création : ' + error.message);
+      toast.error('Erreur lors de la création : ' + error.message);
     }
   };
 
