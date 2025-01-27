@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Tooltip,
-  TooltipContent,
+  TooltipContent, TooltipProvider,
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { Analytics } from '@vercel/analytics/react';
@@ -26,6 +26,8 @@ import Providers from './providers';
 import { NavItem } from './nav-item';
 import { SearchInput } from './search';
 import { DashboardBreadcrumb } from './get-breadcrumb-items';
+import DarkModeToggle from '@/components/dark-mode';
+import { Suspense } from 'react';
 
 export default function DashboardLayout({
   children
@@ -41,7 +43,9 @@ export default function DashboardLayout({
         <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <MobileNav />
+            <Suspense fallback={<div>Loading breadcrumbs...</div>}>
             <DashboardBreadcrumb />
+            </Suspense>
             <SearchInput />
             <User />
           </header>
@@ -88,7 +92,7 @@ function DesktopNav() {
         </NavItem>
 
         {/*En développement...*/}
-        <NavItem href="#" label="Analytics">
+        <NavItem href="/analytics" label="Analytics">
           <LineChart className="h-5 w-5" />
         </NavItem>
       </nav>
@@ -105,6 +109,9 @@ function DesktopNav() {
           </TooltipTrigger>
           <TooltipContent side="right">Settings</TooltipContent>
         </Tooltip>
+
+        <DarkModeToggle />
+
       </nav>
     </aside>
   );

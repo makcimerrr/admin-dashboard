@@ -5,6 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Modal from '@/components/ui/modal';
 import { toast } from 'react-hot-toast';
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+  SelectItem
+} from '@/components/ui/select';
 
 interface Project {
   id: number;
@@ -18,10 +25,12 @@ interface ProjectsByTech {
 
 export default function ProjectsManager() {
   const [projectsByTech, setProjectsByTech] = useState<ProjectsByTech>({});
-  const [newProject, setNewProject] = useState<Omit<Project, 'id'> & { tech: string }>({
+  const [newProject, setNewProject] = useState<
+    Omit<Project, 'id'> & { tech: string }
+  >({
     name: '',
     project_time_week: 0,
-    tech: '',
+    tech: ''
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -54,13 +63,13 @@ export default function ProjectsManager() {
       const response = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, project_time_week, tech }),
+        body: JSON.stringify({ name, project_time_week, tech })
       });
       const data = await response.json();
       setProjectsByTech(data.projects);
       toast.success('Projet ajouté avec succès.');
     } catch (error) {
-      toast.error('Erreur lors de l\'ajout du projet.');
+      toast.error("Erreur lors de l'ajout du projet.");
     }
 
     setNewProject({ name: '', project_time_week: 0, tech });
@@ -73,7 +82,7 @@ export default function ProjectsManager() {
       const response = await fetch('/api/projects', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, tech }),
+        body: JSON.stringify({ id, tech })
       });
       const data = await response.json();
       setProjectsByTech(data.projects);
@@ -84,7 +93,11 @@ export default function ProjectsManager() {
   };
 
   // Réorganiser un projet
-  const handleMoveProject = async (tech: string, id: number, direction: 'up' | 'down') => {
+  const handleMoveProject = async (
+    tech: string,
+    id: number,
+    direction: 'up' | 'down'
+  ) => {
     const techProjects = projectsByTech[tech];
     const index = techProjects.findIndex((project) => project.id === id);
 
@@ -99,7 +112,7 @@ export default function ProjectsManager() {
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
     [reorderedProjects[index], reorderedProjects[swapIndex]] = [
       reorderedProjects[swapIndex],
-      reorderedProjects[index],
+      reorderedProjects[index]
     ];
 
     try {
@@ -108,8 +121,8 @@ export default function ProjectsManager() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tech,
-          reorderedProjects: reorderedProjects.map((proj) => proj.id),
-        }),
+          reorderedProjects: reorderedProjects.map((proj) => proj.id)
+        })
       });
       const data = await response.json();
       setProjectsByTech(data.projects);
@@ -125,25 +138,36 @@ export default function ProjectsManager() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Gestion des Projets</h1>
-      <Button onClick={() => setIsModalOpen(true)}>Ajouter un Projet</Button>
+      <h1 className="text-3xl font-semibold mb-6">Gestion des Projets</h1>
 
-      <div className="mt-4">
+      <Button
+        onClick={() => setIsModalOpen(true)}
+        className="bg-primary font-semibold py-2 px-4 rounded-lg hover:bg-primary-dark transition duration-200"
+      >
+        Ajouter un Projet
+      </Button>
+
+      <div className="mt-8">
         {Object.entries(projectsByTech).map(([tech, projects]) => (
-          <div key={tech} className="mb-6">
-            <h2 className="text-xl font-semibold">{tech}</h2>
-            <ul className="mt-2">
+          <div key={tech} className="mb-8">
+            <h2 className="text-2xl font-semibold">{tech}</h2>
+            <ul className="mt-4 space-y-4">
               {projects.map(({ id, name, project_time_week }, index) => (
-                <li key={id} className="mb-2 flex items-center justify-between">
-                  <div>
+                <li
+                  key={id}
+                  className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-md flex items-center justify-between hover:bg-gray-50 transition-all"
+                >
+                  <div className="text-lg font-medium">
                     <strong>{name}</strong> ({project_time_week} semaines)
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-3">
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => handleMoveProject(tech, id, 'up')}
                       disabled={index === 0}
+                      className="text-sm text-gray-600 hover:text-primary transition-colors"
                     >
                       ↑
                     </Button>
@@ -152,6 +176,7 @@ export default function ProjectsManager() {
                       size="sm"
                       onClick={() => handleMoveProject(tech, id, 'down')}
                       disabled={index === projects.length - 1}
+                      className="text-sm text-gray-600 hover:text-primary transition-colors"
                     >
                       ↓
                     </Button>
@@ -159,6 +184,7 @@ export default function ProjectsManager() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDeleteProject(tech, id)}
+                      className="text-sm text-red-200 hover:text-red-800 transition-colors"
                     >
                       Supprimer
                     </Button>
@@ -171,10 +197,34 @@ export default function ProjectsManager() {
       </div>
 
       {/* Modal pour ajouter un projet */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <div>
-          <h3 className="text-lg font-bold mb-4">Ajouter un Projet</h3>
-          <div className="mb-4">
+      <Modal isOpen={isModalOpen}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">Ajouter un Projet</h3>
+          <button
+            onClick={() => setIsModalOpen(false)}
+            className="text-gray-600 hover:text-gray-900"
+            aria-label="Fermer"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
             <label>Nom</label>
             <Input
               value={newProject.name}
@@ -183,7 +233,7 @@ export default function ProjectsManager() {
               }
             />
           </div>
-          <div className="mb-4">
+          <div>
             <label>Durée du Projet (semaines)</label>
             <Input
               type="number"
@@ -191,25 +241,31 @@ export default function ProjectsManager() {
               onChange={(e) =>
                 setNewProject((prev) => ({
                   ...prev,
-                  project_time_week: Number(e.target.value),
+                  project_time_week: Number(e.target.value)
                 }))
               }
             />
           </div>
-          <div className="mb-4">
+          <div>
             <label>Technologie</label>
-            <select
+            <Select
               value={newProject.tech}
-              onChange={(e) => handleTechChange(e.target.value)}
-              className="border border-gray-300 p-2 rounded w-full"
+              onValueChange={handleTechChange}
             >
-              {Object.keys(projectsByTech).map((tech) => (
-                <option key={tech} value={tech}>
-                  {tech}
-                </option>
-              ))}
-              <option value="">Nouvelle Technologie</option>
-            </select>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sélectionnez une technologie" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(projectsByTech).map((tech) => (
+                  <SelectItem key={tech} value={tech}>
+                    {tech}
+                  </SelectItem>
+                ))}
+                <SelectItem value="new">Nouvelle Technologie</SelectItem>{' '}
+                {/* Valeur unique pour la nouvelle technologie */}
+              </SelectContent>
+            </Select>
+
             {!Object.keys(projectsByTech).includes(newProject.tech) && (
               <Input
                 className="mt-2"
@@ -220,12 +276,13 @@ export default function ProjectsManager() {
               />
             )}
           </div>
-          <div className="flex justify-end">
-            <Button onClick={handleAddProject}>Ajouter</Button>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-              Annuler
-            </Button>
-          </div>
+        </div>
+
+        <div className="flex justify-end space-x-4 mt-6">
+          <Button onClick={handleAddProject}>Ajouter</Button>
+          <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+            Annuler
+          </Button>
         </div>
       </Modal>
     </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { addPromotion, deletePromotion } from '@/lib/db';
 
 const promoFilePath = path.join(process.cwd(), 'config', 'promoConfig.json');
 
@@ -76,28 +77,36 @@ export async function POST(req: Request) {
     // Validation des dates de piscine si elles sont renseignées
     const errorMessages: string[] = [];
 
-    if (piscineJsStart !== 'NaN' && !isDateInRange(piscineJsStart, start, end)) {
+    if (piscineJsStart !== '' && !isDateInRange(piscineJsStart, start, end)) {
       errorMessages.push('La date de début de la piscine JS doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineJsEnd !== 'NaN' && !isDateInRange(piscineJsEnd, start, end)) {
+    if (piscineJsEnd !== '' && !isDateInRange(piscineJsEnd, start, end)) {
       errorMessages.push('La date de fin de la piscine JS doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineRustStart !== 'NaN' && !isDateInRange(piscineRustStart, start, end)) {
+    if (piscineRustStart !== '' && !isDateInRange(piscineRustStart, start, end)) {
       errorMessages.push('La date de début de la piscine Rust doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineRustEnd !== 'NaN' && !isDateInRange(piscineRustEnd, start, end)) {
+    if (piscineRustEnd !== '' && !isDateInRange(piscineRustEnd, start, end)) {
       errorMessages.push('La date de fin de la piscine Rust doit être comprise entre le début et la fin de la promotion.');
+    }
+
+    if (piscineJsStart !== '' && piscineJsEnd !== 'NaN' && new Date(piscineJsStart) >= new Date(piscineJsEnd)) {
+      errorMessages.push('La date de début de la piscine JS doit être avant la date de fin.');
+    }
+
+    if (piscineRustStart !== '' && piscineRustEnd !== 'NaN' && new Date(piscineRustStart) >= new Date(piscineRustEnd)) {
+      errorMessages.push('La date de début de la piscine Rust doit être avant la date de fin.');
     }
 
     // Vérification de l'ordre des piscines
     if (
-      piscineJsStart !== 'NaN' &&
-      piscineJsEnd !== 'NaN' &&
-      piscineRustStart !== 'NaN' &&
-      piscineRustEnd !== 'NaN'
+      piscineJsStart !== '' &&
+      piscineJsEnd !== '' &&
+      piscineRustStart !== '' &&
+      piscineRustEnd !== ''
     ) {
       if (new Date(piscineJsEnd) >= new Date(piscineRustStart)) {
         errorMessages.push('La piscine JS doit se terminer avant le début de la piscine Rust.');
@@ -107,6 +116,16 @@ export async function POST(req: Request) {
     if (errorMessages.length > 0) {
       return NextResponse.json(
         { error: errorMessages.join(' ') },
+        { status: 400 }
+      );
+    }
+
+    // Ajout de la promotion après validation dans la base de données
+    const dbResult = await addPromotion(eventId, key);
+
+    if (dbResult.includes('existe déjà')) {
+      return NextResponse.json(
+        { error: `Une promotion avec cet ID ou ce titre existe déjà dans la base de données.` },
         { status: 400 }
       );
     }
@@ -182,6 +201,15 @@ export async function DELETE(req: Request) {
     if (promoIndex === -1) {
       return NextResponse.json(
         { error: 'Aucune promotion trouvée avec cette clé.' },
+        { status: 404 }
+      );
+    }
+
+    const dbResult = await deletePromotion(key);
+
+    if (dbResult.includes('n\'existe pas')) {
+      return NextResponse.json(
+        { error: 'La promotion n\'existe pas dans la base de données.' },
         { status: 404 }
       );
     }
