@@ -233,11 +233,11 @@ export function StudentsTable({
           {/* Dropdown Menu for Select Status */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" size="sm" className="text-white">
+              <Button variant="default" size="sm">
                 Select Status
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="z-50 bg-white rounded-md shadow-lg border border-gray-200 mt-2 w-44">
+            <DropdownMenuContent className="z-50 rounded-md shadow-lg border mt-2 w-44">
               <DropdownMenuItem
                 onSelect={() => requestStatus('')}
                 className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
@@ -268,11 +268,11 @@ export function StudentsTable({
           {/* Dropdown Menu for Select Delay Level */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" size="sm" className="text-white">
+              <Button variant="default" size="sm">
                 Select Delay Level
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="z-50 bg-white rounded-md shadow-lg border border-gray-200 mt-2 w-44">
+            <DropdownMenuContent className="z-50 rounded-md shadow-lg border mt-2 w-44">
               <DropdownMenuItem
                 onSelect={() => requestDelayLevel('')}
                 className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"

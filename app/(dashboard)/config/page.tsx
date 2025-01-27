@@ -1,16 +1,20 @@
 import PromoManager from '../promo-management';
 import HolidayManager from '../holiday-management';
 import ProjectManager from '../project-management';
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 
 export default function ConfigPage() {
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">Gestion des Promotions</h1>
-      <PromoManager />
-      <h1 className="text-xl font-bold mb-4">Gestion des Vacances</h1>
-      <HolidayManager />
-      <h1 className="text-xl font-bold mb-4">Gestion des Projets</h1>
-      <ProjectManager />
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Config</CardTitle>
+        <CardDescription>Configure promotions, vacations, and projects</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <PromoManager />
+        <HolidayManager />
+        <ProjectManager />
+      </CardContent>
+    </Card>
   );
 }
