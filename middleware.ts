@@ -7,9 +7,10 @@ export async function middleware(request: { url: string | URL | undefined }) {
   const user = session?.user;
 
   const loginUrl = new URL('/login', request.url);
+  const registerUrl = new URL('/register', request.url);
 
   // Avoid redirect loop by checking if the request is already for the login page
-  if (!user && request.url !== loginUrl.toString()) {
+  if (!user && request.url !== loginUrl.toString() && request.url !== registerUrl.toString()) {
     return NextResponse.redirect(loginUrl);
   }
 
