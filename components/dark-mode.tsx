@@ -1,60 +1,40 @@
-'use client';
+"use client"
 
-import React, { useEffect, useState } from 'react';
-import { Toggle } from '@/components/ui/toggle'; // Assurez-vous que votre toggle est déjà configuré
-import { Sun, Moon } from 'lucide-react';
+import * as React from "react"
+import { Moon, MoonIcon, Sun } from "lucide-react"
+import { useTheme } from "next-themes"
+
+import { Button } from "@/components/ui/button"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger
-} from '@/components/ui/tooltip';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-const DarkModeToggle = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  useEffect(() => {
-    // Vérification du mode sombre dans le localStorage côté client
-    const storedDarkMode = localStorage.getItem('darkMode');
-    if (storedDarkMode === 'true') {
-      setIsDarkMode(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.classList.remove('dark');
-    }
-  }, []); // S'exécute une seule fois après le rendu initial
-
-  const toggleDarkMode = () => {
-    setIsDarkMode((prevMode) => !prevMode);
-  };
-
-  useEffect(() => {
-    // Sauvegarder la préférence de l'utilisateur dans le localStorage
-    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+export default function DarkModeToggle() {
+  const { setTheme } = useTheme()
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Toggle onClick={toggleDarkMode} className="p-2">
-          {isDarkMode ? (
-            <Sun className="w-5 h-5" />
-          ) : (
-            <Moon className="w-5 h-5" />
-          )}
-          <span className="sr-only">Dark Mode</span>
-        </Toggle>
-      </TooltipTrigger>
-      <TooltipContent side="right">Dark Mode</TooltipContent>
-    </Tooltip>
-  );
-};
-
-export default DarkModeToggle;
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon">
+          <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setTheme("light")}>
+          Light
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>
+          Dark
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("system")}>
+          System
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
