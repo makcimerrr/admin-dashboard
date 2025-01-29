@@ -8,7 +8,7 @@ import {
   timestamp,
   pgEnum,
   serial,
-  integer
+  integer, varchar
 } from 'drizzle-orm/pg-core';
 import {
   count,
@@ -19,12 +19,41 @@ import {
   sql,
   desc,
   asc,
-  SQLWrapper,
-  SQL
+  SQLWrapper, SQL,
 } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  name : varchar('name', { length: 255 }),
+  username : varchar('username', { length: 255 }),
+  password: varchar('password', { length: 255 }).notNull()
+});
+
+/**
+ * Retrieves a user from the database by email and password hash.
+ * @param email - The email of the user.
+ * @param passwordHash - The hashed password of the user.
+ * @returns The user object if found, otherwise null.
+ */
+export async function getUserFromDb(email: string, passwordHash: string) {
+  try {
+    const user = await db
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), eq(users.password, passwordHash)))
+      .limit(1)
+      .execute();
+
+    return user.length > 0 ? user[0] : null;
+  } catch (error) {
+    console.error('Error fetching user from database:', error);
+    throw new Error('Unable to fetch user from database.');
+  }
+}
 
 export const promosEnum = pgEnum('promos', [
   'P1 2022',
