@@ -2,6 +2,11 @@ import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
+import { AdapterUser as NextAuthAdapterUser } from 'next-auth/adapters';
+
+interface User extends NextAuthAdapterUser {
+  role: string;
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -52,14 +57,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account && (account.provider === 'github' || account.provider === 'google')) {
-        const email = user.email;
-        const name = user.name;
+      if (
+        account &&
+        (account.provider === 'github' || account.provider === 'google')
+      ) {
+        console.log('account', account);
+        console.log('profile', profile);
+        console.log('user', user);
 
         const host = process.env.VERCEL_URL;
-        const protocol = process.env.NEXTAUTH_URL?.startsWith('https') ? 'https' : 'http';
-        const baseUrl = host ? `${protocol}://${host}` : process.env.NEXTAUTH_URL;
-
+        const protocol = process.env.NEXTAUTH_URL?.startsWith('https')
+          ? 'https'
+          : 'http';
+        const baseUrl = host
+          ? `${protocol}://${host}`
+          : process.env.NEXTAUTH_URL;
 
         const response = await fetch(`${baseUrl}/api/save-oauth-user`, {
           method: 'POST',
@@ -72,11 +84,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           })
         });
 
+        const data = await response.json();
+
         if (response.ok) {
+          (user as User).role = data.role;
           return true; // Return true to indicate successful sign-in
         }
         return false; // Return false to indicate failure
-      }else if (account && account.provider === 'credentials') {
+      } else if (account && account.provider === 'credentials') {
         return true; // Return true if the credentials are valid
       }
       return false; // Return false if account is not github or google
@@ -86,6 +101,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.role = (user as User).role;
       }
       return token;
     },
@@ -94,6 +110,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
+        session.user.role = token.role as string;
       }
       return session;
     }
