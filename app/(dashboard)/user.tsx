@@ -39,16 +39,21 @@ export async function User() {
         <DropdownMenuItem>Support</DropdownMenuItem>
         <DropdownMenuSeparator />
         {user ? (
-          <DropdownMenuItem>
-            <form
-              action={async () => {
-                'use server';
-                await signOut();
-              }}
-            >
-              <button type="submit">Sign Out</button>
-            </form>
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem>
+              <Link href="/profile">{user?.name}</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <form
+                action={async () => {
+                  'use server';
+                  await signOut();
+                }}
+              >
+                <button type="submit">Sign Out</button>
+              </form>
+            </DropdownMenuItem>
+          </>
         ) : (
           <DropdownMenuItem>
             <Link href="/login">Sign In</Link>
