@@ -76,6 +76,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return true; // Return true to indicate successful sign-in
         }
         return false; // Return false to indicate failure
+      }else if (account && account.provider === 'credentials') {
+        return true; // Return true if the credentials are valid
       }
       return false; // Return false if account is not github or google
     },
