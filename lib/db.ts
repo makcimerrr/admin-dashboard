@@ -33,7 +33,8 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   name: varchar('name', { length: 255 }),
   username: varchar('username', { length: 255 }),
-  password: varchar('password', { length: 255 })
+  password: varchar('password', { length: 255 }),
+  role: varchar('role', { length: 50 }).default('user')
 });
 
 /*export async function insertUser(email: string, password: string) {
@@ -75,7 +76,8 @@ export async function getUserFromDb(email: string, password: string) {
         id: users.id,
         name: users.name,
         email: users.email,
-        password: users.password
+        password: users.password,
+        role: users.role
       })
       .from(users)
       .where(eq(users.email, email))
@@ -90,7 +92,7 @@ export async function getUserFromDb(email: string, password: string) {
       const isPasswordValid = await compare(password, userRecord.password!);
 
       if (isPasswordValid) {
-        return { id: userRecord.id, name: userRecord.name, email: userRecord.email };
+        return { id: userRecord.id, name: userRecord.name, email: userRecord.email, role: userRecord.role };
       }
     }
 
@@ -121,6 +123,33 @@ export async function saveOauthUser(email:string, name: string){
   } catch (error) {
     console.error('Error saving OAuth user:', error);
     throw new Error('Unable to save OAuth user.');
+  }
+}
+
+/**
+ * Retrieves the role of a user by their email.
+ * @param email - The email of the user.
+ * @returns The role of the user if found, or null if not found.
+ */
+export async function getUserRole(email: string): Promise<string | null> {
+  try {
+    // Recherche de l'utilisateur dans la base de données avec l'email.
+    const user = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1)
+      .execute();
+
+    // Si l'utilisateur existe, retourner le rôle
+    if (user.length > 0) {
+      return user[0].role;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error fetching user role from database:', error);
+    throw new Error('Unable to fetch user role from database.');
   }
 }
 
