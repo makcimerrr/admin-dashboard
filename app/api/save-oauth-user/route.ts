@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { saveOauthUser } from '@/lib/db';
+import { saveOauthUser, getUserRole } from '@/lib/db';
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -9,5 +9,7 @@ export async function POST(req: Request) {
 
   await saveOauthUser(email, name);
 
-  return NextResponse.json({ success: true }, { status: 200 });
+  const role = await getUserRole(email);
+
+  return NextResponse.json({ success: true, role: role }, { status: 200 });
 }
