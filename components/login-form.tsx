@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import { useToast } from '@/components/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 
 const GoogleIcon = () => (
   <svg
@@ -61,8 +61,28 @@ export function LoginForm({
 }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const router = useRouter();
-  const { toast } = useToast();
+
+  const handleSubmit = async (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    setError('');
+
+    const result = await signIn('credentials', {
+      redirect: false,
+      email,
+      password
+    });
+
+    if (result?.error) {
+      console.error(result.error);
+      toast.error('Invalid credentials');
+      setError('Invalid credentials');
+    } else {
+      toast.success('Logged in successfully');
+      router.push('/');
+    }
+  };
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
@@ -100,7 +120,7 @@ export function LoginForm({
               Login with Github
             </Button>
           </div>
-          <form>
+          <form onSubmit={handleSubmit}>
             <div className="grid gap-6">
               <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
                 <span className="relative z-10 bg-background px-2 text-muted-foreground">
@@ -113,7 +133,9 @@ export function LoginForm({
                   <Input
                     id="email"
                     type="email"
+                    value={email}
                     placeholder="m@example.com"
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
@@ -127,8 +149,15 @@ export function LoginForm({
                       Forgot your password?
                     </a>
                   </div>
-                  <Input id="password" type="password" required />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
                 </div>
+                {error && <p className="text-red-500 text-sm">{error}</p>}
                 <Button type="submit" className="w-full">
                   Login
                 </Button>
