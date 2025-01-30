@@ -33,7 +33,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   name: varchar('name', { length: 255 }),
   username: varchar('username', { length: 255 }),
-  password: varchar('password', { length: 255 }).notNull()
+  password: varchar('password', { length: 255 })
 });
 
 /*export async function insertUser(email: string, password: string) {
@@ -87,7 +87,7 @@ export async function getUserFromDb(email: string, password: string) {
       const userRecord = user[0];
 
       // Vérification du mot de passe avec bcrypt
-      const isPasswordValid = await compare(password, userRecord.password);
+      const isPasswordValid = await compare(password, userRecord.password!);
 
       if (isPasswordValid) {
         return { id: userRecord.id, name: userRecord.name, email: userRecord.email };
@@ -98,6 +98,29 @@ export async function getUserFromDb(email: string, password: string) {
   } catch (error) {
     console.error('Error fetching user from database:', error);
     throw new Error('Unable to fetch user from database.');
+  }
+}
+
+export async function saveOauthUser(email:string, name: string){
+  try{
+    // Vérifier si l'utilisateur existe déjà dans la base de données
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (existingUser.length > 0) {
+      return 'User already exists';
+    }
+
+    // Insérer l'utilisateur dans la base de données
+    await db.insert(users).values({ email, name }).execute();
+
+    return 'User added successfully';
+  } catch (error) {
+    console.error('Error saving OAuth user:', error);
+    throw new Error('Unable to save OAuth user.');
   }
 }
 
