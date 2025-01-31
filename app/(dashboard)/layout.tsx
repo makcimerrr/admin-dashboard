@@ -44,6 +44,7 @@ export default function DashboardLayout({
               <DashboardBreadcrumb />
             </Suspense>
             <SearchInput />
+            <DarkModeToggle />
             <User />
           </header>
           <main className="grid flex-1 items-start gap-2 p-4 sm:px-6 sm:py-0 md:gap-4 bg-muted/40">
@@ -133,7 +134,7 @@ function MobileNav() {
             className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
           >
             <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
-            <span className="sr-only">Vercel</span>
+            <span className="sr-only">Zone 01 Rouen</span>
           </Link>
           <Link
             href="/"
@@ -164,7 +165,6 @@ function MobileNav() {
             01Deck
           </Link>
 
-          {/*En développement...*/}
           <Link
             href="#"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
