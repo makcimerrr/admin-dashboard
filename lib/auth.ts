@@ -22,16 +22,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error('No credentials provided');
         }
 
-        // Récupérer l'origine de la requête
-        const host = req.headers.get('host'); // Récupère l'hôte depuis les headers
-        const protocol = process.env.NEXTAUTH_URL?.startsWith('https')
-          ? 'https'
-          : 'http';
-        const baseUrl = host
-          ? `${protocol}://${host}`
-          : process.env.NEXTAUTH_URL;
-
-        const response = await fetch(`${baseUrl}/api/authenticate`, {
+        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/authenticate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -43,7 +34,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (response.ok) {
-          return await response.json();
+          const data = await response.json();
+          return data; // Renvoie la réponse de l'API
         } else {
           throw new Error('Invalid email or password');
         }
@@ -60,15 +52,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         console.log('profile', profile);
         console.log('user', user);
 
-        const host = process.env.VERCEL_URL;
-        const protocol = process.env.NEXTAUTH_URL?.startsWith('https')
-          ? 'https'
-          : 'http';
-        const baseUrl = host
-          ? `${protocol}://${host}`
-          : process.env.NEXTAUTH_URL;
-
-        const response = await fetch(`${baseUrl}/api/save-oauth-user`, {
+        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/save-oauth-user`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
