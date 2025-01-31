@@ -54,7 +54,7 @@ export default function MyForm() {
         <FormField
           control={form.control}
           name="name_8248327585"
-          render={({ field }) => (
+          render={({ field }: any) => (
             <FormItem>
               <FormLabel>Name</FormLabel>
               <FormControl>
@@ -69,7 +69,7 @@ export default function MyForm() {
         <FormField
           control={form.control}
           name="name_2257066199"
-          render={({ field }) => (
+          render={({ field }: any) => (
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
@@ -84,7 +84,7 @@ export default function MyForm() {
         <FormField
           control={form.control}
           name="name_5652350048"
-          render={({ field }) => (
+          render={({ field }: any) => (
             <FormItem>
               <FormLabel>Message</FormLabel>
               <FormControl>
@@ -104,7 +104,7 @@ export default function MyForm() {
         <FormField
           control={form.control}
           name="name_7644453707"
-          render={({ field }) => (
+          render={({ field }:any) => (
             <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
               <FormControl>
                 <Checkbox
