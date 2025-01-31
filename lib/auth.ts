@@ -22,22 +22,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error('No credentials provided');
         }
 
-        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/authenticate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            email: credentials.email,
-            password: credentials.password
-          })
-        });
+       try {
+          const response = await fetch(`${process.env.NEXTAUTH_URL}/api/authenticate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password
+            })
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          return data; // Renvoie la réponse de l'API
-        } else {
-          throw new Error('Invalid email or password');
+          if (response.ok) {
+            const data = await response.json();
+            return data; // Renvoie la réponse de l'API
+          } else {
+            throw new Error('Invalid email or password');
+          }
+        } catch (error) {
+          throw new Error(`Authentication failed: ${error}`);
         }
       }
     })
