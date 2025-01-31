@@ -64,6 +64,43 @@ export const users = pgTable('users', {
 }*/
 
 /**
+ * Creates a new user in the database.
+ * @param user - The user object to create with name, email, and password.
+ */
+export async function createUserInDb(user: {
+  name: string;
+  email: string;
+  password: string;
+}) {
+  try {
+    // Vérifier si l'utilisateur existe déjà dans la base de données
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, user.email))
+      .limit(1);
+
+    if (existingUser.length > 0) {
+      return 'User already exists';
+    }
+
+    // Hachage du mot de passe
+    const passwordHash = await hash(user.password, 10);
+
+    // Insérer l'utilisateur dans la base de données
+    const result = await db
+      .insert(users)
+      .values({ name: user.name, email: user.email, password: passwordHash })
+      .execute();
+
+    return { name: user.name, email: user.email };
+  } catch (error) {
+    console.error('Error creating user in database:', error);
+    throw new Error('Unable to create user in database.');
+  }
+}
+
+/**
  * Retrieves a user from the database by email and password hash.
  * @param email - The email of the user.
  * @param password - The password of the user.
@@ -93,7 +130,12 @@ export async function getUserFromDb(email: string, password: string) {
       const isPasswordValid = await compare(password, userRecord.password!);
 
       if (isPasswordValid) {
-        return { id: userRecord.id, name: userRecord.name, email: userRecord.email, role: userRecord.role };
+        return {
+          id: userRecord.id,
+          name: userRecord.name,
+          email: userRecord.email,
+          role: userRecord.role
+        };
       }
     }
 
@@ -104,8 +146,13 @@ export async function getUserFromDb(email: string, password: string) {
   }
 }
 
-export async function saveOauthUser(email:string, name: string){
-  try{
+/**
+ * Saves an OAuth user to the database.
+ * @param email - The email of the user.
+ * @param name - The name of the user.
+ */
+export async function saveOauthUser(email: string, name: string) {
+  try {
     // Vérifier si l'utilisateur existe déjà dans la base de données
     const existingUser = await db
       .select()
@@ -202,25 +249,25 @@ export async function getAverageDelaysByMonth(promoId: string) {
   return (result = await db
     .select({
       month: sql`DATE_TRUNC
-      ('month',
-      ${delayStatus.lastUpdate}
-      )`.as('month'),
+            ('month',
+            ${delayStatus.lastUpdate}
+            )`.as('month'),
       avgLateCount: sql`AVG(
-      ${delayStatus.lateCount}
-      )`.as('avgLateCount'),
+            ${delayStatus.lateCount}
+            )`.as('avgLateCount'),
       avgGoodLateCount: sql`AVG(
-      ${delayStatus.goodLateCount}
-      )`.as('avgGoodLateCount')
+            ${delayStatus.goodLateCount}
+            )`.as('avgGoodLateCount')
     })
     .from(delayStatus).where(sql`${delayStatus.promoId}
-          =
-          ${promoId}`).groupBy(sql`DATE_TRUNC
-          ('month',
-          ${delayStatus.lastUpdate}
-          )`).orderBy(sql`DATE_TRUNC
-          ('month',
-          ${delayStatus.lastUpdate}
-          )`));
+            =
+            ${promoId}`).groupBy(sql`DATE_TRUNC
+            ('month',
+            ${delayStatus.lastUpdate}
+            )`).orderBy(sql`DATE_TRUNC
+            ('month',
+            ${delayStatus.lastUpdate}
+            )`));
 }
 
 export async function getDelayStatus(promoId: string): Promise<{
@@ -727,8 +774,8 @@ export async function getAllUpdates(): Promise<Update[]> {
     .select({
       eventId: updates.event_id,
       lastUpdate: sql<Date>`MAX(
-      ${updates.last_update}
-      )`.as('lastUpdate')
+            ${updates.last_update}
+            )`.as('lastUpdate')
     })
     .from(updates)
     .groupBy(updates.event_id);
