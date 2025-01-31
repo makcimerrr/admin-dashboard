@@ -43,7 +43,7 @@ export async function User() {
             <DropdownMenuItem>
               <Link href="/profile">{user?.name}</Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>{user?.role}</DropdownMenuItem>
+            {/*<DropdownMenuItem>{user?.role}</DropdownMenuItem>*/}
             <DropdownMenuItem>
               <form
                 action={async () => {
