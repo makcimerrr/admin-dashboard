@@ -11,5 +11,5 @@ export async function POST(req: Request) {
 
   const role = await getUserRole(email);
 
-  return NextResponse.json({ success: true, role: role }, { status: 200 });
+  return NextResponse.json({ success: true, role }, { status: 200 });
 }
