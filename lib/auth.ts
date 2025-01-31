@@ -2,6 +2,11 @@ import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
+import { AdapterUser as NextAuthAdapterUser } from 'next-auth/adapters';
+
+interface User extends NextAuthAdapterUser {
+  role: string;
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -22,20 +27,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error('No credentials provided');
         }
 
-       try {
-          const response = await fetch(`${process.env.NEXTAUTH_URL}/api/authenticate`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password
-            })
-          });
+        try {
+          const response = await fetch(
+            `${process.env.NEXTAUTH_URL}/api/authenticate`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password
+              })
+            }
+          );
+
+          const data = await response.json();
 
           if (response.ok) {
-            const data = await response.json();
             return data; // Renvoie la réponse de l'API
           } else {
             throw new Error('Invalid email or password');
@@ -52,22 +61,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         account &&
         (account.provider === 'github' || account.provider === 'google')
       ) {
-        console.log('account', account);
+        /*console.log('account', account);
         console.log('profile', profile);
-        console.log('user', user);
+        console.log('user', user);*/
 
-        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/save-oauth-user`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            email: user.email,
-            name: user.name
-          })
-        });
+        const response = await fetch(
+          `${process.env.NEXTAUTH_URL}/api/save-oauth-user`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: user.email,
+              name: user.name
+            })
+          }
+        );
+
+        const data = await response.json();
 
         if (response.ok) {
+          (user as User).role = data.role;
           return true; // Return true to indicate successful sign-in
         }
         return false; // Return false to indicate failure
@@ -81,6 +96,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.role = (user as User).role;
       }
       return token;
     },
@@ -89,6 +105,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
+        session.user.role = token.role as string;
       }
       return session;
     }
