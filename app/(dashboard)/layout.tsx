@@ -2,11 +2,9 @@ import Link from 'next/link';
 import {
   Home,
   LineChart,
-  Package,
   Package2,
   PanelLeft,
   Settings,
-  ShoppingCart,
   Users2,
   Bookmark
 } from 'lucide-react';
@@ -15,13 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Tooltip,
-  TooltipContent, TooltipProvider,
+  TooltipContent,
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { Analytics } from '@vercel/analytics/react';
 import { Toaster } from 'react-hot-toast'; // Import du Toaster
 import { User } from './user';
-import { VercelLogo } from '@/components/icons';
 import Providers from './providers';
 import { NavItem } from './nav-item';
 import { SearchInput } from './search';
@@ -44,7 +41,7 @@ export default function DashboardLayout({
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <MobileNav />
             <Suspense fallback={<div>Loading breadcrumbs...</div>}>
-            <DashboardBreadcrumb />
+              <DashboardBreadcrumb />
             </Suspense>
             <SearchInput />
             <User />
@@ -64,11 +61,15 @@ function DesktopNav() {
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
-          href="https://vercel.com/templates/next.js/admin-dashboard-tailwind-postgres-react-nextjs"
+          href="https://zone01rouennormandie.org/"
           className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
         >
-          <VercelLogo className="h-3 w-3 transition-all group-hover:scale-110" />
-          <span className="sr-only">Acme Inc</span>
+          <img
+            src="https://zone01rouennormandie.org/wp-content/uploads/2022/10/ZONE01-ROUEN-NORMANDIE-FOND-BLANC-T-SHIRT.png"
+            alt="Zone01 Rouen Normandie"
+            className="h-9 w-9"
+          />
+          <span className="sr-only">Zone01 Rouen Normandie</span>
         </Link>
 
         <NavItem href="/" label="Dashboard">
@@ -111,7 +112,6 @@ function DesktopNav() {
         </Tooltip>
 
         <DarkModeToggle />
-
       </nav>
     </aside>
   );
