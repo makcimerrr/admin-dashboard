@@ -2,11 +2,6 @@ import NextAuth from 'next-auth';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
 import Credentials from 'next-auth/providers/credentials';
-import { AdapterUser as NextAuthAdapterUser } from 'next-auth/adapters';
-
-interface User extends NextAuthAdapterUser {
-  role: string;
-}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -56,7 +51,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     })
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: any) {
       if (
         account &&
         (account.provider === 'github' || account.provider === 'google')
@@ -84,10 +79,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           })
         });
 
-        const data = await response.json();
-
         if (response.ok) {
-          (user as User).role = data.role;
           return true; // Return true to indicate successful sign-in
         }
         return false; // Return false to indicate failure
@@ -96,21 +88,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       }
       return false; // Return false if account is not github or google
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
-        token.role = (user as User).role;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
-        session.user.role = token.role as string;
       }
       return session;
     }
