@@ -68,20 +68,26 @@ export function LoginForm({
     e.preventDefault();
     setError('');
 
-    const result = await signIn('credentials', {
-      redirect: false,
-      email,
-      password
-    });
+    try {
+        const result = await signIn('credentials', {
+          redirect: false,
+          email,
+          password
+        });
 
-    if (result?.error) {
-      console.error(result.error);
-      toast.error('Invalid credentials');
-      setError('Invalid credentials');
-    } else {
-      toast.success('Logged in successfully');
-      router.push('/');
-    }
+        if (result?.error) {
+          console.error(result.error);
+          toast.error('Invalid credentials');
+          setError('Invalid credentials');
+        } else {
+          toast.success('Logged in successfully');
+          router.push('/');
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('An error occurred during login');
+        setError('An error occurred during login');
+      }
   };
 
   return (
