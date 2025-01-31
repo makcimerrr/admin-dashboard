@@ -8,7 +8,8 @@ import {
   timestamp,
   pgEnum,
   serial,
-  integer
+  integer,
+  varchar
 } from 'drizzle-orm/pg-core';
 import {
   count,
@@ -23,8 +24,182 @@ import {
   SQL
 } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
+// @ts-ignore
+import { hash, compare } from 'bcryptjs';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  name: varchar('name', { length: 255 }),
+  username: varchar('username', { length: 255 }),
+  password: varchar('password', { length: 255 }),
+  role: varchar('role', { length: 50 }).default('user')
+});
+
+/*export async function insertUser(email: string, password: string) {
+  // Vérifier si l'utilisateur existe déjà dans la base de données
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
+
+  if (existingUser.length === 0) {
+    throw new Error('User does not exist');
+  }
+
+  // Hachage du mot de passe
+  const passwordHash = await hash(password, 10);
+
+  // Mettre à jour le mot de passe de l'utilisateur
+  const updatedUser = await db
+    .update(users)
+    .set({ password: passwordHash })
+    .where(eq(users.email, email))
+    .returning();
+
+  return updatedUser[0]; // Retourner l'utilisateur mis à jour
+}*/
+
+/**
+ * Creates a new user in the database.
+ * @param user - The user object to create with name, email, and password.
+ */
+export async function createUserInDb(user: {
+  name: string;
+  email: string;
+  password: string;
+}) {
+  try {
+    // Vérifier si l'utilisateur existe déjà dans la base de données
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, user.email))
+      .limit(1);
+
+    if (existingUser.length > 0) {
+      return 'User already exists';
+    }
+
+    // Hachage du mot de passe
+    const passwordHash = await hash(user.password, 10);
+
+    // Insérer l'utilisateur dans la base de données
+    const result = await db
+      .insert(users)
+      .values({ name: user.name, email: user.email, password: passwordHash })
+      .execute();
+
+    return { name: user.name, email: user.email };
+  } catch (error) {
+    console.error('Error creating user in database:', error);
+    throw new Error('Unable to create user in database.');
+  }
+}
+
+/**
+ * Retrieves a user from the database by email and password hash.
+ * @param email - The email of the user.
+ * @param password - The password of the user.
+ * @returns The user object if found and password is correct, or null if not found or password is incorrect.
+ */
+export async function getUserFromDb(email: string, password: string) {
+  try {
+    // Recherche de l'utilisateur dans la base de données avec l'email.
+    const user = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        password: users.password,
+        role: users.role
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1)
+      .execute();
+
+    // Si l'utilisateur existe, comparez les mots de passe
+    if (user.length > 0) {
+      const userRecord = user[0];
+
+      // Vérification du mot de passe avec bcrypt
+      const isPasswordValid = await compare(password, userRecord.password!);
+
+      if (isPasswordValid) {
+        return {
+          id: userRecord.id,
+          name: userRecord.name,
+          email: userRecord.email,
+          role: userRecord.role
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error fetching user from database:', error);
+    throw new Error('Unable to fetch user from database.');
+  }
+}
+
+/**
+ * Saves an OAuth user to the database.
+ * @param email - The email of the user.
+ * @param name - The name of the user.
+ */
+export async function saveOauthUser(email: string, name: string) {
+  try {
+    // Vérifier si l'utilisateur existe déjà dans la base de données
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (existingUser.length > 0) {
+      return 'User already exists';
+    }
+
+    // Insérer l'utilisateur dans la base de données
+    await db.insert(users).values({ email, name }).execute();
+
+    return 'User added successfully';
+  } catch (error) {
+    console.error('Error saving OAuth user:', error);
+    throw new Error('Unable to save OAuth user.');
+  }
+}
+
+/**
+ * Retrieves the role of a user by their email.
+ * @param email - The email of the user.
+ * @returns The role of the user if found, or null if not found.
+ */
+export async function getUserRole(email: string): Promise<string | null> {
+  try {
+    // Recherche de l'utilisateur dans la base de données avec l'email.
+    const user = await db
+      .select({ role: users.role })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1)
+      .execute();
+
+    // Si l'utilisateur existe, retourner le rôle
+    if (user.length > 0) {
+      return user[0].role;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error fetching user role from database:', error);
+    throw new Error('Unable to fetch user role from database.');
+  }
+}
 
 export const promosEnum = pgEnum('promos', [
   'P1 2022',
@@ -73,16 +248,26 @@ export async function getAverageDelaysByMonth(promoId: string) {
   let result;
   return (result = await db
     .select({
-      month: sql`DATE_TRUNC('month', ${delayStatus.lastUpdate})`.as('month'),
-      avgLateCount: sql`AVG(${delayStatus.lateCount})`.as('avgLateCount'),
-      avgGoodLateCount: sql`AVG(${delayStatus.goodLateCount})`.as(
-        'avgGoodLateCount'
-      )
+      month: sql`DATE_TRUNC
+            ('month',
+            ${delayStatus.lastUpdate}
+            )`.as('month'),
+      avgLateCount: sql`AVG(
+            ${delayStatus.lateCount}
+            )`.as('avgLateCount'),
+      avgGoodLateCount: sql`AVG(
+            ${delayStatus.goodLateCount}
+            )`.as('avgGoodLateCount')
     })
-    .from(delayStatus)
-    .where(sql`${delayStatus.promoId} = ${promoId}`)
-    .groupBy(sql`DATE_TRUNC('month', ${delayStatus.lastUpdate})`)
-    .orderBy(sql`DATE_TRUNC('month', ${delayStatus.lastUpdate})`));
+    .from(delayStatus).where(sql`${delayStatus.promoId}
+            =
+            ${promoId}`).groupBy(sql`DATE_TRUNC
+            ('month',
+            ${delayStatus.lastUpdate}
+            )`).orderBy(sql`DATE_TRUNC
+            ('month',
+            ${delayStatus.lastUpdate}
+            )`));
 }
 
 export async function getDelayStatus(promoId: string): Promise<{
@@ -178,10 +363,7 @@ export async function deletePromotion(key: string): Promise<string> {
     }
 
     // Supprimer la promotion
-    await db
-      .delete(promotions)
-      .where(eq(promotions.name, key))
-      .execute();
+    await db.delete(promotions).where(eq(promotions.name, key)).execute();
 
     return `Promotion "${key}" supprimée avec succès.`;
   } catch (error) {
@@ -592,8 +774,8 @@ export async function getAllUpdates(): Promise<Update[]> {
     .select({
       eventId: updates.event_id,
       lastUpdate: sql<Date>`MAX(
-      ${updates.last_update}
-      )`.as('lastUpdate')
+            ${updates.last_update}
+            )`.as('lastUpdate')
     })
     .from(updates)
     .groupBy(updates.event_id);
