@@ -24,7 +24,7 @@ import {
   SQL
 } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
-import { hash, compare } from 'bcrypt';
+import { hash, compare } from 'bcryptjs';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
