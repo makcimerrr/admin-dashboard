@@ -36,7 +36,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { useToast } from "@/components/hooks/use-toast"
+import { useToast } from '@/components/hooks/use-toast';
 
 const AdminScreen: React.FC = () => {
   const db = getFirestore(firebaseApp); // Firestore Initialization
@@ -73,9 +73,9 @@ const AdminScreen: React.FC = () => {
       if (currentUser && !isNotified) {
         toast.success(`Bienvenue, ${currentUser.displayName}!`);
         /*toast({
-          title: "Scheduled: Catch up",
-          description: "Friday, February 10, 2023 at 5:57 PM",
-        })*/
+                  title: "Scheduled: Catch up",
+                  description: "Friday, February 10, 2023 at 5:57 PM",
+                })*/
         setIsNotified(true); // Marque la notification comme affichée
       }
     });
@@ -441,7 +441,9 @@ const AdminScreen: React.FC = () => {
     <Card>
       <CardHeader>
         <CardTitle>01Deck</CardTitle>
-        <CardDescription>Create educational cards for the mobile app.</CardDescription>
+        <CardDescription>
+          Create educational cards for the mobile app.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col justify-center items-center p-6">
@@ -467,7 +469,7 @@ const AdminScreen: React.FC = () => {
                   <Label>Type de carte</Label>
                   <Select
                     value={selectedType}
-                    onValueChange={(e) => setSelectedType(e)}
+                    onValueChange={(e:any) => setSelectedType(e)}
                   >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Type" />
@@ -482,7 +484,7 @@ const AdminScreen: React.FC = () => {
                   <Label>Catégorie</Label>
                   <Select
                     value={selectedCategory}
-                    onValueChange={(e) => setSelectedCategory(e)}
+                    onValueChange={(e: any) => setSelectedCategory(e)}
                   >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Catégorie" />
