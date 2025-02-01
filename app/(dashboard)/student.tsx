@@ -83,10 +83,12 @@ export function Student({ student }: { student: SelectStudent }) {
       (async () => {
         try {
           const giteaResponse = await fetch(
-              `http://localhost:3010/user-gitea/${student.login}` /*For development*/
+              `https://api-01-edu.vercel.app/user-gitea/${student.login}`
+              /*`http://localhost:3010/user-gitea/${student.login}`*/ /*For development*/
           );
           const userFindResponse = await fetch(
-              `http://localhost:3010/user-find/${student.login}` /*For development*/
+              `https://api-01-edu.vercel.app/user-find/${student.login}`
+              /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/
           );
 
           if (!giteaResponse.ok) {
@@ -98,13 +100,13 @@ export function Student({ student }: { student: SelectStudent }) {
           }
 
           const giteaFindData = await giteaResponse.json();
-          console.log('GITEA', giteaFindData);
+          // console.log('GITEA', giteaFindData);
           const giteaData = {
             last_login: giteaFindData.user.last_login
           }
 
           const userFindData = await userFindResponse.json();
-          console.log(userFindData.user);
+          // console.log(userFindData.user);
           const userData = userFindData.user.map((user: any) => ({
             id: user.id,
             login: user.login,
@@ -166,7 +168,7 @@ export function Student({ student }: { student: SelectStudent }) {
     },
     { label: 'Email', value: currentUser.email || 'N/A' },
     { label: 'Audit Ratio', value: ratio.toFixed(1) ?? 'N/A' },
-    { label: 'Audits Assigned', value: currentUser.auditsAssigned || 'N/A' },
+    { label: 'Audits Assigned', value: currentUser.auditsAssigned || '0' },
     { label: 'Last Login', value: currentUser.last_login ? new Date(currentUser.last_login).toLocaleDateString('en-US') : 'N/A' },
     { label: 'Github ID', value: currentUser.githubId || 'N/A' },
     /*{ label: 'Discord ID', value: currentUser.discordId || 'N/A' },
