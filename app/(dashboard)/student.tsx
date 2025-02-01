@@ -83,12 +83,22 @@ export function Student({ student }: { student: SelectStudent }) {
       (async () => {
         try {
           const giteaResponse = await fetch(
-              `https://api-01-edu.vercel.app/user-gitea/${student.login}`
-              /*`http://localhost:3010/user-gitea/${student.login}`*/ /*For development*/
+            `https://api-01-edu.vercel.app/user-gitea/${student.login}`
+            /*`http://localhost:3010/user-gitea/${student.login}` *//*For development*/,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.ACCESS_TOKEN}`
+              }
+            }
           );
           const userFindResponse = await fetch(
-              `https://api-01-edu.vercel.app/user-find/${student.login}`
-              /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/
+            `https://api-01-edu.vercel.app/user-find/${student.login}`
+            /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.ACCESS_TOKEN}`
+              }
+            }
           );
 
           if (!giteaResponse.ok) {
@@ -96,14 +106,16 @@ export function Student({ student }: { student: SelectStudent }) {
           }
 
           if (!userFindResponse.ok) {
-            throw new Error(`User find fetch failed: ${userFindResponse.statusText}`);
+            throw new Error(
+              `User find fetch failed: ${userFindResponse.statusText}`
+            );
           }
 
           const giteaFindData = await giteaResponse.json();
           // console.log('GITEA', giteaFindData);
           const giteaData = {
             last_login: giteaFindData.user.last_login
-          }
+          };
 
           const userFindData = await userFindResponse.json();
           // console.log(userFindData.user);
@@ -169,10 +181,15 @@ export function Student({ student }: { student: SelectStudent }) {
     { label: 'Email', value: currentUser.email || 'N/A' },
     { label: 'Audit Ratio', value: ratio.toFixed(1) ?? 'N/A' },
     { label: 'Audits Assigned', value: currentUser.auditsAssigned || '0' },
-    { label: 'Last Login', value: currentUser.last_login ? new Date(currentUser.last_login).toLocaleDateString('en-US') : 'N/A' },
-    { label: 'Github ID', value: currentUser.githubId || 'N/A' },
+    {
+      label: 'Last Login',
+      value: currentUser.last_login
+        ? new Date(currentUser.last_login).toLocaleDateString('en-US')
+        : 'N/A'
+    },
+    { label: 'Github ID', value: currentUser.githubId || 'N/A' }
     /*{ label: 'Discord ID', value: currentUser.discordId || 'N/A' },
-    { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
+            { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
   ];
 
   const currentInfo = infoList[currentIndex] || {};
