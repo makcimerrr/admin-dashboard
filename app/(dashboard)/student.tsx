@@ -70,6 +70,7 @@ interface currentUser {
   githubId: string;
   discordId: string;
   discordDMChannelId: string;
+  last_login: string;
 }
 
 export function Student({ student }: { student: SelectStudent }) {
@@ -77,17 +78,34 @@ export function Student({ student }: { student: SelectStudent }) {
   const [userData, setUserData] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const handleClick = async () => {
-    /*toast(student.login);*/
+  const fetchGiteaAndUserFind = async () => {
     toast.promise(
       (async () => {
-        const response = await fetch(
-          `http://localhost:3010/user-find/${student.login}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          console.log(data.user);
-          const userData = data.user.map((user: any) => ({
+        try {
+          const giteaResponse = await fetch(
+              `http://localhost:3010/user-gitea/${student.login}` /*For development*/
+          );
+          const userFindResponse = await fetch(
+              `http://localhost:3010/user-find/${student.login}` /*For development*/
+          );
+
+          if (!giteaResponse.ok) {
+            throw new Error(`Gitea fetch failed: ${giteaResponse.statusText}`);
+          }
+
+          if (!userFindResponse.ok) {
+            throw new Error(`User find fetch failed: ${userFindResponse.statusText}`);
+          }
+
+          const giteaFindData = await giteaResponse.json();
+          console.log('GITEA', giteaFindData);
+          const giteaData = {
+            last_login: giteaFindData.user.last_login
+          }
+
+          const userFindData = await userFindResponse.json();
+          console.log(userFindData.user);
+          const userData = userFindData.user.map((user: any) => ({
             id: user.id,
             login: user.login,
             firstName: user.firstName,
@@ -98,20 +116,27 @@ export function Student({ student }: { student: SelectStudent }) {
             email: user.email,
             githubId: user.githubId,
             discordId: user.discordId,
-            discordDMChannelId: user.discordDMChannelId
+            discordDMChannelId: user.discordDMChannelId,
+            last_login: giteaData.last_login
           }));
           setUserData(userData);
           setIsDrawerOpen(true);
-        } else {
-          throw new Error(response.statusText);
+          return { giteaFindData, userFindData };
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          throw error;
         }
       })(),
       {
-        loading: 'Fetching...',
-        success: <b>{student.login} as been fetched successfully</b>,
-        error: <b>Could not fetch.</b>
+        loading: 'Fetching data...',
+        success: <b>{student.login} has been fetched successfully</b>,
+        error: <b>Could not fetch data.</b>
       }
     );
+  };
+
+  const handleClick = async () => {
+    await fetchGiteaAndUserFind();
   };
 
   const handleClose = () => {
@@ -120,7 +145,7 @@ export function Student({ student }: { student: SelectStudent }) {
   };
 
   const handleNext = () => {
-    if (currentIndex < 3) {
+    if (currentIndex < 10) {
       // Limiter à 4 informations (nom, email, ratio, etc.)
       setCurrentIndex(currentIndex + 1);
     }
@@ -132,7 +157,7 @@ export function Student({ student }: { student: SelectStudent }) {
     }
   };
 
-  const currentUser: currentUser = userData[0] || {} as currentUser;
+  const currentUser: currentUser = userData[0] || ({} as currentUser);
   const ratio = currentUser?.auditRatio ?? 0;
   const infoList = [
     {
@@ -141,6 +166,11 @@ export function Student({ student }: { student: SelectStudent }) {
     },
     { label: 'Email', value: currentUser.email || 'N/A' },
     { label: 'Audit Ratio', value: ratio.toFixed(1) ?? 'N/A' },
+    { label: 'Audits Assigned', value: currentUser.auditsAssigned || 'N/A' },
+    { label: 'Last Login', value: currentUser.last_login ? new Date(currentUser.last_login).toLocaleDateString('en-US') : 'N/A' },
+    { label: 'Github ID', value: currentUser.githubId || 'N/A' },
+    /*{ label: 'Discord ID', value: currentUser.discordId || 'N/A' },
+    { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
   ];
 
   const currentInfo = infoList[currentIndex] || {};
