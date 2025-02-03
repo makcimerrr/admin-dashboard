@@ -25,6 +25,8 @@ import {
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 const getProgressStatusClass = (status: string | null) => {
   switch (status) {
@@ -71,6 +73,7 @@ interface currentUser {
   discordId: string;
   discordDMChannelId: string;
   last_login: string;
+  last_contribution: string;
 }
 
 export function Student({ student }: { student: SelectStudent }) {
@@ -83,18 +86,16 @@ export function Student({ student }: { student: SelectStudent }) {
       (async () => {
         try {
           const giteaResponse = await fetch(
-            `https://api-01-edu.vercel.app/user-gitea/${student.login}`
-            /*`http://localhost:3010/user-gitea/${student.login}` *//*For development*/,
-            {
+            `https://api-01-edu.vercel.app/user-gitea/${student.login}`,
+            /*`http://localhost:3010/user-gitea/${student.login}` */ /*For development*/ {
               headers: {
                 Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
               }
             }
           );
           const userFindResponse = await fetch(
-            `https://api-01-edu.vercel.app/user-find/${student.login}`
-            /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/,
-            {
+            `https://api-01-edu.vercel.app/user-find/${student.login}`,
+            /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/ {
               headers: {
                 Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
               }
@@ -112,9 +113,24 @@ export function Student({ student }: { student: SelectStudent }) {
           }
 
           const giteaFindData = await giteaResponse.json();
+
+          const latestDate = giteaFindData.heatmap.reduce(
+            (latest: { timestamp: number }, current: { timestamp: number }) => {
+              return current.timestamp > latest.timestamp ? current : latest;
+            }
+          );
+
+          const timeMessage = formatDistanceToNow(
+            new Date(latestDate.timestamp * 1000),
+            {
+              locale: fr,
+            }
+          );
+
           // console.log('GITEA', giteaFindData);
           const giteaData = {
-            last_login: giteaFindData.user.last_login
+            last_login: giteaFindData.user.last_login,
+            last_contribution: timeMessage
           };
 
           const userFindData = await userFindResponse.json();
@@ -131,7 +147,8 @@ export function Student({ student }: { student: SelectStudent }) {
             githubId: user.githubId,
             discordId: user.discordId,
             discordDMChannelId: user.discordDMChannelId,
-            last_login: giteaData.last_login
+            last_login: giteaData.last_login,
+            last_contribution: giteaData.last_contribution
           }));
           setUserData(userData);
           setIsDrawerOpen(true);
@@ -179,6 +196,8 @@ export function Student({ student }: { student: SelectStudent }) {
       value: `${currentUser.firstName} ${currentUser.lastName}`
     },
     { label: 'Email', value: currentUser.email || 'N/A' },
+    { label: 'Campus', value: currentUser.campus || 'N/A' },
+    { label: 'Dernière contribution', value: currentUser.last_contribution || 'N/A' },
     { label: 'Audit Ratio', value: ratio.toFixed(1) ?? 'N/A' },
     { label: 'Audits Assigned', value: currentUser.auditsAssigned || '0' },
     {
@@ -189,7 +208,7 @@ export function Student({ student }: { student: SelectStudent }) {
     },
     { label: 'Github ID', value: currentUser.githubId || 'N/A' }
     /*{ label: 'Discord ID', value: currentUser.discordId || 'N/A' },
-            { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
+                    { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
   ];
 
   const currentInfo = infoList[currentIndex] || {};
