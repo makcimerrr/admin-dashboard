@@ -87,7 +87,7 @@ export function Student({ student }: { student: SelectStudent }) {
             /*`http://localhost:3010/user-gitea/${student.login}` *//*For development*/,
             {
               headers: {
-                Authorization: `Bearer ${process.env.ACCESS_TOKEN}`
+                Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
               }
             }
           );
@@ -96,7 +96,7 @@ export function Student({ student }: { student: SelectStudent }) {
             /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/,
             {
               headers: {
-                Authorization: `Bearer ${process.env.ACCESS_TOKEN}`
+                Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
               }
             }
           );
@@ -184,7 +184,7 @@ export function Student({ student }: { student: SelectStudent }) {
     {
       label: 'Last Login',
       value: currentUser.last_login
-        ? new Date(currentUser.last_login).toLocaleDateString('en-US')
+        ? new Date(currentUser.last_login).toLocaleDateString('fr-FR')
         : 'N/A'
     },
     { label: 'Github ID', value: currentUser.githubId || 'N/A' }
