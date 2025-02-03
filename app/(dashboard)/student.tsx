@@ -12,6 +12,19 @@ import { MoreHorizontal } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { SelectStudent } from '@/lib/db';
 import { deleteStudent } from './actions';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger
+} from '@/components/ui/drawer';
+import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const getProgressStatusClass = (status: string | null) => {
   switch (status) {
@@ -45,61 +58,248 @@ const getDelayLevelClass = (level: string | null) => {
   }
 };
 
+interface currentUser {
+  id: number;
+  login: string;
+  firstName: string;
+  lastName: string;
+  auditRatio: number;
+  auditsAssigned: number;
+  campus: string;
+  email: string;
+  githubId: string;
+  discordId: string;
+  discordDMChannelId: string;
+  last_login: string;
+}
+
 export function Student({ student }: { student: SelectStudent }) {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [userData, setUserData] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const fetchGiteaAndUserFind = async () => {
+    toast.promise(
+      (async () => {
+        try {
+          const giteaResponse = await fetch(
+            `https://api-01-edu.vercel.app/user-gitea/${student.login}`
+            /*`http://localhost:3010/user-gitea/${student.login}` *//*For development*/,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.ACCESS_TOKEN}`
+              }
+            }
+          );
+          const userFindResponse = await fetch(
+            `https://api-01-edu.vercel.app/user-find/${student.login}`
+            /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.ACCESS_TOKEN}`
+              }
+            }
+          );
+
+          if (!giteaResponse.ok) {
+            throw new Error(`Gitea fetch failed: ${giteaResponse.statusText}`);
+          }
+
+          if (!userFindResponse.ok) {
+            throw new Error(
+              `User find fetch failed: ${userFindResponse.statusText}`
+            );
+          }
+
+          const giteaFindData = await giteaResponse.json();
+          // console.log('GITEA', giteaFindData);
+          const giteaData = {
+            last_login: giteaFindData.user.last_login
+          };
+
+          const userFindData = await userFindResponse.json();
+          // console.log(userFindData.user);
+          const userData = userFindData.user.map((user: any) => ({
+            id: user.id,
+            login: user.login,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            auditRatio: user.auditRatio,
+            auditsAssigned: user.auditsAssigned,
+            campus: user.campus,
+            email: user.email,
+            githubId: user.githubId,
+            discordId: user.discordId,
+            discordDMChannelId: user.discordDMChannelId,
+            last_login: giteaData.last_login
+          }));
+          setUserData(userData);
+          setIsDrawerOpen(true);
+          return { giteaFindData, userFindData };
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          throw error;
+        }
+      })(),
+      {
+        loading: 'Fetching data...',
+        success: <b>{student.login} has been fetched successfully</b>,
+        error: <b>Could not fetch data.</b>
+      }
+    );
+  };
+
+  const handleClick = async () => {
+    await fetchGiteaAndUserFind();
+  };
+
+  const handleClose = () => {
+    setUserData([]);
+    setIsDrawerOpen(false);
+  };
+
+  const handleNext = () => {
+    if (currentIndex < 10) {
+      // Limiter à 4 informations (nom, email, ratio, etc.)
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  const currentUser: currentUser = userData[0] || ({} as currentUser);
+  const ratio = currentUser?.auditRatio ?? 0;
+  const infoList = [
+    {
+      label: 'Name',
+      value: `${currentUser.firstName} ${currentUser.lastName}`
+    },
+    { label: 'Email', value: currentUser.email || 'N/A' },
+    { label: 'Audit Ratio', value: ratio.toFixed(1) ?? 'N/A' },
+    { label: 'Audits Assigned', value: currentUser.auditsAssigned || '0' },
+    {
+      label: 'Last Login',
+      value: currentUser.last_login
+        ? new Date(currentUser.last_login).toLocaleDateString('en-US')
+        : 'N/A'
+    },
+    { label: 'Github ID', value: currentUser.githubId || 'N/A' }
+    /*{ label: 'Discord ID', value: currentUser.discordId || 'N/A' },
+            { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
+  ];
+
+  const currentInfo = infoList[currentIndex] || {};
+
   return (
-    <TableRow>
-      <TableCell className="font-medium">{student.first_name}</TableCell>
-      <TableCell>{student.last_name}</TableCell>
-      <TableCell>{student.login}</TableCell>
-      <TableCell>
-        <Badge variant="outline" className="capitalize">
-          {student.promos}
-        </Badge>
-      </TableCell>
-      {/* Ajout des nouvelles colonnes */}
-      <TableCell>
-        <Badge variant="outline" className="capitalize">
-          {student.project_name || "N/A"}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge
-          variant="outline"
-          className={`capitalize ${getProgressStatusClass(student.progress_status)}`}
-        >
-          {student.progress_status || "N/A"}
-        </Badge>
-      </TableCell>
-      <TableCell>
-        <Badge
-          variant="outline"
-          className={`capitalize ${getDelayLevelClass(student.delay_level)}`}
-        >
-          {student.delay_level || "N/A"}
-        </Badge>
-      </TableCell>
-      <TableCell className="hidden md:table-cell">
-        {new Date(student.availableAt).toLocaleDateString('en-US')}
-      </TableCell>
-      <TableCell>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button aria-haspopup="true" size="icon" variant="ghost">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">Toggle menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem>Edit</DropdownMenuItem>
-            <DropdownMenuItem>
-              <form action={deleteStudent}>
-                <button type="submit">Delete</button>
-              </form>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-    </TableRow>
+    <>
+      <TableRow onClick={handleClick} className="cursor-pointer">
+        <TableCell className="font-medium">{student.first_name}</TableCell>
+        <TableCell>{student.last_name}</TableCell>
+        <TableCell>{student.login}</TableCell>
+        <TableCell>
+          <Badge variant="outline" className="capitalize">
+            {student.promos}
+          </Badge>
+        </TableCell>
+        {/* Ajout des nouvelles colonnes */}
+        <TableCell>
+          <Badge variant="outline" className="capitalize">
+            {student.project_name || 'N/A'}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Badge
+            variant="outline"
+            className={`capitalize ${getProgressStatusClass(student.progress_status)}`}
+          >
+            {student.progress_status || 'N/A'}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Badge
+            variant="outline"
+            className={`capitalize ${getDelayLevelClass(student.delay_level)}`}
+          >
+            {student.delay_level || 'N/A'}
+          </Badge>
+        </TableCell>
+        <TableCell className="hidden md:table-cell">
+          {new Date(student.availableAt).toLocaleDateString('en-US')}
+        </TableCell>
+        <TableCell>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button aria-haspopup="true" size="icon" variant="ghost">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem>Edit</DropdownMenuItem>
+              <DropdownMenuItem>
+                <form action={deleteStudent}>
+                  <button type="submit">Delete</button>
+                </form>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      </TableRow>
+
+      <Drawer open={isDrawerOpen} onClose={handleClose}>
+        <DrawerContent>
+          <div className="mx-auto w-full max-w-sm">
+            <DrawerHeader>
+              <DrawerTitle>User Data ({currentUser.login})</DrawerTitle>
+              <DrawerDescription>
+                Navigate through the user's data.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="p-4">
+              <div className="flex items-center justify-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 rounded-full"
+                  onClick={handlePrev}
+                  disabled={currentIndex === 0}
+                >
+                  <ChevronLeft />
+                  <span className="sr-only">Previous</span>
+                </Button>
+                <div className="flex-1 text-center">
+                  <div className="text-lg font-bold tracking-tighter">
+                    {currentInfo.label}
+                  </div>
+                  <div className="mt-4 text-3xl font-extrabold">
+                    {currentInfo.value}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 rounded-full"
+                  onClick={handleNext}
+                  disabled={currentIndex === infoList.length - 1}
+                >
+                  <ChevronRight />
+                  <span className="sr-only">Next</span>
+                </Button>
+              </div>
+            </div>
+            <DrawerFooter>
+              <DrawerClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </>
   );
 }
