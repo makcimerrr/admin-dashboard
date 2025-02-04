@@ -86,7 +86,7 @@ export function Student({ student }: { student: SelectStudent }) {
       (async () => {
         try {
           const giteaResponse = await fetch(
-            `https://api-01-edu.vercel.app/user-gitea/${student.login}`,
+            `https://api-zone01-rouen.deno.dev/api/v1/gitea-info/${student.login}`,
             /*`http://localhost:3010/user-gitea/${student.login}` */ /*For development*/ {
               headers: {
                 Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
@@ -94,7 +94,7 @@ export function Student({ student }: { student: SelectStudent }) {
             }
           );
           const userFindResponse = await fetch(
-            `https://api-01-edu.vercel.app/user-find/${student.login}`,
+            `https://api-zone01-rouen.deno.dev/api/v1/user-info/${student.login}`,
             /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/ {
               headers: {
                 Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
