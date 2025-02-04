@@ -158,7 +158,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
     try {
       const response = await fetch(
-        `https://api-01-edu.vercel.app/promotion-progress/${eventId}`
+        `https://api-zone01-rouen.deno.dev/api/v1/promotions/${eventId}/students`
       );
       if (!response.ok) {
         throw new Error(
