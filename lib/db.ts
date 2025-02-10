@@ -287,6 +287,8 @@ export async function getDelayStatus(promoId: string): Promise<{
       })
       .from(delayStatus)
       .where(eq(delayStatus.promoId, promoId))
+      .orderBy(desc(delayStatus.lastUpdate))
+      .limit(1)
       .execute();
 
     // Vérifier si un résultat a été trouvé
