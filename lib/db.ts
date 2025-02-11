@@ -9,7 +9,9 @@ import {
   pgEnum,
   serial,
   integer,
-  varchar
+  varchar,
+  uuid,
+  date
 } from 'drizzle-orm/pg-core';
 import {
   count,
@@ -26,6 +28,7 @@ import {
 import { createInsertSchema } from 'drizzle-zod';
 // @ts-ignore
 import { hash, compare } from 'bcryptjs';
+import { format } from 'date-fns';
 
 export const db = drizzle(neon(process.env.POSTGRES_URL!));
 
@@ -35,7 +38,19 @@ export const users = pgTable('users', {
   name: varchar('name', { length: 255 }),
   username: varchar('username', { length: 255 }),
   password: varchar('password', { length: 255 }),
-  role: varchar('role', { length: 50 }).default('user')
+  role: varchar('role', { length: 50 }).default('user'),
+  bio: text('bio'),
+  urls: text('urls').array()
+});
+
+export const userSettings = pgTable('user_settings', {
+  id: serial('id').primaryKey(),
+  user_id: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  birthdate: date('birthdate'),
+  language: varchar('language', { length: 10 }).default('en')
 });
 
 /*export async function insertUser(email: string, password: string) {
@@ -787,4 +802,87 @@ export async function getAllUpdates(): Promise<Update[]> {
     last_update: update.lastUpdate,
     event_id: update.eventId
   }));
+}
+
+export async function getSettingsByName(name: string) {
+  return await db
+    .select({
+      username: users.username,
+      email: users.email,
+      bio: users.bio,
+      urls: users.urls,
+      name: users.name,
+      birthdate: userSettings.birthdate,
+      language: userSettings.language
+    })
+    .from(users)
+    .leftJoin(userSettings, eq(users.id, userSettings.user_id))
+    .where(eq(users.name, name))
+    .limit(1)
+    .execute()
+    .then((result) => result[0]);
+}
+
+export async function updateSettings(
+  name: string,
+  data: {
+    bio?: string;
+    urls?: string[];
+    name?: string;
+    birthdate?: Date;
+    language?: string;
+  }
+) {
+
+  const user = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.username, name))
+    .execute()
+    .then((result) => result[0]);
+
+  if (!user) throw new Error('User not found');
+
+  // Si birthdate est défini, convertir en string
+  const formattedBirthdate = data.birthdate
+    ? format(data.birthdate, 'yyyy-MM-dd')
+    : undefined;
+
+  // Mise à jour de la table `users`
+  await db
+    .update(users)
+    .set({
+      bio: data.bio,
+      urls: data.urls,
+      name: data.name
+    })
+    .where(eq(users.id, user.id))
+    .execute();
+
+  // Mise à jour de la table `user_settings`
+  await db
+    .update(userSettings)
+    .set({
+      name: data.name,
+      birthdate: formattedBirthdate,
+      language: data.language
+    })
+    .where(eq(userSettings.user_id, user.id))
+    .execute();
+
+  // Retourne les nouvelles valeurs
+  return await db
+    .select({
+      username: users.username,
+      bio: users.bio,
+      urls: users.urls,
+      name: users.name,
+      birthdate: userSettings.birthdate,
+      language: userSettings.language
+    })
+    .from(users)
+    .leftJoin(userSettings, eq(users.id, userSettings.user_id))
+    .where(eq(users.id, user.id))
+    .execute()
+    .then((result) => result[0]);
 }
