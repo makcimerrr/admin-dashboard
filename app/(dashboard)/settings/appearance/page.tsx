@@ -18,21 +18,28 @@ import { useTheme } from 'next-themes';
 
 export default function AppearanceSettingsPage() {
   const [font, setFont] = useState('inter');
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'system');
+  const [theme, setTheme] = useState('system');
   const { setTheme: applyTheme } = useTheme();
 
   useEffect(() => {
-    const savedFont = localStorage.getItem('font');
-    if (savedFont) setFont(savedFont);
+    if (typeof window !== 'undefined') {
+      const savedFont = localStorage.getItem('font');
+      const savedTheme = localStorage.getItem('theme');
+      if (savedFont) setFont(savedFont);
+      if (savedTheme) setTheme(savedTheme);
+    }
   }, []);
 
   const handleSubmit = (event: { preventDefault: () => void }) => {
     event.preventDefault();
-    localStorage.setItem('font', font);
-    localStorage.setItem('theme', theme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('font', font);
+      localStorage.setItem('theme', theme);
+    }
     applyTheme(theme);
     toast.success('Preferences updated successfully');
   };
+
   return (
     <div className="flex-1 lg:max-w-2xl space-y-6">
       <div>
