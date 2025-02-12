@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Select,
   SelectContent,
@@ -8,9 +10,29 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
-import ThemeSwitcher from "./theme-switcher";
+import ThemeSwitcher from './theme-switcher';
+
+import { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import { useTheme } from 'next-themes';
 
 export default function AppearanceSettingsPage() {
+  const [font, setFont] = useState('inter');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'system');
+  const { setTheme: applyTheme } = useTheme();
+
+  useEffect(() => {
+    const savedFont = localStorage.getItem('font');
+    if (savedFont) setFont(savedFont);
+  }, []);
+
+  const handleSubmit = (event: { preventDefault: () => void }) => {
+    event.preventDefault();
+    localStorage.setItem('font', font);
+    localStorage.setItem('theme', theme);
+    applyTheme(theme);
+    toast.success('Preferences updated successfully');
+  };
   return (
     <div className="flex-1 lg:max-w-2xl space-y-6">
       <div>
@@ -21,13 +43,13 @@ export default function AppearanceSettingsPage() {
         </p>
       </div>
       <Separator />
-      <form className="space-y-8">
+      <form className="space-y-8" onSubmit={handleSubmit}>
         {/* Font Selection */}
         <div className="space-y-2">
           <label className="text-sm font-medium leading-none">Font</label>
-          <Select>
+          <Select value={font} onValueChange={setFont}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select a font" defaultValue="inter" />
+              <SelectValue placeholder="Select a font" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="inter">Inter</SelectItem>
@@ -46,7 +68,7 @@ export default function AppearanceSettingsPage() {
           <p className="text-[0.8rem] text-muted-foreground">
             Select the theme for the dashboard.
           </p>
-          <ThemeSwitcher/>
+          <ThemeSwitcher value={theme} onValueChange={setTheme} />
         </div>
 
         <Button type="submit">Update preferences</Button>

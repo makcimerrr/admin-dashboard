@@ -1,12 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card } from '@/components/ui/card';
 
-export default function ThemeToggle() {
-  const [theme, setTheme] = useState('light');
+interface ThemeSwitcherProps {
+  value?: string;
+  onValueChange?: (value: ((prevState: string) => string) | string) => void;
+}
 
+export default function ThemeToggle({
+  value,
+  onValueChange
+}: ThemeSwitcherProps) {
+  const [theme, setTheme] = useState(value || 'light');
+
+  useEffect(() => {
+    if (onValueChange) {
+      onValueChange(theme);
+    }
+  }, [theme, onValueChange]);
   return (
     <RadioGroup
       value={theme}
