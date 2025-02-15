@@ -2,16 +2,13 @@ import path from 'path';
 import fs from 'fs';
 
 export async function getPromoStatus() {
-    // Check if you're in a local or Vercel environment
     const isVercel = process.env.VERCEL === '1';
 
     let jsonFilePath;
 
     if (isVercel) {
-        // Use a relative path if on Vercel
-        jsonFilePath = path.join('/vercel/path0/config', 'promoStatus.json');
+        jsonFilePath = path.join('/vercel/path0/public', 'config', 'promoStatus.json');
     } else {
-        // Local environment (adjust according to your local structure)
         const __dirname = path.dirname(new URL(import.meta.url).pathname);
         const rootDir = path.join(__dirname, '../');
         jsonFilePath = path.join(rootDir, 'config', 'promoStatus.json');
@@ -22,6 +19,6 @@ export async function getPromoStatus() {
         return JSON.parse(fileContent);
     } catch (error) {
         console.error('Error reading promoStatus.json:', error);
-        throw error; // Or handle error gracefully
+        throw new Error(`File not found at ${jsonFilePath}`); // Renvoyer l'erreur avec plus d'infos
     }
 }
