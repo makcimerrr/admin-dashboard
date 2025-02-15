@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {getPromoStatus} from "@/lib/utils";
+import {getPromoStatus} from "@/lib/status";
 
 export async function POST(req: NextRequest) {
   try {
