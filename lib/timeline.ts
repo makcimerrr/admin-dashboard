@@ -88,6 +88,7 @@ export async function displayAgenda(
 }> {
   const result: string[] = [];
   const current_date = new Date();
+  let EndDateEstimated: string = '';
   let currentProject: string = 'Aucun';
   let progress: number = 0;
 
@@ -178,9 +179,9 @@ export async function displayAgenda(
     }
 
     /*if (promotion.key == "P2 2023"){
-                  console.log(`startDate : ${startDate}, endDate : ${endDate}, currentDate : ${currentDate}, project : ${name} `)
-                  console.log(compareDates(startDate, endDate, current_date))
-                }*/
+                      console.log(`startDate : ${startDate}, endDate : ${endDate}, currentDate : ${currentDate}, project : ${name} `)
+                      console.log(compareDates(startDate, endDate, current_date))
+                    }*/
 
     if (compareDates(startDate, endDate, current_date)) {
       const totalDays =
@@ -189,6 +190,7 @@ export async function displayAgenda(
         (current_date.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000);
       progress = (elapsedDays / totalDays) * 100;
       currentProject = name;
+      EndDateEstimated = endDate.toISOString().split('T')[0];
       console.log(
         `Current project: ${name}, Progress: ${progress.toFixed(2)}% for Promo ${promotion.key}`
       );
@@ -314,7 +316,7 @@ export async function displayAgenda(
       ...result,
       currentProject === 'Fin' || currentProject === 'Spécialité'
         ? `Fin de la promo: ${promotion.dates.end}`
-        : `Fin du projet actuel: ${startDate.toISOString().split('T')[0]}`
+        : `Fin du projet actuel : ${EndDateEstimated}`
     ],
     success: true,
     promotionName: promotion.key,
