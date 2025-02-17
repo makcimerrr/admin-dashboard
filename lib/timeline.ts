@@ -178,9 +178,9 @@ export async function displayAgenda(
     }
 
     /*if (promotion.key == "P2 2023"){
-              console.log(`startDate : ${startDate}, endDate : ${endDate}, currentDate : ${currentDate}, project : ${name} `)
-              console.log(compareDates(startDate, endDate, current_date))
-            }*/
+                  console.log(`startDate : ${startDate}, endDate : ${endDate}, currentDate : ${currentDate}, project : ${name} `)
+                  console.log(compareDates(startDate, endDate, current_date))
+                }*/
 
     if (compareDates(startDate, endDate, current_date)) {
       const totalDays =
@@ -310,7 +310,12 @@ export async function displayAgenda(
   }
 
   return {
-    agenda: result,
+    agenda: [
+      ...result,
+      currentProject === 'Fin' || currentProject === 'Spécialité'
+        ? `Fin de la promo: ${promotion.dates.end}`
+        : `Fin du projet actuel: ${startDate.toISOString().split('T')[0]}`
+    ],
     success: true,
     promotionName: promotion.key,
     currentProject,

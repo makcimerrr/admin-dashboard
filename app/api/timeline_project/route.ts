@@ -13,7 +13,7 @@ export async function GET(request: Request) {
         // Appeler displayAgenda pour chaque promo
         // console.log(`Processing promo ${promo}`);
         const result = await displayAgenda(promo, allProjects, holidays);
-        return { promoIndex: index, success: result.success, promotionName: result.promotionName, currentProject: result.currentProject, progress: result.progress };
+        return { promoIndex: index, success: result.success, agenda: result.agenda, promotionName: result.promotionName, currentProject: result.currentProject, progress: result.progress };
       })
     );
 
