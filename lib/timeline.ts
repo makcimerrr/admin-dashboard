@@ -79,10 +79,17 @@ export async function displayAgenda(
   promotion: Promotion,
   allProjects: AllProjects,
   holidays: Holidays
-): Promise<{ agenda: string[]; success: boolean }> {
+): Promise<{
+  agenda: string[];
+  success: boolean;
+  promotionName: string;
+  currentProject: string;
+  progress: number;
+}> {
   const result: string[] = [];
   const current_date = new Date();
-
+  let currentProject: string = 'Aucun';
+  let progress: number = 0;
 
   function getWeekdays(startDate: Date, endDate: Date): Date[] {
     const weekdays: Date[] = [];
@@ -143,10 +150,10 @@ export async function displayAgenda(
   ): Promise<Date> {
     let effectiveDays: Date[] = [];
     let endDate = new Date(startDate);
+
     while (projectWeeks > 0) {
       const nextEndDate = new Date(endDate);
       nextEndDate.setDate(endDate.getDate() + projectWeeks * 7);
-
       const projectEffectiveDays = calculateEffectiveDays(
         endDate,
         nextEndDate,
@@ -162,7 +169,7 @@ export async function displayAgenda(
         endDate.setDate(holidayEnd.getDate() + 1);
         projectWeeks -= Math.floor(
           (nextEndDate.getTime() - endDate.getTime()) /
-          (7 * 24 * 60 * 60 * 1000)
+            (7 * 24 * 60 * 60 * 1000)
         );
       } else {
         endDate = nextEndDate;
@@ -170,20 +177,27 @@ export async function displayAgenda(
       }
     }
 
+    /*if (promotion.key == "P2 2023"){
+              console.log(`startDate : ${startDate}, endDate : ${endDate}, currentDate : ${currentDate}, project : ${name} `)
+              console.log(compareDates(startDate, endDate, current_date))
+            }*/
+
     if (compareDates(startDate, endDate, current_date)) {
       const totalDays =
         (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000) + 1;
       const elapsedDays =
         (current_date.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000);
-      const progress = (elapsedDays / totalDays) * 100;
+      progress = (elapsedDays / totalDays) * 100;
+      currentProject = name;
       console.log(
         `Current project: ${name}, Progress: ${progress.toFixed(2)}% for Promo ${promotion.key}`
       );
-      await updateEnv(name, promotion.key); // Assurez-vous de faire l'appel de mise à jour ici.
+      await updateEnv(name, promotion.key);
 
-      if (isLastProject && progress === 100) {
-        console.log(`Current project: spécialité for Promo ${promotion.key}`);
-        await updateEnv("spécialité", promotion.key);
+      if (isLastProject && progress >= 99.9) {
+        console.log(`Current project: Spécialité for Promo ${promotion.key}`);
+        await updateEnv('Spécialité', promotion.key);
+        currentProject = 'Spécialité';
       }
     }
 
@@ -192,7 +206,6 @@ export async function displayAgenda(
 
   let startDate = new Date(promotion.dates.start);
 
-  // Process Golang Projects
   for (let i = 0; i < allProjects.Golang.length; i++) {
     const project = allProjects.Golang[i];
     const isLastProject = i === allProjects.Golang.length - 1;
@@ -206,19 +219,25 @@ export async function displayAgenda(
     );
   }
 
-  // Piscine JS
   if (promotion.dates['piscine-js-start'] !== 'NaN') {
     const piscineJsStart = new Date(promotion.dates['piscine-js-start']);
     const piscineJsEnd = new Date(promotion.dates['piscine-js-end']);
+
     if (compareDates(piscineJsStart, piscineJsEnd, current_date)) {
       if (allProjects.Javascript.length > 0) {
         const nextProject = allProjects.Javascript[0];
-        console.log(`Current project: ${nextProject.name}, Progress: 0% for Promo ${promotion.key}`);
+        currentProject = nextProject.name;
+        progress = 0;
+        console.log(
+          `Current project: ${nextProject.name}, Progress: 0% for Promo ${promotion.key}`
+        );
         await updateEnv(nextProject.name, promotion.key);
       }
     }
+
     startDate = new Date(piscineJsEnd);
     startDate.setDate(piscineJsEnd.getDate() + 1);
+
     for (let i = 0; i < allProjects.Javascript.length; i++) {
       const project = allProjects.Javascript[i];
       const isLastProject = i === allProjects.Javascript.length - 1;
@@ -233,17 +252,22 @@ export async function displayAgenda(
     }
   }
 
-  // Piscine Rust
   if (promotion.dates['piscine-rust-start'] !== 'NaN') {
     const piscineRustStart = new Date(promotion.dates['piscine-rust-start']);
     const piscineRustEnd = new Date(promotion.dates['piscine-rust-end']);
+
     if (compareDates(piscineRustStart, piscineRustEnd, current_date)) {
       if (allProjects.Rust.length > 0) {
         const nextProject = allProjects.Rust[0];
-        console.log(`Current project: ${nextProject.name}, Progress: 0% for Promo ${promotion.key}`);
+        currentProject = nextProject.name;
+        progress = 0;
+        console.log(
+          `Current project: ${nextProject.name}, Progress: 0% for Promo ${promotion.key}`
+        );
         await updateEnv(nextProject.name, promotion.key);
       }
     }
+
     startDate = new Date(piscineRustEnd);
     startDate.setDate(piscineRustEnd.getDate() + 1);
 
@@ -261,12 +285,35 @@ export async function displayAgenda(
     }
   }
 
-  // Check if the current date is after the end of the promotion
   const promoEndDate = new Date(promotion.dates.end);
   if (current_date > promoEndDate) {
+    currentProject = 'Fin';
+    progress = 100;
     console.log(`Current project: Fin for Promo ${promotion.key}`);
-    await updateEnv("Fin", promotion.key);
+    await updateEnv('Fin', promotion.key);
+  } else {
+    // Vérifie si la current_date est après la fin du dernier projet mais avant la fin de la promo
+    if (current_date > startDate && current_date < promoEndDate) {
+      const totalDays =
+        (promoEndDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000) +
+        1;
+      const elapsedDays =
+        (current_date.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000);
+      progress = (elapsedDays / totalDays) * 100;
+
+      currentProject = 'Spécialité';
+      console.log(
+        `Current project: Spécialité, Progress: ${progress.toFixed(2)}% for Promo ${promotion.key}`
+      );
+      await updateEnv('Spécialité', promotion.key);
+    }
   }
 
-  return { agenda: result, success: true };
+  return {
+    agenda: result,
+    success: true,
+    promotionName: promotion.key,
+    currentProject,
+    progress: Math.round(progress)
+  };
 }
