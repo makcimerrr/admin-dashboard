@@ -714,7 +714,8 @@ export async function updateStudentProject(
   login: string,
   project_name: string,
   project_status: string,
-  delay_level: string
+  delay_level: string,
+  last_projects_finished: { [p: string]: boolean }
 ) {
   // Get the student ID from the login
   const student = await db
@@ -730,6 +731,8 @@ export async function updateStudentProject(
 
   // Get the student ID
   const studentId = student[0].id;
+
+  console.log(`Last projects finished for student ${login}:`, last_projects_finished);
 
   // Update the project details in the studentProjects table
   await db
