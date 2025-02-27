@@ -46,11 +46,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           if (response.ok) {
             return data; // Renvoie la réponse de l'API
+          } else if (response.status === 429) {
+            throw new Error('Too many requests, please try again later');
           } else {
             throw new Error('Invalid email or password');
           }
-        } catch (error) {
-          throw new Error(`Authentication failed: ${error}`);
+        } catch (error: any) {
+          throw new Error(`Authentication failed: ${error.message}`);
         }
       }
     })
@@ -62,8 +64,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (account.provider === 'github' || account.provider === 'google')
       ) {
         /*console.log('account', account);
-        console.log('profile', profile);
-        console.log('user', user);*/
+                        console.log('profile', profile);
+                        console.log('user', user);*/
 
         const response = await fetch(
           `${process.env.NEXTAUTH_URL}/api/save-oauth-user`,
