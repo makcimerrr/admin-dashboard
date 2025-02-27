@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import PromoTable from './promo-table';
+import PromoTable from '../(dashboard)/promo-table';
 import Modal from '@/components/ui/modal';
 import { toast } from 'react-hot-toast';
 import { DatePickerDemo } from '@/components/date-picker';
