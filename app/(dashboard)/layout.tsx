@@ -22,7 +22,7 @@ import { User } from './user';
 import Providers from './providers';
 import { NavItem } from './nav-item';
 import { SearchInput } from './search';
-import { DashboardBreadcrumb } from './get-breadcrumb-items';
+import { DashboardBreadcrumb } from '@/components/get-breadcrumb-items';
 import DarkModeToggle from '@/components/dark-mode';
 import { Suspense } from 'react';
 
@@ -151,7 +151,7 @@ function MobileNav() {
             Students
           </Link>
           <Link
-            href="/config"
+            href="/app/(config)/config"
             className="flex items-center gap-4 px-2.5 text-foreground"
           >
             <PanelLeft className="h-5 w-5" />
