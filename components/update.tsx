@@ -185,6 +185,18 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       // Met à jour le nombre d'étudiants
       setTotalStudents((prev) => (prev || 0) + currentStudentCount);
 
+      const lastProjects: { [key: string]: string } = {
+        Golang: allProjects.Golang[allProjects.Golang.length - 1].name,
+        Javascript:
+        allProjects.Javascript[allProjects.Javascript.length - 1].name,
+        Rust: allProjects.Rust[allProjects.Rust.length - 1].name
+      };
+      const lastProjectsFinished: { [key: string]: boolean } = {
+        Golang: false,
+        Javascript: false,
+        Rust: false
+      };
+
       for (const login in userProjects) {
         const { activeProject, status } = findNextActiveProject(
           projectsList,
@@ -228,6 +240,19 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           );
           delayLevel = 'inconnu'; // En cas d'erreur, retourner "inconnu"
         }
+
+        for (const key in lastProjects) {
+          if (
+              userProjects[login].some(
+                  (p) =>
+                      p.projectName === lastProjects[key] &&
+                      p.projectStatus === 'finished'
+              )
+          ) {
+            lastProjectsFinished[key] = true;
+          }
+        }
+
         if (shouldUpdate(login, activeProject, status, delayLevel)) {
           try {
             await fetch('/api/update_project', {
@@ -237,7 +262,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
                 login,
                 project_name: activeProject,
                 project_status: status,
-                delay_level: delayLevel // Valeur brut, a modifier
+                delay_level: delayLevel,
+                last_projects_finished: lastProjectsFinished
               })
             });
           } catch (error) {
