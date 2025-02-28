@@ -211,31 +211,38 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
         Rust: null
       };
 
+      // Pour chaque tronc commun
       for (const tronc in allProjectsTyped) {
         const projects = allProjectsTyped[tronc as keyof AllProjects];
+
+        // Vérifier si le dernier projet du tronc est terminé par au moins un étudiant
+        const lastProject = projects[projects.length - 1].name;
+        lastProjectsFinished[tronc] = Object.values(userProjects).some(
+          (userProjs) =>
+            userProjs.some(
+              (p) =>
+                p.projectName === lastProject && p.projectStatus === 'finished'
+            )
+        );
+
+        // Trouver le projet le plus avancé qui est terminé
+        // On parcourt la liste en partant du dernier (le plus avancé)
         for (let i = projects.length - 1; i >= 0; i--) {
           const projectName = projects[i].name;
           const isFinishedByAnyone = Object.values(userProjects).some(
-            (projects) =>
-              projects.some(
+            (userProjs) =>
+              userProjs.some(
                 (p) =>
                   p.projectName === projectName &&
                   p.projectStatus === 'finished'
               )
           );
+
           if (isFinishedByAnyone) {
             commonProjects[tronc] = projectName;
-            break;
+            break; // On arrête dès qu'on trouve un projet terminé
           }
         }
-        lastProjectsFinished[tronc] = Object.values(userProjects).some(
-          (projects) =>
-            projects.some(
-              (p) =>
-                p.projectName === projects[projects.length - 1].name &&
-                p.projectStatus === 'finished'
-            )
-        );
       }
 
       for (const login in userProjects) {
