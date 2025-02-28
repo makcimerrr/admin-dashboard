@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import LastUpdate from '@/components/last-update';
 import promotions from '../config/promoConfig.json';
 import promoStatus from '../config/promoStatus.json';
-import allProjects from '../config/projects.json';
+import allProjects from '../config/projects.json' assert { type: 'json' };
 
 interface UpdateProps {
   eventId: string;
@@ -19,6 +19,20 @@ interface Promotion {
   title: string;
   dates: { start: string; end: string };
 }
+
+interface Project {
+  id: number;
+  name: string;
+  project_time_week: number;
+}
+
+interface AllProjects {
+  Golang: Project[];
+  Javascript: Project[];
+  Rust: Project[];
+}
+
+const allProjectsTyped = allProjects as AllProjects;
 
 const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
@@ -162,7 +176,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       );
       if (!response.ok) {
         throw new Error(
-            `Erreur lors de la récupération des données pour l'événement ${eventId}`
+          `Erreur lors de la récupération des données pour l'événement ${eventId}`
         );
       }
       const data = await response.json();
@@ -185,33 +199,59 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       // Met à jour le nombre d'étudiants
       setTotalStudents((prev) => (prev || 0) + currentStudentCount);
 
-      const lastProjects: { [key: string]: string } = {
-        Golang: allProjects.Golang[allProjects.Golang.length - 1].name,
-        Javascript:
-        allProjects.Javascript[allProjects.Javascript.length - 1].name,
-        Rust: allProjects.Rust[allProjects.Rust.length - 1].name
-      };
       const lastProjectsFinished: { [key: string]: boolean } = {
         Golang: false,
         Javascript: false,
         Rust: false
       };
 
+      const commonProjects: { [key: string]: string | null } = {
+        Golang: null,
+        Javascript: null,
+        Rust: null
+      };
+
+      for (const tronc in allProjectsTyped) {
+        const projects = allProjectsTyped[tronc as keyof AllProjects];
+        for (let i = projects.length - 1; i >= 0; i--) {
+          const projectName = projects[i].name;
+          const isFinishedByAnyone = Object.values(userProjects).some(
+            (projects) =>
+              projects.some(
+                (p) =>
+                  p.projectName === projectName &&
+                  p.projectStatus === 'finished'
+              )
+          );
+          if (isFinishedByAnyone) {
+            commonProjects[tronc] = projectName;
+            break;
+          }
+        }
+        lastProjectsFinished[tronc] = Object.values(userProjects).some(
+          (projects) =>
+            projects.some(
+              (p) =>
+                p.projectName === projects[projects.length - 1].name &&
+                p.projectStatus === 'finished'
+            )
+        );
+      }
+
       for (const login in userProjects) {
         const { activeProject, status } = findNextActiveProject(
-            projectsList,
-            userProjects[login]
+          projectsList,
+          userProjects[login]
         );
 
         let delayLevel = '';
-        const commonProjects: { [key: string]: string | null } = { Golang: null, Javascript: null, Rust: null };
 
         try {
           if (promoProject.toLowerCase() === 'fin') {
             if (
-                activeProject.toLowerCase() ===
+              activeProject.toLowerCase() ===
                 projectsList[projectsList.length - 1].toLowerCase() &&
-                status === 'finished'
+              status === 'finished'
             ) {
               delayLevel = 'spécialité';
             } else {
@@ -231,33 +271,18 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
             }
           }
           if (
-              activeProject.toLowerCase() ===
+            activeProject.toLowerCase() ===
               projectsList[projectsList.length - 1].toLowerCase() &&
-              status === 'finished'
+            status === 'finished'
           ) {
             delayLevel = 'spécialité';
           }
         } catch (err) {
           console.error(
-              `Erreur lors du calcul du delayLevel pour ${login}:`,
-              err
+            `Erreur lors du calcul du delayLevel pour ${login}:`,
+            err
           );
           delayLevel = 'inconnu'; // En cas d'erreur, retourner "inconnu"
-        }
-
-        for (const key in lastProjects) {
-          if (userProjects[login].some(p => p.projectName === lastProjects[key] && p.projectStatus === 'finished')) {
-            lastProjectsFinished[key] = true;
-          }
-
-          const lastFinishedProject = userProjects[login]
-              .filter(p => p.projectStatus === 'finished' && projectsList.includes(p.projectName))
-              .map(p => p.projectName)
-              .pop();
-
-          if (lastFinishedProject) {
-            commonProjects[key] = lastFinishedProject;
-          }
         }
 
         if (shouldUpdate(login, activeProject, status, delayLevel)) {
@@ -282,7 +307,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       }
     } catch (error) {
       toast.error(
-          `Erreur lors de la récupération des données pour l'événement ${eventId}. Voici l'erreur: ${error}`
+        `Erreur lors de la récupération des données pour l'événement ${eventId}. Voici l'erreur: ${error}`
       );
       throw error;
     }
@@ -300,7 +325,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       }
     }
     throw new Error(
-        `Projet "${projectName}" introuvable dans la liste des projets.`
+      `Projet "${projectName}" introuvable dans la liste des projets.`
     );
   };
 
@@ -325,15 +350,15 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       }
 
       const results = await Promise.allSettled(
-          promoIds.map((promoId) =>
-              fetchPromotionProgress(promoId).catch((error) => {
-                console.error(
-                    `Erreur détectée dans handleUpdate pour la promotion ${promoId}:`,
-                    error
-                );
-                throw error; // Propager l'erreur à Promise.allSettled
-              })
-          )
+        promoIds.map((promoId) =>
+          fetchPromotionProgress(promoId).catch((error) => {
+            console.error(
+              `Erreur détectée dans handleUpdate pour la promotion ${promoId}:`,
+              error
+            );
+            throw error; // Propager l'erreur à Promise.allSettled
+          })
+        )
       );
 
       // Analyse des résultats
@@ -342,7 +367,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
       if (failed.length > 0) {
         toast.error(
-            `${failed.length} mise(s) à jour ont échoué. Veuillez vérifier.`
+          `${failed.length} mise(s) à jour ont échoué. Veuillez vérifier.`
         );
       }
 
@@ -354,15 +379,15 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
       if (succeeded.length > 0) {
         toast.success(
-            `${succeeded.length} mise(s) à jour ont été effectuées avec succès.`
+          `${succeeded.length} mise(s) à jour ont été effectuées avec succès.`
         );
       }
 
       // Créer l'update dans la base de données si tout s'est bien passé
       const updateMessage =
-          eventId === 'all'
-              ? 'Mise à jour de toutes les promotions.'
-              : `Mise à jour pour la promo ${eventId}`;
+        eventId === 'all'
+          ? 'Mise à jour de toutes les promotions.'
+          : `Mise à jour pour la promo ${eventId}`;
 
       await fetch('/api/last_update', {
         method: 'POST',
@@ -379,7 +404,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       // Si une erreur survient pendant l'appel principal, la notification toast apparaîtra ici
       setLoading(false);
       toast.error(
-          `Impossible de mettre à jour les promotions. Erreur liée à l'événement ${eventId}`
+        `Impossible de mettre à jour les promotions. Erreur liée à l'événement ${eventId}`
       );
     }
   };
@@ -393,7 +418,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       const data = await response.json();
       // Filtrage des résultats pour trouver celui correspondant à l'eventId
       const filteredUpdate = data.find(
-          (update: { event_id: string }) => update.event_id === eventId
+        (update: { event_id: string }) => update.event_id === eventId
       );
 
       if (filteredUpdate) {
@@ -401,7 +426,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       }
 
       const allUpdate = data.find(
-          (update: { event_id: string }) => update.event_id === 'all'
+        (update: { event_id: string }) => update.event_id === 'all'
       );
 
       setAllUpdate(allUpdate.last_update);
@@ -415,15 +440,15 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   }, [eventId]);
 
   return (
-      <div className="flex items-center space-x-4">
-        <Button
-            size="sm"
-            className="h-8 gap-1"
-            onClick={handleUpdate}
-            disabled={loading}
-        >
-          {loading ? (
-              <span className="loading-text">
+    <div className="flex items-center space-x-4">
+      <Button
+        size="sm"
+        className="h-8 gap-1"
+        onClick={handleUpdate}
+        disabled={loading}
+      >
+        {loading ? (
+          <span className="loading-text">
             Chargement de {totalStudents ?? ''} étudiants
             <span className="wave">
               <span>.</span>
@@ -431,61 +456,61 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
               <span>.</span>
             </span>
           </span>
-          ) : (
-              'Exécuter'
-          )}
-        </Button>
-        {/* Affichage de la mise à jour à côté du bouton */}
-        <div className="text-sm text-gray-600">
-          <LastUpdate
-              lastUpdate={lastUpdate}
-              eventId={eventId}
-              allUpdate={allUpdate}
-          />
-        </div>
-        <style jsx>{`
-          .loading-text {
-            display: flex;
-            align-items: center;
-          }
-
-          .wave {
-            display: flex;
-            justify-content: space-between;
-            width: 1.5rem;
-            margin-left: 0.5rem;
-          }
-
-          .wave span {
-            display: inline-block;
-            font-size: 1.5rem;
-            animation: wave 1.5s infinite;
-          }
-
-          .wave span:nth-child(1) {
-            animation-delay: 0s;
-          }
-
-          .wave span:nth-child(2) {
-            animation-delay: 0.2s;
-          }
-
-          .wave span:nth-child(3) {
-            animation-delay: 0.4s;
-          }
-
-          @keyframes wave {
-            0%,
-            60%,
-            100% {
-              transform: translateY(0);
-            }
-            30% {
-              transform: translateY(-10px);
-            }
-          }
-        `}</style>
+        ) : (
+          'Exécuter'
+        )}
+      </Button>
+      {/* Affichage de la mise à jour à côté du bouton */}
+      <div className="text-sm text-gray-600">
+        <LastUpdate
+          lastUpdate={lastUpdate}
+          eventId={eventId}
+          allUpdate={allUpdate}
+        />
       </div>
+      <style jsx>{`
+        .loading-text {
+          display: flex;
+          align-items: center;
+        }
+
+        .wave {
+          display: flex;
+          justify-content: space-between;
+          width: 1.5rem;
+          margin-left: 0.5rem;
+        }
+
+        .wave span {
+          display: inline-block;
+          font-size: 1.5rem;
+          animation: wave 1.5s infinite;
+        }
+
+        .wave span:nth-child(1) {
+          animation-delay: 0s;
+        }
+
+        .wave span:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+
+        .wave span:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+
+        @keyframes wave {
+          0%,
+          60%,
+          100% {
+            transform: translateY(0);
+          }
+          30% {
+            transform: translateY(-10px);
+          }
+        }
+      `}</style>
+    </div>
   );
 };
 export default PromotionProgress;
