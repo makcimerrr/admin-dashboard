@@ -215,32 +215,35 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       for (const tronc in allProjectsTyped) {
         const projects = allProjectsTyped[tronc as keyof AllProjects];
 
-        // Vérifier si le dernier projet du tronc est terminé par au moins un étudiant
+        // On part du dernier projet (le plus avancé)
         const lastProject = projects[projects.length - 1].name;
-        lastProjectsFinished[tronc] = Object.values(userProjects).some(
-          (userProjs) =>
-            userProjs.some(
-              (p) =>
-                p.projectName === lastProject && p.projectStatus === 'finished'
+        const isLastProjectFinished = Object.values(userProjects).some(
+            userProjs => userProjs.some(
+                p => p.projectName === lastProject && p.projectStatus === 'finished'
             )
         );
 
-        // Trouver le projet le plus avancé qui est terminé
-        // On parcourt la liste en partant du dernier (le plus avancé)
-        for (let i = projects.length - 1; i >= 0; i--) {
-          const projectName = projects[i].name;
-          const isFinishedByAnyone = Object.values(userProjects).some(
-            (userProjs) =>
-              userProjs.some(
-                (p) =>
-                  p.projectName === projectName &&
-                  p.projectStatus === 'finished'
-              )
-          );
+        if (isLastProjectFinished) {
+          // Si le dernier projet est terminé, on le met dans commonProjects et on marque le tronc comme terminé
+          commonProjects[tronc] = lastProject;
+          lastProjectsFinished[tronc] = true;
+        } else {
+          // Sinon, on cherche le projet le plus avancé qui est terminé
+          lastProjectsFinished[tronc] = false; // Le tronc n'est pas complètement terminé
 
-          if (isFinishedByAnyone) {
-            commonProjects[tronc] = projectName;
-            break; // On arrête dès qu'on trouve un projet terminé
+          // On parcourt la liste en partant du dernier vers le premier
+          for (let i = projects.length - 1; i >= 0; i--) {
+            const projectName = projects[i].name;
+            const isFinishedByAnyone = Object.values(userProjects).some(
+                userProjs => userProjs.some(
+                    p => p.projectName === projectName && p.projectStatus === 'finished'
+                )
+            );
+
+            if (isFinishedByAnyone) {
+              commonProjects[tronc] = projectName;
+              break; // On arrête dès qu'on trouve un projet terminé
+            }
           }
         }
       }
