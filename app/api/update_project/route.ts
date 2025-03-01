@@ -5,8 +5,8 @@ export async function POST(req: Request) {
   try {
     const { login, project_name, project_status, delay_level, last_projects_finished, common_projects } = await req.json();
 
-    console.log(last_projects_finished);
-    console.log(common_projects);
+    /*console.log(last_projects_finished);
+    console.log(common_projects);*/
 
     // Call the function to update the project status
     await updateStudentProject(login, project_name, project_status, delay_level, last_projects_finished, common_projects);
