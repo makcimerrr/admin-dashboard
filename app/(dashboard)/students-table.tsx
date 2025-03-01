@@ -370,9 +370,45 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('project_name')}>
-                Project{' '}
-                {sortConfig.key === 'project_name' && (
+              <TableHead onClick={() => requestSort('golang_completed')}>
+                Golang Project{' '}
+                {sortConfig.key === 'golang_completed' && (
+                  <span>
+                    {sortConfig.direction === 'asc' ? (
+                      <ChevronUp className="inline h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="inline h-4 w-4" />
+                    )}
+                  </span>
+                )}
+              </TableHead>
+              <TableHead onClick={() => requestSort('javascript_completed')}>
+                JavaScript Project{' '}
+                {sortConfig.key === 'javascript_completed' && (
+                  <span>
+                    {sortConfig.direction === 'asc' ? (
+                      <ChevronUp className="inline h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="inline h-4 w-4" />
+                    )}
+                  </span>
+                )}
+              </TableHead>
+              <TableHead onClick={() => requestSort('rust_completed')}>
+                Rust Project{' '}
+                {sortConfig.key === 'rust_completed' && (
+                  <span>
+                    {sortConfig.direction === 'asc' ? (
+                      <ChevronUp className="inline h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="inline h-4 w-4" />
+                    )}
+                  </span>
+                )}
+              </TableHead>
+              <TableHead onClick={() => requestSort('actual_project_name')}>
+                Actual Project{' '}
+                {sortConfig.key === 'actual_project_name' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
                       <ChevronUp className="inline h-4 w-4" />

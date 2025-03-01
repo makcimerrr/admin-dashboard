@@ -47,7 +47,13 @@ export type SelectStudent = {
     login: string;
     promos: string;
     availableAt: Date;
-    project_name: string | null;
+    actual_project_name: string | null;
     progress_status: string | null;
     delay_level: string | null;
+    golang_project: string | null;
+    javascript_project: string | null;
+    rust_project: string | null;
+    golang_completed: boolean | null;
+    javascript_completed: boolean | null;
+    rust_completed: boolean | null;
 };

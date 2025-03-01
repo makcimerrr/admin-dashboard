@@ -1,8 +1,7 @@
 import { db } from '../config';
-import { students, studentProjects, promotions, delayStatus } from '../schema';
+import { students, studentProjects, promotions, delayStatus, studentCurrentProjects, studentSpecialtyProgress  } from '../schema';
 import { count, eq, ilike, or, and, sql, desc, asc, SQL } from 'drizzle-orm';
 import { SelectStudent } from '@/lib/db/schema/students';
-import {studentCurrentProjects, studentSpecialtyProgress} from "@/lib/db/schema/students";
 
 export async function getStudents(
     search: string,
@@ -75,12 +74,20 @@ export async function getStudents(
             login: students.login,
             promos: students.promoName,
             availableAt: students.availableAt,
-            project_name: studentProjects.project_name,
+            actual_project_name: studentProjects.project_name,
             progress_status: studentProjects.progress_status,
-            delay_level: studentProjects.delay_level
+            delay_level: studentProjects.delay_level,
+            golang_project: studentCurrentProjects.golang_project,
+            javascript_project: studentCurrentProjects.javascript_project,
+            rust_project: studentCurrentProjects.rust_project,
+            golang_completed: studentSpecialtyProgress.golang_completed,
+            javascript_completed: studentSpecialtyProgress.javascript_completed,
+            rust_completed: studentSpecialtyProgress.rust_completed
         })
         .from(students)
-        .leftJoin(studentProjects, eq(students.id, studentProjects.student_id));
+        .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
+        .leftJoin(studentCurrentProjects, eq(students.id, studentCurrentProjects.student_id))
+        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id));
 
     // Appliquer les filtres sur la liste des étudiants
     if (finalFilter) {
