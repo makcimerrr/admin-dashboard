@@ -17,7 +17,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Student } from './student';
-import { SelectStudent } from '@/lib/db';
+import { SelectStudent } from '@/lib/db/schema/students';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronDown,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createUserInDb } from '@/lib/db';
+import { createUserInDb } from '@/lib/db/services/users';
 
 export async function POST(req: Request) {
   const { name, email, password, confirmPassword } = await req.json();

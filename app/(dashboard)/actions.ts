@@ -1,6 +1,6 @@
 'use server';
 
-import { deleteStudentById } from '@/lib/db';
+import { deleteStudentById } from '@/lib/db/services/students';
 import { revalidatePath } from 'next/cache';
 
 export async function deleteStudent(formData: FormData) {

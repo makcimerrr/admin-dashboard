@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getStudents } from '@/lib/db';
+import { getStudents } from '@/lib/db/services/students';
 import { StudentsTable } from '../students-table';
 import promos from 'config/promoConfig.json' assert { type: 'json' };
 import ClientImport from '@/components/clien-import';

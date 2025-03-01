@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateLastUpdate, getAllUpdates } from '@/lib/db'; // Import des fonctions depuis db.ts
+import { updateLastUpdate, getAllUpdates } from '@/lib/db/services/updates'; // Import des fonctions depuis db.ts
 
 /**
  * Fonction GET pour récupérer la dernière mise à jour avec son `event_id`.

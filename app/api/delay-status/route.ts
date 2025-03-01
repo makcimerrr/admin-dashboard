@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDelayStatus, getAverageDelaysByMonth } from '@/lib/db';
+import { getDelayStatus, getAverageDelaysByMonth } from '@/lib/db/services/promotions';
 
 export async function GET(req: Request) {
   try {

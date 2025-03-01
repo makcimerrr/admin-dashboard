@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { saveOauthUser, getUserRole } from '@/lib/db';
+import { saveOauthUser, getUserRole } from '@/lib/db/services/users';
 
 export async function POST(req: Request) {
   const body = await req.json();
