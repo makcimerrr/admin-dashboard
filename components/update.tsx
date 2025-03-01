@@ -153,6 +153,44 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     return true;
   };
 
+  const findActiveProjectsByTrack = (
+    allProjects: AllProjects,
+    userProjects: any[]
+  ) => {
+    const commonProjects: { [key: string]: string | null } = {};
+    const lastProjectsFinished: { [key: string]: boolean } = {};
+
+    for (const track in allProjects as Record<keyof AllProjects, Project[]>) {
+      const trackProjects = allProjects[track as keyof AllProjects];
+      let lastFinishedProject: string | null = null;
+      let activeProject: string | null = null;
+
+      for (const project of trackProjects) {
+        const userProject = userProjects.find(
+          (p) => p.projectName.toLowerCase() === project.name.toLowerCase()
+        );
+
+        if (userProject?.projectStatus === 'finished') {
+          lastFinishedProject = project.name;
+        } else if (!activeProject) {
+          activeProject = project.name;
+        }
+      }
+
+      if (
+        lastFinishedProject === trackProjects[trackProjects.length - 1].name
+      ) {
+        lastProjectsFinished[track] = true;
+      } else {
+        lastProjectsFinished[track] = false;
+      }
+
+      commonProjects[track] = activeProject || lastFinishedProject;
+    }
+
+    return { commonProjects, lastProjectsFinished };
+  };
+
   const fetchPromotionProgress = async (eventId: string) => {
     setLoading(true);
     let currentStudentCount = 0; // Compteur pour les étudiants dans cette promo
@@ -199,56 +237,10 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       // Met à jour le nombre d'étudiants
       setTotalStudents((prev) => (prev || 0) + currentStudentCount);
 
-      const lastProjectsFinished: { [key: string]: boolean } = {
-        Golang: false,
-        Javascript: false,
-        Rust: false
-      };
-
-      const commonProjects: { [key: string]: string | null } = {
-        Golang: null,
-        Javascript: null,
-        Rust: null
-      };
-
-      // Pour chaque tronc commun
-      for (const tronc in allProjectsTyped) {
-        const projects = allProjectsTyped[tronc as keyof AllProjects];
-
-        // On part du dernier projet (le plus avancé)
-        const lastProject = projects[projects.length - 1].name;
-        const isLastProjectFinished = Object.values(userProjects).some(
-            userProjs => userProjs.some(
-                p => p.projectName === lastProject && p.projectStatus === 'finished'
-            )
-        );
-
-        if (isLastProjectFinished) {
-          // Si le dernier projet est terminé, on le met dans commonProjects et on marque le tronc comme terminé
-          commonProjects[tronc] = lastProject;
-          lastProjectsFinished[tronc] = true;
-        } else {
-          // Sinon, on cherche le projet le plus avancé qui est terminé
-          lastProjectsFinished[tronc] = false; // Le tronc n'est pas complètement terminé
-
-          // On parcourt la liste en partant du dernier vers le premier
-          for (let i = projects.length - 1; i >= 0; i--) {
-            const projectName = projects[i].name;
-            const isFinishedByAnyone = Object.values(userProjects).some(
-                userProjs => userProjs.some(
-                    p => p.projectName === projectName && p.projectStatus === 'finished'
-                )
-            );
-
-            if (isFinishedByAnyone) {
-              commonProjects[tronc] = projectName;
-              break; // On arrête dès qu'on trouve un projet terminé
-            }
-          }
-        }
-      }
-
       for (const login in userProjects) {
+        const { commonProjects, lastProjectsFinished } =
+          findActiveProjectsByTrack(allProjectsTyped, userProjects[login]);
+
         const { activeProject, status } = findNextActiveProject(
           projectsList,
           userProjects[login]
