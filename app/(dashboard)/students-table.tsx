@@ -167,17 +167,27 @@ export function StudentsTable({
   };
 
   const requestSort = (key: keyof SelectStudent) => {
-    const direction =
-      sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+     const direction =
+       sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
 
-    setSortConfig({ key, direction });
+     setSortConfig({ key, direction });
 
-    const query = new URLSearchParams(searchParams.toString());
-    query.set('filter', key);
-    query.set('direction', direction);
+     const query = new URLSearchParams(searchParams.toString());
+     query.set('filter', key);
+     query.set('direction', direction);
 
-    router.push(`${pathname}?${query.toString()}`, { scroll: false });
-  };
+     // Handle boolean and special character sorting
+     const sortedList = [...studentsList].sort((a, b) => {
+       if (a[key] === b[key]) return 0;
+       if (typeof a[key] === 'boolean') {
+         return direction === 'asc' ? (a[key] ? -1 : 1) : (a[key] ? 1 : -1);
+       }
+       return direction === 'asc'
+           ? a[key]?.toString().localeCompare(b[key]?.toString() || '', undefined, { numeric: true }) ?? 0
+           : b[key]?.toString().localeCompare(a[key]?.toString() || '', undefined, { numeric: true }) ?? 0;
+     });
+     setStudentsList(sortedList);
+   };
 
   const requestStatus = (status: string) => {
     const query = new URLSearchParams(searchParams.toString());
