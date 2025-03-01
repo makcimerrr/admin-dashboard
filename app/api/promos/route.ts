@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { addPromotion, deletePromotion } from '@/lib/db';
+import { addPromotion, deletePromotion } from '@/lib/db/services/promotions';
 
 const promoFilePath = path.join(process.cwd(), 'config', 'promoConfig.json');
 

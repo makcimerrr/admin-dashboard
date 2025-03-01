@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateStudentProject } from '@/lib/db'; // Assuming this is where your function lives
+import { updateStudentProject } from '@/lib/db/services/students'; // Assuming this is where your function lives
 
 export async function POST(req: Request) {
   try {
