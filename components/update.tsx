@@ -259,6 +259,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
             } else {
               delayLevel = 'en retard';
             }
+          } else if (promoProject.toLowerCase() === 'spécialité') {
+            delayLevel = 'spécialité';
           } else {
             // Logic normale pour calculer le delayLevel pour les projets autres que 'Fin'
             const promoIndex = findProjectIndex(allProjects, promoProject); // Trouve l'indice du projet promo
