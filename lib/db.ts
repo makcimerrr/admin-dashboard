@@ -9,7 +9,9 @@ import {
   pgEnum,
   serial,
   integer,
-  varchar
+  varchar,
+  boolean,
+  IndexColumn
 } from 'drizzle-orm/pg-core';
 import {
   count,
@@ -242,6 +244,22 @@ export const studentProjects = pgTable('student_projects', {
   project_name: text('project_name').notNull(),
   progress_status: text('progress_status').notNull(),
   delay_level: text('delay_level').notNull()
+});
+
+export const studentSpecialtyProgress = pgTable('student_specialty_progress', {
+  id: serial('id').primaryKey(),
+  student_id: integer('student_id').references(() => students.id), // Lien vers la table students
+  golang_completed: boolean('golang_completed').notNull(),
+  javascript_completed: boolean('javascript_completed').notNull(),
+  rust_completed: boolean('rust_completed').notNull()
+});
+
+export const studentCurrentProjects = pgTable('student_current_projects', {
+  id: serial('id').primaryKey(),
+  student_id: integer('student_id').references(() => students.id), // Lien vers la table students
+  golang_project: text('golang_project'),
+  javascript_project: text('javascript_project'),
+  rust_project: text('rust_project')
 });
 
 export async function getAverageDelaysByMonth(promoId: string) {
@@ -715,37 +733,83 @@ export async function updateStudentProject(
   project_name: string,
   project_status: string,
   delay_level: string,
-  last_projects_finished: { [p: string]: boolean },
-  common_projects:  { [key: string]: string | null }
+  last_projects_finished: { [key: string]: boolean },
+  common_projects: { [key: string]: string | null }
 ) {
-  // Get the student ID from the login
+  // Récupérer l'ID de l'étudiant depuis son login
   const student = await db
     .select({ id: students.id })
     .from(students)
     .where(eq(students.login, login))
-    .limit(1); // Removed .run()
+    .limit(1);
 
-  // Check if the student exists
   if (!student || student.length === 0) {
     throw new Error(`Student with login "${login}" not found.`);
   }
 
-  // Get the student ID
   const studentId = student[0].id;
 
-  console.log(`Last projects finished for student ${login}:`, last_projects_finished, common_projects);
+  console.log(`Updating student ${login}:`, {
+    project_name,
+    project_status,
+    delay_level,
+    last_projects_finished,
+    common_projects
+  });
 
-  // Update the project details in the studentProjects table
+  // Mise à jour des projets dans la table studentProjects
   await db
-    .update(studentProjects)
-    .set({
+    .insert(studentProjects)
+    .values({
+      student_id: studentId,
       project_name,
       progress_status: project_status,
       delay_level: delay_level
     })
-    .where(eq(studentProjects.student_id, studentId)); // Removed .run()
+    .onConflictDoUpdate({
+      target: [studentProjects.student_id],
+      set: {
+        project_name,
+        progress_status: project_status,
+        delay_level
+      }
+    });
 
-  console.log(`Project for student ${login} has been updated.`);
+  await db
+    .insert(studentCurrentProjects)
+    .values({
+      student_id: studentId,
+      golang_project: common_projects['Golang'] || null,
+      javascript_project: common_projects['Javascript'] || null,
+      rust_project: common_projects['Rust'] || null
+    })
+    .onConflictDoUpdate({
+      target: studentCurrentProjects.student_id, // Utilisation de la contrainte UNIQUE
+      set: {
+        golang_project: common_projects['Golang'] || null,
+        javascript_project: common_projects['Javascript'] || null,
+        rust_project: common_projects['Rust'] || null
+      }
+    });
+
+  await db
+    .insert(studentSpecialtyProgress)
+    .values({
+      student_id: studentId,
+      golang_completed: last_projects_finished['Golang'] ?? false,
+      javascript_completed: last_projects_finished['Javascript'] ?? false,
+      rust_completed: last_projects_finished['Rust'] ?? false
+    })
+    .onConflictDoUpdate({
+      target: studentSpecialtyProgress.student_id,
+      set: {
+        golang_completed: last_projects_finished['Golang'] ?? false,
+        javascript_completed: last_projects_finished['Javascript'] ?? false,
+        rust_completed: last_projects_finished['Rust'] ?? false
+      }
+    });
+
+  console.log(`Student ${login} data has been updated.`);
 }
 
 export const updates = pgTable('updates', {
