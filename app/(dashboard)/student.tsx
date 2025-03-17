@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { SelectStudent } from '@/lib/db';
+import { SelectStudent } from '@/lib/db/schema/students';
 import { deleteStudent } from './actions';
 import {
   Drawer,
@@ -123,7 +123,7 @@ export function Student({ student }: { student: SelectStudent }) {
           const timeMessage = formatDistanceToNow(
             new Date(latestDate.timestamp * 1000),
             {
-              locale: fr,
+              locale: fr
             }
           );
 
@@ -197,7 +197,10 @@ export function Student({ student }: { student: SelectStudent }) {
     },
     { label: 'Email', value: currentUser.email || 'N/A' },
     { label: 'Campus', value: currentUser.campus || 'N/A' },
-    { label: 'Dernière contribution', value: currentUser.last_contribution || 'N/A' },
+    {
+      label: 'Dernière contribution',
+      value: currentUser.last_contribution || 'N/A'
+    },
     { label: 'Audit Ratio', value: ratio.toFixed(1) ?? 'N/A' },
     { label: 'Audits Assigned', value: currentUser.auditsAssigned || '0' },
     {
@@ -208,7 +211,7 @@ export function Student({ student }: { student: SelectStudent }) {
     },
     { label: 'Github ID', value: currentUser.githubId || 'N/A' }
     /*{ label: 'Discord ID', value: currentUser.discordId || 'N/A' },
-                    { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
+                        { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
   ];
 
   const currentInfo = infoList[currentIndex] || {};
@@ -224,10 +227,19 @@ export function Student({ student }: { student: SelectStudent }) {
             {student.promos}
           </Badge>
         </TableCell>
+        <TableCell>
+          {student.golang_project} {student.golang_completed ? '✅' : '❌'}
+        </TableCell>
+        <TableCell>
+          {student.javascript_project} {student.javascript_completed ? '✅' : '❌'}
+        </TableCell>
+        <TableCell>
+          {student.rust_project} {student.rust_completed ? '✅' : '❌'}
+        </TableCell>
         {/* Ajout des nouvelles colonnes */}
         <TableCell>
           <Badge variant="outline" className="capitalize">
-            {student.project_name || 'N/A'}
+            {student.actual_project_name || 'N/A'}
           </Badge>
         </TableCell>
         <TableCell>

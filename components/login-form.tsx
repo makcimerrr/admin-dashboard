@@ -76,9 +76,6 @@ export function LoginForm({
         });
 
         if (result?.error) {
-          console.error(result.error);
-          console.error(result);
-          console.log(`process.env.NEXTAUTH_URL: ${process.env.NEXTAUTH_URL}`);
           toast.error('Invalid credentials');
           setError('Invalid credentials');
         } else {

@@ -11,9 +11,9 @@ export async function GET(request: Request) {
     const results = await Promise.all(
       promos.map(async (promo, index) => {
         // Appeler displayAgenda pour chaque promo
-        console.log(`Processing promo ${promo}`);
+        // console.log(`Processing promo ${promo}`);
         const result = await displayAgenda(promo, allProjects, holidays);
-        return { promoIndex: index, agenda: result.agenda, success: result.success };
+        return { promoIndex: index, success: result.success, agenda: result.agenda, promotionName: result.promotionName, currentProject: result.currentProject, progress: result.progress };
       })
     );
 
