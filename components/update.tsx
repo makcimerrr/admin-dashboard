@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import LastUpdate from '@/components/last-update';
 import promotions from '../config/promoConfig.json';
 import promoStatus from '../config/promoStatus.json';
-import allProjects from '../config/projects.json';
+import allProjects from '../config/projects.json' assert { type: 'json' };
 
 interface UpdateProps {
   eventId: string;
@@ -19,6 +19,20 @@ interface Promotion {
   title: string;
   dates: { start: string; end: string };
 }
+
+interface Project {
+  id: number;
+  name: string;
+  project_time_week: number;
+}
+
+interface AllProjects {
+  Golang: Project[];
+  Javascript: Project[];
+  Rust: Project[];
+}
+
+const allProjectsTyped = allProjects as AllProjects;
 
 const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
@@ -139,6 +153,44 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     return true;
   };
 
+  const findActiveProjectsByTrack = (
+    allProjects: AllProjects,
+    userProjects: any[]
+  ) => {
+    const commonProjects: { [key: string]: string | null } = {};
+    const lastProjectsFinished: { [key: string]: boolean } = {};
+
+    for (const track in allProjects as Record<keyof AllProjects, Project[]>) {
+      const trackProjects = allProjects[track as keyof AllProjects];
+      let lastFinishedProject: string | null = null;
+      let activeProject: string | null = null;
+
+      for (const project of trackProjects) {
+        const userProject = userProjects.find(
+          (p) => p.projectName.toLowerCase() === project.name.toLowerCase()
+        );
+
+        if (userProject?.projectStatus === 'finished') {
+          lastFinishedProject = project.name;
+        } else if (!activeProject) {
+          activeProject = project.name;
+        }
+      }
+
+      if (
+        lastFinishedProject === trackProjects[trackProjects.length - 1].name
+      ) {
+        lastProjectsFinished[track] = true;
+      } else {
+        lastProjectsFinished[track] = false;
+      }
+
+      commonProjects[track] = activeProject || lastFinishedProject;
+    }
+
+    return { commonProjects, lastProjectsFinished };
+  };
+
   const fetchPromotionProgress = async (eventId: string) => {
     setLoading(true);
     let currentStudentCount = 0; // Compteur pour les étudiants dans cette promo
@@ -186,6 +238,9 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       setTotalStudents((prev) => (prev || 0) + currentStudentCount);
 
       for (const login in userProjects) {
+        const { commonProjects, lastProjectsFinished } =
+          findActiveProjectsByTrack(allProjectsTyped, userProjects[login]);
+
         const { activeProject, status } = findNextActiveProject(
           projectsList,
           userProjects[login]
@@ -195,12 +250,17 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
         try {
           if (promoProject.toLowerCase() === 'fin') {
-            if (activeProject.toLowerCase() === projectsList[projectsList.length - 1].toLowerCase() &&
-              status === 'finished') {
+            if (
+              activeProject.toLowerCase() ===
+                projectsList[projectsList.length - 1].toLowerCase() &&
+              status === 'finished'
+            ) {
               delayLevel = 'spécialité';
             } else {
               delayLevel = 'en retard';
             }
+          } else if (promoProject.toLowerCase() === 'spécialité') {
+            delayLevel = 'spécialité';
           } else {
             // Logic normale pour calculer le delayLevel pour les projets autres que 'Fin'
             const promoIndex = findProjectIndex(allProjects, promoProject); // Trouve l'indice du projet promo
@@ -228,6 +288,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           );
           delayLevel = 'inconnu'; // En cas d'erreur, retourner "inconnu"
         }
+
         if (shouldUpdate(login, activeProject, status, delayLevel)) {
           try {
             await fetch('/api/update_project', {
@@ -237,7 +298,9 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
                 login,
                 project_name: activeProject,
                 project_status: status,
-                delay_level: delayLevel // Valeur brut, a modifier
+                delay_level: delayLevel,
+                last_projects_finished: lastProjectsFinished,
+                common_projects: commonProjects
               })
             });
           } catch (error) {

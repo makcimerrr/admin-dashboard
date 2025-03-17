@@ -17,7 +17,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Student } from './student';
-import { SelectStudent } from '@/lib/db';
+import { SelectStudent } from '@/lib/db/schema/students';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronDown,
@@ -167,17 +167,27 @@ export function StudentsTable({
   };
 
   const requestSort = (key: keyof SelectStudent) => {
-    const direction =
-      sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+     const direction =
+       sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
 
-    setSortConfig({ key, direction });
+     setSortConfig({ key, direction });
 
-    const query = new URLSearchParams(searchParams.toString());
-    query.set('filter', key);
-    query.set('direction', direction);
+     const query = new URLSearchParams(searchParams.toString());
+     query.set('filter', key);
+     query.set('direction', direction);
 
-    router.push(`${pathname}?${query.toString()}`, { scroll: false });
-  };
+     // Handle boolean and special character sorting
+     const sortedList = [...studentsList].sort((a, b) => {
+       if (a[key] === b[key]) return 0;
+       if (typeof a[key] === 'boolean') {
+         return direction === 'asc' ? (a[key] ? -1 : 1) : (a[key] ? 1 : -1);
+       }
+       return direction === 'asc'
+           ? a[key]?.toString().localeCompare(b[key]?.toString() || '', undefined, { numeric: true }) ?? 0
+           : b[key]?.toString().localeCompare(a[key]?.toString() || '', undefined, { numeric: true }) ?? 0;
+     });
+     setStudentsList(sortedList);
+   };
 
   const requestStatus = (status: string) => {
     const query = new URLSearchParams(searchParams.toString());
@@ -370,9 +380,45 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('project_name')}>
-                Project{' '}
-                {sortConfig.key === 'project_name' && (
+              <TableHead onClick={() => requestSort('golang_completed')}>
+                Golang Project{' '}
+                {sortConfig.key === 'golang_completed' && (
+                  <span>
+                    {sortConfig.direction === 'asc' ? (
+                      <ChevronUp className="inline h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="inline h-4 w-4" />
+                    )}
+                  </span>
+                )}
+              </TableHead>
+              <TableHead onClick={() => requestSort('javascript_completed')}>
+                JavaScript Project{' '}
+                {sortConfig.key === 'javascript_completed' && (
+                  <span>
+                    {sortConfig.direction === 'asc' ? (
+                      <ChevronUp className="inline h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="inline h-4 w-4" />
+                    )}
+                  </span>
+                )}
+              </TableHead>
+              <TableHead onClick={() => requestSort('rust_completed')}>
+                Rust Project{' '}
+                {sortConfig.key === 'rust_completed' && (
+                  <span>
+                    {sortConfig.direction === 'asc' ? (
+                      <ChevronUp className="inline h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="inline h-4 w-4" />
+                    )}
+                  </span>
+                )}
+              </TableHead>
+              <TableHead onClick={() => requestSort('actual_project_name')}>
+                Actual Project{' '}
+                {sortConfig.key === 'actual_project_name' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
                       <ChevronUp className="inline h-4 w-4" />
