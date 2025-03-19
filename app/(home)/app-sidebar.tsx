@@ -141,7 +141,7 @@ export function AppSidebar({user, logout, ...props}: { user: any, logout: any} &
             </SidebarHeader>
             <SidebarContent>
                 <NavMain items={data.navMain}/>
-                <NavProjects projects={data.projects}/>
+                {/*<NavProjects projects={data.projects}/>*/}
             </SidebarContent>
             <SidebarFooter>
                 <NavUser user={user} logout={logout}/>
