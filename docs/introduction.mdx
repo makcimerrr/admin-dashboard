@@ -1,0 +1,79 @@
+---
+title: "Introduction"
+description: "Utilisation de l'application"
+updatedAt: '10 Mars 2025'
+next: { slug: 'authentication', title: 'Authentification' }
+prev: null
+---
+
+# Introduction à notre API
+
+Notre API vous permet d'accéder à nos services via des requêtes HTTP standard. Elle est conçue pour être simple à utiliser, robuste et évolutive.
+
+<Alert title="Important">
+    Toutes les requêtes doivent être authentifiées avec une clé API valide.
+</Alert>
+
+## Présentation de l'API
+
+Notre API RESTful permet d'accéder à toutes les fonctionnalités de notre plateforme de manière programmatique. Vous pouvez l'utiliser pour intégrer nos services dans vos applications, automatiser des tâches ou créer des expériences personnalisées pour vos utilisateurs.
+
+## Fonctionnalités principales
+
+- Authentification sécurisée avec tokens JWT
+- Endpoints RESTful pour une intégration facile
+- Pagination et filtrage avancés
+- Webhooks pour les notifications en temps réel
+- SDKs disponibles dans plusieurs langages
+
+## Exemples de code
+
+<CodeTabs>
+    <TabsList>
+        <TabsTrigger value="javascript">JavaScript</TabsTrigger>
+        <TabsTrigger value="python">Python</TabsTrigger>
+        <TabsTrigger value="curl">cURL</TabsTrigger>
+    </TabsList>
+    <TabsContent value="javascript">
+        <CodeBlock
+            language="JavaScript"
+            code={`const apiKey = 'votre_clé_api';
+
+            fetch('https://api.example.com/v1/resources', {
+              method: 'GET',
+              headers: {
+                'Authorization': \`Bearer \${apiKey}\`,
+                'Content-Type': 'application/json'
+              }
+            })
+            .then(response => response.json())
+            .then(data => console.log(data))
+            .catch(error => console.error('Erreur:', error));`}
+        />
+    </TabsContent>
+    <TabsContent value="python">
+        <CodeBlock
+            language="Python"
+            code={`import requests
+
+            api_key = 'votre_clé_api'
+            headers = {
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.get('https://api.example.com/v1/resources', headers=headers)
+            data = response.json()
+            print(data)`}
+        />
+    </TabsContent>
+    <TabsContent value="curl">
+        <CodeBlock
+            language="cURL"
+            code={`curl -X GET \\
+  -H "Authorization: Bearer votre_clé_api" \\
+  -H "Content-Type: application/json" \\
+  https://api.example.com/v1/resources`}
+        />
+    </TabsContent>
+</CodeTabs>
