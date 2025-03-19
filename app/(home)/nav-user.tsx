@@ -6,7 +6,10 @@ import {
   ChevronsUpDown,
   CreditCard,
   LogOut,
-  Sparkles
+  Moon,
+  Settings,
+  Sparkles,
+  Sun
 } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,9 +28,16 @@ import {
   SidebarMenuItem,
   useSidebar
 } from '@/components/ui/sidebar';
+import { Darker_Grotesque } from 'next/dist/compiled/@next/font/dist/google';
+import { useTheme } from 'next-themes';
 
 export function NavUser({ user, logout }: any) {
   const { isMobile } = useSidebar();
+  const { theme, setTheme } = useTheme();
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
     <SidebarMenu>
@@ -69,9 +79,19 @@ export function NavUser({ user, logout }: any) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              {/*<DropdownMenuItem>
                 <Sparkles />
                 Upgrade to Pro
+              </DropdownMenuItem>*/}
+              <DropdownMenuItem>
+                {theme === 'dark' ? <Sun /> : <Moon />}
+                <form action={toggleTheme}>
+                  <button type="submit">Dark Mode</button>
+                </form>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Settings />
+                Settings
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -80,10 +100,10 @@ export function NavUser({ user, logout }: any) {
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              {/*<DropdownMenuItem>
                 <CreditCard />
                 Billing
-              </DropdownMenuItem>
+              </DropdownMenuItem>*/}
               <DropdownMenuItem>
                 <Bell />
                 Notifications
