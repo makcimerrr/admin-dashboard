@@ -17,6 +17,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 
 interface DocsLayoutProps {
   children: React.ReactNode;
@@ -33,6 +34,7 @@ interface NavigationItem {
 }
 
 export default function DocsLayout({ children }: DocsLayoutProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [searchResults, setSearchResults] = React.useState<NavigationItem[]>([]);
   const [isSearching, setIsSearching] = React.useState<boolean>(false);
@@ -186,6 +188,13 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
     setIsSearching(false);
   }
 
+  // Gérer la navigation vers un résultat de recherche
+  const handleResultClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    clearSearch(); // Effacer la recherche avant la navigation
+    router.push(href); // Naviguer vers le lien
+  };
+
   // Grouper les éléments de navigation par catégorie
   const groupedNavItems: { [key: string]: NavigationItem[] } = {};
   navigationItems.forEach(item => {
@@ -201,7 +210,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
           <div className="container flex h-14 items-center">
             <div className="mr-4 flex">
-              <Link href="/docs" className="flex items-center space-x-2">
+              <Link href="/" className="flex items-center space-x-2">
                 <span className="font-bold text-xl">API Docs</span>
               </Link>
             </div>
@@ -315,10 +324,11 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
                   </p>
                   <div className="grid gap-4">
                     {searchResults.map((result, index) => (
-                        <Link
+                        <a
                             href={result.href}
                             key={index}
-                            className="block p-4 border rounded-lg hover:bg-accent transition-colors"
+                            className="block p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
+                            onClick={(e) => handleResultClick(e, result.href)}
                         >
                           <div className="flex items-start">
                             <div className="mr-3 mt-1">
@@ -360,7 +370,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
                               )}
                             </div>
                           </div>
-                        </Link>
+                        </a>
                     ))}
                   </div>
                   <div className="mt-6 pt-4 border-t">
