@@ -211,7 +211,7 @@ export default async function DocPage({
             <div className="flex justify-between pt-4 border-t">
                 {data.prev ? (
                     <Button variant="outline" asChild>
-                        <a href={`/docs/${data.prev.slug}`} className="flex items-center">
+                        <a href={`/hub/docs/${data.prev.slug}`} className="flex items-center">
                             <ChevronRight className="h-4 w-4 mr-2 rotate-180"/>
                             {data.prev.title}
                         </a>
@@ -221,7 +221,7 @@ export default async function DocPage({
                 )}
                 {data.next && (
                     <Button variant="outline" asChild>
-                        <a href={`/docs/${data.next.slug}`} className="flex items-center">
+                        <a href={`/hub/docs/${data.next.slug}`} className="flex items-center">
                             {data.next.title}
                             <ChevronRight className="h-4 w-4 ml-2"/>
                         </a>
