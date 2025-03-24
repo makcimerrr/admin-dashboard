@@ -12,27 +12,27 @@ export default function DocsPage() {
       title: 'Premiers pas',
       description: 'Découvrez les bases pour commencer à utiliser notre API.',
       links: [
-        { title: 'Introduction', href: '/docs/introduction' },
-        { title: 'Authentification', href: '/docs/authentication' },
-        { title: 'Exemples rapides', href: '/docs/quickstart' },
+        { title: 'Introduction', href: '/hub/docs/introduction' },
+        { title: 'Authentification', href: '/hub/docs/authentication' },
+        { title: 'Exemples rapides', href: '/hub/docs/quickstart' },
       ]
     },
     {
       title: 'Guides',
       description: 'Guides détaillés pour intégrer et utiliser notre API.',
       links: [
-        { title: 'Gestion des ressources', href: '/docs/resources' },
-        { title: 'Pagination', href: '/docs/pagination' },
-        { title: 'Gestion des erreurs', href: '/docs/errors' },
+        { title: 'Gestion des ressources', href: '/hub/docs/resources' },
+        { title: 'Pagination', href: '/hub/docs/pagination' },
+        { title: 'Gestion des erreurs', href: '/hub/docs/errors' },
       ]
     },
     {
       title: 'Référence API',
       description: 'Documentation technique complète de tous les endpoints.',
       links: [
-        { title: 'Endpoints', href: '/docs/endpoints' },
-        { title: 'Objets', href: '/docs/objects' },
-        { title: 'Webhooks', href: '/docs/webhooks' },
+        { title: 'Endpoints', href: '/hub/docs/endpoints' },
+        { title: 'Objets', href: '/hub/docs/objects' },
+        { title: 'Webhooks', href: '/hub/docs/webhooks' },
       ]
     },
   ];
@@ -120,19 +120,19 @@ export default function DocsPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" className="justify-between" asChild>
-              <Link href="/(home)/hub/docs/faq">
+              <Link href="/hub/docs/faq">
                 FAQ
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button variant="outline" className="justify-between" asChild>
-              <Link href="/(home)/hub/docs/community">
+              <Link href="/hub/docs/community">
                 Communauté
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button variant="outline" className="justify-between" asChild>
-              <Link href="/(home)/hub/docs/support">
+              <Link href="/hub/docs/support">
                 Support technique
                 <ChevronRight className="h-4 w-4" />
               </Link>
