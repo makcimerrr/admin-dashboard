@@ -9,14 +9,13 @@ import ContactForm from '../../contact-form';
 
 export default function CustomersPage() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Contact Us</CardTitle>
-        <CardDescription></CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ContactForm />
-      </CardContent>
-    </Card>
+      <div className="flex flex-col gap-4">
+          <header className="flex flex-col gap-2 text-center">
+              <h1 className="text-4xl font-bold">Contact Us</h1>
+          </header>
+          <main>
+              <ContactForm />
+          </main>
+      </div>
   );
 }
