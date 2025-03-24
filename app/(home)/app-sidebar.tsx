@@ -63,11 +63,11 @@ const data = {
       items: [
         {
           title: 'Introduction',
-          url: '/docs/introduction'
+          url: '/hub/docs/introduction'
         },
         {
           title: 'Authentication',
-          url: '/docs/authentication'
+          url: '/hub/docs/authentication'
         },
         {
           title: 'Endpoints',
