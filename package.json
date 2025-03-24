@@ -39,6 +39,7 @@
     "drizzle-orm": "^0.31.4",
     "drizzle-zod": "^0.5.1",
     "firebase": "^11.2.0",
+    "framer-motion": "^12.5.0",
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.400.0",
     "mdx": "^0.3.1",
