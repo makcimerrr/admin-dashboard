@@ -43,42 +43,42 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
   const navigationItems: NavigationItem[] = [
     {
       title: 'Introduction',
-      href: '/docs/introduction',
+      href: '/hub/docs/introduction',
       description: 'Présentation de l\'API et premiers pas',
       keywords: ['démarrer', 'commencer', 'overview', 'aperçu', 'présentation'],
       category: 'Général'
     },
     {
       title: 'Authentification',
-      href: '/docs/authentication',
+      href: '/hub/docs/authentication',
       description: 'Méthodes d\'authentification et gestion des tokens',
       keywords: ['token', 'jwt', 'oauth', 'clés api', 'sécurité'],
       category: 'Sécurité'
     },
     {
       title: 'Endpoints',
-      href: '/docs/endpoints',
+      href: '/hub/docs/endpoints',
       description: 'Liste complète des endpoints et leur utilisation',
       keywords: ['routes', 'api', 'ressources', 'url', 'http'],
       category: 'API'
     },
     {
       title: 'SDKs & Intégrations',
-      href: '/docs/sdks',
+      href: '/hub/docs/sdks',
       description: 'Bibliothèques officielles et outils d\'intégration',
       keywords: ['bibliothèques', 'librairies', 'outils', 'client', 'packages'],
       category: 'Intégration'
     },
     {
       title: 'Exemples',
-      href: '/docs/examples',
+      href: '/hub/docs/examples',
       description: 'Exemples de code pour les cas d\'usage courants',
       keywords: ['code', 'samples', 'tutoriels', 'guides', 'demos'],
       category: 'Ressources'
     },
     {
       title: 'Limites de taux',
-      href: '/docs/rate-limits',
+      href: '/hub/docs/rate-limits',
       description: 'Comprendre et gérer les limites de requêtes',
       keywords: ['throttling', 'quotas', 'limitations', 'requêtes'],
       category: 'API',
@@ -86,21 +86,21 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
     },
     {
       title: 'Gestion des erreurs',
-      href: '/docs/error-handling',
+      href: '/hub/docs/error-handling',
       description: 'Codes d\'erreur et stratégies de résolution',
       keywords: ['erreurs', 'codes', 'debugging', 'résolution', 'troubleshooting'],
       category: 'API'
     },
     {
       title: 'Webhooks',
-      href: '/docs/webhooks',
+      href: '/hub/docs/webhooks',
       description: 'Configuration et utilisation des webhooks',
       keywords: ['événements', 'callbacks', 'notifications', 'temps réel'],
       category: 'Intégration'
     },
     {
       title: 'FAQ',
-      href: '/docs/faq',
+      href: '/hub/docs/faq',
       description: 'Réponses aux questions fréquemment posées',
       keywords: ['questions', 'problèmes', 'aide', 'support'],
       category: 'Support'
@@ -110,19 +110,19 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
   const resourceItems: NavigationItem[] = [
     {
       title: 'Changelog',
-      href: '/docs/changelog',
+      href: '/hub/docs/changelog',
       description: 'Historique des versions et nouveautés',
       keywords: ['versions', 'mises à jour', 'historique', 'nouvelles fonctionnalités']
     },
     {
       title: 'Statut de l\'API',
-      href: '/docs/status',
+      href: '/hub/docs/status',
       description: 'État actuel et incidents du service',
       keywords: ['disponibilité', 'uptime', 'performance', 'incidents', 'maintenance']
     },
     {
       title: 'Support',
-      href: '/docs/support',
+      href: '/hub/docs/support',
       description: 'Comment contacter l\'équipe de support',
       keywords: ['aide', 'contact', 'assistance', 'tickets', 'problèmes']
     }

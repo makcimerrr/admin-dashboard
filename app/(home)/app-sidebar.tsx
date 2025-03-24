@@ -71,19 +71,19 @@ const data = {
         },
         {
           title: 'Endpoints',
-          url: '#'
+          url: '/hub/docs/endpoints'
         },
         {
           title: 'SDKs & Integrations',
-          url: '#'
+          url: '/hub/docs/sdks'
         },
         {
           title: 'Exemples',
-          url: '#'
+          url: '/hub/docs/examples'
         },
         {
           title: 'FAQ',
-          url: '#'
+          url: '/hub/docs/faq'
         }
       ]
     },
