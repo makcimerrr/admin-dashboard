@@ -264,55 +264,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
             </div>
           </div>
         </header>
-        <div className="container flex-1 items-start md:grid md:grid-cols-[220px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-10">
-          <aside className="fixed top-14 z-30 -ml-2 hidden h-[calc(100vh-3.5rem)] w-full shrink-0 md:sticky md:block">
-            <div className="h-full overflow-y-auto py-6 pr-6 lg:py-8">
-              <div className="space-y-4">
-                {/* Menu de navigation par catégorie */}
-                {Object.entries(groupedNavItems).map(([category, items]) => (
-                    <div key={category} className="px-4">
-                      <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-                        {category}
-                      </h2>
-                      <div className="space-y-1">
-                        {items.map((item, index) => (
-                            <Link
-                                key={index}
-                                href={item.href}
-                                className="flex w-full items-center justify-between rounded-md px-2 py-2 hover:bg-accent hover:text-accent-foreground"
-                            >
-                              <span>{item.title}</span>
-                              {item.isNew && (
-                                  <Badge variant="outline" className="ml-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                                    Nouveau
-                                  </Badge>
-                              )}
-                            </Link>
-                        ))}
-                      </div>
-                    </div>
-                ))}
-
-                {/* Ressources */}
-                <div className="px-4">
-                  <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-                    Ressources
-                  </h2>
-                  <div className="space-y-1">
-                    {resourceItems.map((item, index) => (
-                        <Link
-                            key={index}
-                            href={item.href}
-                            className="flex w-full items-center rounded-md px-2 py-2 hover:bg-accent hover:text-accent-foreground"
-                        >
-                          {item.title}
-                        </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </aside>
+        <div className="flex-1 mx-auto container py-6 lg:py-8">
           <main className="relative py-6 lg:py-8">
             {isSearching && searchResults.length > 0 ? (
                 <div className="search-results space-y-4">
