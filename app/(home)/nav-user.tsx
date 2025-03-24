@@ -83,11 +83,8 @@ export function NavUser({ user, logout }: any) {
                 <Sparkles />
                 Upgrade to Pro
               </DropdownMenuItem>*/}
-              <DropdownMenuItem>
-                {theme === 'dark' ? <Sun /> : <Moon />}
-                <form action={toggleTheme}>
-                  <button type="submit">Dark Mode</button>
-                </form>
+              <DropdownMenuItem onSelect={toggleTheme} className="cursor-pointer">
+                {theme === 'dark' ? <Sun /> : <Moon />} Dark Mode
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Settings />
@@ -110,11 +107,9 @@ export function NavUser({ user, logout }: any) {
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onSelect={logout} className="cursor-pointer">
               <LogOut />
-              <form action={logout}>
-                <button type="submit">Sign Out</button>
-              </form>
+              Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
