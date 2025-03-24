@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import ContactForm from '../contact-form';
+import ContactForm from '../../contact-form';
 
 export default function CustomersPage() {
   return (
