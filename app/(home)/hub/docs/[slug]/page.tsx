@@ -30,9 +30,9 @@ import matter from 'gray-matter';
 import { serialize } from 'next-mdx-remote/serialize';
 
 type PageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 };
 
 export async function generateMetadata({
