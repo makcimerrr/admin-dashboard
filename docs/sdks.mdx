@@ -1,0 +1,47 @@
+---
+title: "SDKs"
+description: "Bibliothèques SDK disponibles pour faciliter l'intégration de notre API."
+updatedAt: '20 Mars 2025'
+next: { slug: 'examples', title: 'Examples' }
+prev: { slug: 'endpoints', title: 'Endpoints' }
+---
+
+# SDKs
+
+This section details the SDKs available for interacting with our API in various programming languages.
+
+## SDKs disponibles
+
+### `/sdks`
+
+- **Méthode**: `GET`
+- **Description**: Récupère une liste de toutes les SDKs disponibles.
+- **Paramètres**:
+- `limit` (optionnel) : Nombre maximum de résultats par page.
+- `offset` (optionnel) : Décalage pour la pagination.
+- `filter` (optionnel) : Filtre les résultats en fonction de critères spécifiques.
+- **Exemple de réponse**:
+
+<CodeBlock
+    language="JSON"
+    code={`[
+  {
+    "id": 1,
+    "name": "SDK 1",
+    "description": "Description de la SDK 1"
+  },
+  {
+    "id": 2,
+    "name": "SDK 2",
+    "description": "Description de la SDK 2"
+  }
+]`}
+/>
+
+## Autres SDKs
+
+Décrivez ici les autres SDKs disponibles dans votre API, en suivant la même structure.
+
+## Exemples d'utilisation
+
+Vous pouvez trouver des exemples d'utilisation de nos SDKs dans les sections correspondantes de la documentation.
