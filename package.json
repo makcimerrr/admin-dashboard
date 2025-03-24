@@ -77,5 +77,12 @@
     "singleQuote": true,
     "tabWidth": 2,
     "trailingComma": "none"
+  },
+  "pnpm": {
+    "overrides": {
+      "trim-newlines": "3.0.1",
+      "esbuild": "^0.25.0",
+      "@babel/runtime": "^7.26.10"
+    }
   }
 }
