@@ -120,19 +120,19 @@ export default function DocsPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" className="justify-between" asChild>
-              <Link href="/docs/faq">
+              <Link href="/(home)/hub/docs/faq">
                 FAQ
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button variant="outline" className="justify-between" asChild>
-              <Link href="/docs/community">
+              <Link href="/(home)/hub/docs/community">
                 Communauté
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button variant="outline" className="justify-between" asChild>
-              <Link href="/docs/support">
+              <Link href="/(home)/hub/docs/support">
                 Support technique
                 <ChevronRight className="h-4 w-4" />
               </Link>
