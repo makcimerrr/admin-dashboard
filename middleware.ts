@@ -12,7 +12,8 @@ export async function middleware(req: NextRequest) {
 
     // Si l'utilisateur est connecté mais n'a pas le rôle 'admin', on limite l'accès
     const url = req.nextUrl.pathname;
-    if (user && user.role !== 'admin' && url !== "/non-admin" && url !== "/contact") {
+    const allowedNonAdminRoutes = [/^\/non-admin/, /^\/contact/, /^\/docs/, /^\/settings/, /^\/privacy/];
+    if (user && user.role !== 'admin' && !allowedNonAdminRoutes.some(route => route.test(url))) {
         return NextResponse.redirect(new URL("/non-admin", req.url));
     }
 

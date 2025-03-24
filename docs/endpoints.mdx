@@ -1,0 +1,156 @@
+---
+title: "Endpoints"
+description: "Liste des points d'accès de notre API et de leurs fonctionnalités."
+updatedAt: '15 Mars 2025'
+next: { slug: 'sdks', title: 'SDKs' }
+prev: { slug: 'authentication', title: 'Authentification' }
+---
+
+# Points d'accès (Endpoints)
+
+Cette section détaille tous les points d'accès disponibles dans notre API.
+
+## Ressources
+
+### `/resources`
+
+- **Méthode**: `GET`
+- **Description**: Récupère une liste de toutes les ressources disponibles.
+- **Paramètres**:
+- `limit` (optionnel) : Nombre maximum de résultats par page.
+- `offset` (optionnel) : Décalage pour la pagination.
+- `filter` (optionnel) : Filtre les résultats en fonction de critères spécifiques.
+- **Exemple de réponse**:
+
+<CodeBlock
+    language="JSON"
+    code={`[
+  {
+    "id": 1,
+    "name": "Ressource 1",
+    "description": "Description de la ressource 1"
+  },
+  {
+    "id": 2,
+    "name": "Ressource 2",
+    "description": "Description de la ressource 2"
+  }
+]`}
+/>
+
+### `/resources/{id}`
+
+- **Méthode**: `GET`
+- **Description**: Récupère une ressource spécifique par son ID.
+- **Paramètres**:
+- `id` (requis) : ID de la ressource à récupérer.
+- **Exemple de réponse**:
+
+<CodeBlock
+    language="JSON"
+    code={`{
+  "id": 1,
+  "name": "Ressource 1",
+  "description": "Description de la ressource 1"
+}`}
+/>
+
+### `/resources`
+
+- **Méthode**: `POST`
+- **Description**: Crée une nouvelle ressource.
+- **Corps de la requête**:
+
+<CodeBlock
+    language="JSON"
+    code={`{
+  "name": "Nouvelle ressource",
+  "description": "Description de la nouvelle ressource"
+}`}
+/>
+
+- **Exemple de réponse**:
+
+<CodeBlock
+    language="JSON"
+    code={`{
+  "id": 3,
+  "name": "Nouvelle ressource",
+  "description": "Description de la nouvelle ressource"
+}`}
+/>
+
+## Utilisateurs
+
+### `/users`
+
+- **Méthode**: `GET`
+- **Description**: Récupère une liste de tous les utilisateurs.
+- **Paramètres**:
+  - `limit` (optionnel) : Nombre maximum de résultats par page.
+  - `offset` (optionnel) : Décalage pour la pagination.
+  - `filter` (optionnel) : Filtre les résultats en fonction de critères spécifiques.
+- **Exemple de réponse**:
+
+<CodeBlock
+    language="JSON"
+    code={`[
+  {
+    "id": 1,
+    "name": "Utilisateur 1",
+    "email": "user1@example.com"
+  },
+  {
+    "id": 2,
+    "name": "Utilisateur 2",
+    "email": "user2@example.com"
+  }
+]`}
+/>
+
+### `/users/{id}`
+
+- **Méthode**: `GET`
+- **Description**: Récupère un utilisateur spécifique par son ID.
+- **Paramètres**:
+- `id` (requis) : ID de l'utilisateur à récupérer.
+- **Exemple de réponse**:
+
+<CodeBlock
+    language="JSON"
+    code={`{
+  "id": 1,
+  "name": "Utilisateur 1",
+  "email": "user1@example.com"
+}`}
+/>
+
+### `/users`
+
+- **Méthode**: `POST`
+- **Description**: Crée un nouvel utilisateur.
+- **Corps de la requête**:
+
+<CodeBlock
+    language="JSON"
+    code={`{
+  "name": "Nouvel utilisateur",
+  "email": "nouvel_utilisateur@example.com",
+  "password": "mot_de_passe"
+}`}
+/>
+
+- **Exemple de réponse**:
+
+<CodeBlock
+    language="JSON"
+    code={`{
+  "id": 3,
+  "name": "Nouvel utilisateur",
+  "email": "nouvel_utilisateur@example.com"
+}`}
+/>
+
+## Autres points d'accès
+
+Décrivez ici les autres points d'accès disponibles dans votre API, en suivant la même structure.
