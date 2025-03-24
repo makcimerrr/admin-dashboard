@@ -157,7 +157,7 @@ export function AppSidebar({
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold">Zone01 Dashboard</span>
-                  <span className="">v1.0.0</span>
+                  <span className="">v1.0</span>
                 </div>
               </a>
             </SidebarMenuButton>
