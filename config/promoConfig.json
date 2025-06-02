@@ -50,5 +50,18 @@
       "piscine-rust-end": "2025-09-12",
       "end": "2026-06-03"
     }
+  },
+  {
+    "key": "P1 2025",
+    "eventId": 526,
+    "title": "Promotion 1 - Année 2024",
+    "dates": {
+      "start": "2025-05-26",
+      "piscine-js-start": "NaN",
+      "piscine-js-end": "NaN",
+      "piscine-rust-start": "NaN",
+      "piscine-rust-end": "NaN",
+      "end": "2027-05-19"
+    }
   }
 ]
