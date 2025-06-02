@@ -2,6 +2,7 @@ import { HandHelping, Users, Zap } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import React from 'react';
 
 interface Feature {
     icon: React.ReactNode;
@@ -44,7 +45,7 @@ const HeroSection = ({
                     ],
                 }: Hero45Props) => {
     return (
-        <section className="py-32">
+        <section className="py-8">
             <div className="container overflow-hidden">
                 <div className="mb-20 flex flex-col items-center gap-6 text-center">
                     <Badge variant="outline">{badge}</Badge>
@@ -62,27 +63,26 @@ const HeroSection = ({
                 </div>
                 <div className="mx-auto mt-10 flex max-w-screen-lg flex-col md:flex-row">
                     {features.map((feature, index) => (
-                        <>
-                            {index > 0 && (
-                                <Separator
-                                    orientation="vertical"
-                                    className="mx-6 hidden h-auto w-[2px] bg-gradient-to-b from-muted via-transparent to-muted md:block"
-                                />
-                            )}
-                            <div
-                                key={index}
-                                className="flex grow basis-0 flex-col rounded-md bg-background p-4"
-                            >
-                                <div className="mb-6 flex size-10 items-center justify-center rounded-full bg-background drop-shadow-lg">
-                                    {feature.icon}
-                                </div>
-                                <h3 className="mb-2 font-semibold">{feature.title}</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    {feature.description}
-                                </p>
-                            </div>
-                        </>
-                    ))}
+                                <React.Fragment key={index}>
+                                    {index > 0 && (
+                                        <Separator
+                                            orientation="vertical"
+                                            className="mx-6 hidden h-auto w-[2px] bg-gradient-to-b from-muted via-transparent to-muted md:block"
+                                        />
+                                    )}
+                                    <div
+                                        className="flex grow basis-0 flex-col rounded-md bg-background p-4"
+                                    >
+                                        <div className="mb-6 flex size-10 items-center justify-center rounded-full bg-background drop-shadow-lg">
+                                            {feature.icon}
+                                        </div>
+                                        <h3 className="mb-2 font-semibold">{feature.title}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {feature.description}
+                                        </p>
+                                    </div>
+                                </React.Fragment>
+                            ))}
                 </div>
             </div>
         </section>

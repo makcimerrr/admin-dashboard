@@ -1,5 +1,9 @@
-import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Separator } from '@/components/ui/separator';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { DashboardBreadcrumb } from '../app/(dashboard)/get-breadcrumb-items';
+import { Suspense } from 'react';
+import { SearchInput } from '../app/(dashboard)/search';
+import DarkModeToggle from '@/components/dark-mode';
 
 export function SiteHeader() {
   return (
@@ -10,8 +14,14 @@ export function SiteHeader() {
           orientation="vertical"
           className="mx-2 data-[orientation=vertical]:h-4"
         />
-        <h1 className="text-base font-medium">Documents</h1>
+        <h1 className="text-base font-medium">
+          <Suspense fallback={<div>Loading breadcrumbs...</div>}>
+            <DashboardBreadcrumb />
+          </Suspense>
+        </h1>
+        <SearchInput />
+        <DarkModeToggle className="sm:hidden" />
       </div>
     </header>
-  )
+  );
 }

@@ -1,179 +1,32 @@
-import Link from 'next/link';
-import {
-  Home,
-  LineChart,
-  Package2,
-  PanelLeft,
-  Settings,
-  Users2,
-  Bookmark
-} from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
-} from '@/components/ui/tooltip';
 import { Analytics } from '@vercel/analytics/react';
-import { Toaster } from 'react-hot-toast'; // Import du Toaster
-import { User } from './user';
-import Providers from './providers';
-import { NavItem } from './nav-item';
-import { SearchInput } from './search';
-import { DashboardBreadcrumb } from './get-breadcrumb-items';
-import DarkModeToggle from '@/components/dark-mode';
-import { Suspense } from 'react';
+import {
+  SidebarInset,
+  SidebarProvider
+} from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
+import { SiteHeader } from '@/components/site-header';
+import { auth } from '@/lib/auth';
+import type React from 'react';
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <Providers>
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+  let session = await auth();
+  let user = session?.user;
 
-      <main className="flex min-h-screen w-full flex-col bg-muted/40">
-        <DesktopNav />
-        <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-            <MobileNav />
-            <Suspense fallback={<div>Loading breadcrumbs...</div>}>
-              <DashboardBreadcrumb />
-            </Suspense>
-            <SearchInput />
-            <DarkModeToggle className="sm:hidden" />
-            <User />
-          </header>
-          <main className="grid flex-1 items-start gap-2 p-4 sm:px-6 sm:py-0 md:gap-4 bg-muted/40">
-            {children}
-          </main>
+  return (
+    <SidebarProvider>
+      <AppSidebar variant="inset" user={user} />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">{children}</div>
         </div>
         <Analytics />
-      </main>
-    </Providers>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
 
-function DesktopNav() {
-  return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
-      <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
-        <Link
-          href="https://zone01rouennormandie.org/"
-          className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
-        >
-          <img
-            src="https://zone01rouennormandie.org/wp-content/uploads/2022/10/ZONE01-ROUEN-NORMANDIE-FOND-BLANC-T-SHIRT.png"
-            alt="Zone01 Rouen Normandie"
-            className="h-9 w-9"
-          />
-          <span className="sr-only">Zone01 Rouen Normandie</span>
-        </Link>
-
-        <NavItem href="/" label="Dashboard">
-          <Home className="h-5 w-5" />
-        </NavItem>
-
-        {/*<NavItem href="#" label="Orders">
-          <ShoppingCart className="h-5 w-5" />
-        </NavItem>*/}
-
-        <NavItem href="/students" label="Students">
-          <Users2 className="h-5 w-5" />
-        </NavItem>
-
-        <NavItem href="/config" label="Configuration">
-          <PanelLeft className="h-5 w-5" />
-        </NavItem>
-
-        <NavItem href="/01deck" label="01Deck">
-          <Bookmark className="h-5 w-5" />
-        </NavItem>
-
-        {/*En développement...*/}
-        <NavItem href="/analytics" label="Analytics">
-          <LineChart className="h-5 w-5" />
-        </NavItem>
-      </nav>
-      <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              href="#"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8"
-            >
-              <Settings className="h-5 w-5" />
-              <span className="sr-only">Settings</span>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right">Settings</TooltipContent>
-        </Tooltip>
-
-        <DarkModeToggle />
-      </nav>
-    </aside>
-  );
-}
-
-function MobileNav() {
-  return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button size="icon" variant="outline" className="sm:hidden">
-          <PanelLeft className="h-5 w-5" />
-          <span className="sr-only">Toggle Menu</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="sm:max-w-xs">
-        <nav className="grid gap-6 text-lg font-medium">
-          <Link
-            href="#"
-            className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
-          >
-            <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
-            <span className="sr-only">Zone 01 Rouen</span>
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <Home className="h-5 w-5" />
-            Dashboard
-          </Link>
-          <Link
-            href="/students"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <Users2 className="h-5 w-5" />
-            Students
-          </Link>
-          <Link
-            href="/config"
-            className="flex items-center gap-4 px-2.5 text-foreground"
-          >
-            <PanelLeft className="h-5 w-5" />
-            Configuration
-          </Link>
-          <Link
-            href="/01deck"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <Bookmark className="h-5 w-5" />
-            01Deck
-          </Link>
-
-          <Link
-            href="#"
-            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
-          >
-            <LineChart className="h-5 w-5" />
-            Analytics
-          </Link>
-        </nav>
-      </SheetContent>
-    </Sheet>
-  );
-}

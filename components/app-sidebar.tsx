@@ -34,35 +34,30 @@ import {
 } from "@/components/ui/sidebar"
 
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/",
       icon: LayoutDashboardIcon,
     },
     {
-      title: "Lifecycle",
-      url: "#",
+      title: "Students",
+      url: "/students",
       icon: ListIcon,
     },
     {
       title: "Analytics",
-      url: "#",
+      url: "/analytics",
       icon: BarChartIcon,
     },
     {
-      title: "Projects",
-      url: "#",
+      title: "Config",
+      url: "/config",
       icon: FolderIcon,
     },
     {
-      title: "Team",
-      url: "#",
+      title: "01 Deck",
+      url: "/01deck",
       icon: UsersIcon,
     },
   ],
@@ -150,7 +145,15 @@ const data = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+let User: {
+  id?: string
+  name?: string
+  email?: string
+  image?: string
+  role?: string
+} | undefined
+
+export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user?: typeof User }) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -160,9 +163,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
+              <a href="https://zone01rouennormandie.org/">
                 <ArrowUpCircleIcon className="h-5 w-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <span className="text-base font-semibold">Zone01 Rouen</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -174,7 +177,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user}/>
       </SidebarFooter>
     </Sidebar>
   )
