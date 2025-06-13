@@ -87,7 +87,7 @@ export function Student({ student }: { student: SelectStudent }) {
         try {
           const giteaResponse = await fetch(
             `https://api-zone01-rouen.deno.dev/api/v1/gitea-info/${student.login}`,
-            /*`http://localhost:3010/user-gitea/${student.login}` */ /*For development*/ {
+            /*`http://localhost:8000/api/v1/gitea-info/${student.login}`,*/  /*For development*/ {
               headers: {
                 Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
               }
@@ -95,7 +95,7 @@ export function Student({ student }: { student: SelectStudent }) {
           );
           const userFindResponse = await fetch(
             `https://api-zone01-rouen.deno.dev/api/v1/user-info/${student.login}`,
-            /*`http://localhost:3010/user-find/${student.login}`*/ /*For development*/ {
+            /*`http://localhost:8000/api/v1/user-info/${student.login}`,*/ /*For development*/ {
               headers: {
                 Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
               }

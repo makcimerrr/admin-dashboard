@@ -21,6 +21,7 @@ export default function AnalyticsPage() {
         <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
           {promos.map((promo) => (
             <PieChart
+              key={promo.key}
               title={promo.title}
               eventID={promo.eventId}
               keyPromo={promo.key}
@@ -30,6 +31,7 @@ export default function AnalyticsPage() {
         <div className="mt-8 grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
           {promos.map((promo) => (
             <BarChartStacked
+              key={promo.key}
               title={promo.title}
               eventID={promo.eventId}
               keyPromo={promo.key}
