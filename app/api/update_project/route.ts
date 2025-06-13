@@ -3,13 +3,21 @@ import { updateStudentProject } from '@/lib/db/services/students'; // Assuming t
 
 export async function POST(req: Request) {
   try {
-    const { login, project_name, project_status, delay_level, last_projects_finished, common_projects } = await req.json();
+    const { login, project_name, project_status, delay_level, last_projects_finished, common_projects, promo_name } = await req.json();
 
     /*console.log(last_projects_finished);
     console.log(common_projects);*/
 
     // Call the function to update the project status
-    await updateStudentProject(login, project_name, project_status, delay_level, last_projects_finished, common_projects);
+    await updateStudentProject(
+      login,
+      project_name,
+      project_status,
+      delay_level,
+      last_projects_finished,
+      common_projects,
+      promo_name
+    );
 
     return NextResponse.json({ message: 'Project updated successfully' });
   } catch (error) {
