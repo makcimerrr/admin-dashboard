@@ -71,8 +71,8 @@ export default function HolidayManager() {
       return;
     }
 
-    if (new Date(start).getTime() - new Date(end).getTime() < 0) {
-      toast.error('La date de fin doit venir apres la date de debut.');
+    if (new Date(start).getTime() - new Date(end).getTime() > 0) {
+      toast.error('La date de début doit être avant la date de fin.');
       return;
     }
 
