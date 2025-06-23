@@ -6,7 +6,7 @@ import {
   PanelLeft,
   Settings,
   Users2,
-  Bookmark
+  Bookmark, LayoutTemplate
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -93,10 +93,18 @@ function DesktopNav() {
           <Bookmark className="h-5 w-5" />
         </NavItem>
 
-        {/*En développement...*/}
+
         <NavItem href="/analytics" label="Analytics">
           <LineChart className="h-5 w-5" />
         </NavItem>
+
+        {/*En développement...*/}
+        <NavItem href="/planning" label="Planning">
+          <LayoutTemplate className="h-5 w-5" />
+        </NavItem>
+
+
+
       </nav>
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <Tooltip>
@@ -166,11 +174,18 @@ function MobileNav() {
           </Link>
 
           <Link
-            href="#"
+            href="/analytics"
             className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
           >
             <LineChart className="h-5 w-5" />
             Analytics
+          </Link>
+          <Link
+            href="/planning"
+            className="flex items-center gap-4 px-2.5 text-muted-foreground hover:text-foreground"
+          >
+            <LayoutTemplate className="h-5 w-5" />
+            Planning
           </Link>
         </nav>
       </SheetContent>
