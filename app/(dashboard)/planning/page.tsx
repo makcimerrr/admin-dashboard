@@ -10,7 +10,7 @@ import { useToast } from "@/components/hooks/use-toast"
 import { Calendar as CalendarIcon, Clock, Users, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2 } from "lucide-react"
 import { Separator } from "@radix-ui/react-separator"
 import Link from "next/link"
-import { getWeekDates, getWeekNumber, getWeekKey, formatDate } from "@/lib/db/utils"
+import { getWeekDates, getWeekNumber, getWeekKey, formatDate, EMPLOYEE_COLORS } from "@/lib/db/utils"
 import type { Employee } from "@/lib/db/schema/employees"
 import type { TimeSlot } from "@/lib/db/schema/schedules"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -295,8 +295,7 @@ function EmployeeManagementView({
       switch (type) {
         case "full":
           timeSlots = [
-            { start: "09:00", end: "12:00", isWorking: true, type: "work" as const },
-            { start: "13:00", end: "17:00", isWorking: true, type: "work" as const },
+            { start: "09:00", end: "17:00", isWorking: true, type: "work" as const },
           ]
           break
         case "morning":
@@ -461,7 +460,51 @@ function EmployeeManagementView({
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <h3 className="font-medium text-sm">{employee.name}</h3>
+                    <h3 className="font-medium text-sm flex items-center gap-2">
+                      {employee.name}
+                      {/* Sélecteur de couleur */}
+                      <Select
+                        value={employee.color}
+                        onValueChange={async (color) => {
+                          // Appel API pour mettre à jour la couleur
+                          const response = await fetch(`/api/employees/${employee.id}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ color }),
+                          });
+                          if (response.ok) {
+                            setEmployees((prev) =>
+                              prev.map((emp) =>
+                                emp.id === employee.id ? { ...emp, color } : emp
+                              )
+                            );
+                            toast({
+                              title: "Succès",
+                              description: "Couleur modifiée avec succès",
+                            });
+                          } else {
+                            toast({
+                              title: "Erreur",
+                              description: "Impossible de modifier la couleur",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-8 h-8 p-0 border-none bg-transparent">
+                          <span className="sr-only">Changer la couleur</span>
+                          <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: employee.color }} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {EMPLOYEE_COLORS.map((color) => (
+                            <SelectItem key={color} value={color} className="flex items-center gap-2">
+                              <div className="w-5 h-5 rounded-full border" style={{ backgroundColor: color }} />
+                              <span>{color}</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </h3>
                     <p className="text-xs text-muted-foreground">{employee.role}</p>
                   </div>
                 </div>
@@ -658,7 +701,7 @@ function EmployeeManagementView({
                                                   size="sm"
                                                   onClick={() => setStandardWorkDay(employee.id, day, "full")}
                                                 >
-                                                  Journée complète (9h-12h, 13h-17h)
+                                                  Journée complète (9h-17h)
                                                 </Button>
                                                 <Button
                                                   variant="outline"
