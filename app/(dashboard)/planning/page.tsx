@@ -128,6 +128,7 @@ function EmployeeManagementView({
   const [hoursData, setHoursData] = useState<Record<string, Record<string, string>>>({});
   const [totalHours, setTotalHours] = useState<Record<string, number>>({});
   const { toast } = useToast();
+  const [editingSlot, setEditingSlot] = useState<{ day: string, index: number } | null>(null);
 
   // Regrouper tous les useEffect après les useState
   useEffect(() => {
@@ -576,13 +577,57 @@ function EmployeeManagementView({
                                           <div key={index} className="space-y-2">
                                             <div className="flex justify-between items-center">
                                               <Label>Créneau {index + 1}</Label>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                  const newSlots = [...employee.schedule[currentWeekKey][day]]
-                                                  newSlots.splice(index, 1)
-                                                  fetch("/api/schedules", {
+                                              <div className="flex gap-1">
+                                                {/* Bouton Modifier */}
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  className="h-6 px-2"
+                                                  onClick={() => setEditingSlot({ day, index })}
+                                                >
+                                                  Modifier
+                                                </Button>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  onClick={() => {
+                                                    const newSlots = [...employee.schedule[currentWeekKey][day]]
+                                                    newSlots.splice(index, 1)
+                                                    fetch("/api/schedules", {
+                                                      method: "POST",
+                                                      headers: { "Content-Type": "application/json" },
+                                                      body: JSON.stringify({
+                                                        employeeId: employee.id,
+                                                        weekKey: currentWeekKey,
+                                                        day,
+                                                        timeSlots: newSlots,
+                                                      }),
+                                                    }).then(() => {
+                                                      updateLocalSchedule(employee.id, day, newSlots)
+                                                      toast({
+                                                        title: "Succès",
+                                                        description: "Créneau supprimé",
+                                                      })
+                                                    })
+                                                  }}
+                                                  className="h-6 px-2 text-red-600 hover:bg-red-50"
+                                                >
+                                                  <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                              </div>
+                                            </div>
+                                            {/* Formulaire d'édition inline */}
+                                            {editingSlot && editingSlot.day === day && editingSlot.index === index ? (
+                                              <form
+                                                className="flex gap-2 items-center"
+                                                onSubmit={async (e) => {
+                                                  e.preventDefault();
+                                                  const form = e.target as HTMLFormElement;
+                                                  const start = (form.elements.namedItem('start') as HTMLInputElement).value;
+                                                  const end = (form.elements.namedItem('end') as HTMLInputElement).value;
+                                                  const newSlots = [...employee.schedule[currentWeekKey][day]];
+                                                  newSlots[index] = { ...slot, start, end };
+                                                  const response = await fetch("/api/schedules", {
                                                     method: "POST",
                                                     headers: { "Content-Type": "application/json" },
                                                     body: JSON.stringify({
@@ -591,69 +636,44 @@ function EmployeeManagementView({
                                                       day,
                                                       timeSlots: newSlots,
                                                     }),
-                                                  }).then(() => {
-                                                    updateLocalSchedule(employee.id, day, newSlots)
-                                                    toast({
-                                                      title: "Succès",
-                                                      description: "Créneau supprimé",
-                                                    })
-                                                  })
+                                                  });
+                                                  if (response.ok) {
+                                                    updateLocalSchedule(employee.id, day, newSlots);
+                                                    setEditingSlot(null);
+                                                    toast({ title: "Succès", description: "Créneau modifié" });
+                                                  } else {
+                                                    toast({ title: "Erreur", description: "Impossible de modifier le créneau", variant: "destructive" });
+                                                  }
                                                 }}
-                                                className="h-6 px-2 text-red-600 hover:bg-red-50"
                                               >
-                                                <Trash2 className="h-3 w-3" />
-                                              </Button>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                              <div className="space-y-2">
-                                                <Label className="text-xs">Heure de début</Label>
-                                                <Input
-                                                  type="time"
-                                                  value={slot.start}
-                                                  onChange={(e) => {
-                                                    const newSlots = [...employee.schedule[currentWeekKey][day]]
-                                                    newSlots[index] = { ...slot, start: e.target.value }
-                                                    fetch("/api/schedules", {
-                                                      method: "POST",
-                                                      headers: { "Content-Type": "application/json" },
-                                                      body: JSON.stringify({
-                                                        employeeId: employee.id,
-                                                        weekKey: currentWeekKey,
-                                                        day,
-                                                        timeSlots: newSlots,
-                                                      }),
-                                                    }).then(() => {
-                                                      updateLocalSchedule(employee.id, day, newSlots)
-                                                    })
-                                                  }}
-                                                  className="h-8"
-                                                />
+                                                <Input type="time" name="start" defaultValue={slot.start} className="h-8 w-24" required />
+                                                <span>-</span>
+                                                <Input type="time" name="end" defaultValue={slot.end} className="h-8 w-24" required />
+                                                <Button type="submit" size="sm" className="h-8">Valider</Button>
+                                                <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => setEditingSlot(null)}>Annuler</Button>
+                                              </form>
+                                            ) : (
+                                              <div className="grid grid-cols-2 gap-2">
+                                                <div className="space-y-2">
+                                                  <Label className="text-xs">Heure de début</Label>
+                                                  <Input
+                                                    type="time"
+                                                    value={slot.start}
+                                                    readOnly
+                                                    className="h-8"
+                                                  />
+                                                </div>
+                                                <div className="space-y-2">
+                                                  <Label className="text-xs">Heure de fin</Label>
+                                                  <Input
+                                                    type="time"
+                                                    value={slot.end}
+                                                    readOnly
+                                                    className="h-8"
+                                                  />
+                                                </div>
                                               </div>
-                                              <div className="space-y-2">
-                                                <Label className="text-xs">Heure de fin</Label>
-                                                <Input
-                                                  type="time"
-                                                  value={slot.end}
-                                                  onChange={(e) => {
-                                                    const newSlots = [...employee.schedule[currentWeekKey][day]]
-                                                    newSlots[index] = { ...slot, end: e.target.value }
-                                                    fetch("/api/schedules", {
-                                                      method: "POST",
-                                                      headers: { "Content-Type": "application/json" },
-                                                      body: JSON.stringify({
-                                                        employeeId: employee.id,
-                                                        weekKey: currentWeekKey,
-                                                        day,
-                                                        timeSlots: newSlots,
-                                                      }),
-                                                    }).then(() => {
-                                                      updateLocalSchedule(employee.id, day, newSlots)
-                                                    })
-                                                  }}
-                                                  className="h-8"
-                                                />
-                                              </div>
-                                            </div>
+                                            )}
                                           </div>
                                         ))}
                                       </div>
