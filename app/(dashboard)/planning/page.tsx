@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/components/hooks/use-toast"
-import { Calendar as CalendarIcon, Clock, Users, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2 } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2, Edit } from "lucide-react"
 import { Separator } from "@radix-ui/react-separator"
 import Link from "next/link"
 import { getWeekDates, getWeekNumber, getWeekKey, formatDate, EMPLOYEE_COLORS } from "@/lib/db/utils"
@@ -556,7 +556,11 @@ function EmployeeManagementView({
                               <Dialog>
                                 <DialogTrigger asChild>
                                   <Button variant="outline" size="sm" className="h-6 px-2">
-                                    <Plus className="h-3 w-3" />
+                                    {employee.schedule?.[currentWeekKey]?.[day]?.length > 0 ? (
+                                      <Edit className="h-3 w-3" />
+                                    ) : (
+                                      <Plus className="h-3 w-3" />
+                                    )}
                                   </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-md">
@@ -571,54 +575,12 @@ function EmployeeManagementView({
                                   <div className="space-y-4">
                                     {employee.schedule?.[currentWeekKey]?.[day]?.length > 0 ? (
                                       // Afficher les créneaux existants avec option de modification
-                                      <div className="space-y-4">
+                                      <div className="space-y-2 mt-2">
                                         {employee.schedule[currentWeekKey][day].map((slot: TimeSlot, index: number) => (
-                                          <div key={index} className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                              <Label>Créneau {index + 1}</Label>
-                                              <div className="flex gap-1">
-                                                {/* Bouton Modifier */}
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  className="h-6 px-2"
-                                                  onClick={() => setEditingSlot({ day, index })}
-                                                >
-                                                  Modifier
-                                                </Button>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  onClick={() => {
-                                                    const newSlots = [...employee.schedule[currentWeekKey][day]]
-                                                    newSlots.splice(index, 1)
-                                                    fetch("/api/schedules", {
-                                                      method: "POST",
-                                                      headers: { "Content-Type": "application/json" },
-                                                      body: JSON.stringify({
-                                                        employeeId: employee.id,
-                                                        weekKey: currentWeekKey,
-                                                        day,
-                                                        timeSlots: newSlots,
-                                                      }),
-                                                    }).then(() => {
-                                                      updateLocalSchedule(employee.id, day, newSlots)
-                                                      toast({
-                                                        title: "Succès",
-                                                        description: "Créneau supprimé",
-                                                      })
-                                                    })
-                                                  }}
-                                                  className="h-6 px-2 text-red-600 hover:bg-red-50"
-                                                >
-                                                  <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                              </div>
-                                            </div>
-                                            {/* Formulaire d'édition inline */}
+                                          <div key={index} className="flex items-center gap-2 border rounded p-2 bg-white">
                                             {editingSlot && editingSlot.day === day && editingSlot.index === index ? (
                                               <form
-                                                className="flex gap-2 items-center"
+                                                className="flex gap-2 items-center w-full"
                                                 onSubmit={async (e) => {
                                                   e.preventDefault();
                                                   const form = e.target as HTMLFormElement;
@@ -652,26 +614,20 @@ function EmployeeManagementView({
                                                 <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => setEditingSlot(null)}>Annuler</Button>
                                               </form>
                                             ) : (
-                                              <div className="grid grid-cols-2 gap-2">
-                                                <div className="space-y-2">
-                                                  <Label className="text-xs">Heure de début</Label>
-                                                  <Input
-                                                    type="time"
-                                                    value={slot.start}
-                                                    readOnly
-                                                    className="h-8"
-                                                  />
+                                              <>
+                                                <div className="flex-1 flex gap-4 items-center">
+                                                  <span className="font-medium text-sm">{slotTypeConfig[slot.type].label}</span>
+                                                  <span className="text-xs">{slot.start} - {slot.end}</span>
                                                 </div>
-                                                <div className="space-y-2">
-                                                  <Label className="text-xs">Heure de fin</Label>
-                                                  <Input
-                                                    type="time"
-                                                    value={slot.end}
-                                                    readOnly
-                                                    className="h-8"
-                                                  />
-                                                </div>
-                                              </div>
+                                                <Button
+                                                  variant="outline"
+                                                  size="sm"
+                                                  className="h-6 px-2"
+                                                  onClick={() => setEditingSlot({ day, index })}
+                                                >
+                                                  Modifier
+                                                </Button>
+                                              </>
                                             )}
                                           </div>
                                         ))}
@@ -922,7 +878,7 @@ function EmployeeManagementView({
                                     </span>
                                     {slot.note && <span className="text-muted-foreground">({slot.note})</span>}
                                   </div>
-                                  <Button
+                                  {/*<Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={async () => {
@@ -963,7 +919,7 @@ function EmployeeManagementView({
                                     className="h-4 w-4 p-0"
                                   >
                                     <Trash2 className="h-3 w-3" />
-                                  </Button>
+                                  </Button>*/}
                                 </div>
                               )
                             })}
@@ -1871,7 +1827,7 @@ export default function PlanningPage() {
                                           height: `calc(${height} - 4px)`,
                                           width,
                                           left,
-                                          zIndex: (slotColumn || 0) + 10,
+                                          zIndex: (slotColumn || 0) + 1,
                                           maxWidth: '100%',
                                           margin: 0,
                                           background: hatch,
@@ -2083,7 +2039,7 @@ export default function PlanningPage() {
                                           height: `calc(${height} - 4px)`,
                                           width,
                                           left,
-                                          zIndex: (slotColumn || 0) + 10,
+                                          zIndex: (slotColumn || 0) + 1,
                                           maxWidth: '100%',
                                           margin: 0,
                                           background: hatch,
