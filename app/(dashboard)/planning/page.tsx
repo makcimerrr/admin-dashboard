@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -129,7 +129,6 @@ function EmployeeManagementView({
   const [totalHours, setTotalHours] = useState<Record<string, number>>({});
   const { toast } = useToast();
   const [editingSlot, setEditingSlot] = useState<{ day: string, index: number } | null>(null);
-
   // Regrouper tous les useEffect après les useState
   useEffect(() => {
     const loadData = () => {
@@ -999,6 +998,82 @@ export default function PlanningPage() {
   const currentWeekKey = useMemo(() => getWeekKey(currentWeekOffset), [currentWeekOffset])
   const weekNumber = useMemo(() => getWeekNumber(currentWeekDates[0]), [currentWeekDates])
 
+  const [resizeSlot, setResizeSlot] = useState<{
+    employeeId: string;
+    day: string;
+    slotIndex: number;
+    type: 'start' | 'end';
+  } | null>(null);
+  const [resizeValue, setResizeValue] = useState<string | null>(null);
+  const slotDragRef = useRef<HTMLDivElement | null>(null);
+
+  // Ajout de l'état pour le drag & drop de créneau
+  const [dragSlot, setDragSlot] = useState<{
+    employeeId: string;
+    day: string;
+    slotIndex: number;
+    duration: number; // en minutes
+    originalStart: string;
+  } | null>(null);
+  const [dragGhostTime, setDragGhostTime] = useState<string | null>(null);
+  const dragOffsetRef = useRef<number>(0);
+
+  // Gestion du drag & drop vertical
+  useEffect(() => {
+    if (!dragSlot) return;
+    const onMouseMove = (e: MouseEvent) => {
+      const grid = document.getElementById(`day-grid-${dragSlot.day}`);
+      if (!grid) return;
+      const rect = grid.getBoundingClientRect();
+      let y = e.clientY - rect.top - dragOffsetRef.current;
+      y = Math.max(0, Math.min(y, rect.height - 1));
+      const hour = 8 + (y / rect.height) * 14;
+      const h = Math.floor(hour);
+      const m = Math.round((hour - h) * 60 / 5) * 5;
+      let time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      // Clamp pour ne pas dépasser la journée
+      const [origH, origM] = dragSlot.originalStart.split(':').map(Number);
+      const maxMinutes = 22 * 60 - dragSlot.duration;
+      let minutes = h * 60 + m;
+      if (minutes < 8 * 60) minutes = 8 * 60;
+      if (minutes > maxMinutes) minutes = maxMinutes;
+      const ch = Math.floor(minutes / 60);
+      const cm = minutes % 60;
+      time = `${ch.toString().padStart(2, '0')}:${cm.toString().padStart(2, '0')}`;
+      setDragGhostTime(time);
+    };
+    const onMouseUp = async () => {
+      if (dragSlot && dragGhostTime && dragGhostTime !== dragSlot.originalStart) {
+        const { employeeId, day, slotIndex, duration } = dragSlot;
+        const slots = getEmployeeScheduleForDay(employeeId, day);
+        const slot = slots[slotIndex];
+        if (!slot) return;
+        // Calcule la nouvelle heure de fin
+        const [sh, sm] = dragGhostTime.split(':').map(Number);
+        const startMinutes = sh * 60 + sm;
+        const endMinutes = startMinutes + duration;
+        const eh = Math.floor(endMinutes / 60);
+        const em = endMinutes % 60;
+        const newStart = dragGhostTime;
+        const newEnd = `${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
+        const newSlots = slots.map((s, i) => i === slotIndex ? { ...s, start: newStart, end: newEnd } : s);
+        await updateLocalSchedule(employeeId, day, newSlots);
+      }
+      setDragSlot(null);
+      setDragGhostTime(null);
+    };
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grab';
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [dragSlot, dragGhostTime]);
+
   // Charger les employés
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -1546,6 +1621,103 @@ export default function PlanningPage() {
     return { stacked: sorted, maxOverlap };
   }
 
+  // Gestion globale du drag
+  useEffect(() => {
+    if (!resizeSlot) return;
+    const onMouseMove = (e: MouseEvent) => {
+      if (!slotDragRef.current) return;
+      const rect = slotDragRef.current.parentElement!.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const totalHeight = rect.height;
+      const hour = 8 + (y / totalHeight) * 14;
+      const h = Math.floor(hour);
+      const m = Math.round((hour - h) * 60 / 5) * 5;
+      const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      setResizeValue(time);
+    };
+    const onMouseUp = async () => {
+      if (resizeSlot && resizeValue) {
+        const { employeeId, day, slotIndex, type } = resizeSlot;
+        const slots = getEmployeeScheduleForDay(employeeId, day);
+        const slot = slots[slotIndex];
+        if (!slot) return;
+        let newStart = slot.start;
+        let newEnd = slot.end;
+        if (type === 'start' && resizeValue < slot.end) newStart = resizeValue;
+        if (type === 'end' && resizeValue > slot.start) newEnd = resizeValue;
+        if (newStart !== slot.start || newEnd !== slot.end) {
+          const newSlots = slots.map((s, i) => i === slotIndex ? { ...s, start: newStart, end: newEnd } : s);
+          await updateLocalSchedule(employeeId, day, newSlots);
+        }
+      }
+      setResizeSlot(null);
+      setResizeValue(null);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [resizeSlot, resizeValue]);
+
+  // Ajout d'un style pour la ligne ghost et le label d'heure
+  const ghostLineStyle = {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    height: 2,
+    background: '#2563eb',
+    zIndex: 20,
+    pointerEvents: 'none' as const,
+  };
+  const ghostLabelStyle = {
+    position: 'absolute' as const,
+    left: '100%',
+    marginLeft: 8,
+    background: '#2563eb',
+    color: '#fff',
+    borderRadius: 4,
+    padding: '2px 8px',
+    fontSize: 12,
+    fontWeight: 700,
+    zIndex: 30,
+    pointerEvents: 'none' as const,
+    boxShadow: '0 2px 8px #2563eb44',
+  };
+
+  // Ajoute un style pour le label d'aperçu horaire
+  const previewLabelStyle = {
+    position: 'absolute' as const,
+    left: '100%',
+    marginLeft: 12,
+    background: '#25a6eb',
+    color: '#fff',
+    borderRadius: 4,
+    padding: '4px 10px',
+    fontSize: 14,
+    fontWeight: 700,
+    zIndex: 40,
+    pointerEvents: 'none' as const,
+    boxShadow: '0 2px 8px #22c55e44',
+    whiteSpace: 'nowrap' as const,
+  };
+
+  // Empêcher la sélection de texte pendant le resize
+  useEffect(() => {
+    if (resizeSlot != null) {
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'ns-resize';
+    } else {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    }
+    return () => {
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [resizeSlot]);
+
   return (
     <div className="space-y-6">
         {/* Header */}
@@ -1657,7 +1829,7 @@ export default function PlanningPage() {
                               ))}
                             </div>
                             {daysOfWeek.slice(0, 5).map((day, dayIndex) => (
-                              <div key={day} className="relative space-y-1 overflow-visible min-w-[180px]">
+                              <div key={day} className="relative space-y-1 overflow-visible min-w-[180px]" id={`day-grid-${day}`}>
                                 {hours.map((hour) => (
                                   <div
                                     key={hour}
@@ -1676,26 +1848,140 @@ export default function PlanningPage() {
                                     const hatch = !isWork ? `repeating-linear-gradient(135deg, ${bgColor}, ${bgColor} 10px, #fff2 10px, #fff2 20px)` : bgColor;
                                     const width = `calc(${100 / maxOverlap}% - 4px)`;
                                     const left = `calc(${(slotColumn || 0) * 100 / maxOverlap}% + 2px)`;
+                                    // Identifiant unique du slot
+                                    const slotIndex = getEmployeeScheduleForDay(employee.id, day).findIndex(s => s.start === slot.start && s.end === slot.end && s.type === slot.type);
+                                    // Affichage temporaire pendant le drag
+                                    let displayStart = slot.start;
+                                    let displayEnd = slot.end;
+                                    if (resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
+                                      if (resizeSlot.type === 'start' && resizeValue) displayStart = resizeValue < slot.end ? resizeValue : slot.start;
+                                      if (resizeSlot.type === 'end' && resizeValue) displayEnd = resizeValue > slot.start ? resizeValue : slot.end;
+                                    }
                                     return (
                                       <div
                                         key={`${employee.id}-${slot.start}-${slot.end}`}
-                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] cursor-pointer`}
+                                        ref={el => {
+                                          if (resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
+                                            slotDragRef.current = el;
+                                          }
+                                        }}
+                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
                                         style={{
-                                          top,
+                                          top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
                                           height: `calc(${height} - 4px)`,
                                           width,
                                           left,
-                                          zIndex: (slotColumn || 0) + 2,
+                                          zIndex: (slotColumn || 0) + 10,
                                           maxWidth: '100%',
                                           margin: 0,
                                           background: hatch,
                                           color: textColor,
                                           borderColor: bgColor,
+                                          transition: 'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
+                                          boxShadow: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? '0 8px 32px #22c55e44' : undefined,
+                                          pointerEvents: resizeSlot ? 'none' : undefined,
+                                          cursor: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'grabbing' : 'grab',
+                                          userSelect: 'none',
                                         }}
                                         title={isWork ? employee.name : `${employee.name} - ${slotTypeConfig[slot.type as keyof typeof slotTypeConfig].label}`}
+                                        onMouseDown={e => {
+                                          // Drag uniquement si pas sur un handle
+                                          if (!(e.target as HTMLElement).classList.contains('resize-handle')) {
+                                            e.stopPropagation();
+                                            const slotStartY = e.currentTarget.getBoundingClientRect().top;
+                                            dragOffsetRef.current = e.clientY - slotStartY;
+                                            const duration = (Number(slot.end.split(':')[0]) * 60 + Number(slot.end.split(':')[1])) - (Number(slot.start.split(':')[0]) * 60 + Number(slot.start.split(':')[1]));
+                                            setDragSlot({ employeeId: employee.id, day, slotIndex, duration, originalStart: slot.start });
+                                            setDragGhostTime(slot.start);
+                                          }
+                                        }}
                                       >
-                                        <span className="w-full text-center truncate">{employee.name}</span>
-                                        <span className="text-xs opacity-80">{slot.start} - {slot.end}</span>
+                                        {/* Aperçu horaire pendant le drag */}
+                                        {dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime && (
+                                          (() => {
+                                            // Calcule l'heure de fin
+                                            const [sh, sm] = dragGhostTime.split(':').map(Number);
+                                            const startMinutes = sh * 60 + sm;
+                                            const endMinutes = startMinutes + dragSlot.duration;
+                                            const eh = Math.floor(endMinutes / 60);
+                                            const em = endMinutes % 60;
+                                            const preview = `${dragGhostTime} - ${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
+                                            return (
+                                              <div
+                                                style={{
+                                                  ...previewLabelStyle,
+                                                  top: `calc(50% - 18px)`
+                                                }}
+                                              >
+                                                {preview}
+                                              </div>
+                                            );
+                                          })()
+                                        )}
+                                        {/* Handle haut */}
+                                        <div
+                                          className="resize-handle"
+                                          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
+                                          onMouseDown={e => {
+                                            e.stopPropagation();
+                                            setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'start' });
+                                            setResizeValue(slot.start);
+                                          }}
+                                        />
+                                        {/* Ligne ghost et label d'heure pour le handle haut */}
+                                        {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'start' && resizeValue && (
+                                          <>
+                                            <div
+                                              style={{
+                                                ...ghostLineStyle,
+                                                top: 0,
+                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                background: '#2563eb',
+                                              }}
+                                            />
+                                            <div
+                                              style={{
+                                                ...ghostLabelStyle,
+                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                              }}
+                                            >
+                                              {resizeValue}
+                                            </div>
+                                          </>
+                                        )}
+                                        <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
+                                        <span className="text-xs opacity-80" style={{ userSelect: 'none' }}>{displayStart} - {displayEnd}</span>
+                                        {/* Handle bas */}
+                                        <div
+                                          className="resize-handle"
+                                          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
+                                          onMouseDown={e => {
+                                            e.stopPropagation();
+                                            setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'end' });
+                                            setResizeValue(slot.end);
+                                          }}
+                                        />
+                                        {/* Ligne ghost et label d'heure pour le handle bas */}
+                                        {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'end' && resizeValue && (
+                                          <>
+                                            <div
+                                              style={{
+                                                ...ghostLineStyle,
+                                                bottom: 0,
+                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                background: '#2563eb',
+                                              }}
+                                            />
+                                            <div
+                                              style={{
+                                                ...ghostLabelStyle,
+                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                              }}
+                                            >
+                                              {resizeValue}
+                                            </div>
+                                          </>
+                                        )}
                                       </div>
                                     );
                                   });
@@ -1755,7 +2041,7 @@ export default function PlanningPage() {
                               ))}
                             </div>
                             {daysOfWeek.slice(5, 7).map((day, i) => (
-                              <div key={day} className="relative space-y-1 overflow-visible min-w-[180px]">
+                              <div key={day} className="relative space-y-1 overflow-visible min-w-[180px]" id={`day-grid-${day}`}>
                                 {hours.map((hour) => (
                                   <div
                                     key={hour}
@@ -1774,26 +2060,140 @@ export default function PlanningPage() {
                                     const hatch = !isWork ? `repeating-linear-gradient(135deg, ${bgColor}, ${bgColor} 10px, #fff2 10px, #fff2 20px)` : bgColor;
                                     const width = `calc(${100 / maxOverlap}% - 4px)`;
                                     const left = `calc(${(slotColumn || 0) * 100 / maxOverlap}% + 2px)`;
+                                    // Identifiant unique du slot
+                                    const slotIndex = getEmployeeScheduleForDay(employee.id, day).findIndex(s => s.start === slot.start && s.end === slot.end && s.type === slot.type);
+                                    // Affichage temporaire pendant le drag
+                                    let displayStart = slot.start;
+                                    let displayEnd = slot.end;
+                                    if (resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
+                                      if (resizeSlot.type === 'start' && resizeValue) displayStart = resizeValue < slot.end ? resizeValue : slot.start;
+                                      if (resizeSlot.type === 'end' && resizeValue) displayEnd = resizeValue > slot.start ? resizeValue : slot.end;
+                                    }
                                     return (
                                       <div
                                         key={`${employee.id}-${slot.start}-${slot.end}`}
-                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] cursor-pointer`}
+                                        ref={el => {
+                                          if (resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
+                                            slotDragRef.current = el;
+                                          }
+                                        }}
+                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
                                         style={{
-                                          top,
+                                          top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
                                           height: `calc(${height} - 4px)`,
                                           width,
                                           left,
-                                          zIndex: (slotColumn || 0) + 2,
+                                          zIndex: (slotColumn || 0) + 10,
                                           maxWidth: '100%',
                                           margin: 0,
                                           background: hatch,
                                           color: textColor,
                                           borderColor: bgColor,
+                                          transition: 'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
+                                          boxShadow: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? '0 8px 32px #22c55e44' : undefined,
+                                          pointerEvents: resizeSlot ? 'none' : undefined,
+                                          cursor: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'grabbing' : 'grab',
+                                          userSelect: 'none',
                                         }}
                                         title={isWork ? employee.name : `${employee.name} - ${slotTypeConfig[slot.type as keyof typeof slotTypeConfig].label}`}
+                                        onMouseDown={e => {
+                                          // Drag uniquement si pas sur un handle
+                                          if (!(e.target as HTMLElement).classList.contains('resize-handle')) {
+                                            e.stopPropagation();
+                                            const slotStartY = e.currentTarget.getBoundingClientRect().top;
+                                            dragOffsetRef.current = e.clientY - slotStartY;
+                                            const duration = (Number(slot.end.split(':')[0]) * 60 + Number(slot.end.split(':')[1])) - (Number(slot.start.split(':')[0]) * 60 + Number(slot.start.split(':')[1]));
+                                            setDragSlot({ employeeId: employee.id, day, slotIndex, duration, originalStart: slot.start });
+                                            setDragGhostTime(slot.start);
+                                          }
+                                        }}
                                       >
-                                        <span className="w-full text-center truncate">{employee.name}</span>
-                                        <span className="text-xs opacity-80">{slot.start} - {slot.end}</span>
+                                        {/* Aperçu horaire pendant le drag */}
+                                        {dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime && (
+                                          (() => {
+                                            // Calcule l'heure de fin
+                                            const [sh, sm] = dragGhostTime.split(':').map(Number);
+                                            const startMinutes = sh * 60 + sm;
+                                            const endMinutes = startMinutes + dragSlot.duration;
+                                            const eh = Math.floor(endMinutes / 60);
+                                            const em = endMinutes % 60;
+                                            const preview = `${dragGhostTime} - ${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
+                                            return (
+                                              <div
+                                                style={{
+                                                  ...previewLabelStyle,
+                                                  top: `calc(50% - 18px)`
+                                                }}
+                                              >
+                                                {preview}
+                                              </div>
+                                            );
+                                          })()
+                                        )}
+                                        {/* Handle haut */}
+                                        <div
+                                          className="resize-handle"
+                                          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
+                                          onMouseDown={e => {
+                                            e.stopPropagation();
+                                            setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'start' });
+                                            setResizeValue(slot.start);
+                                          }}
+                                        />
+                                        {/* Ligne ghost et label d'heure pour le handle haut */}
+                                        {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'start' && resizeValue && (
+                                          <>
+                                            <div
+                                              style={{
+                                                ...ghostLineStyle,
+                                                top: 0,
+                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                background: '#2563eb',
+                                              }}
+                                            />
+                                            <div
+                                              style={{
+                                                ...ghostLabelStyle,
+                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                              }}
+                                            >
+                                              {resizeValue}
+                                            </div>
+                                          </>
+                                        )}
+                                        <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
+                                        <span className="text-xs opacity-80" style={{ userSelect: 'none' }}>{displayStart} - {displayEnd}</span>
+                                        {/* Handle bas */}
+                                        <div
+                                          className="resize-handle"
+                                          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
+                                          onMouseDown={e => {
+                                            e.stopPropagation();
+                                            setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'end' });
+                                            setResizeValue(slot.end);
+                                          }}
+                                        />
+                                        {/* Ligne ghost et label d'heure pour le handle bas */}
+                                        {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'end' && resizeValue && (
+                                          <>
+                                            <div
+                                              style={{
+                                                ...ghostLineStyle,
+                                                bottom: 0,
+                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                background: '#2563eb',
+                                              }}
+                                            />
+                                            <div
+                                              style={{
+                                                ...ghostLabelStyle,
+                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                              }}
+                                            >
+                                              {resizeValue}
+                                            </div>
+                                          </>
+                                        )}
                                       </div>
                                     );
                                   });
