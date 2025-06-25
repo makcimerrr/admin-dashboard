@@ -1724,7 +1724,14 @@ export default function PlanningPage() {
                 {/* Légende des employés */}
                 <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted rounded-lg">
                   {employees.map((employee) => (
-                    <div key={employee.id} className="flex items-center gap-2">
+                    <div
+                      key={employee.id}
+                      className="flex items-center gap-2 cursor-move"
+                      draggable
+                      onDragStart={e => {
+                        e.dataTransfer.setData('employeeId', employee.id);
+                      }}
+                    >
                       <div className="w-4 h-4 rounded" style={{ backgroundColor: employee.color }} />
                       <span className="text-sm font-medium">{employee.name}</span>
                       <span className="text-xs text-muted-foreground">({getTotalHoursForWeek(employee.id)}h)</span>
@@ -1769,23 +1776,25 @@ export default function PlanningPage() {
                           <div className="font-bold text-lg mb-1">Semaine (lundi à vendredi)</div>
                           <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-2 sticky top-0 bg-background z-10 w-full">
                             <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
-                            {daysOfWeek.slice(0, 5).map((day, index) => (
-                              <div key={day} className="p-2 text-center font-bold bg-muted rounded text-lg truncate">
-                                <div className="font-bold">{day}</div>
-                                <div className="text-base text-muted-foreground">{formatDate(currentWeekDates[index])}</div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 w-full">
-                            <div className="space-y-1">
-                              {hours.map((hour) => (
-                                <div key={hour} className="h-16 p-2 text-center text-base text-muted-foreground font-semibold w-[50px] min-w-[50px] max-w-[50px]">
-                                  {hour}h
-                                </div>
-                              ))}
-                            </div>
                             {daysOfWeek.slice(0, 5).map((day, dayIndex) => (
-                              <div key={day} className="relative space-y-1 overflow-visible min-w-[180px]" id={`day-grid-${day}`}>
+                              <div
+                                key={day}
+                                className="relative space-y-1 overflow-visible min-w-[180px]"
+                                id={`day-grid-${day}`}
+                                onDragOver={e => e.preventDefault()}
+                                onDrop={async e => {
+                                  const employeeId = e.dataTransfer.getData('employeeId');
+                                  if (!employeeId) return;
+                                  const slots = getEmployeeScheduleForDay(employeeId, day);
+                                  if (slots && slots.length > 0) {
+                                    toast({ title: 'Erreur', description: 'Un créneau existe déjà pour cet employé ce jour-là', variant: 'destructive' });
+                                    return;
+                                  }
+                                  // Ajoute un créneau 09:00-17:00
+                                  await updateLocalSchedule(employeeId, day, [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }]);
+                                  toast({ title: 'Créneau ajouté', description: 'Journée de 8h ajoutée' });
+                                }}
+                              >
                                 {hours.map((hour) => (
                                   <div
                                     key={hour}
@@ -1821,7 +1830,7 @@ export default function PlanningPage() {
                                             slotDragRef.current = el;
                                           }
                                         }}
-                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
+                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
                                         style={{
                                           top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
                                           height: `calc(${height} - 4px)`,
@@ -1938,6 +1947,30 @@ export default function PlanningPage() {
                                             </div>
                                           </>
                                         )}
+                                        {/* Icône poubelle au hover */}
+                                        <button
+                                          type="button"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const slots = getEmployeeScheduleForDay(employee.id, day);
+                                            const newSlots = [...slots];
+                                            newSlots.splice(slotIndex, 1);
+                                            await updateLocalSchedule(employee.id, day, newSlots);
+                                            toast({ title: 'Créneau supprimé' });
+                                          }}
+                                          style={{
+                                            position: 'absolute',
+                                            top: 2,
+                                            right: 2,
+                                            zIndex: 50,
+                                            background: 'rgba(255,255,255,0.7)',
+                                            borderRadius: 4,
+                                            // display: 'none', // SUPPRIMÉ
+                                          }}
+                                          className="hidden group-hover:inline-block hover:bg-red-100"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-red-600" />
+                                        </button>
                                       </div>
                                     );
                                   });
@@ -2033,7 +2066,7 @@ export default function PlanningPage() {
                                             slotDragRef.current = el;
                                           }
                                         }}
-                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
+                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
                                         style={{
                                           top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
                                           height: `calc(${height} - 4px)`,
@@ -2150,6 +2183,30 @@ export default function PlanningPage() {
                                             </div>
                                           </>
                                         )}
+                                        {/* Icône poubelle au hover */}
+                                        <button
+                                          type="button"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const slots = getEmployeeScheduleForDay(employee.id, day);
+                                            const newSlots = [...slots];
+                                            newSlots.splice(slotIndex, 1);
+                                            await updateLocalSchedule(employee.id, day, newSlots);
+                                            toast({ title: 'Créneau supprimé' });
+                                          }}
+                                          style={{
+                                            position: 'absolute',
+                                            top: 2,
+                                            right: 2,
+                                            zIndex: 50,
+                                            background: 'rgba(255,255,255,0.7)',
+                                            borderRadius: 4,
+                                            // display: 'none', // SUPPRIMÉ
+                                          }}
+                                          className="hidden group-hover:inline-block hover:bg-red-100"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-red-600" />
+                                        </button>
                                       </div>
                                     );
                                   });
