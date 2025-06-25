@@ -1774,8 +1774,28 @@ export default function PlanningPage() {
                         {/* Jours ouvrés */}
                         <div className="mb-2">
                           <div className="font-bold text-lg mb-1">Semaine (lundi à vendredi)</div>
-                          <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-2 sticky top-0 bg-background z-10 w-full">
+                          {/* Header sticky pour les jours de la semaine */}
+                          <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-0 sticky top-0 bg-background z-10 w-full">
                             <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
+                            {daysOfWeek.slice(0, 5).map((day, dayIndex) => (
+                              <div
+                                key={day}
+                                className="p-2 text-center font-bold bg-muted rounded text-lg truncate flex flex-col items-center sticky top-0 z-10"
+                              >
+                                <div className="font-bold">{day}</div>
+                                <div className="text-base text-muted-foreground">{formatDate(currentWeekDates[dayIndex])}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Grille des créneaux */}
+                          <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-2 w-full">
+                            <div className="space-y-1">
+                              {hours.map((hour) => (
+                                <div key={hour} className="h-16 p-2 text-center text-base text-muted-foreground font-semibold w-[50px] min-w-[50px] max-w-[50px]">
+                                  {hour}h
+                                </div>
+                              ))}
+                            </div>
                             {daysOfWeek.slice(0, 5).map((day, dayIndex) => (
                               <div
                                 key={day}
