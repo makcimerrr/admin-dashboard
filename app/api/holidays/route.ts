@@ -1,25 +1,16 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { getAllHolidays, addHoliday, deleteHoliday } from '@/lib/db/services/holidays';
 
-// Define the path to the holidays data file
-const holidaysFilePath = path.join(process.cwd(), 'config/holidays.json');
-
-// Read and parse the holidays data from the file
-function readHolidaysData() {
-  const holidaysRawData = fs.readFileSync(holidaysFilePath, 'utf-8');
-  return JSON.parse(holidaysRawData);
-}
-
-// Save the holidays data back to the file
-function saveHolidaysData(holidaysData: any) {
-  fs.writeFileSync(holidaysFilePath, JSON.stringify(holidaysData, null, 2), 'utf-8');
-}
-
-// Handle GET request - Fetch all holidays
+// GET - Fetch all holidays
 export async function GET() {
   try {
-    const holidaysData = readHolidaysData();
+    const holidaysRows = await getAllHolidays();
+    // Regrouper par label comme dans l'ancien JSON
+    const holidaysData: Record<string, { start: string; end: string }[]> = {};
+    for (const row of holidaysRows) {
+      if (!holidaysData[row.label]) holidaysData[row.label] = [];
+      holidaysData[row.label].push({ start: row.start, end: row.end });
+    }
     return NextResponse.json({ success: true, data: holidaysData });
   } catch (error) {
     console.error('Error reading holidays data:', error);
@@ -27,28 +18,26 @@ export async function GET() {
   }
 }
 
-// Handle POST request - Add a new holiday
+// POST - Add a new holiday
 export async function POST(request: Request) {
   try {
     const { name, start, end }: { name: string, start: string, end: string } = await request.json();
-
     if (!name || !start || !end) {
       return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 });
     }
-
-    const holidaysData = readHolidaysData();
-
-    // Check if the holiday already exists
-    if (holidaysData[name]) {
+    // Vérifier si la holiday existe déjà
+    const holidaysRows = await getAllHolidays();
+    if (holidaysRows.some(h => h.label === name && h.start === start && h.end === end)) {
       return NextResponse.json({ success: false, message: 'Holiday with this name already exists' }, { status: 400 });
     }
-
-    // Add new holiday
-    holidaysData[name] = [{ start, end }];
-
-    // Save the updated holidays data to the file
-    saveHolidaysData(holidaysData);
-
+    await addHoliday(name, start, end);
+    // Retourner la liste à jour
+    const updatedRows = await getAllHolidays();
+    const holidaysData: Record<string, { start: string; end: string }[]> = {};
+    for (const row of updatedRows) {
+      if (!holidaysData[row.label]) holidaysData[row.label] = [];
+      holidaysData[row.label].push({ start: row.start, end: row.end });
+    }
     return NextResponse.json({ success: true, message: 'Holiday added successfully', data: holidaysData });
   } catch (error) {
     console.error('Error adding holiday:', error);
@@ -56,28 +45,26 @@ export async function POST(request: Request) {
   }
 }
 
-// Handle DELETE request - Delete a holiday by name
+// DELETE - Delete a holiday by name
 export async function DELETE(request: Request) {
   try {
     const { name }: { name: string } = await request.json();
-
     if (!name) {
       return NextResponse.json({ success: false, message: 'Holiday name is required' }, { status: 400 });
     }
-
-    const holidaysData = readHolidaysData();
-
-    // Check if the holiday exists
-    if (!holidaysData[name]) {
-      return NextResponse.json({ success: false, message: 'Holiday not found' }, { status: 404 });
+    // Trouver tous les holidays avec ce label et les supprimer
+    const holidaysRows = await getAllHolidays();
+    const toDelete = holidaysRows.filter(h => h.label === name);
+    for (const h of toDelete) {
+      await deleteHoliday(h.id);
     }
-
-    // Delete the holiday
-    delete holidaysData[name];
-
-    // Save the updated holidays data to the file
-    saveHolidaysData(holidaysData);
-
+    // Retourner la liste à jour
+    const updatedRows = await getAllHolidays();
+    const holidaysData: Record<string, { start: string; end: string }[]> = {};
+    for (const row of updatedRows) {
+      if (!holidaysData[row.label]) holidaysData[row.label] = [];
+      holidaysData[row.label].push({ start: row.start, end: row.end });
+    }
     return NextResponse.json({ success: true, message: 'Holiday deleted successfully', data: holidaysData });
   } catch (error) {
     console.error('Error deleting holiday:', error);

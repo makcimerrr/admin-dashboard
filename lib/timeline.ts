@@ -1,28 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import { upsertPromoStatus } from './db/services/promoStatus';
 
 // Fonction pour mettre à jour le fichier JSON avec le projet et la promotion
 export async function updateEnv(projectName: string, promotionKey: string) {
-  // Obtenir le répertoire courant du fichier
-  const __dirname = path.dirname(new URL(import.meta.url).pathname);
-  const rootDir = path.join(__dirname, '../'); // En remontant jusqu'à la racine du projet
-  const jsonFilePath = path.join(rootDir, 'config', 'promoStatus.json'); // Chemin vers config/promoStatus.json
-
   try {
-    // Vérifier si le fichier existe déjà, sinon le créer avec un objet vide
-    if (!fs.existsSync(jsonFilePath)) {
-      fs.writeFileSync(jsonFilePath, JSON.stringify({}, null, 2), 'utf8');
-    }
-
-    // Lire le contenu actuel du fichier JSON
-    let data = fs.readFileSync(jsonFilePath, 'utf8');
-    let jsonData = JSON.parse(data);
-
-    // Mettre à jour la promotion avec le nom du projet
-    jsonData[promotionKey] = projectName;
-
-    // Sauvegarder le fichier JSON mis à jour
-    fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData, null, 2), 'utf8');
+    await upsertPromoStatus(promotionKey, projectName);
     return {
       success: true,
       message: `La variable ${promotionKey} a été mise à jour avec le projet: ${projectName}`
