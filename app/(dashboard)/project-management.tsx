@@ -17,6 +17,7 @@ interface Project {
   id: number;
   name: string;
   project_time_week: number;
+  sort_index?: number;
 }
 
 interface ProjectsByTech {
@@ -33,6 +34,8 @@ export default function ProjectsManager() {
     tech: ''
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const techOrder = ['Golang', 'Javascript', 'Rust'];
 
   // Chargement initial des projets
   const fetchProjects = async () => {
@@ -148,52 +151,61 @@ export default function ProjectsManager() {
       </Button>
 
       <div className="mt-8">
-        {Object.entries(projectsByTech).map(([tech, projects]) => (
-          <div key={tech} className="mb-8">
-            <h2 className="text-2xl font-semibold">{tech}</h2>
-            <ul className="mt-4 space-y-4">
-              {projects.map(({ id, name, project_time_week }, index) => (
-                <li
-                  key={id}
-                  className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-md flex items-center justify-between hover:bg-gray-50 transition-all"
-                >
-                  <div className="text-lg font-medium">
-                    <strong>{name}</strong> ({project_time_week} semaines)
-                  </div>
+        {Object.entries(projectsByTech)
+          .sort(([a], [b]) => {
+            const indexA = techOrder.indexOf(a);
+            const indexB = techOrder.indexOf(b);
+            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+          })
+          .map(([tech, projects]) => (
+            <div key={tech} className="mb-8">
+              <h2 className="text-2xl font-semibold">{tech}</h2>
+              <ul className="mt-4 space-y-4">
+                {projects
+                  .slice()
+                  .sort((a, b) => (a.sort_index ?? 0) - (b.sort_index ?? 0))
+                  .map(({ id, name, project_time_week }, index) => (
+                    <li
+                      key={id}
+                      className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-md flex items-center justify-between hover:bg-gray-50 transition-all"
+                    >
+                      <div className="text-lg font-medium">
+                        <strong>{name}</strong> ({project_time_week} semaines)
+                      </div>
 
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleMoveProject(tech, id, 'up')}
-                      disabled={index === 0}
-                      className="text-sm text-gray-600 hover:text-primary transition-colors"
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleMoveProject(tech, id, 'down')}
-                      disabled={index === projects.length - 1}
-                      className="text-sm text-gray-600 hover:text-primary transition-colors"
-                    >
-                      ↓
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteProject(tech, id)}
-                      className="text-sm text-red-200 hover:text-red-800 transition-colors"
-                    >
-                      Supprimer
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+                      <div className="flex items-center gap-3">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleMoveProject(tech, id, 'up')}
+                          disabled={index === 0}
+                          className="text-sm text-gray-600 hover:text-primary transition-colors"
+                        >
+                          ↑
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleMoveProject(tech, id, 'down')}
+                          disabled={index === projects.length - 1}
+                          className="text-sm text-gray-600 hover:text-primary transition-colors"
+                        >
+                          ↓
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteProject(tech, id)}
+                          className="text-sm text-red-200 hover:text-red-800 transition-colors"
+                        >
+                          Supprimer
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+            </div>
+          ))}
       </div>
 
       {/* Modal pour ajouter un projet */}

@@ -4,9 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 import LastUpdate from '@/components/last-update';
-import promotions from '../config/promoConfig.json';
-import promoStatus from '../config/promoStatus.json';
-import allProjects from '../config/projects.json' assert { type: 'json' };
 
 interface UpdateProps {
   eventId: string;
@@ -40,6 +37,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [loadingDots, setLoadingDots] = useState<string>('.');
   const [lastUpdate, setLastUpdate] = useState<string | null>(null); // State pour la dernière mise à jour
   const [allUpdate, setAllUpdate] = useState<string | null>(null);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
 
   const [updates, setUpdates] = useState<
     { last_update: string; event_id: string }[]
@@ -67,21 +65,20 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     }
   }
 
-  // Récupérer dynamiquement les promotions via l'API
-  const fetchPromotions = async (): Promise<string[]> => {
-    try {
-      const response = await fetch('/api/promos'); // Chemin API pour récupérer les promotions
-      if (!response.ok) {
-        throw new Error('Unable to fetch promotions');
+  // Charger dynamiquement les promotions depuis l'API
+  useEffect(() => {
+    async function fetchPromos() {
+      try {
+        const response = await fetch('/api/promos');
+        if (!response.ok) throw new Error('Unable to fetch promotions');
+        const data = await response.json();
+        setPromotions(data.promos);
+      } catch (error) {
+        toast.error('Impossible de récupérer les promotions.');
       }
-      const data = await response.json();
-      const promoIds = data.promos.map((promo: Promotion) => promo.eventId);
-      return promoIds; // Retourne les IDs pour une utilisation immédiate
-    } catch (error) {
-      toast.error('Impossible de récupérer les promotions.');
-      return [];
     }
-  };
+    fetchPromos();
+  }, []);
 
   //const promoEventIds = ['32', '148', '216', '303'];
   const cache = new Map<
@@ -204,10 +201,10 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     if (!promotion) return;
 
     const promotionTitle = promotion.key;
-    if (!promotionTitle || !(promotionTitle in promoStatus)) return;
+    if (!promotionTitle) return;
 
     // Projet lié à la promotion
-    const promoProject = promoStatus[promotionTitle as keyof typeof promoStatus];
+    const promoProject = promoProject;
     console.log('Projet de la promo:', promoProject);
 
     try {
@@ -265,8 +262,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
                 } else if (promoProject.toLowerCase() === 'spécialité') {
                     delayLevel = 'spécialité';
                 } else {
-                    const promoIndex = findProjectIndex(allProjects, promoProject);
-                    const studentIndex = findProjectIndex(allProjects, activeProject);
+                    const promoIndex = findProjectIndex(allProjectsTyped, promoProject);
+                    const studentIndex = findProjectIndex(allProjectsTyped, activeProject);
 
                     if (studentIndex > promoIndex) {
                         delayLevel = 'en avance';
@@ -357,7 +354,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
       // Si eventId est 'all', récupérer toutes les promotions
       if (eventId === 'all') {
-        promoIds = await fetchPromotions(); // Récupère les IDs des promotions
+        promoIds = promotions.map((promo) => String(promo.eventId)); // Récupère les IDs des promotions en string
       }
 
       const results = await Promise.allSettled(
