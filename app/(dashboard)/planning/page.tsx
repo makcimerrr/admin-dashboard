@@ -129,6 +129,7 @@ function EmployeeManagementView({
   const [totalHours, setTotalHours] = useState<Record<string, number>>({});
   const { toast } = useToast();
   const [editingSlot, setEditingSlot] = useState<{ day: string, index: number } | null>(null);
+  const [isAbsenceLoading, setIsAbsenceLoading] = useState(false);
   // Regrouper tous les useEffect après les useState
   useEffect(() => {
     const loadData = () => {
@@ -218,7 +219,7 @@ function EmployeeManagementView({
       const schedulesResponse = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
       if (schedulesResponse.ok) {
         const data = await schedulesResponse.json();
-        const schedulesMap: Record<string, TimeSlot[]> = {};
+        const schedulesMap: Record<string, any[]> = {};
 
         if (Array.isArray(data)) {
           data.forEach((schedule: any) => {
@@ -553,7 +554,8 @@ function EmployeeManagementView({
                               {day} {formatDate(currentWeekDates[dayIndex])}
                             </div>
                             <div className="flex gap-1">
-                              <Dialog>
+                              {/* Ajout/édition de créneau */}
+                              <Dialog modal={false}>
                                 <DialogTrigger asChild>
                                   <Button variant="outline" size="sm" className="h-6 px-2">
                                     {employee.schedule?.[currentWeekKey]?.[day]?.length > 0 ? (
@@ -563,282 +565,286 @@ function EmployeeManagementView({
                                     )}
                                   </Button>
                                 </DialogTrigger>
-                                <DialogContent className="max-w-md">
+                                <DialogContent className="max-w-md p-6 rounded-xl shadow-xl">
                                   <DialogHeader>
-                                    <DialogTitle>
-                                      {employee.schedule?.[currentWeekKey]?.[day]?.length > 0 ? "Modifier le créneau" : "Ajouter un créneau"}
+                                    <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                                      <Plus className="h-5 w-5 text-blue-600" />
+                                      Ajouter un créneau
                                     </DialogTitle>
-                                    <p className="text-sm text-muted-foreground">
-                                      {employee.name} - {day} {formatDate(currentWeekDates[dayIndex])}
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      {employee.name} – {day} {formatDate(currentWeekDates[dayIndex])}
                                     </p>
                                   </DialogHeader>
-                                  <div className="space-y-4">
-                                    {employee.schedule?.[currentWeekKey]?.[day]?.length > 0 ? (
-                                      // Afficher les créneaux existants avec option de modification
-                                      <div className="space-y-2 mt-2">
-                                        {employee.schedule[currentWeekKey][day].map((slot: TimeSlot, index: number) => (
-                                          <div key={index} className="flex items-center gap-2 border rounded p-2 bg-white">
-                                            {editingSlot && editingSlot.day === day && editingSlot.index === index ? (
-                                              <form
-                                                className="flex gap-2 items-center w-full"
-                                                onSubmit={async (e) => {
-                                                  e.preventDefault();
-                                                  const form = e.target as HTMLFormElement;
-                                                  const start = (form.elements.namedItem('start') as HTMLInputElement).value;
-                                                  const end = (form.elements.namedItem('end') as HTMLInputElement).value;
-                                                  const newSlots = [...employee.schedule[currentWeekKey][day]];
-                                                  newSlots[index] = { ...slot, start, end };
-                                                  const response = await fetch("/api/schedules", {
-                                                    method: "POST",
-                                                    headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({
-                                                      employeeId: employee.id,
-                                                      weekKey: currentWeekKey,
-                                                      day,
-                                                      timeSlots: newSlots,
-                                                    }),
-                                                  });
-                                                  if (response.ok) {
-                                                    updateLocalSchedule(employee.id, day, newSlots);
-                                                    setEditingSlot(null);
-                                                    toast({ title: "Succès", description: "Créneau modifié" });
-                                                  } else {
-                                                    toast({ title: "Erreur", description: "Impossible de modifier le créneau", variant: "destructive" });
-                                                  }
-                                                }}
-                                              >
-                                                <Input type="time" name="start" defaultValue={slot.start} className="h-8 w-24" required />
-                                                <span>-</span>
-                                                <Input type="time" name="end" defaultValue={slot.end} className="h-8 w-24" required />
-                                                <Button type="submit" size="sm" className="h-8">Valider</Button>
-                                                <Button type="button" size="sm" variant="outline" className="h-8" onClick={() => setEditingSlot(null)}>Annuler</Button>
-                                              </form>
-                                            ) : (
-                                              <>
-                                                <div className="flex-1 flex gap-4 items-center">
-                                                  <span className="font-medium text-sm">{slotTypeConfig[slot.type].label}</span>
-                                                  <span className="text-xs">{slot.start} - {slot.end}</span>
-                                                </div>
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  className="h-6 px-2"
-                                                  onClick={() => setEditingSlot({ day, index })}
-                                                >
-                                                  Modifier
-                                                </Button>
-                                              </>
-                                            )}
-                                          </div>
-                                        ))}
+                                  <Separator className="my-3" />
+                                  {/* Résumé dynamique */}
+                                  {selectedType && (
+                                    <div className="mb-2 flex items-center gap-2 text-base font-medium">
+                                      <span className="text-muted-foreground">Type sélectionné :</span>
+                                      {(() => {
+                                        const config = slotTypeConfig[selectedType];
+                                        const Icon = config.icon;
+                                        return (
+                                          <span className="flex items-center gap-1 px-2 py-1 rounded bg-muted border">
+                                            <Icon className="h-4 w-4" />
+                                            {config.label}
+                                          </span>
+                                        );
+                                      })()}
+                                    </div>
+                                  )}
+                                  {/* Étape 1 : Sélection du type de créneau */}
+                                  <div>
+                                    <Label className="block mb-2">Type de créneau</Label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                      {Object.entries(slotTypeConfig).map(([type, config]) => {
+                                        const Icon = config.icon;
+                                        return (
+                                          <button
+                                            key={type}
+                                            type="button"
+                                            aria-pressed={selectedType === type}
+                                            onClick={() => {
+                                              setSelectedType(type as TimeSlot["type"]);
+                                              setShowWorkOptions(false);
+                                              setShowDatePicker(false);
+                                            }}
+                                            className={`flex flex-col items-center justify-center gap-1 p-3 rounded-lg border transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400/60 ${selectedType === type ? "bg-blue-50 border-blue-500 shadow" : "bg-background border-muted hover:bg-muted/60"}`}
+                                          >
+                                            <Icon className={`h-6 w-6 ${selectedType === type ? "text-blue-600" : "text-muted-foreground"}`} />
+                                            <span className="font-semibold text-sm">{config.label}</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                  <Separator className="my-4" />
+                                  {/* Étape 2 : Formulaire selon le type sélectionné */}
+                                  {selectedType === "work" && (
+                                    <div className="space-y-6">
+                                      <div>
+                                        <Label className="block mb-2">Options rapides</Label>
+                                        <div className="grid grid-cols-1 gap-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setStandardWorkDay(employee.id, day, "full")}
+                                            className="w-full"
+                                          >
+                                            Journée complète (9h-17h)
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setStandardWorkDay(employee.id, day, "morning")}
+                                            className="w-full"
+                                          >
+                                            Matin (9h-12h)
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setStandardWorkDay(employee.id, day, "afternoon")}
+                                            className="w-full"
+                                          >
+                                            Après-midi (13h-17h)
+                                          </Button>
+                                        </div>
                                       </div>
-                                    ) : (
-                                      // Afficher les options d'ajout de créneau
-                                      <>
-                                        <div>
-                                          <Label>Type de créneau</Label>
-                                          <div className="grid grid-cols-2 gap-2 mt-2">
-                                            {Object.entries(slotTypeConfig).map(([type, config]) => {
-                                              const Icon = config.icon
-                                              return (
-                                                <Button
-                                                  key={type}
-                                                  variant="outline"
-                                                  size="sm"
-                                                  onClick={() => {
-                                                    if (type === "work") {
-                                                      setShowWorkOptions(true)
-                                                    } else {
-                                                      setShowDatePicker(true)
-                                                      setSelectedType(type as TimeSlot["type"])
-                                                    }
-                                                  }}
-                                                  className="flex items-center gap-2"
-                                                >
-                                                  <Icon className="h-4 w-4" />
-                                                  {config.label}
-                                                </Button>
-                                              )
-                                            })}
+                                      <Separator className="my-2" />
+                                      <div>
+                                        <Label className="block mb-2">Créneau personnalisé</Label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="space-y-2">
+                                            <Label className="text-xs">Heure de début</Label>
+                                            <Input
+                                              type="time"
+                                              value={customStartTime}
+                                              onChange={(e) => setCustomStartTime(e.target.value)}
+                                              className="h-8"
+                                              aria-label="Heure de début"
+                                            />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label className="text-xs">Heure de fin</Label>
+                                            <Input
+                                              type="time"
+                                              value={customEndTime}
+                                              onChange={(e) => setCustomEndTime(e.target.value)}
+                                              className="h-8"
+                                              aria-label="Heure de fin"
+                                            />
                                           </div>
                                         </div>
-
-                                        <Separator />
-
-                                        {/* Options pour les créneaux de travail */}
-                                        {showWorkOptions && (
-                                          <div className="space-y-4">
-                                            <div>
-                                              <Label>Créneaux de travail rapides</Label>
-                                              <div className="grid grid-cols-1 gap-2 mt-2">
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  onClick={() => setStandardWorkDay(employee.id, day, "full")}
-                                                >
-                                                  Journée complète (9h-17h)
-                                                </Button>
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  onClick={() => setStandardWorkDay(employee.id, day, "morning")}
-                                                >
-                                                  Matin (9h-12h)
-                                                </Button>
-                                                <Button
-                                                  variant="outline"
-                                                  size="sm"
-                                                  onClick={() => setStandardWorkDay(employee.id, day, "afternoon")}
-                                                >
-                                                  Après-midi (13h-17h)
-                                                </Button>
-                                              </div>
-                                            </div>
-
-                                            <Separator />
-
-                                            <div>
-                                              <Label>Créneau personnalisé</Label>
-                                              <div className="grid grid-cols-2 gap-2 mt-2">
-                                                <div className="space-y-2">
-                                                  <Label className="text-xs">Heure de début</Label>
-                                                  <Input
-                                                    type="time"
-                                                    value={customStartTime}
-                                                    onChange={(e) => setCustomStartTime(e.target.value)}
-                                                    className="h-8"
-                                                  />
-                                                </div>
-                                                <div className="space-y-2">
-                                                  <Label className="text-xs">Heure de fin</Label>
-                                                  <Input
-                                                    type="time"
-                                                    value={customEndTime}
-                                                    onChange={(e) => setCustomEndTime(e.target.value)}
-                                                    className="h-8"
-                                                  />
-                                                </div>
-                                              </div>
+                                        <Button
+                                          variant="default"
+                                          size="sm"
+                                          className="w-full mt-2"
+                                          onClick={() => {
+                                            if (customStartTime && customEndTime) {
+                                              const timeSlots: TimeSlot[] = [{
+                                                start: customStartTime,
+                                                end: customEndTime,
+                                                isWorking: true,
+                                                type: "work" as const,
+                                              }];
+                                              fetch("/api/schedules", {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({
+                                                  employeeId: employee.id,
+                                                  weekKey: currentWeekKey,
+                                                  day,
+                                                  timeSlots,
+                                                }),
+                                              }).then(() => {
+                                                updateLocalSchedule(employee.id, day, timeSlots);
+                                                setCustomStartTime("");
+                                                setCustomEndTime("");
+                                                toast({
+                                                  title: "Succès",
+                                                  description: "Créneau ajouté",
+                                                });
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          Ajouter le créneau personnalisé
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {selectedType && selectedType !== "work" && (
+                                    <div className="space-y-6">
+                                      <div>
+                                        <Label className="block mb-2">Période d'absence</Label>
+                                        <div className="flex flex-col gap-2">
+                                          <div className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4 text-orange-500" />
+                                            <span className="font-medium">Début : {formatDate(currentWeekDates[dayIndex])}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4 text-orange-500" />
+                                            <span className="font-medium">Fin : {endDate ? format(endDate, "PPP", { locale: fr }) : <span className="text-muted-foreground">Sélectionner une date (non incluse)</span>}</span>
+                                          </div>
+                                          <Popover>
+                                            <PopoverTrigger asChild>
                                               <Button
                                                 variant="outline"
-                                                size="sm"
-                                                className="w-full mt-2"
-                                                onClick={() => {
-                                                  if (customStartTime && customEndTime) {
-                                                    const timeSlots: TimeSlot[] = [{
-                                                      start: customStartTime,
-                                                      end: customEndTime,
-                                                      isWorking: true,
-                                                      type: "work" as const,
-                                                    }]
-                                                    fetch("/api/schedules", {
-                                                      method: "POST",
-                                                      headers: { "Content-Type": "application/json" },
-                                                      body: JSON.stringify({
-                                                        employeeId: employee.id,
-                                                        weekKey: currentWeekKey,
-                                                        day,
-                                                        timeSlots,
-                                                      }),
-                                                    }).then(() => {
-                                                      updateLocalSchedule(employee.id, day, timeSlots)
-                                                      setCustomStartTime("")
-                                                      setCustomEndTime("")
-                                                      setShowWorkOptions(false)
-                                                      toast({
-                                                        title: "Succès",
-                                                        description: "Créneau ajouté",
-                                                      })
-                                                    })
-                                                  }
-                                                }}
+                                                className="w-full justify-start text-left font-normal mt-2"
+                                                aria-label="Sélectionner la date de fin"
                                               >
-                                                Ajouter le créneau personnalisé
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {endDate ? format(endDate, "PPP", { locale: fr }) : "Sélectionner une date"}
                                               </Button>
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {/* Sélecteur de date pour les autres types */}
-                                        {showDatePicker && (
-                                          <div className="space-y-4">
-                                            <div>
-                                              <Label>Jusqu'à quand ?</Label>
-                                              <Popover>
-                                                <PopoverTrigger asChild>
-                                                  <Button
-                                                    variant="outline"
-                                                    className="w-full justify-start text-left font-normal mt-2"
-                                                  >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {endDate ? format(endDate, "PPP", { locale: fr }) : "Sélectionner une date"}
-                                                  </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0">
-                                                  <Calendar
-                                                    mode="single"
-                                                    selected={endDate || undefined}
-                                                    onSelect={(date: Date | undefined) => setEndDate(date || null)}
-                                                    initialFocus
-                                                    locale={fr}
-                                                    disabled={(date: Date) => date < new Date()}
-                                                  />
-                                                </PopoverContent>
-                                              </Popover>
-                                            </div>
-
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              className="w-full"
-                                              onClick={() => {
-                                                if (endDate && selectedType) {
-                                                  const startDate = currentWeekDates[dayIndex]
-                                                  const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
-
-                                                  // Créer un créneau pour chaque jour
-                                                  for (let i = 0; i < days; i++) {
-                                                    const currentDate = new Date(startDate)
-                                                    currentDate.setDate(startDate.getDate() + i)
-                                                    const currentDayIndex = currentDate.getDay() - 1
-                                                    if (currentDayIndex >= 0 && currentDayIndex < 7) {
-                                                      const currentDay = daysOfWeek[currentDayIndex]
-                                                      const timeSlots: TimeSlot[] = [{
-                                                        start: "08:00",
-                                                        end: "22:00",
-                                                        isWorking: false,
-                                                        type: selectedType as TimeSlot["type"],
-                                                      }]
-                                                      fetch("/api/schedules", {
-                                                        method: "POST",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({
-                                                          employeeId: employee.id,
-                                                          weekKey: getWeekKey(Math.floor(i / 7)),
-                                                          day: currentDay,
-                                                          timeSlots,
-                                                        }),
-                                                      }).then(() => {
-                                                        updateLocalSchedule(employee.id, currentDay, timeSlots)
-                                                      })
-                                                    }
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start" side="bottom" sideOffset={8}>
+                                              <Calendar
+                                                mode="single"
+                                                selected={endDate || undefined}
+                                                onSelect={(date: Date | undefined) => setEndDate(date || null)}
+                                                initialFocus
+                                                locale={fr}
+                                                fromDate={new Date(2000, 0, 1)}
+                                                toDate={new Date(2100, 11, 31)}
+                                                defaultMonth={currentWeekDates[dayIndex]}
+                                              />
+                                            </PopoverContent>
+                                          </Popover>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        variant="default"
+                                        className="w-full mt-2"
+                                        disabled={isAbsenceLoading}
+                                        onClick={async () => {
+                                          if (!endDate) return toast({ title: "Erreur", description: "Sélectionnez une date de fin", variant: "destructive" });
+                                          const startDate = currentWeekDates[dayIndex];
+                                          if (endDate < startDate) {
+                                            toast({ title: "Erreur", description: "La date de fin doit être après la date de début", variant: "destructive" });
+                                            return;
+                                          }
+                                          setIsAbsenceLoading(true);
+                                          try {
+                                            // Supprimer tous les créneaux existants sur la plage pour l'employé
+                                            let current = new Date(startDate);
+                                            current.setHours(0,0,0,0);
+                                            const end = new Date(endDate);
+                                            end.setHours(0,0,0,0);
+                                            while (current <= end) {
+                                              const weekKey = `${current.getFullYear()}-W${getWeekNumber(current)}`;
+                                              const dayIdx = current.getDay() === 0 ? 6 : current.getDay() - 1;
+                                              const dayName = daysOfWeek[dayIdx];
+                                              await fetch(`/api/schedules?employeeId=${employee.id}&weekKey=${weekKey}&day=${dayName}`, { method: "DELETE" });
+                                              current.setDate(current.getDate() + 1);
+                                            }
+                                            // Appel API range pour créer l'absence
+                                            const res = await fetch("/api/schedules/range", {
+                                              method: "POST",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({
+                                                employeeId: employee.id,
+                                                startDate: startDate.toISOString().slice(0, 10),
+                                                endDate: endDate.toISOString().slice(0, 10),
+                                                slotType: selectedType,
+                                              }),
+                                            });
+                                            if (res.ok) {
+                                              const weekKeys = new Set<string>();
+                                              let cur = new Date(startDate);
+                                              cur.setHours(0,0,0,0);
+                                              const endAbs = new Date(endDate);
+                                              endAbs.setHours(0,0,0,0);
+                                              while (cur <= endAbs) {
+                                                weekKeys.add(`${cur.getFullYear()}-W${getWeekNumber(cur)}`);
+                                                cur.setDate(cur.getDate() + 1);
+                                              }
+                                              const schedulesMap: Record<string, any[]> = {};
+                                              for (const weekKey of weekKeys) {
+                                                const schedulesResponse = await fetch(`/api/schedules?weekKey=${weekKey}`);
+                                                if (schedulesResponse.ok) {
+                                                  const data = await schedulesResponse.json();
+                                                  if (Array.isArray(data)) {
+                                                    data.forEach((schedule: any) => {
+                                                      const key = `${schedule.employeeId}-${schedule.day}`;
+                                                      schedulesMap[key] = Array.isArray(schedule.timeSlots) ? schedule.timeSlots : [];
+                                                    });
                                                   }
-                                                  setEndDate(null)
-                                                  setSelectedType(null)
-                                                  setShowDatePicker(false)
-                                                  toast({
-                                                    title: "Succès",
-                                                    description: "Créneaux ajoutés",
-                                                  })
                                                 }
-                                              }}
-                                            >
-                                              Ajouter
-                                            </Button>
-                                          </div>
-                                        )}
-                                      </>
-                                    )}
+                                              }
+                                              setSchedules(schedulesMap);
+                                              setEmployees((prev) =>
+                                                prev.map((emp) => ({
+                                                  ...emp,
+                                                  schedule: {
+                                                    ...emp.schedule,
+                                                    ...Array.from(weekKeys).reduce((acc, weekKey) => {
+                                                      acc[weekKey] = daysOfWeek.reduce((acc2, d) => {
+                                                        acc2[d] = Array.isArray(schedulesMap[`${emp.id}-${d}`]) ? schedulesMap[`${emp.id}-${d}`] : [];
+                                                        return acc2;
+                                                      }, {} as { [day: string]: TimeSlot[] });
+                                                      return acc;
+                                                    }, {} as { [weekKey: string]: { [day: string]: TimeSlot[] } }),
+                                                  },
+                                                }))
+                                              );
+                                              toast({ title: "Succès", description: "Absence ajoutée" });
+                                              setEndDate(null);
+                                              setSelectedType(null);
+                                            } else {
+                                              toast({ title: "Erreur", description: "Impossible d'ajouter l'absence", variant: "destructive" });
+                                            }
+                                          } finally {
+                                            setIsAbsenceLoading(false);
+                                          }
+                                        }}
+                                      >
+                                        {isAbsenceLoading ? <Loader2 className="animate-spin w-4 h-4 mx-auto" /> : "Valider l'absence"}
+                                      </Button>
+                                    </div>
+                                  )}
+                                  <Separator className="my-4" />
+                                  <div className="flex justify-end gap-2">
+                                    <Button variant="outline" onClick={() => { setSelectedType(null); setEndDate(null); setCustomStartTime(""); setCustomEndTime(""); setShowWorkOptions(false); setShowDatePicker(false); }}>Annuler</Button>
                                   </div>
                                 </DialogContent>
                               </Dialog>
@@ -1067,7 +1073,7 @@ export default function PlanningPage() {
         if (!response.ok) throw new Error("Failed to fetch schedules");
 
         const data = await response.json();
-        const schedulesMap: Record<string, TimeSlot[]> = {};
+        const schedulesMap: Record<string, any[]> = {};
 
         if (Array.isArray(data)) {
           data.forEach((schedule: any) => {
@@ -1205,7 +1211,7 @@ export default function PlanningPage() {
       const schedulesResponse = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
       if (schedulesResponse.ok) {
         const data = await schedulesResponse.json();
-        const schedulesMap: Record<string, TimeSlot[]> = {};
+        const schedulesMap: Record<string, any[]> = {};
 
         if (Array.isArray(data)) {
           data.forEach((schedule: any) => {
@@ -1445,7 +1451,7 @@ export default function PlanningPage() {
       const schedulesResponse = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
       if (schedulesResponse.ok) {
         const data = await schedulesResponse.json();
-        const schedulesMap: Record<string, TimeSlot[]> = {};
+        const schedulesMap: Record<string, any[]> = {};
         if (Array.isArray(data)) {
           data.forEach((schedule: any) => {
             const key = `${schedule.employeeId}-${schedule.day}`;
@@ -1497,7 +1503,7 @@ export default function PlanningPage() {
         const schedulesResponse = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
         if (schedulesResponse.ok) {
           const data = await schedulesResponse.json();
-          const schedulesMap: Record<string, TimeSlot[]> = {};
+          const schedulesMap: Record<string, any[]> = {};
 
           if (Array.isArray(data)) {
             data.forEach((schedule: any) => {
@@ -1674,6 +1680,15 @@ export default function PlanningPage() {
     };
   }, [resizeSlot]);
 
+  // Ajout de l'état pour les jours fériés
+  const [holidays, setHolidays] = useState<{ [date: string]: string }>({});
+
+  useEffect(() => {
+    fetch('https://etalab.github.io/jours-feries-france-data/json/metropole.json')
+      .then(res => res.json())
+      .then(setHolidays);
+  }, []);
+
   return (
     <div className="space-y-6">
         {/* Header */}
@@ -1777,15 +1792,29 @@ export default function PlanningPage() {
                           {/* Header sticky pour les jours de la semaine */}
                           <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-0 sticky top-0 bg-background z-10 w-full">
                             <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
-                            {daysOfWeek.slice(0, 5).map((day, dayIndex) => (
-                              <div
-                                key={day}
-                                className="p-2 text-center font-bold bg-muted rounded text-lg truncate flex flex-col items-center sticky top-0 z-10"
-                              >
-                                <div className="font-bold">{day}</div>
-                                <div className="text-base text-muted-foreground">{formatDate(currentWeekDates[dayIndex])}</div>
-                              </div>
-                            ))}
+                            {daysOfWeek.slice(0, 5).map((day, dayIndex) => {
+                              const dateStr = currentWeekDates[dayIndex].toISOString().slice(0, 10);
+                              const holidayName = holidays[dateStr];
+                              return (
+                                <div
+                                  key={day}
+                                  className="p-2 text-center font-bold bg-muted rounded text-lg truncate flex flex-col items-center sticky top-0 z-10"
+                                  style={holidayName ? {
+                                    background: `repeating-linear-gradient(135deg, #f87171 0px, #f87171 8px, #fff 8px, #fff 16px)`
+                                  } : {}}
+                                >
+                                  <div className="font-bold flex items-center justify-center gap-2">
+                                    {day}
+                                    {holidayName && (
+                                      <span className="ml-2 px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-bold border border-red-300">
+                                        {holidayName}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-base text-muted-foreground">{formatDate(currentWeekDates[dayIndex])}</div>
+                                </div>
+                              );
+                            })}
                           </div>
                           {/* Grille des créneaux */}
                           <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-2 w-full">
@@ -1796,207 +1825,225 @@ export default function PlanningPage() {
                                 </div>
                               ))}
                             </div>
-                            {daysOfWeek.slice(0, 5).map((day, dayIndex) => (
-                              <div
-                                key={day}
-                                className="relative space-y-1 overflow-visible min-w-[180px]"
-                                id={`day-grid-${day}`}
-                                onDragOver={e => e.preventDefault()}
-                                onDrop={async e => {
-                                  const employeeId = e.dataTransfer.getData('employeeId');
-                                  if (!employeeId) return;
-                                  const slots = getEmployeeScheduleForDay(employeeId, day);
-                                  if (slots && slots.length > 0) {
-                                    toast({ title: 'Erreur', description: 'Un créneau existe déjà pour cet employé ce jour-là', variant: 'destructive' });
-                                    return;
-                                  }
-                                  // Ajoute un créneau 09:00-17:00
-                                  await updateLocalSchedule(employeeId, day, [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }]);
-                                  toast({ title: 'Créneau ajouté', description: 'Journée de 8h ajoutée' });
-                                }}
-                              >
-                                {hours.map((hour) => (
-                                  <div
-                                    key={hour}
-                                    className="h-16 border border-border rounded hover:bg-muted/50 transition-colors"
-                                  />
-                                ))}
-                                {/* Créneaux */}
-                                {(() => {
-                                  const daySlots = getOverlappingTimeSlots(day);
-                                  const { stacked, maxOverlap } = getStackedSlots(daySlots);
-                                  return stacked.map(({ employee, slot, startHour, endHour, slotColumn }, index) => {
-                                    const { top, height } = getTimeSlotPosition(slot.start, slot.end);
-                                    const isWork = slot.type === 'work';
-                                    const bgColor = employee.color || '#8884d8';
-                                    const textColor = getContrastYIQ(bgColor);
-                                    const hatch = !isWork ? `repeating-linear-gradient(135deg, ${bgColor}, ${bgColor} 10px, #fff2 10px, #fff2 20px)` : bgColor;
-                                    const width = `calc(${100 / maxOverlap}% - 4px)`;
-                                    const left = `calc(${(slotColumn || 0) * 100 / maxOverlap}% + 2px)`;
-                                    // Identifiant unique du slot
-                                    const slotIndex = getEmployeeScheduleForDay(employee.id, day).findIndex(s => s.start === slot.start && s.end === slot.end && s.type === slot.type);
-                                    // Affichage temporaire pendant le drag
-                                    let displayStart = slot.start;
-                                    let displayEnd = slot.end;
-                                    if (resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
-                                      if (resizeSlot.type === 'start' && resizeValue) displayStart = resizeValue < slot.end ? resizeValue : slot.start;
-                                      if (resizeSlot.type === 'end' && resizeValue) displayEnd = resizeValue > slot.start ? resizeValue : slot.end;
+                            {daysOfWeek.slice(0, 5).map((day, dayIndex) => {
+                              const dateStr = currentWeekDates[dayIndex].toISOString().slice(0, 10);
+                              const holidayName = holidays[dateStr];
+                              return (
+                                <div
+                                  key={day}
+                                  className="relative space-y-1 overflow-visible min-w-[180px]"
+                                  id={`day-grid-${day}`}
+                                  style={holidayName ? {
+                                    background: `repeating-linear-gradient(135deg, #f87171 0px, #f87171 8px, #fff 8px, #fff 16px)`
+                                  } : {}}
+                                  onDragOver={e => e.preventDefault()}
+                                  onDrop={async e => {
+                                    const employeeId = e.dataTransfer.getData('employeeId');
+                                    if (!employeeId) return;
+                                    const slots = getEmployeeScheduleForDay(employeeId, day);
+                                    if (slots && slots.length > 0) {
+                                      toast({ title: 'Erreur', description: 'Un créneau existe déjà pour cet employé ce jour-là', variant: 'destructive' });
+                                      return;
                                     }
-                                    return (
-                                      <div
-                                        key={`${employee.id}-${slot.start}-${slot.end}`}
-                                        ref={el => {
-                                          if (resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
-                                            slotDragRef.current = el;
-                                          }
-                                        }}
-                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
-                                        style={{
-                                          top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
-                                          height: `calc(${height} - 4px)`,
-                                          width,
-                                          left,
-                                          zIndex: (slotColumn || 0) + 1,
-                                          maxWidth: '100%',
-                                          margin: 0,
-                                          background: hatch,
-                                          color: textColor,
-                                          borderColor: bgColor,
-                                          transition: 'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
-                                          boxShadow: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? '0 8px 32px #22c55e44' : undefined,
-                                          pointerEvents: resizeSlot ? 'none' : undefined,
-                                          cursor: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'grabbing' : 'grab',
-                                          userSelect: 'none',
-                                        }}
-                                        title={isWork ? employee.name : `${employee.name} - ${slotTypeConfig[slot.type as keyof typeof slotTypeConfig].label}`}
-                                        onMouseDown={e => {
-                                          // Drag uniquement si pas sur un handle
-                                          if (!(e.target as HTMLElement).classList.contains('resize-handle')) {
-                                            e.stopPropagation();
-                                            const slotStartY = e.currentTarget.getBoundingClientRect().top;
-                                            dragOffsetRef.current = e.clientY - slotStartY;
-                                            const duration = (Number(slot.end.split(':')[0]) * 60 + Number(slot.end.split(':')[1])) - (Number(slot.start.split(':')[0]) * 60 + Number(slot.start.split(':')[1]));
-                                            setDragSlot({ employeeId: employee.id, day, slotIndex, duration, originalStart: slot.start });
-                                            setDragGhostTime(slot.start);
-                                          }
-                                        }}
-                                      >
-                                        {/* Aperçu horaire pendant le drag */}
-                                        {dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime && (
-                                          (() => {
-                                            // Calcule l'heure de fin
-                                            const [sh, sm] = dragGhostTime.split(':').map(Number);
-                                            const startMinutes = sh * 60 + sm;
-                                            const endMinutes = startMinutes + dragSlot.duration;
-                                            const eh = Math.floor(endMinutes / 60);
-                                            const em = endMinutes % 60;
-                                            const preview = `${dragGhostTime} - ${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
-                                            return (
+                                    // Ajoute un créneau 09:00-17:00
+                                    await updateLocalSchedule(employeeId, day, [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }]);
+                                    toast({ title: 'Créneau ajouté', description: 'Journée de 8h ajoutée' });
+                                  }}
+                                >
+                                  {hours.map((hour) => (
+                                    <div
+                                      key={hour}
+                                      className="h-16 border border-border rounded hover:bg-muted/50 transition-colors"
+                                    />
+                                  ))}
+                                  {/* Créneaux */}
+                                  {(() => {
+                                    const daySlots = getOverlappingTimeSlots(day);
+                                    const { stacked, maxOverlap } = getStackedSlots(daySlots);
+                                    return stacked.map(({ employee, slot, startHour, endHour, slotColumn }, index) => {
+                                      const isAbsence = slot.type !== 'work';
+                                      const { top, height } = getTimeSlotPosition(
+                                        slot.type !== 'work' ? '08:00' : slot.start,
+                                        slot.type !== 'work' ? '22:00' : slot.end
+                                      );
+                                      const isWork = slot.type === 'work';
+                                      const bgColor = employee.color || '#8884d8';
+                                      const textColor = getContrastYIQ(bgColor);
+                                      const hatch = !isWork ? `repeating-linear-gradient(135deg, ${bgColor}, ${bgColor} 10px, #fff2 10px, #fff2 20px)` : bgColor;
+                                      const width = `calc(${100 / maxOverlap}% - 4px)`;
+                                      const left = `calc(${(slotColumn || 0) * 100 / maxOverlap}% + 2px)`;
+                                      // Identifiant unique du slot
+                                      const slotIndex = getEmployeeScheduleForDay(employee.id, day).findIndex(s => s.start === slot.start && s.end === slot.end && s.type === slot.type);
+                                      // Affichage temporaire pendant le drag
+                                      let displayStart = slot.start;
+                                      let displayEnd = slot.end;
+                                      if (resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
+                                        if (resizeSlot.type === 'start' && resizeValue) displayStart = resizeValue < slot.end ? resizeValue : slot.start;
+                                        if (resizeSlot.type === 'end' && resizeValue) displayEnd = resizeValue > slot.start ? resizeValue : slot.end;
+                                      }
+                                      return (
+                                        <div
+                                          key={`${employee.id}-${slot.start}-${slot.end}`}
+                                          ref={el => {
+                                            if (resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
+                                              slotDragRef.current = el;
+                                            }
+                                          }}
+                                          className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
+                                          style={{
+                                            top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
+                                            height: `calc(${height} - 4px)`,
+                                            width,
+                                            left,
+                                            zIndex: (slotColumn || 0) + 1,
+                                            maxWidth: '100%',
+                                            margin: 0,
+                                            background: hatch,
+                                            color: textColor,
+                                            borderColor: bgColor,
+                                            transition: 'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
+                                            boxShadow: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? '0 8px 32px #22c55e44' : undefined,
+                                            pointerEvents: slot.type !== 'work' ? 'none' : (resizeSlot ? 'none' : undefined),
+                                            cursor: slot.type !== 'work' ? 'default' : (dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'grabbing' : 'grab'),
+                                            userSelect: 'none',
+                                          }}
+                                          title={isWork ? employee.name : `${employee.name} - ${slotTypeConfig[slot.type as keyof typeof slotTypeConfig].label}`}
+                                          onMouseDown={e => {
+                                            // Drag uniquement si pas sur un handle
+                                            if (!(e.target as HTMLElement).classList.contains('resize-handle')) {
+                                              e.stopPropagation();
+                                              const slotStartY = e.currentTarget.getBoundingClientRect().top;
+                                              dragOffsetRef.current = e.clientY - slotStartY;
+                                              const duration = (Number(slot.end.split(':')[0]) * 60 + Number(slot.end.split(':')[1])) - (Number(slot.start.split(':')[0]) * 60 + Number(slot.start.split(':')[1]));
+                                              setDragSlot({ employeeId: employee.id, day, slotIndex, duration, originalStart: slot.start });
+                                              setDragGhostTime(slot.start);
+                                            }
+                                          }}
+                                        >
+                                          {/* Aperçu horaire pendant le drag */}
+                                          {dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime && (
+                                            (() => {
+                                              // Calcule l'heure de fin
+                                              const [sh, sm] = dragGhostTime.split(':').map(Number);
+                                              const startMinutes = sh * 60 + sm;
+                                              const endMinutes = startMinutes + dragSlot.duration;
+                                              const eh = Math.floor(endMinutes / 60);
+                                              const em = endMinutes % 60;
+                                              const preview = `${dragGhostTime} - ${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
+                                              return (
+                                                <div
+                                                  style={{
+                                                    ...previewLabelStyle,
+                                                    top: `calc(50% - 18px)`
+                                                  }}
+                                                >
+                                                  {preview}
+                                                </div>
+                                              );
+                                            })()
+                                          )}
+                                          {/* Handle haut */}
+                                          <div
+                                            className="resize-handle"
+                                            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
+                                            onMouseDown={e => {
+                                              e.stopPropagation();
+                                              setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'start' });
+                                              setResizeValue(slot.start);
+                                            }}
+                                          />
+                                          {/* Ligne ghost et label d'heure pour le handle haut */}
+                                          {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'start' && resizeValue && (
+                                            <>
                                               <div
                                                 style={{
-                                                  ...previewLabelStyle,
-                                                  top: `calc(50% - 18px)`
+                                                  ...ghostLineStyle,
+                                                  top: 0,
+                                                  transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                  background: '#2563eb',
+                                                }}
+                                              />
+                                              <div
+                                                style={{
+                                                  ...ghostLabelStyle,
+                                                  top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
                                                 }}
                                               >
-                                                {preview}
+                                                {resizeValue}
                                               </div>
-                                            );
-                                          })()
-                                        )}
-                                        {/* Handle haut */}
-                                        <div
-                                          className="resize-handle"
-                                          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
-                                          onMouseDown={e => {
-                                            e.stopPropagation();
-                                            setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'start' });
-                                            setResizeValue(slot.start);
-                                          }}
-                                        />
-                                        {/* Ligne ghost et label d'heure pour le handle haut */}
-                                        {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'start' && resizeValue && (
-                                          <>
-                                            <div
-                                              style={{
-                                                ...ghostLineStyle,
-                                                top: 0,
-                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
-                                                background: '#2563eb',
-                                              }}
-                                            />
-                                            <div
-                                              style={{
-                                                ...ghostLabelStyle,
-                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
-                                              }}
-                                            >
-                                              {resizeValue}
-                                            </div>
-                                          </>
-                                        )}
-                                        <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
-                                        <span className="text-xs opacity-80" style={{ userSelect: 'none' }}>{displayStart} - {displayEnd}</span>
-                                        {/* Handle bas */}
-                                        <div
-                                          className="resize-handle"
-                                          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
-                                          onMouseDown={e => {
-                                            e.stopPropagation();
-                                            setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'end' });
-                                            setResizeValue(slot.end);
-                                          }}
-                                        />
-                                        {/* Ligne ghost et label d'heure pour le handle bas */}
-                                        {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'end' && resizeValue && (
-                                          <>
-                                            <div
-                                              style={{
-                                                ...ghostLineStyle,
-                                                bottom: 0,
-                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
-                                                background: '#2563eb',
-                                              }}
-                                            />
-                                            <div
-                                              style={{
-                                                ...ghostLabelStyle,
-                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
-                                              }}
-                                            >
-                                              {resizeValue}
-                                            </div>
-                                          </>
-                                        )}
-                                        {/* Icône poubelle au hover */}
-                                        <button
-                                          type="button"
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            const slots = getEmployeeScheduleForDay(employee.id, day);
-                                            const newSlots = [...slots];
-                                            newSlots.splice(slotIndex, 1);
-                                            await updateLocalSchedule(employee.id, day, newSlots);
-                                            toast({ title: 'Créneau supprimé' });
-                                          }}
-                                          style={{
-                                            position: 'absolute',
-                                            top: 2,
-                                            right: 2,
-                                            zIndex: 50,
-                                            background: 'rgba(255,255,255,0.7)',
-                                            borderRadius: 4,
-                                            // display: 'none', // SUPPRIMÉ
-                                          }}
-                                          className="hidden group-hover:inline-block hover:bg-red-100"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-red-600" />
-                                        </button>
-                                      </div>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            ))}
+                                            </>
+                                          )}
+                                          {slot.type !== 'work' ? (
+                                            <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
+                                          ) : (
+                                            <>
+                                              <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
+                                              <span className="text-xs opacity-80" style={{ userSelect: 'none' }}>{displayStart} - {displayEnd} {holidayName && slot.type === 'work' && <span className="text-red-600 font-bold">(férié travaillé)</span>}</span>
+                                              {/* Handles, drag, etc. ici uniquement pour work */}
+                                            </>
+                                          )}
+                                          {/* Handle bas */}
+                                          <div
+                                            className="resize-handle"
+                                            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
+                                            onMouseDown={e => {
+                                              e.stopPropagation();
+                                              setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'end' });
+                                              setResizeValue(slot.end);
+                                            }}
+                                          />
+                                          {/* Ligne ghost et label d'heure pour le handle bas */}
+                                          {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'end' && resizeValue && (
+                                            <>
+                                              <div
+                                                style={{
+                                                  ...ghostLineStyle,
+                                                  bottom: 0,
+                                                  transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                  background: '#2563eb',
+                                                }}
+                                              />
+                                              <div
+                                                style={{
+                                                  ...ghostLabelStyle,
+                                                  top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                                }}
+                                              >
+                                                {resizeValue}
+                                              </div>
+                                            </>
+                                          )}
+                                          {/* Icône poubelle au hover */}
+                                          <button
+                                            type="button"
+                                            onClick={async (e) => {
+                                              e.stopPropagation();
+                                              const slots = getEmployeeScheduleForDay(employee.id, day);
+                                              const newSlots = [...slots];
+                                              newSlots.splice(slotIndex, 1);
+                                              await updateLocalSchedule(employee.id, day, newSlots);
+                                              toast({ title: 'Créneau supprimé' });
+                                            }}
+                                            style={{
+                                              position: 'absolute',
+                                              top: 2,
+                                              right: 2,
+                                              zIndex: 50,
+                                              background: 'rgba(255,255,255,0.7)',
+                                              borderRadius: 4,
+                                              // display: 'none', // SUPPRIMÉ
+                                            }}
+                                            className="hidden group-hover:inline-block hover:bg-red-100"
+                                          >
+                                            <Trash2 className="h-4 w-4 text-red-600" />
+                                          </button>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                         {/* Séparateur visuel */}
@@ -2062,7 +2109,11 @@ export default function PlanningPage() {
                                   const daySlots = getOverlappingTimeSlots(day);
                                   const { stacked, maxOverlap } = getStackedSlots(daySlots);
                                   return stacked.map(({ employee, slot, startHour, endHour, slotColumn }, index) => {
-                                    const { top, height } = getTimeSlotPosition(slot.start, slot.end);
+                                    const isAbsence = slot.type !== 'work';
+                                    const { top, height } = getTimeSlotPosition(
+                                      slot.type !== 'work' ? '08:00' : slot.start,
+                                      slot.type !== 'work' ? '22:00' : slot.end
+                                    );
                                     const isWork = slot.type === 'work';
                                     const bgColor = employee.color || '#8884d8';
                                     const textColor = getContrastYIQ(bgColor);
@@ -2078,6 +2129,10 @@ export default function PlanningPage() {
                                       if (resizeSlot.type === 'start' && resizeValue) displayStart = resizeValue < slot.end ? resizeValue : slot.start;
                                       if (resizeSlot.type === 'end' && resizeValue) displayEnd = resizeValue > slot.start ? resizeValue : slot.end;
                                     }
+                                    // Correction : holidayName doit être défini ici pour chaque slot
+                                    const dayIndex = daysOfWeek.indexOf(day);
+                                    const dateStr = dayIndex !== -1 && currentWeekDates[dayIndex] ? currentWeekDates[dayIndex].toISOString().slice(0, 10) : null;
+                                    const holidayName = dateStr ? holidays[dateStr] : undefined;
                                     return (
                                       <div
                                         key={`${employee.id}-${slot.start}-${slot.end}`}
@@ -2100,8 +2155,8 @@ export default function PlanningPage() {
                                           borderColor: bgColor,
                                           transition: 'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
                                           boxShadow: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? '0 8px 32px #22c55e44' : undefined,
-                                          pointerEvents: resizeSlot ? 'none' : undefined,
-                                          cursor: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'grabbing' : 'grab',
+                                          pointerEvents: slot.type !== 'work' ? 'none' : (resizeSlot ? 'none' : undefined),
+                                          cursor: slot.type !== 'work' ? 'default' : (dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'grabbing' : 'grab'),
                                           userSelect: 'none',
                                         }}
                                         title={isWork ? employee.name : `${employee.name} - ${slotTypeConfig[slot.type as keyof typeof slotTypeConfig].label}`}
@@ -2170,8 +2225,15 @@ export default function PlanningPage() {
                                             </div>
                                           </>
                                         )}
-                                        <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
-                                        <span className="text-xs opacity-80" style={{ userSelect: 'none' }}>{displayStart} - {displayEnd}</span>
+                                        {slot.type !== 'work' ? (
+                                          <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
+                                        ) : (
+                                          <>
+                                            <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
+                                            <span className="text-xs opacity-80" style={{ userSelect: 'none' }}>{displayStart} - {displayEnd} {holidayName && slot.type === 'work' && <span className="text-red-600 font-bold">(férié travaillé)</span>}</span>
+                                            {/* Handles, drag, etc. ici uniquement pour work */}
+                                          </>
+                                        )}
                                         {/* Handle bas */}
                                         <div
                                           className="resize-handle"

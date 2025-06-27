@@ -12,6 +12,8 @@ export interface TimeSlot {
   note?: string
   createdAt?: Date
   updatedAt?: Date
+  isHoliday?: boolean
+  isSunday?: boolean
 }
 
 export const schedules = pgTable(
@@ -50,6 +52,8 @@ export const timeSlotSchema = z.object({
   isWorking: z.boolean(),
   type: z.enum(["work", "vacation", "sick", "personal"]),
   note: z.string().optional(),
+  isHoliday: z.boolean().optional(),
+  isSunday: z.boolean().optional(),
 })
 
 export const scheduleSchema = z.object({
@@ -61,9 +65,6 @@ export const scheduleSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
 })
-
-export type TimeSlot = z.infer<typeof timeSlotSchema>
-export type Schedule = z.infer<typeof scheduleSchema>
 
 // Configuration des types de créneaux
 export const slotTypeConfig = {

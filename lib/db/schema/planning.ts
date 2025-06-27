@@ -8,6 +8,7 @@ export interface TimeSlot {
   note?: string
   createdAt?: Date
   updatedAt?: Date
+  isHoliday?: boolean
 }
 
 export interface Schedule {
