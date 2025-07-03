@@ -32,6 +32,53 @@ interface EmployeeWithSchedule extends Employee {
   }
 }
 
+// Définition globale des modèles de semaine type
+const weekTemplates: {
+  key: string;
+  label: string;
+  days: { [day: string]: { start: string; end: string; isWorking: boolean; type: TimeSlot["type"] }[] }
+}[] = [
+  {
+    key: "classic",
+    label: "Classique bureau (L-V 9h-17h)",
+    days: {
+      lundi:   [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      mardi:   [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      mercredi:[{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      jeudi:   [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      vendredi:[{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      samedi:  [],
+      dimanche:[],
+    }
+  },
+  {
+    key: "alternance",
+    label: "Alternance (L-M, J-V 9h-17h)",
+    days: {
+      lundi:   [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      mardi:   [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      mercredi:[],
+      jeudi:   [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      vendredi:[{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
+      samedi:  [],
+      dimanche:[],
+    }
+  },
+  {
+    key: "4jours",
+    label: "4 jours (L-J 8h-18h)",
+    days: {
+      lundi:   [{ start: "08:00", end: "18:00", isWorking: true, type: "work" }],
+      mardi:   [{ start: "08:00", end: "18:00", isWorking: true, type: "work" }],
+      mercredi:[{ start: "08:00", end: "18:00", isWorking: true, type: "work" }],
+      jeudi:   [{ start: "08:00", end: "18:00", isWorking: true, type: "work" }],
+      vendredi:[],
+      samedi:  [],
+      dimanche:[],
+    }
+  },
+];
+
 // Configuration des types de créneaux
 const slotTypeConfig = {
   work: {
@@ -101,7 +148,7 @@ function EmployeeManagementView({
   weekNumber: number
   daysOfWeek: string[]
   getTotalHoursForWeek: (employeeId: string) => number
-  updateLocalSchedule: (employeeId: string, day: string, timeSlots: TimeSlot[]) => void
+  updateLocalSchedule: (employeeId: string, day: string, timeSlots: TimeSlot[], weekKey?: string) => void
   getEmployeeScheduleForDay: (employeeId: string, day: string) => TimeSlot[]
   slotTypeConfig: {
     [key: string]: {
@@ -135,6 +182,36 @@ function EmployeeManagementView({
   const { toast } = useToast();
   const [editingSlot, setEditingSlot] = useState<{ day: string, index: number } | null>(null);
   const [isAbsenceLoading, setIsAbsenceLoading] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [selectedEmployeesForTemplate, setSelectedEmployeesForTemplate] = useState<string[]>([]);
+  // Multi-semaine
+  const [selectedWeeks, setSelectedWeeks] = useState<number[]>([currentWeekOffset]);
+  const weekOptions = getMultiWeekOptions();
+
+  // Fonction d'application du modèle
+  const applyTemplateToEmployees = async () => {
+    if (!selectedTemplate) return toast({ title: "Erreur", description: "Sélectionnez un modèle.", variant: "destructive" });
+    if (selectedEmployeesForTemplate.length === 0) return toast({ title: "Erreur", description: "Sélectionnez au moins un employé.", variant: "destructive" });
+    if (selectedWeeks.length === 0) return toast({ title: "Erreur", description: "Sélectionnez au moins une semaine.", variant: "destructive" });
+    const template = weekTemplates.find(t => t.key === selectedTemplate);
+    if (!template) return;
+    for (const weekOffset of selectedWeeks) {
+      const weekKey = getWeekKey(weekOffset);
+      for (const employeeId of selectedEmployeesForTemplate) {
+        for (const day of daysOfWeek) {
+          const slots = (template.days[day as keyof typeof template.days] || []).map((slot: { start: string; end: string; isWorking: boolean; type: TimeSlot["type"] }) => ({
+            ...slot,
+            type: slot.type as TimeSlot["type"]
+          }));
+          // updateLocalSchedule doit pouvoir prendre un weekKey custom
+          await updateLocalSchedule(employeeId, day, slots, weekKey);
+        }
+      }
+    }
+    toast({ title: "Succès", description: "Modèle appliqué sur les semaines sélectionnées." });
+    setSelectedEmployeesForTemplate([]);
+  };
+
   // Regrouper tous les useEffect après les useState
   useEffect(() => {
     const loadData = () => {
@@ -351,6 +428,75 @@ function EmployeeManagementView({
           currentWeekDates={currentWeekDates}
           weekNumber={weekNumber}
         />
+      </div>
+      {/* Semaine type */}
+      <div className="rounded-lg border bg-background mb-4">
+        <div className="p-6 border-b flex items-center gap-4 flex-wrap">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <LayoutTemplate className="h-5 w-5" />
+            Semaine type
+          </h2>
+          <select
+            className="border rounded px-2 py-1 text-base"
+            value={selectedTemplate}
+            onChange={e => setSelectedTemplate(e.target.value)}
+            style={{ minWidth: 200 }}
+          >
+            <option value="">Choisir un modèle...</option>
+            {weekTemplates.map((t: typeof weekTemplates[number]) => (
+              <option key={t.key} value={t.key}>{t.label}</option>
+            ))}
+          </select>
+          {/* Multi-semaine */}
+          <div className="flex items-center gap-2">
+            <Label>Semaines</Label>
+            <div className="flex flex-wrap gap-2">
+              {weekOptions.map(opt => (
+                <label key={opt.value} className="flex items-center gap-1 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedWeeks.includes(opt.value)}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedWeeks(list => [...list, opt.value]);
+                      else setSelectedWeeks(list => list.filter(v => v !== opt.value));
+                    }}
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex-1" />
+          <Button
+            variant="default"
+            onClick={applyTemplateToEmployees}
+            disabled={!selectedTemplate || selectedEmployeesForTemplate.length === 0 || selectedWeeks.length === 0}
+          >
+            Appliquer aux semaines
+          </Button>
+        </div>
+        <div className="p-6">
+          <Label>Employés concernés</Label>
+          <div className="flex flex-wrap gap-3 mt-2">
+            {employees.map(emp => (
+              <label key={emp.id} className="flex items-center gap-2 px-3 py-1 rounded border cursor-pointer bg-white shadow-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedEmployeesForTemplate.includes(emp.id)}
+                  onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedEmployeesForTemplate(list => [...list, emp.id]);
+                    } else {
+                      setSelectedEmployeesForTemplate(list => list.filter(id => id !== emp.id));
+                    }
+                  }}
+                />
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: emp.color }} />
+                <span>{emp.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
       </div>
       {/* Outil de copier-coller */}
       <div className="rounded-lg border bg-background">
@@ -991,6 +1137,23 @@ function WeekSelector({
   );
 }
 
+// Utilitaire pour obtenir les options de semaines sur plusieurs semaines
+function getMultiWeekOptions(range = 4) {
+  const options = [];
+  for (let i = -range; i <= range; i++) {
+    const weekDates = getWeekDates(i);
+    const weekNum = getWeekNumber(weekDates[0]);
+    options.push({
+      value: i,
+      label: `Semaine ${weekNum} (${formatDate(weekDates[0])} - ${formatDate(weekDates[6])})`,
+      weekKey: getWeekKey(i),
+      weekNumber: weekNum,
+      dates: weekDates,
+    });
+  }
+  return options;
+}
+
 export default function PlanningPage() {
   const [employees, setEmployees] = useState<EmployeeWithSchedule[]>([])
   const [schedules, setSchedules] = useState<Record<string, TimeSlot[]>>({})
@@ -1216,7 +1379,7 @@ export default function PlanningPage() {
   }
 
   // Modifier la fonction updateLocalSchedule
-  const updateLocalSchedule = async (employeeId: string, day: string, timeSlots: TimeSlot[]) => {
+  const updateLocalSchedule = async (employeeId: string, day: string, timeSlots: TimeSlot[], weekKey?: string) => {
     try {
       // Mettre à jour la base de données
       const response = await fetch("/api/schedules", {
@@ -1224,7 +1387,7 @@ export default function PlanningPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           employeeId,
-          weekKey: currentWeekKey,
+          weekKey: weekKey || currentWeekKey,
           day,
           timeSlots,
         }),
@@ -1246,8 +1409,8 @@ export default function PlanningPage() {
                 ...emp,
                 schedule: {
                   ...emp.schedule,
-                  [currentWeekKey]: {
-                    ...emp.schedule[currentWeekKey],
+                  [weekKey || currentWeekKey]: {
+                    ...emp.schedule[weekKey || currentWeekKey],
                     [day]: timeSlots,
                   },
                 },
@@ -1257,7 +1420,7 @@ export default function PlanningPage() {
       );
 
       // Recharger les données depuis la base de données pour s'assurer de la synchronisation
-      const schedulesResponse = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
+      const schedulesResponse = await fetch(`/api/schedules?weekKey=${weekKey || currentWeekKey}`);
       if (schedulesResponse.ok) {
         const data = await schedulesResponse.json();
         const schedulesMap: Record<string, any[]> = {};
@@ -1277,7 +1440,7 @@ export default function PlanningPage() {
             ...emp,
             schedule: {
               ...emp.schedule,
-              [currentWeekKey]: daysOfWeek.reduce((acc, day) => {
+              [weekKey || currentWeekKey]: daysOfWeek.reduce((acc, day) => {
                 acc[day] = Array.isArray(schedulesMap[`${emp.id}-${day}`]) ? schedulesMap[`${emp.id}-${day}`] : [];
                 return acc;
               }, {} as { [day: string]: TimeSlot[] }),
@@ -1698,6 +1861,36 @@ export default function PlanningPage() {
     }
   }, [employees]);
 
+  // Ajout pour semaine type en vue calendrier
+  const [calendarTemplateOpen, setCalendarTemplateOpen] = useState(false);
+  const [calendarSelectedTemplate, setCalendarSelectedTemplate] = useState<string>("");
+  const [calendarSelectedEmployees, setCalendarSelectedEmployees] = useState<string[]>([]);
+  const [calendarSelectedWeeks, setCalendarSelectedWeeks] = useState<number[]>([currentWeekOffset]);
+  const calendarWeekOptions = getMultiWeekOptions();
+
+  const applyTemplateToEmployeesCalendar = async () => {
+    if (!calendarSelectedTemplate) return toast({ title: "Erreur", description: "Sélectionnez un modèle.", variant: "destructive" });
+    if (calendarSelectedEmployees.length === 0) return toast({ title: "Erreur", description: "Sélectionnez au moins un employé.", variant: "destructive" });
+    if (calendarSelectedWeeks.length === 0) return toast({ title: "Erreur", description: "Sélectionnez au moins une semaine.", variant: "destructive" });
+    const template = weekTemplates.find(t => t.key === calendarSelectedTemplate);
+    if (!template) return;
+    for (const weekOffset of calendarSelectedWeeks) {
+      const weekKey = getWeekKey(weekOffset);
+      for (const employeeId of calendarSelectedEmployees) {
+        for (const day of daysOfWeek) {
+          const slots = (template.days[day as keyof typeof template.days] || []).map((slot: { start: string; end: string; isWorking: boolean; type: TimeSlot["type"] }) => ({
+            ...slot,
+            type: slot.type as TimeSlot["type"]
+          }));
+          await updateLocalSchedule(employeeId, day, slots, weekKey);
+        }
+      }
+    }
+    toast({ title: "Succès", description: "Modèle appliqué sur les semaines sélectionnées." });
+    setCalendarSelectedEmployees([]);
+    setCalendarTemplateOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header harmonisé */}
@@ -1826,6 +2019,77 @@ export default function PlanningPage() {
                       </div>
                     );
                   })}
+                </div>
+                {/* Bouton semaine type calendrier */}
+                <div className="flex justify-end mb-2">
+                  <Popover open={calendarTemplateOpen} onOpenChange={setCalendarTemplateOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <LayoutTemplate className="h-4 w-4" />
+                        Semaine type
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[340px] p-4" align="end">
+                      <div className="mb-2 font-semibold flex items-center gap-2">
+                        <LayoutTemplate className="h-5 w-5" />
+                        Appliquer un modèle à la semaine
+                      </div>
+                      <select
+                        className="border rounded px-2 py-1 text-base w-full mb-3"
+                        value={calendarSelectedTemplate}
+                        onChange={e => setCalendarSelectedTemplate(e.target.value)}
+                      >
+                        <option value="">Choisir un modèle...</option>
+                        {weekTemplates.map((t: typeof weekTemplates[number]) => (
+                          <option key={t.key} value={t.key}>{t.label}</option>
+                        ))}
+                      </select>
+                      <div className="mb-2 text-sm font-medium">Employés concernés</div>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {employees.map(emp => (
+                          <label key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded border cursor-pointer bg-white shadow-sm">
+                            <input
+                              type="checkbox"
+                              checked={calendarSelectedEmployees.includes(emp.id)}
+                              onChange={e => {
+                                if (e.target.checked) {
+                                  setCalendarSelectedEmployees(list => [...list, emp.id]);
+                                } else {
+                                  setCalendarSelectedEmployees(list => list.filter(id => id !== emp.id));
+                                }
+                              }}
+                            />
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: emp.color }} />
+                            <span>{emp.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="mb-2 text-sm font-medium">Semaines concernées</div>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {calendarWeekOptions.map(opt => (
+                          <label key={opt.value} className="flex items-center gap-1 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={calendarSelectedWeeks.includes(opt.value)}
+                              onChange={e => {
+                                if (e.target.checked) setCalendarSelectedWeeks(list => [...list, opt.value]);
+                                else setCalendarSelectedWeeks(list => list.filter(v => v !== opt.value));
+                              }}
+                            />
+                            {opt.label}
+                          </label>
+                        ))}
+                      </div>
+                      <Button
+                        variant="default"
+                        className="w-full"
+                        onClick={applyTemplateToEmployeesCalendar}
+                        disabled={!calendarSelectedTemplate || calendarSelectedEmployees.length === 0 || calendarSelectedWeeks.length === 0}
+                      >
+                        Appliquer aux semaines
+                      </Button>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 {/* Grille calendrier (jours ouvrés + weekend) */}
                 <div className="rounded-lg border bg-background">
