@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/components/hooks/use-toast"
-import { Calendar as CalendarIcon, Clock, Users, PhoneCall, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2, Edit } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, PhoneCall, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2, Edit, LayoutTemplate } from "lucide-react"
 import { Separator } from "@radix-ui/react-separator"
 import Link from "next/link"
 import { getWeekDates, getWeekNumber, getWeekKey, formatDate, EMPLOYEE_COLORS } from "@/lib/db/utils"
@@ -1688,42 +1688,44 @@ export default function PlanningPage() {
 
   return (
     <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-            <div>
+      {/* Header harmonisé */}
+      <div className="flex items-center justify-between">
+        <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
-            <CalendarIcon className="h-8 w-8 text-blue-600" />
+            <LayoutTemplate className="h-8 w-8 text-blue-600" />
             Planning
-              </h1>
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">Gérez les plannings de votre équipe</p>
-          </div>
-          <div className="flex items-center gap-4">
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/planning">
+            <Button variant="default">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Planning
+            </Button>
+          </Link>
+          <Link href="/planning/absences">
+            <Button variant="outline">
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              Absences
+            </Button>
+          </Link>
+          <Link href="/planning/extraction">
+            <Button variant="outline">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Extraction
+            </Button>
+          </Link>
           <Link href="/employees">
             <Button variant="outline">
               <Users className="h-4 w-4 mr-2" />
-              Gérer les Employés
+              Employés
             </Button>
           </Link>
-            <Link href="/planning/absences">
-              <Button variant="outline">
-                <PhoneCall className="h-4 w-4 mr-2" />
-                Gérer les Absences
-              </Button>
-            </Link>
-            <Link href="/planning">
-              <Button variant="outline">
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                Voir le Planning
-              </Button>
-            </Link>
-            <Link href="/planning/extraction">
-              <Button variant="secondary">
-                Extraction
-              </Button>
-            </Link>
-          </div>
         </div>
-
+      </div>
+      {/* Contenu principal dans un conteneur harmonisé */}
+      <div className="rounded-lg border bg-background p-6">
         <Tabs defaultValue="calendar" className="w-full">
           <TabsList className="grid w-full grid-cols-3 max-w-xl">
             <TabsTrigger value="calendar" className="flex items-center gap-2">
@@ -1741,11 +1743,37 @@ export default function PlanningPage() {
           </TabsList>
 
           <TabsContent value="calendar">
-            {/* Sélecteur de vue supplémentaire */}
-            <div className="flex gap-2 my-4">
-              <Button variant={viewMode === 'calendar' ? 'default' : 'outline'} onClick={() => setViewMode('calendar')}>Vue calendrier</Button>
-              <Button variant={viewMode === 'person' ? 'default' : 'outline'} onClick={() => setViewMode('person')}>Vue par personne</Button>
-              <Button variant={viewMode === 'slot' ? 'default' : 'outline'} onClick={() => setViewMode('slot')}>Vue par créneau</Button>
+            {/* View mode switcher: segmented control */}
+            <div className="flex justify-end my-4">
+              <div className="inline-flex rounded-md shadow-sm bg-muted p-1">
+                <Button
+                  variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                  onClick={() => setViewMode('calendar')}
+                  className="rounded-l-md flex items-center gap-2"
+                  aria-pressed={viewMode === 'calendar'}
+                >
+                  <Grid className="h-4 w-4" />
+                  Calendrier
+                </Button>
+                <Button
+                  variant={viewMode === 'person' ? 'default' : 'ghost'}
+                  onClick={() => setViewMode('person')}
+                  className="flex items-center gap-2"
+                  aria-pressed={viewMode === 'person'}
+                >
+                  <Users className="h-4 w-4" />
+                  Personne
+                </Button>
+                <Button
+                  variant={viewMode === 'slot' ? 'default' : 'ghost'}
+                  onClick={() => setViewMode('slot')}
+                  className="rounded-r-md flex items-center gap-2"
+                  aria-pressed={viewMode === 'slot'}
+                >
+                  <Clock className="h-4 w-4" />
+                  Créneau
+                </Button>
+              </div>
             </div>
             {/* Affichage exclusif de la vue sélectionnée */}
             {viewMode === 'calendar' && (
@@ -2440,6 +2468,7 @@ export default function PlanningPage() {
             <TableView />
           </TabsContent>
         </Tabs>
+      </div>
     </div>
   )
 }

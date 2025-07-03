@@ -22,7 +22,15 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/hooks/use-toast';
 import { format, parseISO, addDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Loader2, Trash2, Edit, Plus } from 'lucide-react';
+import {
+  Loader2,
+  Trash2,
+  Edit,
+  Plus,
+  Calendar,
+  Users,
+  LayoutTemplate
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +42,6 @@ import { getWeekNumber } from '@/lib/db/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Link from 'next/link';
-import { Calendar } from 'lucide-react';
 import { toast as sonnerToast } from 'sonner';
 
 const slotTypeConfig = {
@@ -361,516 +368,661 @@ export default function AbsencesPage() {
 
   // Suppression d'un groupe
   const handleDeleteGroup = async (group: (typeof grouped)[0]) => {
-    sonnerToast(
-      'Supprimer cette absence sur toute la période ?',
-      {
-        description: `${group.employee?.name || group.employeeId} du ${group.start} au ${group.end}`,
-        action: {
-          label: 'Oui, supprimer',
-          onClick: async () => {
-            setEditLoading(true);
-            try {
-              await Promise.all(
-                group.slotIds.map(async (slotId) => {
-                  const absence = absences.find((a) => a.slotId === slotId);
-                  if (!absence) return;
-                  const res = await fetch(
-                    `/api/schedules?employeeId=${absence.employeeId}&weekKey=${absence.weekKey}&day=${absence.day}`
-                  );
-                  const sched = await res.json();
-                  if (!sched || !sched[0]) return;
-                  const newSlots = sched[0].timeSlots.filter(
-                    (s: { id: string }) => s.id !== slotId
-                  );
-                  await fetch(`/api/schedules`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      employeeId: absence.employeeId,
-                      weekKey: absence.weekKey,
-                      day: absence.day,
-                      timeSlots: newSlots
-                    })
-                  });
-                })
-              );
-              toast({ title: 'Succès', description: 'Absence supprimée' });
-              window.location.reload();
-            } catch (e) {
-              toast({
-                title: 'Erreur',
-                description: 'Suppression échouée',
-                variant: 'destructive'
-              });
-            } finally {
-              setEditLoading(false);
-            }
-          },
-        },
-        cancel: 'Annuler',
-      }
-    );
+    sonnerToast('Supprimer cette absence sur toute la période ?', {
+      description: `${group.employee?.name || group.employeeId} du ${group.start} au ${group.end}`,
+      action: {
+        label: 'Oui, supprimer',
+        onClick: async () => {
+          setEditLoading(true);
+          try {
+            await Promise.all(
+              group.slotIds.map(async (slotId) => {
+                const absence = absences.find((a) => a.slotId === slotId);
+                if (!absence) return;
+                const res = await fetch(
+                  `/api/schedules?employeeId=${absence.employeeId}&weekKey=${absence.weekKey}&day=${absence.day}`
+                );
+                const sched = await res.json();
+                if (!sched || !sched[0]) return;
+                const newSlots = sched[0].timeSlots.filter(
+                  (s: { id: string }) => s.id !== slotId
+                );
+                await fetch(`/api/schedules`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    employeeId: absence.employeeId,
+                    weekKey: absence.weekKey,
+                    day: absence.day,
+                    timeSlots: newSlots
+                  })
+                });
+              })
+            );
+            toast({ title: 'Succès', description: 'Absence supprimée' });
+            window.location.reload();
+          } catch (e) {
+            toast({
+              title: 'Erreur',
+              description: 'Suppression échouée',
+              variant: 'destructive'
+            });
+          } finally {
+            setEditLoading(false);
+          }
+        }
+      },
+      cancel: 'Annuler'
+    });
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-4 flex justify-between items-center">
-        <div className="flex gap-2">
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="default" onClick={() => setAddDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter une absence
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Ajouter une absence</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Employé</label>
-                  <Select value={addEmployeeId} onValueChange={setAddEmployeeId}>
-                    <SelectTrigger className="w-48"><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                    <SelectContent>
-                      {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Type</label>
-                  <Select value={addType} onValueChange={setAddType}>
-                    <SelectTrigger className="w-40"><SelectValue placeholder="Type" /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(slotTypeConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex gap-2">
+    <div className="space-y-6">
+      {/* Header harmonisé */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Calendar className="h-8 w-8 text-blue-600" />
+            Absences
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gérez les absences de votre équipe
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/planning">
+            <Button variant="outline">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Planning
+            </Button>
+          </Link>
+          <Link href="/planning/absences">
+            <Button variant="default">
+              <Calendar className="h-4 w-4 mr-2" />
+              Absences
+            </Button>
+          </Link>
+          <Link href="/planning/extraction">
+            <Button variant="outline">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Extraction
+            </Button>
+          </Link>
+          <Link href="/employees">
+            <Button variant="outline">
+              <Users className="h-4 w-4 mr-2" />
+              Employés
+            </Button>
+          </Link>
+        </div>
+      </div>
+      {/* Contenu principal dans un conteneur harmonisé */}
+      <div className="rounded-lg border bg-background p-6">
+        <div className="mb-4 flex justify-between items-center">
+          <div className="flex gap-2">
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="default"
+                  onClick={() => setAddDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter une absence
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Ajouter une absence</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Début</label>
-                    <DatePickerDemo value={addStart} onChange={setAddStart} className="w-36" />
+                    <label className="block mb-1 text-sm font-medium">
+                      Employé
+                    </label>
+                    <Select
+                      value={addEmployeeId}
+                      onValueChange={setAddEmployeeId}
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Choisir..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium">Fin</label>
-                    <DatePickerDemo value={addEnd} onChange={setAddEnd} className="w-36" />
+                    <label className="block mb-1 text-sm font-medium">
+                      Type
+                    </label>
+                    <Select value={addType} onValueChange={setAddType}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(slotTypeConfig).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>
+                            {v.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Note</label>
-                  <Input value={addNote} onChange={e => setAddNote(e.target.value)} placeholder="Optionnel" />
-                </div>
-                <div className="flex gap-2 justify-end mt-4">
-                  <Button variant="outline" onClick={() => setAddDialogOpen(false)}>Annuler</Button>
-                  <Button
-                    variant="default"
-                    disabled={addLoading || !addEmployeeId || !addType || !addStart || !addEnd}
-                    onClick={async () => {
-                      if (!addEmployeeId || !addType || !addStart || !addEnd) return;
-                      setAddLoading(true);
-                      try {
-                        const res = await fetch('/api/schedules/range', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            employeeId: addEmployeeId,
-                            startDate: addStart,
-                            endDate: addEnd,
-                            slotType: addType,
-                            note: addNote,
-                          }),
-                        });
-                        if (res.ok) {
-                          toast({ title: 'Succès', description: 'Absence ajoutée' });
-                          setAddDialogOpen(false);
-                          setAddEmployeeId('');
-                          setAddType('vacation');
-                          setAddStart(undefined);
-                          setAddEnd(undefined);
-                          setAddNote('');
-                          // Rafraîchir la liste
-                          const params = new URLSearchParams();
-                          if (filters.employeeId && filters.employeeId !== 'all') params.append('employeeId', filters.employeeId);
-                          if (filters.type && filters.type !== 'all') params.append('type', filters.type);
-                          if (filters.start) params.append('start', filters.start);
-                          if (filters.end) params.append('end', filters.end);
-                          const absencesRes = await fetch(`/api/schedules/absences?${params.toString()}`);
-                          const absencesData = await absencesRes.json();
-                          setAbsences(absencesData.map((a: Absence) => ({
-                            ...a,
-                            date: getDateFromWeekKeyAndDay(a.weekKey, a.day),
-                            employee: employees.find((e: Employee) => e.id === a.employeeId),
-                          })));
-                        } else {
-                          toast({ title: 'Erreur', description: 'Impossible d\'ajouter l\'absence', variant: 'destructive' });
-                        }
-                      } catch (e) {
-                        toast({ title: 'Erreur', description: 'Impossible d\'ajouter l\'absence', variant: 'destructive' });
-                      } finally {
-                        setAddLoading(false);
+                  <div className="flex gap-2">
+                    <div>
+                      <label className="block mb-1 text-sm font-medium">
+                        Début
+                      </label>
+                      <DatePickerDemo
+                        value={addStart}
+                        onChange={setAddStart}
+                        className="w-36"
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1 text-sm font-medium">
+                        Fin
+                      </label>
+                      <DatePickerDemo
+                        value={addEnd}
+                        onChange={setAddEnd}
+                        className="w-36"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block mb-1 text-sm font-medium">
+                      Note
+                    </label>
+                    <Input
+                      value={addNote}
+                      onChange={(e) => setAddNote(e.target.value)}
+                      placeholder="Optionnel"
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-end mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setAddDialogOpen(false)}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      variant="default"
+                      disabled={
+                        addLoading ||
+                        !addEmployeeId ||
+                        !addType ||
+                        !addStart ||
+                        !addEnd
                       }
-                    }}
-                  >
-                    {addLoading ? <Loader2 className="animate-spin w-4 h-4" /> : 'Ajouter'}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <Link href="/planning">
-          <Button variant="outline">
-            <Calendar className="h-4 w-4 mr-2" />
-            Voir le Planning
-          </Button>
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold mb-6">Gestion des absences</h1>
-      <div className="flex flex-wrap gap-4 mb-6 items-end">
-        <div>
-          <label className="block mb-1 text-sm font-medium">Employé</label>
-          <Select
-            value={filters.employeeId}
-            onValueChange={(v) => setFilters((f) => ({ ...f, employeeId: v }))}
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Tous" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              {employees.map((e) => (
-                <SelectItem key={e.id} value={e.id}>
-                  {e.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="block mb-1 text-sm font-medium">Type</label>
-          <Select
-            value={filters.type}
-            onValueChange={(v) => setFilters((f) => ({ ...f, type: v }))}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Tous" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous</SelectItem>
-              {Object.entries(slotTypeConfig).map(([k, v]) => (
-                <SelectItem key={k} value={k}>
-                  {v.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="block mb-1 text-sm font-medium">Début après</label>
-          <DatePickerDemo
-            value={filters.start || undefined}
-            onChange={(dateStr) =>
-              setFilters((f) => ({ ...f, start: dateStr || null }))
-            }
-          />
-        </div>
-        <div>
-          <label className="block mb-1 text-sm font-medium">Fin avant</label>
-          <DatePickerDemo
-            value={filters.end || undefined}
-            onChange={(dateStr) =>
-              setFilters((f) => ({ ...f, end: dateStr || null }))
-            }
-          />
-        </div>
-        <div>
-          <label className="block mb-1 text-sm font-medium">Recherche</label>
-          <Input
-            placeholder="Nom employé..."
-            value={filters.search}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setFilters((f) => ({ ...f, search: e.target.value }))
-            }
-            className="w-56"
-          />
-        </div>
-      </div>
-      <div className="rounded-lg border bg-background overflow-x-auto">
-        {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <Loader2 className="animate-spin w-8 h-8" />
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employé</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Du</TableHead>
-                <TableHead>Au</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {grouped.map((group) => {
-                const daysCount = countDays(group.start, group.end);
-                const weeksCount = countWeeks(group.start, group.end);
-                return (
-                  <TableRow key={group.slotIds.join('-') + group.employeeId}>
-                    <TableCell>
-                      {group.employee?.name || group.employeeId}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className="capitalize flex items-center gap-2"
-                      >
-                        <span
-                          className={`inline-block w-2 h-2 rounded-full ${group.type === 'vacation' ? 'bg-orange-400' : group.type === 'sick' ? 'bg-red-400' : 'bg-purple-400'}`}
-                        />
-                        {slotTypeConfig[
-                          group.type as keyof typeof slotTypeConfig
-                        ]?.label || group.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{formatDateLabel(group.start)}</TableCell>
-                    <TableCell>{formatDateLabel(group.end)}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="mr-2">
-                        {daysCount} jour{daysCount > 1 ? 's' : ''}
-                      </Badge>
-                      {daysCount > 6 && (
-                        <Badge variant="outline">
-                          {weeksCount} semaine{weeksCount > 1 ? 's' : ''}
-                        </Badge>
+                      onClick={async () => {
+                        if (!addEmployeeId || !addType || !addStart || !addEnd)
+                          return;
+                        setAddLoading(true);
+                        try {
+                          const res = await fetch('/api/schedules/range', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              employeeId: addEmployeeId,
+                              startDate: addStart,
+                              endDate: addEnd,
+                              slotType: addType,
+                              note: addNote
+                            })
+                          });
+                          if (res.ok) {
+                            toast({
+                              title: 'Succès',
+                              description: 'Absence ajoutée'
+                            });
+                            setAddDialogOpen(false);
+                            setAddEmployeeId('');
+                            setAddType('vacation');
+                            setAddStart(undefined);
+                            setAddEnd(undefined);
+                            setAddNote('');
+                            // Rafraîchir la liste
+                            const params = new URLSearchParams();
+                            if (
+                              filters.employeeId &&
+                              filters.employeeId !== 'all'
+                            )
+                              params.append('employeeId', filters.employeeId);
+                            if (filters.type && filters.type !== 'all')
+                              params.append('type', filters.type);
+                            if (filters.start)
+                              params.append('start', filters.start);
+                            if (filters.end) params.append('end', filters.end);
+                            const absencesRes = await fetch(
+                              `/api/schedules/absences?${params.toString()}`
+                            );
+                            const absencesData = await absencesRes.json();
+                            setAbsences(
+                              absencesData.map((a: Absence) => ({
+                                ...a,
+                                date: getDateFromWeekKeyAndDay(
+                                  a.weekKey,
+                                  a.day
+                                ),
+                                employee: employees.find(
+                                  (e: Employee) => e.id === a.employeeId
+                                )
+                              }))
+                            );
+                          } else {
+                            toast({
+                              title: 'Erreur',
+                              description: "Impossible d'ajouter l'absence",
+                              variant: 'destructive'
+                            });
+                          }
+                        } catch (e) {
+                          toast({
+                            title: 'Erreur',
+                            description: "Impossible d'ajouter l'absence",
+                            variant: 'destructive'
+                          });
+                        } finally {
+                          setAddLoading(false);
+                        }
+                      }}
+                    >
+                      {addLoading ? (
+                        <Loader2 className="animate-spin w-4 h-4" />
+                      ) : (
+                        'Ajouter'
                       )}
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {group.notes.join('; ')}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        title="Éditer"
-                        onClick={() => openEdit(group)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Dialog
-                        open={editDialogOpen}
-                        onOpenChange={(open) => {
-                          if (!open) closeEdit();
-                        }}
-                      >
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Modifier l'absence</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="secondary">
-                                {editGroup?.employee?.name ||
-                                  editGroup?.employeeId}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className="capitalize flex items-center gap-2"
-                              >
-                                <span
-                                  className={`inline-block w-2 h-2 rounded-full ${editGroup?.type === 'vacation' ? 'bg-orange-400' : editGroup?.type === 'sick' ? 'bg-red-400' : 'bg-purple-400'}`}
-                                />
-                                {slotTypeConfig[
-                                  editGroup?.type as keyof typeof slotTypeConfig
-                                ]?.label || editGroup?.type}
-                              </Badge>
-                            </div>
-                            <Tabs
-                              value={editMode}
-                              onValueChange={(v) =>
-                                setEditMode(v as 'type' | 'periode')
-                              }
-                              className="w-full"
-                            >
-                              <TabsList className="mb-4">
-                                <TabsTrigger value="type">
-                                  Modifier le type
-                                </TabsTrigger>
-                                <TabsTrigger value="periode">
-                                  Modifier la période
-                                </TabsTrigger>
-                              </TabsList>
-                              <TabsContent value="type">
-                                <div className="flex gap-2 items-center mb-2">
-                                  <div>
-                                    <label className="block mb-1 text-sm font-medium">
-                                      Début
-                                    </label>
-                                    <Badge variant="outline">
-                                      {formatDateLabel(editStart)}
-                                    </Badge>
-                                  </div>
-                                  <div>
-                                    <label className="block mb-1 text-sm font-medium">
-                                      Fin
-                                    </label>
-                                    <Badge variant="outline">
-                                      {formatDateLabel(editEnd)}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex flex-col justify-center items-start mt-5">
-                                    <Badge variant="secondary">
-                                      {countDays(editStart, editEnd)} jour
-                                      {countDays(editStart, editEnd) > 1
-                                        ? 's'
-                                        : ''}
-                                    </Badge>
-                                    {countDays(editStart, editEnd) > 6 && (
-                                      <Badge variant="outline">
-                                        {countWeeks(editStart, editEnd)} semaine
-                                        {countWeeks(editStart, editEnd) > 1
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+        <h1 className="text-2xl font-bold mb-6">Gestion des absences</h1>
+        <div className="flex flex-wrap gap-4 mb-6 items-end">
+          <div>
+            <label className="block mb-1 text-sm font-medium">Employé</label>
+            <Select
+              value={filters.employeeId}
+              onValueChange={(v) =>
+                setFilters((f) => ({ ...f, employeeId: v }))
+              }
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Tous" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {employees.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium">Type</label>
+            <Select
+              value={filters.type}
+              onValueChange={(v) => setFilters((f) => ({ ...f, type: v }))}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Tous" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                {Object.entries(slotTypeConfig).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium">
+              Début après
+            </label>
+            <DatePickerDemo
+              value={filters.start || undefined}
+              onChange={(dateStr) =>
+                setFilters((f) => ({ ...f, start: dateStr || null }))
+              }
+            />
+          </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium">Fin avant</label>
+            <DatePickerDemo
+              value={filters.end || undefined}
+              onChange={(dateStr) =>
+                setFilters((f) => ({ ...f, end: dateStr || null }))
+              }
+            />
+          </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium">Recherche</label>
+            <Input
+              placeholder="Nom employé..."
+              value={filters.search}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setFilters((f) => ({ ...f, search: e.target.value }))
+              }
+              className="w-56"
+            />
+          </div>
+        </div>
+        <div className="rounded-lg border bg-background overflow-x-auto">
+          {loading ? (
+            <div className="flex justify-center items-center h-40">
+              <Loader2 className="animate-spin w-8 h-8" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employé</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Du</TableHead>
+                  <TableHead>Au</TableHead>
+                  <TableHead>Notes</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {grouped.map((group) => {
+                  const daysCount = countDays(group.start, group.end);
+                  const weeksCount = countWeeks(group.start, group.end);
+                  return (
+                    <TableRow key={group.slotIds.join('-') + group.employeeId}>
+                      <TableCell>
+                        {group.employee?.name || group.employeeId}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="capitalize flex items-center gap-2"
+                        >
+                          <span
+                            className={`inline-block w-2 h-2 rounded-full ${group.type === 'vacation' ? 'bg-orange-400' : group.type === 'sick' ? 'bg-red-400' : 'bg-purple-400'}`}
+                          />
+                          {slotTypeConfig[
+                            group.type as keyof typeof slotTypeConfig
+                          ]?.label || group.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDateLabel(group.start)}</TableCell>
+                      <TableCell>{formatDateLabel(group.end)}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="mr-2">
+                          {daysCount} jour{daysCount > 1 ? 's' : ''}
+                        </Badge>
+                        {daysCount > 6 && (
+                          <Badge variant="outline">
+                            {weeksCount} semaine{weeksCount > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {group.notes.join('; ')}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            title="Éditer"
+                            onClick={() => openEdit(group)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Dialog
+                            open={editDialogOpen}
+                            onOpenChange={(open) => {
+                              if (!open) closeEdit();
+                            }}
+                          >
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Modifier l'absence</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="secondary">
+                                    {editGroup?.employee?.name ||
+                                      editGroup?.employeeId}
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className="capitalize flex items-center gap-2"
+                                  >
+                                    <span
+                                      className={`inline-block w-2 h-2 rounded-full ${editGroup?.type === 'vacation' ? 'bg-orange-400' : editGroup?.type === 'sick' ? 'bg-red-400' : 'bg-purple-400'}`}
+                                    />
+                                    {slotTypeConfig[
+                                      editGroup?.type as keyof typeof slotTypeConfig
+                                    ]?.label || editGroup?.type}
+                                  </Badge>
+                                </div>
+                                <Tabs
+                                  value={editMode}
+                                  onValueChange={(v) =>
+                                    setEditMode(v as 'type' | 'periode')
+                                  }
+                                  className="w-full"
+                                >
+                                  <TabsList className="mb-4">
+                                    <TabsTrigger value="type">
+                                      Modifier le type
+                                    </TabsTrigger>
+                                    <TabsTrigger value="periode">
+                                      Modifier la période
+                                    </TabsTrigger>
+                                  </TabsList>
+                                  <TabsContent value="type">
+                                    <div className="flex gap-2 items-center mb-2">
+                                      <div>
+                                        <label className="block mb-1 text-sm font-medium">
+                                          Début
+                                        </label>
+                                        <Badge variant="outline">
+                                          {formatDateLabel(editStart)}
+                                        </Badge>
+                                      </div>
+                                      <div>
+                                        <label className="block mb-1 text-sm font-medium">
+                                          Fin
+                                        </label>
+                                        <Badge variant="outline">
+                                          {formatDateLabel(editEnd)}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex flex-col justify-center items-start mt-5">
+                                        <Badge variant="secondary">
+                                          {countDays(editStart, editEnd)} jour
+                                          {countDays(editStart, editEnd) > 1
+                                            ? 's'
+                                            : ''}
+                                        </Badge>
+                                        {countDays(editStart, editEnd) > 6 && (
+                                          <Badge variant="outline">
+                                            {countWeeks(editStart, editEnd)}{' '}
+                                            semaine
+                                            {countWeeks(editStart, editEnd) > 1
+                                              ? 's'
+                                              : ''}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <label className="block mb-1 text-sm font-medium">
+                                        Type
+                                      </label>
+                                      <Select
+                                        value={editType}
+                                        onValueChange={setEditType}
+                                        disabled={editMode !== 'type'}
+                                      >
+                                        <SelectTrigger className="w-40">
+                                          <SelectValue placeholder="Type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {Object.entries(slotTypeConfig).map(
+                                            ([k, v]) => (
+                                              <SelectItem
+                                                key={k}
+                                                value={k}
+                                                className="flex items-center gap-2"
+                                              >
+                                                <span
+                                                  className={`inline-block w-2 h-2 rounded-full ${k === 'vacation' ? 'bg-orange-400' : k === 'sick' ? 'bg-red-400' : 'bg-purple-400'}`}
+                                                />
+                                                {v.label}
+                                              </SelectItem>
+                                            )
+                                          )}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </TabsContent>
+                                  <TabsContent value="periode">
+                                    <div className="flex gap-2 items-center mb-2">
+                                      <div>
+                                        <label className="block mb-1 text-sm font-medium">
+                                          Début
+                                        </label>
+                                        {editMode === 'periode' ? (
+                                          <DatePickerDemo
+                                            value={editStart}
+                                            onChange={setEditStart}
+                                            className="w-36"
+                                          />
+                                        ) : (
+                                          <Badge variant="outline">
+                                            {formatDateLabel(editStart)}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <label className="block mb-1 text-sm font-medium">
+                                          Fin
+                                        </label>
+                                        {editMode === 'periode' ? (
+                                          <DatePickerDemo
+                                            value={editEnd}
+                                            onChange={setEditEnd}
+                                            className="w-36"
+                                          />
+                                        ) : (
+                                          <Badge variant="outline">
+                                            {formatDateLabel(editEnd)}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-row gap-2 items-center justify-center mb-2">
+                                      <Badge
+                                        variant="secondary"
+                                        className="text-xs py-1 px-2"
+                                      >
+                                        {countDays(editStart, editEnd)} jour
+                                        {countDays(editStart, editEnd) > 1
                                           ? 's'
                                           : ''}
                                       </Badge>
-                                    )}
-                                  </div>
-                                </div>
+                                      {countDays(editStart, editEnd) > 6 && (
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs py-1 px-2"
+                                        >
+                                          {countWeeks(editStart, editEnd)}{' '}
+                                          semaine
+                                          {countWeeks(editStart, editEnd) > 1
+                                            ? 's'
+                                            : ''}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <label className="block mb-1 text-sm font-medium">
+                                        Type
+                                      </label>
+                                      <Badge
+                                        variant="outline"
+                                        className="capitalize flex items-center gap-2"
+                                      >
+                                        <span
+                                          className={`inline-block w-2 h-2 rounded-full ${editType === 'vacation' ? 'bg-orange-400' : editType === 'sick' ? 'bg-red-400' : 'bg-purple-400'}`}
+                                        />
+                                        {slotTypeConfig[
+                                          editType as keyof typeof slotTypeConfig
+                                        ]?.label || editType}
+                                      </Badge>
+                                    </div>
+                                  </TabsContent>
+                                </Tabs>
                                 <div>
                                   <label className="block mb-1 text-sm font-medium">
-                                    Type
+                                    Note
                                   </label>
-                                  <Select
-                                    value={editType}
-                                    onValueChange={setEditType}
-                                    disabled={editMode !== 'type'}
+                                  <Input
+                                    value={editNote}
+                                    onChange={(e) =>
+                                      setEditNote(e.target.value)
+                                    }
+                                  />
+                                </div>
+                                <div className="flex gap-2 justify-end mt-4">
+                                  <Button variant="outline" onClick={closeEdit}>
+                                    Annuler
+                                  </Button>
+                                  <Button
+                                    variant="default"
+                                    disabled={editLoading || !editMode}
+                                    onClick={handleEdit}
                                   >
-                                    <SelectTrigger className="w-40">
-                                      <SelectValue placeholder="Type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Object.entries(slotTypeConfig).map(
-                                        ([k, v]) => (
-                                          <SelectItem
-                                            key={k}
-                                            value={k}
-                                            className="flex items-center gap-2"
-                                          >
-                                            <span
-                                              className={`inline-block w-2 h-2 rounded-full ${k === 'vacation' ? 'bg-orange-400' : k === 'sick' ? 'bg-red-400' : 'bg-purple-400'}`}
-                                            />
-                                            {v.label}
-                                          </SelectItem>
-                                        )
-                                      )}
-                                    </SelectContent>
-                                  </Select>
+                                    Enregistrer
+                                  </Button>
                                 </div>
-                              </TabsContent>
-                              <TabsContent value="periode">
-                                <div className="flex gap-2 items-center mb-2">
-                                  <div>
-                                    <label className="block mb-1 text-sm font-medium">
-                                      Début
-                                    </label>
-                                    {editMode === 'periode' ? (
-                                      <DatePickerDemo
-                                        value={editStart}
-                                        onChange={setEditStart}
-                                        className="w-36"
-                                      />
-                                    ) : (
-                                      <Badge variant="outline">
-                                        {formatDateLabel(editStart)}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <label className="block mb-1 text-sm font-medium">
-                                      Fin
-                                    </label>
-                                    {editMode === 'periode' ? (
-                                      <DatePickerDemo
-                                        value={editEnd}
-                                        onChange={setEditEnd}
-                                        className="w-36"
-                                      />
-                                    ) : (
-                                      <Badge variant="outline">
-                                        {formatDateLabel(editEnd)}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex flex-row gap-2 items-center justify-center mb-2">
-                                  <Badge variant="secondary" className="text-xs py-1 px-2">
-                                    {countDays(editStart, editEnd)} jour{countDays(editStart, editEnd) > 1 ? 's' : ''}
-                                  </Badge>
-                                  {countDays(editStart, editEnd) > 6 && (
-                                    <Badge variant="outline" className="text-xs py-1 px-2">
-                                      {countWeeks(editStart, editEnd)} semaine{countWeeks(editStart, editEnd) > 1 ? 's' : ''}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div>
-                                  <label className="block mb-1 text-sm font-medium">Type</label>
-                                  <Badge variant="outline" className="capitalize flex items-center gap-2">
-                                    <span className={`inline-block w-2 h-2 rounded-full ${editType === 'vacation' ? 'bg-orange-400' : editType === 'sick' ? 'bg-red-400' : 'bg-purple-400'}`} />
-                                    {slotTypeConfig[editType as keyof typeof slotTypeConfig]?.label || editType}
-                                  </Badge>
-                                </div>
-                              </TabsContent>
-                            </Tabs>
-                            <div>
-                              <label className="block mb-1 text-sm font-medium">
-                                Note
-                              </label>
-                              <Input
-                                value={editNote}
-                                onChange={(e) => setEditNote(e.target.value)}
-                              />
-                            </div>
-                            <div className="flex gap-2 justify-end mt-4">
-                              <Button variant="outline" onClick={closeEdit}>
-                                Annuler
-                              </Button>
-                              <Button
-                                variant="default"
-                                disabled={editLoading || !editMode}
-                                onClick={handleEdit}
-                              >
-                                Enregistrer
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      <Button
-                        size="icon"
-                        variant="destructive"
-                        title="Supprimer"
-                        onClick={() => handleDeleteGroup(group)}
-                        disabled={editLoading}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          <Button
+                            size="icon"
+                            variant="destructive"
+                            title="Supprimer"
+                            onClick={() => handleDeleteGroup(group)}
+                            disabled={editLoading}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {grouped.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center text-muted-foreground"
+                    >
+                      Aucune absence trouvée
                     </TableCell>
                   </TableRow>
-                );
-              })}
-              {grouped.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center text-muted-foreground"
-                  >
-                    Aucune absence trouvée
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        )}
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </div>
       </div>
     </div>
   );
