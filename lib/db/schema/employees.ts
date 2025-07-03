@@ -13,6 +13,7 @@ export const employees = pgTable(
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    hoursPerWeek: text("hours_per_week"),
   },
   (table) => ({
     emailIdx: index("employees_email_idx").on(table.email),
@@ -31,6 +32,7 @@ export interface CreateEmployeeData {
   color: string
   email: string
   phone?: string
+  hoursPerWeek?: string
 }
 
 export interface UpdateEmployeeData {
@@ -41,4 +43,5 @@ export interface UpdateEmployeeData {
   email?: string
   phone?: string
   isActive?: boolean
+  hoursPerWeek?: string
 }

@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/components/hooks/use-toast"
-import { Calendar as CalendarIcon, Clock, Users, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2, Edit } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, PhoneCall, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2, Edit } from "lucide-react"
 import { Separator } from "@radix-ui/react-separator"
 import Link from "next/link"
 import { getWeekDates, getWeekNumber, getWeekKey, formatDate, EMPLOYEE_COLORS } from "@/lib/db/utils"
@@ -21,6 +21,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
+import { CallStack } from 'next/dist/client/components/react-dev-overlay/ui/components/errors/call-stack/call-stack';
 
 // Étendre le type Employee pour inclure les plannings
 interface EmployeeWithSchedule extends Employee {
@@ -89,8 +90,10 @@ function EmployeeManagementView({
   getEmployeeScheduleForDay,
   slotTypeConfig,
   currentWeekOffset,
+  setCurrentWeekOffset,
   setSchedules,
   setEmployees,
+  reloadSchedules,
 }: {
   employees: EmployeeWithSchedule[]
   currentWeekKey: string
@@ -110,8 +113,10 @@ function EmployeeManagementView({
     }
   }
   currentWeekOffset: number
+  setCurrentWeekOffset: (offset: number) => void
   setSchedules: React.Dispatch<React.SetStateAction<Record<string, TimeSlot[]>>>
   setEmployees: React.Dispatch<React.SetStateAction<EmployeeWithSchedule[]>>
+  reloadSchedules: () => Promise<void>
 }) {
   // Regrouper tous les useState au début
   const [copyFromWeek, setCopyFromWeek] = useState(currentWeekOffset - 1);
@@ -338,6 +343,15 @@ function EmployeeManagementView({
 
   return (
     <div className="space-y-6">
+      {/* Semaine selector en haut de la vue Gestion */}
+      <div className="flex justify-end">
+        <WeekSelector
+          currentWeekOffset={currentWeekOffset}
+          setCurrentWeekOffset={setCurrentWeekOffset}
+          currentWeekDates={currentWeekDates}
+          weekNumber={weekNumber}
+        />
+      </div>
       {/* Outil de copier-coller */}
       <div className="rounded-lg border bg-background">
         <div className="p-6 border-b">
@@ -830,6 +844,7 @@ function EmployeeManagementView({
                                               toast({ title: "Succès", description: "Absence ajoutée" });
                                               setEndDate(null);
                                               setSelectedType(null);
+                                              if (reloadSchedules) await reloadSchedules();
                                             } else {
                                               toast({ title: "Erreur", description: "Impossible d'ajouter l'absence", variant: "destructive" });
                                             }
@@ -945,6 +960,35 @@ function EmployeeManagementView({
       </div>
     </div>
   )
+}
+
+// Composant WeekSelector pour changer de semaine
+function WeekSelector({
+  currentWeekOffset,
+  setCurrentWeekOffset,
+  currentWeekDates,
+  weekNumber
+}: {
+  currentWeekOffset: number;
+  setCurrentWeekOffset: (offset: number) => void;
+  currentWeekDates: Date[];
+  weekNumber: number;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={() => setCurrentWeekOffset(currentWeekOffset - 1)}>
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <div className="text-center px-2">
+        <div className="font-medium">
+          Semaine {weekNumber} ({formatDate(currentWeekDates[0])} - {formatDate(currentWeekDates[6])})
+        </div>
+      </div>
+      <Button variant="outline" size="sm" onClick={() => setCurrentWeekOffset(currentWeekOffset + 1)}>
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 }
 
 export default function PlanningPage() {
@@ -1110,49 +1154,51 @@ export default function PlanningPage() {
       }
     };
 
+    // On rend loadSchedules accessible via une ref
+    (window as any).reloadSchedules = loadSchedules;
     loadSchedules();
   }, [currentWeekKey, employees.length, daysOfWeek, toast]);
 
   // Ajouter un effet pour initialiser le créneau du samedi
-  useEffect(() => {
-    const initializeSaturdaySlot = async () => {
-      const saturdayEmployee = getSaturdayEmployee();
-      if (saturdayEmployee) {
-        const timeSlots: TimeSlot[] = [{
-          start: "10:00",
-          end: "20:00",
-          isWorking: true,
-          type: "work" as const,
-        }];
-
-        try {
-          const response = await fetch("/api/schedules", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              employeeId: saturdayEmployee,
-              weekKey: currentWeekKey,
-              day: "samedi",
-              timeSlots,
-            }),
-          });
-
-          if (response.ok) {
-            // Mettre à jour l'état local
-            updateLocalSchedule(saturdayEmployee, "samedi", timeSlots);
-            setSchedules(prev => ({
-              ...prev,
-              [`${saturdayEmployee}-samedi`]: timeSlots
-            }));
-          }
-        } catch (error) {
-          console.error("Erreur lors de l'initialisation du créneau du samedi:", error);
-        }
-      }
-    };
-
-    initializeSaturdaySlot();
-  }, [currentWeekKey]);
+  // useEffect(() => {
+  //   const initializeSaturdaySlot = async () => {
+  //     const saturdayEmployee = getSaturdayEmployee();
+  //     if (saturdayEmployee) {
+  //       const timeSlots: TimeSlot[] = [{
+  //         start: "10:00",
+  //         end: "20:00",
+  //         isWorking: true,
+  //         type: "work" as const,
+  //       }];
+  //
+  //       try {
+  //         const response = await fetch("/api/schedules", {
+  //           method: "POST",
+  //           headers: { "Content-Type": "application/json" },
+  //           body: JSON.stringify({
+  //             employeeId: saturdayEmployee,
+  //             weekKey: currentWeekKey,
+  //             day: "samedi",
+  //             timeSlots,
+  //           }),
+  //         });
+  //
+  //         if (response.ok) {
+  //           // Mettre à jour l'état local
+  //           updateLocalSchedule(saturdayEmployee, "samedi", timeSlots);
+  //           setSchedules(prev => ({
+  //             ...prev,
+  //             [`${saturdayEmployee}-samedi`]: timeSlots
+  //           }));
+  //         }
+  //       } catch (error) {
+  //         console.error("Erreur lors de l'initialisation du créneau du samedi:", error);
+  //       }
+  //     }
+  //   };
+  //
+  //   initializeSaturdaySlot();
+  // }, [currentWeekKey]);
 
   // Ajouter une fonction pour obtenir le prochain employé disponible pour le week-end
   const getNextWeekendEmployee = (currentEmployeeId: string | null): string => {
@@ -1247,19 +1293,19 @@ export default function PlanningPage() {
   };
 
   // Modifier la fonction getSaturdayEmployee pour qu'elle soit synchrone
-  const getSaturdayEmployee = (): string | null => {
-    // Chercher d'abord dans les schedules existants
-    for (const employee of employees) {
-      const saturdaySchedule = employee.schedule?.[currentWeekKey]?.["samedi"];
-      if (saturdaySchedule && saturdaySchedule.length > 0) {
-        return employee.id;
-      }
-    }
-
-    // Si aucun employé n'a de créneau, retourner le premier employé actif
-    const activeEmployees = employees.filter(emp => emp.isActive);
-    return activeEmployees.length > 0 ? activeEmployees[0].id : null;
-  };
+  // const getSaturdayEmployee = (): string | null => {
+  //   // Chercher d'abord dans les schedules existants
+  //   for (const employee of employees) {
+  //     const saturdaySchedule = employee.schedule?.[currentWeekKey]?.["samedi"];
+  //     if (saturdaySchedule && saturdaySchedule.length > 0) {
+  //       return employee.id;
+  //     }
+  //   }
+  //
+  //   // Si aucun employé n'a de créneau, retourner le premier employé actif
+  //   const activeEmployees = employees.filter(emp => emp.isActive);
+  //   return activeEmployees.length > 0 ? activeEmployees[0].id : null;
+  // };
 
   // Modifier la fonction getEmployeeScheduleForDay pour retourner les créneaux correctement
   const getEmployeeScheduleForDay = (employeeId: string, day: string): TimeSlot[] => {
@@ -1269,19 +1315,6 @@ export default function PlanningPage() {
     // Si des créneaux existent, les retourner
     if (Array.isArray(schedule) && schedule.length > 0) {
       return schedule;
-    }
-
-    // Pour le samedi, vérifier si c'est l'employé désigné
-    if (day === "samedi") {
-      const saturdayEmployee = getSaturdayEmployee();
-      if (saturdayEmployee === employeeId) {
-        return [{
-          start: "10:00",
-          end: "20:00",
-          isWorking: true,
-          type: "work"
-        }];
-      }
     }
 
     // Si aucun créneau n'est trouvé, retourner un tableau vide
@@ -1367,11 +1400,17 @@ export default function PlanningPage() {
 
     return (
       <div className="rounded-lg border bg-background">
-        <div className="p-6 border-b">
+        <div className="p-6 border-b flex items-center justify-between">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-          <List className="h-5 w-5" />
-          Vue Tableau - Semaine {weekNumber}
+            <List className="h-5 w-5" />
+            Vue Tableau
           </h2>
+          <WeekSelector
+            currentWeekOffset={currentWeekOffset}
+            setCurrentWeekOffset={setCurrentWeekOffset}
+            currentWeekDates={currentWeekDates}
+            weekNumber={weekNumber}
+          />
         </div>
         <div className="p-6">
         <ScrollArea className="h-[600px]">
@@ -1433,63 +1472,30 @@ export default function PlanningPage() {
 
   // Modifier la fonction handleSaturdayEmployeeChange pour recharger les données
   const handleSaturdayEmployeeChange = async (employeeId: string, day: string) => {
-    if (!employeeId) {
-      // Supprimer le créneau de travail pour ce jour pour tous les employés
-      for (const emp of employees) {
-        await fetch("/api/schedules", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            employeeId: emp.id,
-            weekKey: currentWeekKey,
-            day,
-            timeSlots: [],
-          }),
-        });
-      }
-      // Recharge les plannings
-      const schedulesResponse = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
-      if (schedulesResponse.ok) {
-        const data = await schedulesResponse.json();
-        const schedulesMap: Record<string, any[]> = {};
-        if (Array.isArray(data)) {
-          data.forEach((schedule: any) => {
-            const key = `${schedule.employeeId}-${schedule.day}`;
-            schedulesMap[key] = Array.isArray(schedule.timeSlots) ? schedule.timeSlots : [];
-          });
-        }
-        setSchedules(schedulesMap);
-        setEmployees((prev) =>
-          prev.map((emp) => ({
-            ...emp,
-            schedule: {
-              ...emp.schedule,
-              [currentWeekKey]: daysOfWeek.reduce((acc, d) => {
-                acc[d] = Array.isArray(schedulesMap[`${emp.id}-${d}`]) ? schedulesMap[`${emp.id}-${d}`] : [];
-                return acc;
-              }, {} as { [day: string]: TimeSlot[] }),
-            },
-          }))
-        );
-      }
-      return;
-    }
-    const saturdayEmployee = getSaturdayEmployee();
-    if (saturdayEmployee === employeeId) return;
-
-    const timeSlot: TimeSlot = {
-      start: "10:00",
-      end: "20:00",
-      isWorking: true,
-      type: "work"
-    };
-
-    try {
-      const response = await fetch("/api/schedules", {
+    // Supprimer le créneau de travail pour ce jour pour tous les employés
+    for (const emp of employees) {
+      await fetch("/api/schedules", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeId: emp.id,
+          weekKey: currentWeekKey,
+          day,
+          timeSlots: [],
+        }),
+      });
+    }
+    // Si on veut assigner quelqu'un
+    if (employeeId) {
+      const timeSlot: TimeSlot = {
+        start: "10:00",
+        end: "20:00",
+        isWorking: true,
+        type: "work"
+      };
+      await fetch("/api/schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           employeeId,
           weekKey: currentWeekKey,
@@ -1497,40 +1503,31 @@ export default function PlanningPage() {
           timeSlots: [timeSlot],
         }),
       });
-
-      if (response.ok) {
-        // Recharger les données depuis la base de données
-        const schedulesResponse = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
-        if (schedulesResponse.ok) {
-          const data = await schedulesResponse.json();
-          const schedulesMap: Record<string, any[]> = {};
-
-          if (Array.isArray(data)) {
-            data.forEach((schedule: any) => {
-              const key = `${schedule.employeeId}-${schedule.day}`;
-              schedulesMap[key] = Array.isArray(schedule.timeSlots) ? schedule.timeSlots : [];
-            });
-          }
-
-          setSchedules(schedulesMap);
-
-          // Mettre à jour les employés avec les nouvelles données
-          setEmployees((prev) =>
-            prev.map((emp) => ({
-              ...emp,
-              schedule: {
-                ...emp.schedule,
-                [currentWeekKey]: daysOfWeek.reduce((acc, d) => {
-                  acc[d] = Array.isArray(schedulesMap[`${emp.id}-${d}`]) ? schedulesMap[`${emp.id}-${d}`] : [];
-                  return acc;
-                }, {} as { [day: string]: TimeSlot[] }),
-              },
-            }))
-          );
-        }
+    }
+    // Recharge les plannings
+    const schedulesResponse = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
+    if (schedulesResponse.ok) {
+      const data = await schedulesResponse.json();
+      const schedulesMap: Record<string, any[]> = {};
+      if (Array.isArray(data)) {
+        data.forEach((schedule: any) => {
+          const key = `${schedule.employeeId}-${schedule.day}`;
+          schedulesMap[key] = Array.isArray(schedule.timeSlots) ? schedule.timeSlots : [];
+        });
       }
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour du planning du samedi:", error);
+      setSchedules(schedulesMap);
+      setEmployees((prev) =>
+        prev.map((emp) => ({
+          ...emp,
+          schedule: {
+            ...emp.schedule,
+            [currentWeekKey]: daysOfWeek.reduce((acc, d) => {
+              acc[d] = Array.isArray(schedulesMap[`${emp.id}-${d}`]) ? schedulesMap[`${emp.id}-${d}`] : [];
+              return acc;
+            }, {} as { [day: string]: TimeSlot[] }),
+          },
+        }))
+      );
     }
   };
 
@@ -1707,6 +1704,23 @@ export default function PlanningPage() {
               Gérer les Employés
             </Button>
           </Link>
+            <Link href="/planning/absences">
+              <Button variant="outline">
+                <PhoneCall className="h-4 w-4 mr-2" />
+                Gérer les Absences
+              </Button>
+            </Link>
+            <Link href="/planning">
+              <Button variant="outline">
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                Voir le Planning
+              </Button>
+            </Link>
+            <Link href="/planning/extraction">
+              <Button variant="secondary">
+                Extraction
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -1867,9 +1881,15 @@ export default function PlanningPage() {
                                         slot.type !== 'work' ? '22:00' : slot.end
                                       );
                                       const isWork = slot.type === 'work';
+                                      // Style spécial pour absences
+                                      let absenceBg = 'repeating-linear-gradient(135deg, #cbd5e1 0px, #cbd5e1 10px, #f1f5f9 10px, #f1f5f9 20px)';
+                                      let absenceBorder = '2px solid #64748b';
+                                      let absenceOpacity = 0.85;
                                       const bgColor = employee.color || '#8884d8';
                                       const textColor = getContrastYIQ(bgColor);
-                                      const hatch = !isWork ? `repeating-linear-gradient(135deg, ${bgColor}, ${bgColor} 10px, #fff2 10px, #fff2 20px)` : bgColor;
+                                      const hatch = !isWork ? absenceBg : bgColor;
+                                      const border = !isWork ? absenceBorder : `2px solid ${bgColor}`;
+                                      const opacity = !isWork ? absenceOpacity : 1;
                                       const width = `calc(${100 / maxOverlap}% - 4px)`;
                                       const left = `calc(${(slotColumn || 0) * 100 / maxOverlap}% + 2px)`;
                                       // Identifiant unique du slot
@@ -1889,7 +1909,7 @@ export default function PlanningPage() {
                                               slotDragRef.current = el;
                                             }
                                           }}
-                                          className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
+                                          className={`absolute rounded-lg shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
                                           style={{
                                             top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
                                             height: `calc(${height} - 4px)`,
@@ -1900,7 +1920,8 @@ export default function PlanningPage() {
                                             margin: 0,
                                             background: hatch,
                                             color: textColor,
-                                            borderColor: bgColor,
+                                            border: border,
+                                            opacity: opacity,
                                             transition: 'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
                                             boxShadow: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? '0 8px 32px #22c55e44' : undefined,
                                             pointerEvents: slot.type !== 'work' ? 'none' : (resizeSlot ? 'none' : undefined),
@@ -2115,9 +2136,15 @@ export default function PlanningPage() {
                                       slot.type !== 'work' ? '22:00' : slot.end
                                     );
                                     const isWork = slot.type === 'work';
+                                    // Style spécial pour absences
+                                    let absenceBg = 'repeating-linear-gradient(135deg, #cbd5e1 0px, #cbd5e1 10px, #f1f5f9 10px, #f1f5f9 20px)';
+                                    let absenceBorder = '2px solid #64748b';
+                                    let absenceOpacity = 0.85;
                                     const bgColor = employee.color || '#8884d8';
                                     const textColor = getContrastYIQ(bgColor);
-                                    const hatch = !isWork ? `repeating-linear-gradient(135deg, ${bgColor}, ${bgColor} 10px, #fff2 10px, #fff2 20px)` : bgColor;
+                                    const hatch = !isWork ? absenceBg : bgColor;
+                                    const border = !isWork ? absenceBorder : `2px solid ${bgColor}`;
+                                    const opacity = !isWork ? absenceOpacity : 1;
                                     const width = `calc(${100 / maxOverlap}% - 4px)`;
                                     const left = `calc(${(slotColumn || 0) * 100 / maxOverlap}% + 2px)`;
                                     // Identifiant unique du slot
@@ -2141,7 +2168,7 @@ export default function PlanningPage() {
                                             slotDragRef.current = el;
                                           }
                                         }}
-                                        className={`absolute rounded-lg border-2 shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
+                                        className={`absolute rounded-lg shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
                                         style={{
                                           top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
                                           height: `calc(${height} - 4px)`,
@@ -2152,7 +2179,8 @@ export default function PlanningPage() {
                                           margin: 0,
                                           background: hatch,
                                           color: textColor,
-                                          borderColor: bgColor,
+                                          border: border,
+                                          opacity: opacity,
                                           transition: 'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
                                           boxShadow: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? '0 8px 32px #22c55e44' : undefined,
                                           pointerEvents: slot.type !== 'work' ? 'none' : (resizeSlot ? 'none' : undefined),
@@ -2305,7 +2333,15 @@ export default function PlanningPage() {
             )}
             {viewMode === 'person' && (
               <div className="p-6 bg-muted rounded-lg">
-                <h2 className="text-xl font-bold mb-4">Vue par personne</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">Vue par personne</h2>
+                  <WeekSelector
+                    currentWeekOffset={currentWeekOffset}
+                    setCurrentWeekOffset={setCurrentWeekOffset}
+                    currentWeekDates={currentWeekDates}
+                    weekNumber={weekNumber}
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {employees.map((employee) => (
                     <div key={employee.id} className="bg-background rounded-lg shadow p-4">
@@ -2343,7 +2379,15 @@ export default function PlanningPage() {
             )}
             {viewMode === 'slot' && (
               <div className="p-6 bg-muted rounded-lg">
-                <h2 className="text-xl font-bold mb-4">Vue par créneau</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">Vue par créneau</h2>
+                  <WeekSelector
+                    currentWeekOffset={currentWeekOffset}
+                    setCurrentWeekOffset={setCurrentWeekOffset}
+                    currentWeekDates={currentWeekDates}
+                    weekNumber={weekNumber}
+                  />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {daysOfWeek.map((day, i) => {
                     const slots = getOverlappingTimeSlots(day);
@@ -2385,8 +2429,10 @@ export default function PlanningPage() {
               getEmployeeScheduleForDay={getEmployeeScheduleForDay}
               slotTypeConfig={slotTypeConfig}
               currentWeekOffset={currentWeekOffset}
+              setCurrentWeekOffset={setCurrentWeekOffset}
               setSchedules={setSchedules}
               setEmployees={setEmployees}
+              reloadSchedules={(window as any).reloadSchedules}
             />
           </TabsContent>
 
