@@ -1522,10 +1522,10 @@ export default function PlanningPage() {
   const getTimeSlotPosition = (startTime: string, endTime: string) => {
     const startHour = Number.parseInt(startTime.split(":")[0]) + Number.parseInt(startTime.split(":")[1]) / 60
     const endHour = Number.parseInt(endTime.split(":")[0]) + Number.parseInt(endTime.split(":")[1]) / 60
-
-    const top = ((startHour - 8) / 14) * 100
-    const height = ((endHour - startHour) / 14) * 100
-
+    const base = isHackaton ? 6 : 8;
+    const range = isHackaton ? 24 : 14;
+    const top = ((startHour - base) / range) * 100
+    const height = ((endHour - startHour) / range) * 100
     return { top: `${top}%`, height: `${height}%` }
   }
 
@@ -1891,6 +1891,30 @@ export default function PlanningPage() {
     setCalendarTemplateOpen(false);
   };
 
+  // Semaine hackaton : état par semaine (persistant)
+  const [hackatonWeeks, setHackatonWeeks] = useState<{ [weekKey: string]: boolean }>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('hackatonWeeks');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return {};
+  });
+  const isHackaton = !!hackatonWeeks[currentWeekKey];
+
+  // Persistance localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('hackatonWeeks', JSON.stringify(hackatonWeeks));
+    } catch {}
+  }, [hackatonWeeks]);
+
+  // Heures dynamiques selon mode hackaton
+  const calendarHours = isHackaton
+    ? Array.from({ length: 24 }, (_, i) => (i + 6) % 24)
+    : hours;
+
   return (
     <div className="space-y-6">
       {/* Header harmonisé */}
@@ -1928,6 +1952,24 @@ export default function PlanningPage() {
             </Button>
           </Link>
         </div>
+      </div>
+      {/* Hackaton toggle + semaine selector */}
+      <div className="flex items-center gap-4 mb-2">
+        <WeekSelector
+          currentWeekOffset={currentWeekOffset}
+          setCurrentWeekOffset={setCurrentWeekOffset}
+          currentWeekDates={currentWeekDates}
+          weekNumber={weekNumber}
+        />
+        <label className="flex items-center gap-2 ml-4 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={isHackaton}
+            onChange={e => setHackatonWeeks(weeks => ({ ...weeks, [currentWeekKey]: e.target.checked }))}
+            className="accent-pink-600 w-5 h-5"
+          />
+          <span className="font-semibold text-pink-600">Semaine hackaton (horaires étendus)</span>
+        </label>
       </div>
       {/* Contenu principal dans un conteneur harmonisé */}
       <div className="rounded-lg border bg-background p-6">
@@ -2157,7 +2199,7 @@ export default function PlanningPage() {
                           {/* Grille des créneaux */}
                           <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-2 w-full">
                             <div className="space-y-1">
-                              {hours.map((hour) => (
+                              {calendarHours.map((hour) => (
                                 <div key={hour} className="h-16 p-2 text-center text-base text-muted-foreground font-semibold w-[50px] min-w-[50px] max-w-[50px]">
                                   {hour}h
                                 </div>
@@ -2190,7 +2232,7 @@ export default function PlanningPage() {
                                     toast({ title: 'Créneau ajouté', description: 'Journée de 8h ajoutée' });
                                   }}
                                 >
-                                  {hours.map((hour) => (
+                                  {calendarHours.map((hour) => (
                                     <div
                                       key={hour}
                                       className="h-16 border border-border rounded hover:bg-muted/50 transition-colors"
@@ -2204,8 +2246,8 @@ export default function PlanningPage() {
                                     return stacked.map(({ employee, slot, startHour, endHour, slotColumn }, index) => {
                                       const isAbsence = slot.type !== 'work';
                                       const { top, height } = getTimeSlotPosition(
-                                        slot.type !== 'work' ? '08:00' : slot.start,
-                                        slot.type !== 'work' ? '22:00' : slot.end
+                                        slot.type !== 'work' ? (isHackaton ? '06:00' : '08:00') : slot.start,
+                                        slot.type !== 'work' ? (isHackaton ? '06:00' : '22:00') : slot.end
                                       );
                                       const isWork = slot.type === 'work';
                                       // Ne pas afficher les congés (vacation) sur samedi/dimanche
@@ -2240,7 +2282,7 @@ export default function PlanningPage() {
                                           }}
                                           className={`absolute rounded-lg shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
                                           style={{
-                                            top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
+                                            top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% )` : top,
                                             height: `calc(${height} - 4px)`,
                                             width,
                                             left,
@@ -2309,14 +2351,14 @@ export default function PlanningPage() {
                                                 style={{
                                                   ...ghostLineStyle,
                                                   top: 0,
-                                                  transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                  transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}%))`,
                                                   background: '#2563eb',
                                                 }}
                                               />
                                               <div
                                                 style={{
                                                   ...ghostLabelStyle,
-                                                  top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                                  top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% - 12px)`
                                                 }}
                                               >
                                                 {resizeValue}
@@ -2349,14 +2391,14 @@ export default function PlanningPage() {
                                                 style={{
                                                   ...ghostLineStyle,
                                                   bottom: 0,
-                                                  transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                  transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}%))`,
                                                   background: '#2563eb',
                                                 }}
                                               />
                                               <div
                                                 style={{
                                                   ...ghostLabelStyle,
-                                                  top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                                  top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% - 12px)`
                                                 }}
                                               >
                                                 {resizeValue}
@@ -2440,7 +2482,7 @@ export default function PlanningPage() {
                           </div>
                           <div className="grid grid-cols-[50px_repeat(2,minmax(180px,1fr))] gap-1 w-full">
                             <div className="space-y-1">
-                              {hours.map((hour) => (
+                              {calendarHours.map((hour) => (
                                 <div key={hour} className="h-16 p-2 text-center text-base text-muted-foreground font-semibold w-[50px] min-w-[50px] max-w-[50px]">
                                   {hour}h
                                 </div>
@@ -2448,7 +2490,7 @@ export default function PlanningPage() {
                             </div>
                             {daysOfWeek.slice(5, 7).map((day, i) => (
                               <div key={day} className="relative space-y-1 overflow-visible min-w-[180px]" id={`day-grid-${day}`}>
-                                {hours.map((hour) => (
+                                {calendarHours.map((hour) => (
                                   <div
                                     key={hour}
                                     className="h-16 border border-border rounded hover:bg-muted/50 transition-colors"
@@ -2462,8 +2504,8 @@ export default function PlanningPage() {
                                   return stacked.map(({ employee, slot, startHour, endHour, slotColumn }, index) => {
                                     const isAbsence = slot.type !== 'work';
                                     const { top, height } = getTimeSlotPosition(
-                                      slot.type !== 'work' ? '08:00' : slot.start,
-                                      slot.type !== 'work' ? '22:00' : slot.end
+                                      slot.type !== 'work' ? (isHackaton ? '06:00' : '08:00') : slot.start,
+                                      slot.type !== 'work' ? (isHackaton ? '06:00' : '22:00') : slot.end
                                     );
                                     const isWork = slot.type === 'work';
                                     // Ne pas afficher les congés (vacation) sur samedi/dimanche
@@ -2502,7 +2544,7 @@ export default function PlanningPage() {
                                         }}
                                         className={`absolute rounded-lg shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
                                         style={{
-                                          top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / 14) * 100}% )` : top,
+                                          top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% )` : top,
                                           height: `calc(${height} - 4px)`,
                                           width,
                                           left,
@@ -2571,14 +2613,14 @@ export default function PlanningPage() {
                                               style={{
                                                 ...ghostLineStyle,
                                                 top: 0,
-                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}%))`,
                                                 background: '#2563eb',
                                               }}
                                             />
                                             <div
                                               style={{
                                                 ...ghostLabelStyle,
-                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% - 12px)`
                                               }}
                                             >
                                               {resizeValue}
@@ -2611,14 +2653,14 @@ export default function PlanningPage() {
                                               style={{
                                                 ...ghostLineStyle,
                                                 bottom: 0,
-                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}%))`,
+                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}%))`,
                                                 background: '#2563eb',
                                               }}
                                             />
                                             <div
                                               style={{
                                                 ...ghostLabelStyle,
-                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / 14) * 100}% - 12px)`
+                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% - 12px)`
                                               }}
                                             >
                                               {resizeValue}
