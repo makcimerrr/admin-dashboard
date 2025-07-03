@@ -1000,6 +1000,9 @@ export default function PlanningPage() {
   const [viewMode, setViewMode] = useState<'calendar' | 'person' | 'slot'>('calendar')
   const { toast } = useToast();
 
+  // NEW: State for visible employees (by id)
+  const [visibleEmployeeIds, setVisibleEmployeeIds] = useState<string[]>([]);
+
   const currentWeekDates = useMemo(() => getWeekDates(currentWeekOffset), [currentWeekOffset])
   const currentWeekKey = useMemo(() => getWeekKey(currentWeekOffset), [currentWeekOffset])
   const weekNumber = useMemo(() => getWeekNumber(currentWeekDates[0]), [currentWeekDates])
@@ -1688,6 +1691,13 @@ export default function PlanningPage() {
       .then(setHolidays);
   }, []);
 
+  // After employees are loaded, set all as visible by default
+  useEffect(() => {
+    if (employees.length > 0 && visibleEmployeeIds.length === 0) {
+      setVisibleEmployeeIds(employees.map(e => e.id));
+    }
+  }, [employees]);
+
   return (
     <div className="space-y-6">
       {/* Header harmonisé */}
@@ -1782,20 +1792,40 @@ export default function PlanningPage() {
               <>
                 {/* Légende des employés */}
                 <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted rounded-lg">
-                  {employees.map((employee) => (
-                    <div
-                      key={employee.id}
-                      className="flex items-center gap-2 cursor-move"
-                      draggable
-                      onDragStart={e => {
-                        e.dataTransfer.setData('employeeId', employee.id);
-                      }}
-                    >
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: employee.color }} />
-                      <span className="text-sm font-medium">{employee.name}</span>
-                      <span className="text-xs text-muted-foreground">({getTotalHoursForWeek(employee.id)}h)</span>
-                    </div>
-                  ))}
+                  {employees.map((employee) => {
+                    const isVisible = visibleEmployeeIds.includes(employee.id);
+                    return (
+                      <div
+                        key={employee.id}
+                        className="flex items-center gap-2 cursor-move px-3 py-1 rounded-lg bg-white shadow border border-muted/40 hover:shadow-md transition-all"
+                        draggable
+                        onDragStart={e => {
+                          e.dataTransfer.setData('employeeId', employee.id);
+                        }}
+                        style={{ opacity: isVisible ? 1 : 0.5 }}
+                      >
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: employee.color }} />
+                        <span className="text-sm font-medium">{employee.name}</span>
+                        <span className="text-xs text-muted-foreground">({getTotalHoursForWeek(employee.id)}h)</span>
+                        {/* Toggle visibility button */}
+                        <button
+                          type="button"
+                          aria-label={isVisible ? 'Cacher du planning' : 'Afficher sur le planning'}
+                          onClick={() => {
+                            setVisibleEmployeeIds(ids =>
+                              isVisible ? ids.filter(id => id !== employee.id) : [...ids, employee.id]
+                            );
+                          }}
+                          className={`ml-2 flex items-center justify-center w-8 h-8 rounded-full border transition-all duration-150
+                            ${isVisible ? 'bg-blue-100 border-blue-400 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 border-gray-300 text-gray-400 hover:bg-gray-200'}
+                            shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40`}
+                          style={{ fontSize: 18 }}
+                        >
+                          {isVisible ? '👁️' : '🚫'}
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
                 {/* Grille calendrier (jours ouvrés + weekend) */}
                 <div className="rounded-lg border bg-background">
@@ -1884,6 +1914,8 @@ export default function PlanningPage() {
                                   onDrop={async e => {
                                     const employeeId = e.dataTransfer.getData('employeeId');
                                     if (!employeeId) return;
+                                    // Only allow drop if employee is visible
+                                    if (!visibleEmployeeIds.includes(employeeId)) return;
                                     const slots = getEmployeeScheduleForDay(employeeId, day);
                                     if (slots && slots.length > 0) {
                                       toast({ title: 'Erreur', description: 'Un créneau existe déjà pour cet employé ce jour-là', variant: 'destructive' });
@@ -1902,7 +1934,8 @@ export default function PlanningPage() {
                                   ))}
                                   {/* Créneaux */}
                                   {(() => {
-                                    const daySlots = getOverlappingTimeSlots(day);
+                                    // Filter slots to only visible employees
+                                    const daySlots = getOverlappingTimeSlots(day).filter(({employee}) => visibleEmployeeIds.includes(employee.id));
                                     const { stacked, maxOverlap } = getStackedSlots(daySlots);
                                     return stacked.map(({ employee, slot, startHour, endHour, slotColumn }, index) => {
                                       const isAbsence = slot.type !== 'work';
@@ -2159,7 +2192,8 @@ export default function PlanningPage() {
                                 ))}
                                 {/* Créneaux */}
                                 {(() => {
-                                  const daySlots = getOverlappingTimeSlots(day);
+                                  // Filter slots to only visible employees
+                                  const daySlots = getOverlappingTimeSlots(day).filter(({employee}) => visibleEmployeeIds.includes(employee.id));
                                   const { stacked, maxOverlap } = getStackedSlots(daySlots);
                                   return stacked.map(({ employee, slot, startHour, endHour, slotColumn }, index) => {
                                     const isAbsence = slot.type !== 'work';
