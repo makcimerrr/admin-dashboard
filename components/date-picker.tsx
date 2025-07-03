@@ -17,9 +17,10 @@ interface DatePickerDemoProps {
   value?: string; // Date initiale sous forme de string ISO
   onChange?: (value: string) => void; // Fonction pour transmettre la date sélectionnée au parent
   id?: string; // ID pour identification ou accessibilité
+  className?: string; // Permet de personnaliser la largeur du bouton
 }
 
-export function DatePickerDemo({ value, onChange, id }: DatePickerDemoProps) {
+export function DatePickerDemo({ value, onChange, id, className }: DatePickerDemoProps) {
   const [date, setDate] = React.useState<Date | undefined>();
 
   const handleDateChange = (selectedDate: Date | undefined) => {
@@ -39,12 +40,13 @@ export function DatePickerDemo({ value, onChange, id }: DatePickerDemoProps) {
         <Button
           variant={'outline'}
           className={cn(
-            'w-[240px] justify-start text-left font-normal',
-            !date && 'text-muted-foreground'
+            'justify-start text-left font-normal',
+            !date && 'text-muted-foreground',
+            className || 'w-[240px]'
           )}
         >
           <CalendarIcon />
-          {date ? format(date, 'yyyy-MM-dd') : <span>Sélectionnez une date</span>}
+          {date ? format(date, 'yyyy-MM-dd') : <span>Date...</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
