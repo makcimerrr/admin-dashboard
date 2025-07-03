@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { addDays, format, isAfter, isBefore, isEqual, parseISO } from "date-fns";
+import { Calendar, Users, LayoutTemplate } from 'lucide-react';
+import Link from 'next/link';
 
 interface Employee {
   id: string;
@@ -179,56 +181,94 @@ export default function ExtractionPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Extraction des heures</h1>
-      <div className="flex gap-4 mb-6 items-end">
+    <div className="space-y-6">
+      {/* Header harmonisé */}
+      <div className="flex items-center justify-between">
         <div>
-          <label className="block mb-1 text-sm font-medium">Début</label>
-          <DatePickerDemo value={start} onChange={setStart} className="w-36" />
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <LayoutTemplate className="h-8 w-8 text-blue-600" />
+            Extraction
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Extraction des heures et statistiques</p>
         </div>
-        <div>
-          <label className="block mb-1 text-sm font-medium">Fin</label>
-          <DatePickerDemo value={end} onChange={setEnd} className="w-36" />
+        <div className="flex items-center gap-2">
+          <Link href="/planning">
+            <Button variant="outline">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Planning
+            </Button>
+          </Link>
+          <Link href="/planning/absences">
+            <Button variant="outline">
+              <Calendar className="h-4 w-4 mr-2" />
+              Absences
+            </Button>
+          </Link>
+          <Link href="/planning/extraction">
+            <Button variant="default">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Extraction
+            </Button>
+          </Link>
+          <Link href="/employees">
+            <Button variant="outline">
+              <Users className="h-4 w-4 mr-2" />
+              Employés
+            </Button>
+          </Link>
         </div>
-        <Button onClick={handleExtract} disabled={!start || !end || loading}>
-          {loading ? "Chargement..." : "Extraire"}
-        </Button>
       </div>
-      <div className="rounded-lg border bg-background overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Employé</TableHead>
-              <TableHead>Heures nuit</TableHead>
-              <TableHead>Heures nuits + férié</TableHead>
-              <TableHead>Heures fériés / dimanche</TableHead>
-              <TableHead>Congés</TableHead>
-              <TableHead>Maladie</TableHead>
-              <TableHead>TR</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
+      {/* Contenu principal dans un conteneur harmonisé */}
+      <div className="rounded-lg border bg-background p-6">
+        <div className="flex gap-4 mb-6 items-end">
+          <div>
+            <label className="block mb-1 text-sm font-medium">Début</label>
+            <DatePickerDemo value={start} onChange={setStart} className="w-36" />
+          </div>
+          <div>
+            <label className="block mb-1 text-sm font-medium">Fin</label>
+            <DatePickerDemo value={end} onChange={setEnd} className="w-36" />
+          </div>
+          <Button onClick={handleExtract} disabled={!start || !end || loading}>
+            {loading ? "Chargement..." : "Extraire"}
+          </Button>
+        </div>
+        <div className="rounded-lg border bg-background overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
-                  Aucune donnée à afficher
-                </TableCell>
+                <TableHead>Employé</TableHead>
+                <TableHead>Heures nuit</TableHead>
+                <TableHead>Heures nuits + férié</TableHead>
+                <TableHead>Heures fériés / dimanche</TableHead>
+                <TableHead>Congés</TableHead>
+                <TableHead>Maladie</TableHead>
+                <TableHead>TR</TableHead>
               </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.employee.id}>
-                  <TableCell>{row.employee.name}</TableCell>
-                  <TableCell>{row.nightHours}</TableCell>
-                  <TableCell>{row.nightAndHoliday}</TableCell>
-                  <TableCell>{row.holidayAndSunday}</TableCell>
-                  <TableCell>{row.vacationDays}</TableCell>
-                  <TableCell>{row.sickDays}</TableCell>
-                  <TableCell>{row.trCount}</TableCell>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                    Aucune donnée à afficher
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                rows.map((row) => (
+                  <TableRow key={row.employee.id}>
+                    <TableCell>{row.employee.name}</TableCell>
+                    <TableCell>{row.nightHours}</TableCell>
+                    <TableCell>{row.nightAndHoliday}</TableCell>
+                    <TableCell>{row.holidayAndSunday}</TableCell>
+                    <TableCell>{row.vacationDays}</TableCell>
+                    <TableCell>{row.sickDays}</TableCell>
+                    <TableCell>{row.trCount}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

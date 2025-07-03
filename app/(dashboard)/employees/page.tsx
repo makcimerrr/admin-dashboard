@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/components/hooks/use-toast"
-import { Users, Plus, Trash2, Edit, Home, Calendar } from "lucide-react"
+import { Users, Plus, Trash2, Edit, Home, Calendar, LayoutTemplate } from "lucide-react"
 import Link from "next/link"
 import type { Employee } from "@/lib/db/schema/employees"
+import { Separator } from "@radix-ui/react-separator"
 
 const colors = [
   "#3B82F6",
@@ -167,7 +168,7 @@ export default function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header harmonisé */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -176,83 +177,104 @@ export default function EmployeesPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Ajoutez et gérez les membres de votre équipe</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Link href="/planning">
             <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Voir le Planning
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Planning
             </Button>
           </Link>
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter un Employé
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Ajouter un nouvel employé</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Nom complet *</Label>
-                  <Input
-                    id="name"
-                    value={newEmployee.name}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                    placeholder="Ex: Jean Dupont"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="role">Poste *</Label>
-                  <Input
-                    id="role"
-                    value={newEmployee.role}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                    placeholder="Ex: Développeur"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newEmployee.email}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
-                    placeholder="Ex: jean.dupont@entreprise.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phone">Téléphone</Label>
-                  <Input
-                    id="phone"
-                    value={newEmployee.phone}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
-                    placeholder="Ex: 06 12 34 56 78"
-                  />
-                </div>
-                <div className="flex gap-2 pt-4">
-                  <Button onClick={handleAddEmployee} className="flex-1">
-                    Ajouter
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                    Annuler
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Link href="/planning/absences">
+            <Button variant="outline">
+              <Calendar className="h-4 w-4 mr-2" />
+              Absences
+            </Button>
+          </Link>
+          <Link href="/planning/extraction">
+            <Button variant="outline">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Extraction
+            </Button>
+          </Link>
+          <Link href="/employees">
+            <Button variant="default">
+              <Users className="h-4 w-4 mr-2" />
+              Employés
+            </Button>
+          </Link>
         </div>
       </div>
-
-      {/* Liste des employés */}
-      <div className="rounded-lg border bg-background">
-        <div className="p-6 border-b">
-          <div className="flex items-center justify-between">
+      {/* Bouton Ajouter un Employé aligné à droite sous le header */}
+      <div className="flex justify-end mb-2">
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Button className="font-semibold" variant="default">
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un Employé
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Ajouter un nouvel employé</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Nom complet *</Label>
+                <Input
+                  id="name"
+                  value={newEmployee.name}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                  placeholder="Ex: Jean Dupont"
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Poste *</Label>
+                <Input
+                  id="role"
+                  value={newEmployee.role}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                  placeholder="Ex: Développeur"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newEmployee.email}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                  placeholder="Ex: jean.dupont@entreprise.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">Téléphone</Label>
+                <Input
+                  id="phone"
+                  value={newEmployee.phone}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
+                  placeholder="Ex: 06 12 34 56 78"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleAddEmployee} className="flex-1">
+                  Ajouter
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                  Annuler
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+      {/* Contenu principal dans un conteneur harmonisé */}
+      <div className="rounded-lg border bg-background p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
             <h2 className="text-lg font-semibold">Équipe ({employees.length} employés)</h2>
-            <Badge variant="outline">{employees.length} actifs</Badge>
           </div>
+          <Badge variant="outline">{employees.length} actifs</Badge>
         </div>
         <div className="p-6">
           {loading ? (
