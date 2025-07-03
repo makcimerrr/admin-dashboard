@@ -115,6 +115,8 @@ export default function ExtractionPage() {
           if (sched.employeeId !== emp.id) continue;
           const key = `${sched.weekKey}|${sched.day}`;
           if (!dayMap[key]) continue; // hors période
+          // Ajout : ignorer samedi/dimanche pour les congés
+          const isWeekend = sched.day === 'samedi' || sched.day === 'dimanche';
           weekCount.add(sched.weekKey);
           let workHoursForDay = 0;
           let isVacation = false;
@@ -132,7 +134,8 @@ export default function ExtractionPage() {
             }
             if (
               slot.type === "vacation" &&
-              !slotsCounted.has(key)
+              !slotsCounted.has(key) &&
+              !isWeekend // <-- Ajout ici : ne compte pas samedi/dimanche
             ) {
               vacationDays++;
               slotsCounted.add(key);

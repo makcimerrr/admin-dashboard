@@ -1543,6 +1543,8 @@ export default function PlanningPage() {
     employees.forEach(employee => {
       const daySchedule = getEmployeeScheduleForDay(employee.id, day);
       daySchedule.forEach(slot => {
+        // Ne pas inclure les congés (vacation) sur samedi/dimanche
+        if ((day === 'samedi' || day === 'dimanche') && slot.type === 'vacation') return;
         const startHour = Number.parseInt(slot.start.split(":")[0]) + Number.parseInt(slot.start.split(":")[1]) / 60;
         const endHour = Number.parseInt(slot.end.split(":")[0]) + Number.parseInt(slot.end.split(":")[1]) / 60;
         slots.push({ employee, slot, startHour, endHour });
@@ -1909,6 +1911,8 @@ export default function PlanningPage() {
                                         slot.type !== 'work' ? '22:00' : slot.end
                                       );
                                       const isWork = slot.type === 'work';
+                                      // Ne pas afficher les congés (vacation) sur samedi/dimanche
+                                      if ((day === 'samedi' || day === 'dimanche') && slot.type === 'vacation') return null;
                                       // Style spécial pour absences
                                       let absenceBg = 'repeating-linear-gradient(135deg, #cbd5e1 0px, #cbd5e1 10px, #f1f5f9 10px, #f1f5f9 20px)';
                                       let absenceBorder = '2px solid #64748b';
@@ -2164,6 +2168,8 @@ export default function PlanningPage() {
                                       slot.type !== 'work' ? '22:00' : slot.end
                                     );
                                     const isWork = slot.type === 'work';
+                                    // Ne pas afficher les congés (vacation) sur samedi/dimanche
+                                    if ((day === 'samedi' || day === 'dimanche') && slot.type === 'vacation') return null;
                                     // Style spécial pour absences
                                     let absenceBg = 'repeating-linear-gradient(135deg, #cbd5e1 0px, #cbd5e1 10px, #f1f5f9 10px, #f1f5f9 20px)';
                                     let absenceBorder = '2px solid #64748b';
@@ -2386,13 +2392,15 @@ export default function PlanningPage() {
                       <div className="space-y-2 mt-2">
                         {daysOfWeek.map((day, i) => {
                           const slots = getEmployeeScheduleForDay(employee.id, day);
+                          // Ne pas afficher les congés sur samedi/dimanche
+                          const filteredSlots = (day === 'samedi' || day === 'dimanche') ? slots.filter(s => s.type !== 'vacation') : slots;
                           return (
                             <div key={day} className="flex items-center gap-2">
                               <span className="w-20 font-medium">{day}</span>
-                              {slots.length === 0 ? (
+                              {filteredSlots.length === 0 ? (
                                 <span className="text-muted-foreground">Repos</span>
                               ) : (
-                                slots.map((slot, idx) => (
+                                filteredSlots.map((slot, idx) => (
                                   <span key={idx} className={`px-2 py-1 rounded text-xs font-bold ${slotTypeConfig[slot.type].bgColor} ${slotTypeConfig[slot.type].textColor} border ${slotTypeConfig[slot.type].borderColor}`}>{slotTypeConfig[slot.type].label} {slot.start}-{slot.end}</span>
                                 ))
                               )}
@@ -2419,13 +2427,15 @@ export default function PlanningPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {daysOfWeek.map((day, i) => {
                     const slots = getOverlappingTimeSlots(day);
+                    // Ne pas afficher les congés sur samedi/dimanche
+                    const filteredSlots = (day === 'samedi' || day === 'dimanche') ? slots.filter(({slot}) => slot.type !== 'vacation') : slots;
                     return (
                       <div key={day} className="bg-background rounded-lg shadow p-4">
                         <div className="font-bold text-lg mb-2">{day} ({formatDate(currentWeekDates[i])})</div>
-                        {slots.length === 0 ? (
+                        {filteredSlots.length === 0 ? (
                           <span className="text-muted-foreground">Aucun créneau</span>
                         ) : (
-                          slots.map(({ employee, slot }, idx) => (
+                          filteredSlots.map(({ employee, slot }, idx) => (
                             <div key={idx} className="flex items-center gap-2 mb-1">
                               <Avatar className="h-6 w-6">
                                 <AvatarImage src={`https://avatar.vercel.sh/${employee.id}.png`} alt={employee.name} />

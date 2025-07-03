@@ -332,6 +332,11 @@ export default function AbsencesPage() {
         ];
         const dayIdx = d.getDay() === 0 ? 6 : d.getDay() - 1;
         const day = daysOfWeek[dayIdx];
+        // Ne pas créer de slot pour les congés sur samedi/dimanche
+        if (editType === 'vacation' && (day === 'samedi' || day === 'dimanche')) {
+          d = addDays(d, 1);
+          continue;
+        }
         await fetch(`/api/schedules`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -565,18 +570,50 @@ export default function AbsencesPage() {
                           return;
                         setAddLoading(true);
                         try {
-                          const res = await fetch('/api/schedules/range', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              employeeId: addEmployeeId,
-                              startDate: addStart,
-                              endDate: addEnd,
-                              slotType: addType,
-                              note: addNote
-                            })
-                          });
-                          if (res.ok) {
+                          // Ajout custom : ne crée pas de slot pour les samedis/dimanches si type vacation
+                          let d = new Date(addStart);
+                          const end = new Date(addEnd);
+                          let allOk = true;
+                          while (d <= end) {
+                            const dateStr = d.toISOString().slice(0, 10);
+                            const weekKey = `${d.getFullYear()}-W${getWeekNumber(d)}`;
+                            const daysOfWeek = [
+                              'lundi',
+                              'mardi',
+                              'mercredi',
+                              'jeudi',
+                              'vendredi',
+                              'samedi',
+                              'dimanche'
+                            ];
+                            const dayIdx = d.getDay() === 0 ? 6 : d.getDay() - 1;
+                            const day = daysOfWeek[dayIdx];
+                            if (addType === 'vacation' && (day === 'samedi' || day === 'dimanche')) {
+                              d = addDays(d, 1);
+                              continue;
+                            }
+                            const res = await fetch('/api/schedules', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                employeeId: addEmployeeId,
+                                weekKey,
+                                day,
+                                timeSlots: [
+                                  {
+                                    start: dateStr,
+                                    end: dateStr,
+                                    isWorking: false,
+                                    type: addType,
+                                    note: addNote
+                                  }
+                                ]
+                              })
+                            });
+                            if (!res.ok) allOk = false;
+                            d = addDays(d, 1);
+                          }
+                          if (allOk) {
                             toast({
                               title: 'Succès',
                               description: 'Absence ajoutée'
