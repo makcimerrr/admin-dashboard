@@ -5,6 +5,7 @@ export const employees = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
+    initial: text("initial").notNull(),
     role: text("role").notNull(),
     avatar: text("avatar"),
     color: text("color").notNull(),
@@ -27,6 +28,7 @@ export type NewEmployee = typeof employees.$inferInsert
 
 export interface CreateEmployeeData {
   name: string
+  initial: string
   role: string
   avatar?: string
   color: string
@@ -37,6 +39,7 @@ export interface CreateEmployeeData {
 
 export interface UpdateEmployeeData {
   name?: string
+  initial?: string
   role?: string
   avatar?: string
   color?: string

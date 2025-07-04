@@ -1927,7 +1927,7 @@ export default function PlanningPage() {
     : hours;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       {/* Header harmonisé */}
       <div className="flex items-center justify-between">
         <div>
@@ -2144,46 +2144,44 @@ export default function PlanningPage() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                {/* Grille calendrier (jours ouvrés + weekend) */}
-                <div className="rounded-lg border bg-background">
-                  <div className="p-6 border-b">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold flex items-center gap-2">
-                        <Grid className="h-5 w-5" />
-                        Planning Semaine {weekNumber}
-                      </h2>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setCurrentWeekOffset(currentWeekOffset - 1)}>
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <div className="text-center px-4">
-                          <div className="font-medium">
-                            Du {formatDate(currentWeekDates[0])} au {formatDate(currentWeekDates[6])}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {currentWeekDates[0].toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
-                          </div>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => setCurrentWeekOffset(currentWeekOffset + 1)}>
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
+                {/* Header semaine et navigation hors scroll */}
+                <div className="flex items-center justify-between px-6 pt-6 pb-2">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Grid className="h-5 w-5" />
+                    Planning Semaine {weekNumber}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setCurrentWeekOffset(currentWeekOffset - 1)}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="text-center px-4">
+                      <div className="font-medium">
+                        Du {formatDate(currentWeekDates[0])} au {formatDate(currentWeekDates[6])}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {currentWeekDates[0].toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
                       </div>
                     </div>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentWeekOffset(currentWeekOffset + 1)}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
+                </div>
+                <section className="rounded-lg border bg-background overflow-x-auto max-h-[700px] overflow-y-auto w-full">
                   <div className="p-6">
                     {loading ? (
                       <div className="flex items-center justify-center h-[600px]">
                         <Loader2 className="h-8 w-8 animate-spin" />
                       </div>
                     ) : (
-                      <>
-                        {/* Jours ouvrés */}
+                      <div className="w-full min-w-[2150px]">
+                        {/* Jours semaine + weekend dans la même grille */}
                         <div className="mb-2">
-                          <div className="font-bold text-lg mb-1">Semaine (lundi à vendredi)</div>
-                          {/* Header sticky pour les jours de la semaine */}
-                          <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-0 sticky top-0 bg-background z-10 w-full">
+                          <div className="font-bold text-lg mb-1">Semaine complète (lundi à dimanche)</div>
+                          {/* Header sticky pour tous les jours */}
+                          <div className="grid grid-cols-[50px_repeat(7,minmax(260px,1fr))] gap-1 mb-0 sticky top-0 z-20 bg-background w-full min-w-[2150px]">
                             <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
-                            {daysOfWeek.slice(0, 5).map((day, dayIndex) => {
+                            {daysOfWeek.map((day, dayIndex) => {
                               const dateStr = currentWeekDates[dayIndex].toISOString().slice(0, 10);
                               const holidayName = holidays[dateStr];
                               return (
@@ -2203,12 +2201,42 @@ export default function PlanningPage() {
                                     )}
                                   </div>
                                   <div className="text-base text-muted-foreground">{formatDate(currentWeekDates[dayIndex])}</div>
+                                  {/* Sélecteur de personne en charge pour le weekend */}
+                                  {(day === 'samedi' || day === 'dimanche') && (
+                                    <Select
+                                      value={(() => {
+                                        // Trouver l'employé en charge pour ce jour
+                                        const found = employees.find(emp => {
+                                          const slots = getEmployeeScheduleForDay(emp.id, day);
+                                          return slots && slots.length > 0 && slots.some(slot => slot.type === 'work');
+                                        });
+                                        return found ? found.id : 'none';
+                                      })()}
+                                      onValueChange={empId => handleSaturdayEmployeeChange(empId === 'none' ? '' : empId, day)}
+                                    >
+                                      <SelectTrigger className="mt-1 w-full max-w-[160px] mx-auto">
+                                        <SelectValue placeholder="Choisir..." />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none" className="flex items-center gap-2 text-muted-foreground">
+                                          <span className="w-3 h-3 rounded-full inline-block mr-2 bg-gray-300" />
+                                          Aucune (retirer)
+                                        </SelectItem>
+                                        {employees.map(emp => (
+                                          <SelectItem key={emp.id} value={emp.id} className="flex items-center gap-2">
+                                            <span className="w-3 h-3 rounded-full inline-block mr-2" style={{ backgroundColor: emp.color }} />
+                                            {emp.name}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
-                          {/* Grille des créneaux */}
-                          <div className="grid grid-cols-[50px_repeat(5,minmax(180px,1fr))] gap-1 mb-2 w-full">
+                          {/* Grille des créneaux pour tous les jours */}
+                          <div className="grid grid-cols-[50px_repeat(7,minmax(260px,1fr))] gap-1 mb-2 w-full min-w-[2150px]">
                             <div className="space-y-1">
                               {calendarHours.map((hour) => (
                                 <div key={hour} className="h-16 p-2 text-center text-base text-muted-foreground font-semibold w-[50px] min-w-[50px] max-w-[50px]">
@@ -2216,13 +2244,13 @@ export default function PlanningPage() {
                                 </div>
                               ))}
                             </div>
-                            {daysOfWeek.slice(0, 5).map((day, dayIndex) => {
+                            {daysOfWeek.map((day, dayIndex) => {
                               const dateStr = currentWeekDates[dayIndex].toISOString().slice(0, 10);
                               const holidayName = holidays[dateStr];
                               return (
                                 <div
                                   key={day}
-                                  className="relative space-y-1 overflow-visible min-w-[180px]"
+                                  className="relative space-y-1 overflow-visible min-w-[260px]"
                                   id={`day-grid-${day}`}
                                   style={holidayName ? {
                                     background: `repeating-linear-gradient(135deg, #f87171 0px, #f87171 8px, #fff 8px, #fff 16px)`
@@ -2283,6 +2311,8 @@ export default function PlanningPage() {
                                         if (resizeSlot.type === 'start' && resizeValue) displayStart = resizeValue < slot.end ? resizeValue : slot.start;
                                         if (resizeSlot.type === 'end' && resizeValue) displayEnd = resizeValue > slot.start ? resizeValue : slot.end;
                                       }
+                                      // Correction : holidayName doit être défini ici pour chaque slot
+                                      // (déjà défini plus haut)
                                       return (
                                         <div
                                           key={`${employee.id}-${slot.start}-${slot.end}`}
@@ -2377,10 +2407,10 @@ export default function PlanningPage() {
                                             </>
                                           )}
                                           {slot.type !== 'work' ? (
-                                            <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
+                                            <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.initial}</span>
                                           ) : (
                                             <>
-                                              <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
+                                              <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.initial}</span>
                                               <span className="text-xs opacity-80" style={{ userSelect: 'none' }}>{displayStart} - {displayEnd} {holidayName && slot.type === 'work' && <span className="text-red-600 font-bold">(férié travaillé)</span>}</span>
                                               {/* Handles, drag, etc. ici uniquement pour work */}
                                             </>
@@ -2434,7 +2464,6 @@ export default function PlanningPage() {
                                               zIndex: 50,
                                               background: 'rgba(255,255,255,0.7)',
                                               borderRadius: 4,
-                                              // display: 'none', // SUPPRIMÉ
                                             }}
                                             className="hidden group-hover:inline-block hover:bg-red-100"
                                           >
@@ -2449,271 +2478,10 @@ export default function PlanningPage() {
                             })}
                           </div>
                         </div>
-                        {/* Séparateur visuel */}
-                        <div className="my-4 border-t border-border" />
-                        {/* Weekend */}
-                        <div>
-                          <div className="font-bold text-lg mb-1">Weekend (samedi & dimanche)</div>
-                          <div className="grid grid-cols-[50px_repeat(2,minmax(180px,1fr))] gap-1 mb-2 sticky top-0 bg-background z-10 w-full">
-                            <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
-                            {daysOfWeek.slice(5, 7).map((day, index) => (
-                              <div key={day} className="p-2 text-center font-bold bg-muted rounded text-lg truncate flex flex-col items-center">
-                                <div className="font-bold">{day}</div>
-                                <div className="text-base text-muted-foreground">{formatDate(currentWeekDates[5 + index])}</div>
-                                {/* Sélecteur de personne en charge pour le weekend */}
-                                <Select
-                                  value={(() => {
-                                    // Trouver l'employé en charge pour ce jour
-                                    const found = employees.find(emp => {
-                                      const slots = getEmployeeScheduleForDay(emp.id, day);
-                                      return slots && slots.length > 0 && slots.some(slot => slot.type === 'work');
-                                    });
-                                    return found ? found.id : 'none';
-                                  })()}
-                                  onValueChange={empId => handleSaturdayEmployeeChange(empId === 'none' ? '' : empId, day)}
-                                >
-                                  <SelectTrigger className="mt-1 w-full max-w-[160px] mx-auto">
-                                    <SelectValue placeholder="Choisir..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none" className="flex items-center gap-2 text-muted-foreground">
-                                      <span className="w-3 h-3 rounded-full inline-block mr-2 bg-gray-300" />
-                                      Aucune (retirer)
-                                    </SelectItem>
-                                    {employees.map(emp => (
-                                      <SelectItem key={emp.id} value={emp.id} className="flex items-center gap-2">
-                                        <span className="w-3 h-3 rounded-full inline-block mr-2" style={{ backgroundColor: emp.color }} />
-                                        {emp.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="grid grid-cols-[50px_repeat(2,minmax(180px,1fr))] gap-1 w-full">
-                            <div className="space-y-1">
-                              {calendarHours.map((hour) => (
-                                <div key={hour} className="h-16 p-2 text-center text-base text-muted-foreground font-semibold w-[50px] min-w-[50px] max-w-[50px]">
-                                  {hour}h
-                                </div>
-                              ))}
-                            </div>
-                            {daysOfWeek.slice(5, 7).map((day, i) => (
-                              <div key={day} className="relative space-y-1 overflow-visible min-w-[180px]" id={`day-grid-${day}`}>
-                                {calendarHours.map((hour) => (
-                                  <div
-                                    key={hour}
-                                    className="h-16 border border-border rounded hover:bg-muted/50 transition-colors"
-                                  />
-                                ))}
-                                {/* Créneaux */}
-                                {(() => {
-                                  // Filter slots to only visible employees
-                                  const daySlots = getOverlappingTimeSlots(day).filter(({employee}) => visibleEmployeeIds.includes(employee.id));
-                                  const { stacked, maxOverlap } = getStackedSlots(daySlots);
-                                  return stacked.map(({ employee, slot, startHour, endHour, slotColumn }, index) => {
-                                    const isAbsence = slot.type !== 'work';
-                                    const { top, height } = getTimeSlotPosition(
-                                      slot.type !== 'work' ? (isHackaton ? '06:00' : '08:00') : slot.start,
-                                      slot.type !== 'work' ? (isHackaton ? '06:00' : '22:00') : slot.end
-                                    );
-                                    const isWork = slot.type === 'work';
-                                    // Ne pas afficher les congés (vacation) sur samedi/dimanche
-                                    if ((day === 'samedi' || day === 'dimanche') && slot.type === 'vacation') return null;
-                                    // Style spécial pour absences
-                                    let absenceBg = 'repeating-linear-gradient(135deg, #cbd5e1 0px, #cbd5e1 10px, #f1f5f9 10px, #f1f5f9 20px)';
-                                    let absenceBorder = '2px solid #64748b';
-                                    let absenceOpacity = 0.85;
-                                    const bgColor = employee.color || '#8884d8';
-                                    const textColor = getContrastYIQ(bgColor);
-                                    const hatch = !isWork ? absenceBg : bgColor;
-                                    const border = !isWork ? absenceBorder : `2px solid ${bgColor}`;
-                                    const opacity = !isWork ? absenceOpacity : 1;
-                                    const width = `calc(${100 / maxOverlap}% - 4px)`;
-                                    const left = `calc(${(slotColumn || 0) * 100 / maxOverlap}% + 2px)`;
-                                    // Identifiant unique du slot
-                                    const slotIndex = getEmployeeScheduleForDay(employee.id, day).findIndex(s => s.start === slot.start && s.end === slot.end && s.type === slot.type);
-                                    // Affichage temporaire pendant le drag
-                                    let displayStart = slot.start;
-                                    let displayEnd = slot.end;
-                                    if (resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
-                                      if (resizeSlot.type === 'start' && resizeValue) displayStart = resizeValue < slot.end ? resizeValue : slot.start;
-                                      if (resizeSlot.type === 'end' && resizeValue) displayEnd = resizeValue > slot.start ? resizeValue : slot.end;
-                                    }
-                                    // Correction : holidayName doit être défini ici pour chaque slot
-                                    const dayIndex = daysOfWeek.indexOf(day);
-                                    const dateStr = dayIndex !== -1 && currentWeekDates[dayIndex] ? currentWeekDates[dayIndex].toISOString().slice(0, 10) : null;
-                                    const holidayName = dateStr ? holidays[dateStr] : undefined;
-                                    return (
-                                      <div
-                                        key={`${employee.id}-${slot.start}-${slot.end}`}
-                                        ref={el => {
-                                          if (resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex) {
-                                            slotDragRef.current = el;
-                                          }
-                                        }}
-                                        className={`absolute rounded-lg shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
-                                        style={{
-                                          top: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% )` : top,
-                                          height: `calc(${height} - 4px)`,
-                                          width,
-                                          left,
-                                          zIndex: (slotColumn || 0) + 1,
-                                          maxWidth: '100%',
-                                          margin: 0,
-                                          background: hatch,
-                                          color: textColor,
-                                          border: border,
-                                          opacity: opacity,
-                                          transition: 'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
-                                          boxShadow: dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? '0 8px 32px #22c55e44' : undefined,
-                                          pointerEvents: slot.type !== 'work' ? 'none' : (resizeSlot ? 'none' : undefined),
-                                          cursor: slot.type !== 'work' ? 'default' : (dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'grabbing' : 'grab'),
-                                          userSelect: 'none',
-                                        }}
-                                        title={isWork ? employee.name : `${employee.name} - ${slotTypeConfig[slot.type as keyof typeof slotTypeConfig].label}`}
-                                        onMouseDown={e => {
-                                          // Drag uniquement si pas sur un handle
-                                          if (!(e.target as HTMLElement).classList.contains('resize-handle')) {
-                                            e.stopPropagation();
-                                            const slotStartY = e.currentTarget.getBoundingClientRect().top;
-                                            dragOffsetRef.current = e.clientY - slotStartY;
-                                            const duration = (Number(slot.end.split(':')[0]) * 60 + Number(slot.end.split(':')[1])) - (Number(slot.start.split(':')[0]) * 60 + Number(slot.start.split(':')[1]));
-                                            setDragSlot({ employeeId: employee.id, day, slotIndex, duration, originalStart: slot.start });
-                                            setDragGhostTime(slot.start);
-                                          }
-                                        }}
-                                      >
-                                        {/* Aperçu horaire pendant le drag */}
-                                        {dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex && dragGhostTime && (
-                                          (() => {
-                                            // Calcule l'heure de fin
-                                            const [sh, sm] = dragGhostTime.split(':').map(Number);
-                                            const startMinutes = sh * 60 + sm;
-                                            const endMinutes = startMinutes + dragSlot.duration;
-                                            const eh = Math.floor(endMinutes / 60);
-                                            const em = endMinutes % 60;
-                                            const preview = `${dragGhostTime} - ${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
-                                            return (
-                                              <div
-                                                style={{
-                                                  ...previewLabelStyle,
-                                                  top: `calc(50% - 18px)`
-                                                }}
-                                              >
-                                                {preview}
-                                              </div>
-                                            );
-                                          })()
-                                        )}
-                                        {/* Handle haut */}
-                                        <div
-                                          className="resize-handle"
-                                          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
-                                          onMouseDown={e => {
-                                            e.stopPropagation();
-                                            setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'start' });
-                                            setResizeValue(slot.start);
-                                          }}
-                                        />
-                                        {/* Ligne ghost et label d'heure pour le handle haut */}
-                                        {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'start' && resizeValue && (
-                                          <>
-                                            <div
-                                              style={{
-                                                ...ghostLineStyle,
-                                                top: 0,
-                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}%))`,
-                                                background: '#2563eb',
-                                              }}
-                                            />
-                                            <div
-                                              style={{
-                                                ...ghostLabelStyle,
-                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% - 12px)`
-                                              }}
-                                            >
-                                              {resizeValue}
-                                            </div>
-                                          </>
-                                        )}
-                                        {slot.type !== 'work' ? (
-                                          <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
-                                        ) : (
-                                          <>
-                                            <span className="w-full text-center truncate" style={{ userSelect: 'none' }}>{employee.name}</span>
-                                            <span className="text-xs opacity-80" style={{ userSelect: 'none' }}>{displayStart} - {displayEnd} {holidayName && slot.type === 'work' && <span className="text-red-600 font-bold">(férié travaillé)</span>}</span>
-                                            {/* Handles, drag, etc. ici uniquement pour work */}
-                                          </>
-                                        )}
-                                        {/* Handle bas */}
-                                        <div
-                                          className="resize-handle"
-                                          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
-                                          onMouseDown={e => {
-                                            e.stopPropagation();
-                                            setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'end' });
-                                            setResizeValue(slot.end);
-                                          }}
-                                        />
-                                        {/* Ligne ghost et label d'heure pour le handle bas */}
-                                        {resizeSlot && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && resizeSlot.type === 'end' && resizeValue && (
-                                          <>
-                                            <div
-                                              style={{
-                                                ...ghostLineStyle,
-                                                bottom: 0,
-                                                transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}%))`,
-                                                background: '#2563eb',
-                                              }}
-                                            />
-                                            <div
-                                              style={{
-                                                ...ghostLabelStyle,
-                                                top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% - 12px)`
-                                              }}
-                                            >
-                                              {resizeValue}
-                                            </div>
-                                          </>
-                                        )}
-                                        {/* Icône poubelle au hover */}
-                                        <button
-                                          type="button"
-                                          onClick={async (e) => {
-                                            e.stopPropagation();
-                                            const slots = getEmployeeScheduleForDay(employee.id, day);
-                                            const newSlots = [...slots];
-                                            newSlots.splice(slotIndex, 1);
-                                            await updateLocalSchedule(employee.id, day, newSlots);
-                                            toast({ title: 'Créneau supprimé' });
-                                          }}
-                                          style={{
-                                            position: 'absolute',
-                                            top: 2,
-                                            right: 2,
-                                            zIndex: 50,
-                                            background: 'rgba(255,255,255,0.7)',
-                                            borderRadius: 4,
-                                            // display: 'none', // SUPPRIMÉ
-                                          }}
-                                          className="hidden group-hover:inline-block hover:bg-red-100"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-red-600" />
-                                        </button>
-                                      </div>
-                                    );
-                                  });
-                                })()}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </>
+                      </div>
                     )}
                   </div>
-                </div>
+                </section>
               </>
             )}
             {viewMode === 'person' && (

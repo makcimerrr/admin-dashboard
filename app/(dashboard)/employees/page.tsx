@@ -32,6 +32,7 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true)
   const [newEmployee, setNewEmployee] = useState({
     name: "",
+    initial: "",
     role: "",
     email: "",
     phone: "",
@@ -89,7 +90,7 @@ export default function EmployeesPage() {
       if (response.ok) {
         const employee = await response.json()
         setEmployees([...employees, employee])
-        setNewEmployee({ name: "", role: "", email: "", phone: "" })
+        setNewEmployee({ name: "", initial: "", role: "", email: "", phone: "" })
         setShowAddDialog(false)
         toast({
           title: "Succès",
@@ -228,6 +229,15 @@ export default function EmployeesPage() {
                 />
               </div>
               <div>
+                <Label htmlFor="name">Initiales *</Label>
+                <Input
+                  id="initials"
+                  value={newEmployee.initial}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, initial: e.target.value })}
+                  placeholder="Ex: JED"
+                />
+              </div>
+              <div>
                 <Label htmlFor="role">Poste *</Label>
                 <Input
                   id="role"
@@ -358,6 +368,14 @@ export default function EmployeesPage() {
                   id="edit-name"
                   value={editingEmployee.name}
                   onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-name">Initiales *</Label>
+                <Input
+                  id="edit-initial"
+                  value={editingEmployee.initial}
+                  onChange={(e) => setEditingEmployee({ ...editingEmployee, initial: e.target.value })}
                 />
               </div>
               <div>
