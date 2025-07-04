@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
 
     const employee = await createEmployee({
       name: data.name.trim(),
+      initial: data.initial.trim(),
       role: data.role.trim(),
       avatar: data.avatar || "/placeholder.svg?height=40&width=40",
       color: data.color,

@@ -20,7 +20,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const data = await request.json()
 
     // Validation des données modifiées
-    if (data.name || data.role || data.email || data.color) {
+    if (data.name || data.initial || data.role || data.email || data.color) {
       const currentEmployee = await getEmployee(params.id)
       if (!currentEmployee) {
         return NextResponse.json({ error: "Employee not found" }, { status: 404 })
@@ -28,6 +28,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
       const validationData = {
         name: data.name || currentEmployee.name,
+        initial: data.initial || currentEmployee.initial,
         role: data.role || currentEmployee.role,
         email: data.email || currentEmployee.email,
         color: data.color || currentEmployee.color,
