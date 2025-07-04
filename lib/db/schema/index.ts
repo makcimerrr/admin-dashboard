@@ -3,3 +3,4 @@ export * from './users';
 export * from './promotions';
 export * from './students';
 export * from './updates';
+export * from './hackatonWeeks';
