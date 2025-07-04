@@ -7,7 +7,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/components/hooks/use-toast"
-import { Calendar as CalendarIcon, Clock, Users, PhoneCall, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2, Edit, LayoutTemplate } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Users, PhoneCall, ChevronLeft, ChevronRight, Grid, List, Settings, Loader2, Home, Copy, Plus, Trash2, Edit, LayoutTemplate,
+  EyeIcon,
+  EyeOffIcon
+} from "lucide-react"
 import { Separator } from "@radix-ui/react-separator"
 import Link from "next/link"
 import { getWeekDates, getWeekNumber, getWeekKey, formatDate, EMPLOYEE_COLORS } from "@/lib/db/utils"
@@ -479,7 +482,7 @@ function EmployeeManagementView({
           <Label>Employés concernés</Label>
           <div className="flex flex-wrap gap-3 mt-2">
             {employees.map(emp => (
-              <label key={emp.id} className="flex items-center gap-2 px-3 py-1 rounded border cursor-pointer bg-white shadow-sm">
+              <label key={emp.id} className="flex items-center gap-2 px-3 py-1 rounded border cursor-pointer shadow-sm">
                 <input
                   type="checkbox"
                   checked={selectedEmployeesForTemplate.includes(emp.id)}
@@ -897,7 +900,7 @@ function EmployeeManagementView({
                                                 {endDate ? format(endDate, "PPP", { locale: fr }) : "Sélectionner une date"}
                                               </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start" side="bottom" sideOffset={8}>
+                                            <PopoverContent className="w-[340px] p-4 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" align="center">
                                               <Calendar
                                                 mode="single"
                                                 selected={endDate || undefined}
@@ -1891,24 +1894,32 @@ export default function PlanningPage() {
     setCalendarTemplateOpen(false);
   };
 
-  // Semaine hackaton : état par semaine (persistant)
-  const [hackatonWeeks, setHackatonWeeks] = useState<{ [weekKey: string]: boolean }>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('hackatonWeeks');
-        if (saved) return JSON.parse(saved);
-      } catch {}
-    }
-    return {};
-  });
+  // Semaine hackaton : état par semaine (persistant via API)
+  const [hackatonWeeks, setHackatonWeeks] = useState<{ [weekKey: string]: boolean }>({});
   const isHackaton = !!hackatonWeeks[currentWeekKey];
 
-  // Persistance localStorage
+  // Charge l'état hackaton pour la semaine courante
   useEffect(() => {
-    try {
-      localStorage.setItem('hackatonWeeks', JSON.stringify(hackatonWeeks));
-    } catch {}
-  }, [hackatonWeeks]);
+    let cancelled = false;
+    fetch(`/api/hackaton-week?weekKey=${currentWeekKey}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!cancelled && typeof data.isHackaton === 'boolean') {
+          setHackatonWeeks(weeks => ({ ...weeks, [currentWeekKey]: data.isHackaton }));
+        }
+      });
+    return () => { cancelled = true; };
+  }, [currentWeekKey]);
+
+  // Toggle hackaton (API)
+  const handleToggleHackaton = (checked: boolean) => {
+    setHackatonWeeks(weeks => ({ ...weeks, [currentWeekKey]: checked }));
+    fetch('/api/hackaton-week', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weekKey: currentWeekKey, isHackaton: checked })
+    });
+  };
 
   // Heures dynamiques selon mode hackaton
   const calendarHours = isHackaton
@@ -1965,7 +1976,7 @@ export default function PlanningPage() {
           <input
             type="checkbox"
             checked={isHackaton}
-            onChange={e => setHackatonWeeks(weeks => ({ ...weeks, [currentWeekKey]: e.target.checked }))}
+            onChange={e => handleToggleHackaton(e.target.checked)}
             className="accent-pink-600 w-5 h-5"
           />
           <span className="font-semibold text-pink-600">Semaine hackaton (horaires étendus)</span>
@@ -2032,7 +2043,7 @@ export default function PlanningPage() {
                     return (
                       <div
                         key={employee.id}
-                        className="flex items-center gap-2 cursor-move px-3 py-1 rounded-lg bg-white shadow border border-muted/40 hover:shadow-md transition-all"
+                        className="flex items-center gap-2 cursor-move px-3 py-1 rounded-lg shadow border border-muted/40 hover:shadow-md transition-all"
                         draggable
                         onDragStart={e => {
                           e.dataTransfer.setData('employeeId', employee.id);
@@ -2056,7 +2067,7 @@ export default function PlanningPage() {
                             shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40`}
                           style={{ fontSize: 18 }}
                         >
-                          {isVisible ? '👁️' : '🚫'}
+                          {isVisible ? <EyeIcon className="w-4 h-4"/> : <EyeOffIcon className="w-4 h-4"/>}
                         </button>
                       </div>
                     );
@@ -2071,7 +2082,7 @@ export default function PlanningPage() {
                         Semaine type
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[340px] p-4" align="end">
+                    <PopoverContent className="w-[340px] p-4 fixed top-1/2 right-1/2 -translate-x-1/2 -translate-y-1/2 z-50 shadow-lg rounded-md" align="center">
                       <div className="mb-2 font-semibold flex items-center gap-2">
                         <LayoutTemplate className="h-5 w-5" />
                         Appliquer un modèle à la semaine
@@ -2089,7 +2100,7 @@ export default function PlanningPage() {
                       <div className="mb-2 text-sm font-medium">Employés concernés</div>
                       <div className="flex flex-wrap gap-2 mb-3">
                         {employees.map(emp => (
-                          <label key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded border cursor-pointer bg-white shadow-sm">
+                          <label key={emp.id} className="flex items-center gap-2 px-2 py-1 rounded border cursor-pointer shadow-sm">
                             <input
                               type="checkbox"
                               checked={calendarSelectedEmployees.includes(emp.id)}

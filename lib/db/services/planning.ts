@@ -1,5 +1,8 @@
 import type { Schedule, TimeSlot, CreateScheduleData } from "../schema/planning"
 import { validateScheduleData, calculateTotalWorkHours, detectTimeConflicts } from "../schema/planning"
+import { hackatonWeeks } from "../schema/hackatonWeeks"
+import { db } from "../config"
+import { eq } from "drizzle-orm"
 
 // Interface pour le service planning (à implémenter avec la vraie DB)
 export interface PlanningService {
@@ -309,4 +312,21 @@ export const exportWeekScheduleToCSV = async (weekKey: string): Promise<string> 
   })
 
   return [headers, ...rows].map((row) => row.join(",")).join("\n")
+}
+
+export async function getHackatonWeek(weekKey: string) {
+  const result = await db.select().from(hackatonWeeks).where(eq(hackatonWeeks.weekKey, weekKey)).limit(1);
+  return result[0] || null;
+}
+
+export async function setHackatonWeek(weekKey: string, isHackaton: boolean) {
+  const existing = await getHackatonWeek(weekKey);
+  if (existing) {
+    await db.update(hackatonWeeks)
+      .set({ isHackaton, updatedAt: new Date() })
+      .where(eq(hackatonWeeks.weekKey, weekKey));
+  } else {
+    await db.insert(hackatonWeeks)
+      .values({ weekKey, isHackaton, updatedAt: new Date() });
+  }
 }
