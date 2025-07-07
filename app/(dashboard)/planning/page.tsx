@@ -1929,35 +1929,35 @@ export default function PlanningPage() {
   return (
     <div className="space-y-6 overflow-x-hidden">
       {/* Header harmonisé */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <LayoutTemplate className="h-8 w-8 text-blue-600" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <LayoutTemplate className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600" />
             Planning
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Gérez les plannings de votre équipe</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Gérez les plannings de votre équipe</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href="/planning">
-            <Button variant="default">
+            <Button variant="default" className="w-full sm:w-auto text-sm h-10">
               <LayoutTemplate className="h-4 w-4 mr-2" />
               Planning
             </Button>
           </Link>
           <Link href="/planning/absences">
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto text-sm h-10">
               <CalendarIcon className="h-4 w-4 mr-2" />
               Absences
             </Button>
           </Link>
           <Link href="/planning/extraction">
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto text-sm h-10">
               <LayoutTemplate className="h-4 w-4 mr-2" />
               Extraction
             </Button>
           </Link>
           <Link href="/employees">
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto text-sm h-10">
               <Users className="h-4 w-4 mr-2" />
               Employés
             </Button>
@@ -1965,14 +1965,14 @@ export default function PlanningPage() {
         </div>
       </div>
       {/* Hackaton toggle + semaine selector */}
-      <div className="flex items-center gap-4 mb-2">
+      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-2">
         <WeekSelector
           currentWeekOffset={currentWeekOffset}
           setCurrentWeekOffset={setCurrentWeekOffset}
           currentWeekDates={currentWeekDates}
           weekNumber={weekNumber}
         />
-        <label className="flex items-center gap-2 ml-4 cursor-pointer select-none">
+        <label className="flex items-center gap-2 ml-0 sm:ml-4 cursor-pointer select-none text-xs sm:text-base">
           <input
             type="checkbox"
             checked={isHackaton}
@@ -1983,31 +1983,30 @@ export default function PlanningPage() {
         </label>
       </div>
       {/* Contenu principal dans un conteneur harmonisé */}
-      <div className="rounded-lg border bg-background p-6">
+      <div className="rounded-lg border bg-background p-2 sm:p-6">
         <Tabs defaultValue="calendar" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-xl">
+          <TabsList className="grid w-full grid-cols-3 max-w-xl text-xs sm:text-base">
             <TabsTrigger value="calendar" className="flex items-center gap-2">
               <Grid className="h-4 w-4" />
-              Calendrier
+              <span className="hidden xs:inline">Calendrier</span>
             </TabsTrigger>
             <TabsTrigger value="management" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Gestion
+              <span className="hidden xs:inline">Gestion</span>
             </TabsTrigger>
             <TabsTrigger value="table" className="flex items-center gap-2">
               <List className="h-4 w-4" />
-              Tableau
+              <span className="hidden xs:inline">Tableau</span>
             </TabsTrigger>
           </TabsList>
-
           <TabsContent value="calendar">
             {/* View mode switcher: segmented control */}
-            <div className="flex justify-end my-4">
+            <div className="flex justify-end my-2 sm:my-4">
               <div className="inline-flex rounded-md shadow-sm bg-muted p-1">
                 <Button
                   variant={viewMode === 'calendar' ? 'default' : 'ghost'}
                   onClick={() => setViewMode('calendar')}
-                  className="rounded-l-md flex items-center gap-2"
+                  className="rounded-l-md flex items-center gap-2 text-xs sm:text-base"
                   aria-pressed={viewMode === 'calendar'}
                 >
                   <Grid className="h-4 w-4" />
@@ -2016,7 +2015,7 @@ export default function PlanningPage() {
                 <Button
                   variant={viewMode === 'person' ? 'default' : 'ghost'}
                   onClick={() => setViewMode('person')}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-xs sm:text-base"
                   aria-pressed={viewMode === 'person'}
                 >
                   <Users className="h-4 w-4" />
@@ -2025,7 +2024,7 @@ export default function PlanningPage() {
                 <Button
                   variant={viewMode === 'slot' ? 'default' : 'ghost'}
                   onClick={() => setViewMode('slot')}
-                  className="rounded-r-md flex items-center gap-2"
+                  className="rounded-r-md flex items-center gap-2 text-xs sm:text-base"
                   aria-pressed={viewMode === 'slot'}
                 >
                   <Clock className="h-4 w-4" />
@@ -2037,22 +2036,22 @@ export default function PlanningPage() {
             {viewMode === 'calendar' && (
               <>
                 {/* Légende des employés */}
-                <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted rounded-lg">
+                <div className="flex flex-wrap gap-2 sm:gap-4 mb-4 sm:mb-6 p-2 sm:p-4 bg-muted rounded-lg">
                   {employees.map((employee) => {
                     const isVisible = visibleEmployeeIds.includes(employee.id);
                     return (
                       <div
                         key={employee.id}
-                        className="flex items-center gap-2 cursor-move px-3 py-1 rounded-lg shadow border border-muted/40 hover:shadow-md transition-all"
+                        className="flex items-center gap-2 cursor-move px-2 py-1 sm:px-3 sm:py-1 rounded-lg shadow border border-muted/40 hover:shadow-md transition-all text-xs sm:text-sm"
                         draggable
                         onDragStart={e => {
                           e.dataTransfer.setData('employeeId', employee.id);
                         }}
                         style={{ opacity: isVisible ? 1 : 0.5 }}
                       >
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: employee.color }} />
-                        <span className="text-sm font-medium">{employee.name}</span>
-                        <span className="text-xs text-muted-foreground">({getTotalHoursForWeek(employee.id)}h)</span>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: employee.color }} />
+                        <span className="font-medium">{employee.name}</span>
+                        <span className="hidden sm:inline text-xs text-muted-foreground">({getTotalHoursForWeek(employee.id)}h)</span>
                         {/* Toggle visibility button */}
                         <button
                           type="button"
@@ -2062,10 +2061,10 @@ export default function PlanningPage() {
                               isVisible ? ids.filter(id => id !== employee.id) : [...ids, employee.id]
                             );
                           }}
-                          className={`ml-2 flex items-center justify-center w-8 h-8 rounded-full border transition-all duration-150
+                          className={`ml-2 flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-all duration-150
                             ${isVisible ? 'bg-blue-100 border-blue-400 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 border-gray-300 text-gray-400 hover:bg-gray-200'}
                             shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40`}
-                          style={{ fontSize: 18 }}
+                          style={{ fontSize: 16 }}
                         >
                           {isVisible ? <EyeIcon className="w-4 h-4"/> : <EyeOffIcon className="w-4 h-4"/>}
                         </button>
@@ -2077,12 +2076,12 @@ export default function PlanningPage() {
                 <div className="flex justify-end mb-2">
                   <Popover open={calendarTemplateOpen} onOpenChange={setCalendarTemplateOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" className="flex items-center gap-2 text-xs sm:text-base">
                         <LayoutTemplate className="h-4 w-4" />
                         Semaine type
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[340px] p-4 fixed top-1/2 right-1/2 -translate-x-1/2 -translate-y-1/2 z-50 shadow-lg rounded-md" align="center">
+                    <PopoverContent className="w-[95vw] max-w-[340px] p-2 sm:p-4 fixed top-1/2 right-1/2 -translate-x-1/2 -translate-y-1/2 z-50 shadow-lg rounded-md" align="center">
                       <div className="mb-2 font-semibold flex items-center gap-2">
                         <LayoutTemplate className="h-5 w-5" />
                         Appliquer un modèle à la semaine
@@ -2179,7 +2178,7 @@ export default function PlanningPage() {
                         <div className="mb-2">
                           <div className="font-bold text-lg mb-1">Semaine complète (lundi à dimanche)</div>
                           {/* Header sticky pour tous les jours */}
-                          <div className="grid grid-cols-[50px_repeat(7,minmax(260px,1fr))] gap-1 mb-0 sticky top-0 z-20 bg-background w-full min-w-[2150px]">
+                          <div className="grid grid-cols-[40px_repeat(7,minmax(160px,1fr))] md:grid-cols-[50px_repeat(7,minmax(260px,1fr))] gap-1 mb-0 sticky top-0 z-20 bg-background w-full min-w-full md:min-w-[2150px]">
                             <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
                             {daysOfWeek.map((day, dayIndex) => {
                               const dateStr = currentWeekDates[dayIndex].toISOString().slice(0, 10);
@@ -2236,7 +2235,7 @@ export default function PlanningPage() {
                             })}
                           </div>
                           {/* Grille des créneaux pour tous les jours */}
-                          <div className="grid grid-cols-[50px_repeat(7,minmax(260px,1fr))] gap-1 mb-2 w-full min-w-[2150px]">
+                          <div className="grid grid-cols-[40px_repeat(7,minmax(160px,1fr))] md:grid-cols-[50px_repeat(7,minmax(260px,1fr))] gap-1 mb-2 w-full min-w-full md:min-w-[2150px]">
                             <div className="space-y-1">
                               {calendarHours.map((hour) => (
                                 <div key={hour} className="h-16 p-2 text-center text-base text-muted-foreground font-semibold w-[50px] min-w-[50px] max-w-[50px]">
@@ -2485,9 +2484,9 @@ export default function PlanningPage() {
               </>
             )}
             {viewMode === 'person' && (
-              <div className="p-6 bg-muted rounded-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Vue par personne</h2>
+              <div className="p-2 sm:p-6 bg-muted rounded-lg">
+                <div className="flex flex-col sm:flex-row items-center justify-between mb-2 sm:mb-4 gap-2 sm:gap-0">
+                  <h2 className="text-lg sm:text-xl font-bold">Vue par personne</h2>
                   <WeekSelector
                     currentWeekOffset={currentWeekOffset}
                     setCurrentWeekOffset={setCurrentWeekOffset}
@@ -2495,27 +2494,27 @@ export default function PlanningPage() {
                     weekNumber={weekNumber}
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6">
                   {employees.map((employee) => (
-                    <div key={employee.id} className="bg-background rounded-lg shadow p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Avatar className="h-10 w-10">
+                    <div key={employee.id} className="bg-background rounded-lg shadow p-2 sm:p-4">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                           <AvatarImage src={`https://avatar.vercel.sh/${employee.id}.png`} alt={employee.name} />
-                          <AvatarFallback className="text-lg">{employee.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
+                          <AvatarFallback className="text-base sm:text-lg">{employee.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <div className="font-bold text-lg">{employee.name}</div>
-                          <div className="text-sm text-muted-foreground">{employee.role}</div>
+                          <div className="font-bold text-base sm:text-lg">{employee.name}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground">{employee.role}</div>
                         </div>
                       </div>
-                      <div className="space-y-2 mt-2">
+                      <div className="space-y-1 sm:space-y-2 mt-2">
                         {daysOfWeek.map((day, i) => {
                           const slots = getEmployeeScheduleForDay(employee.id, day);
                           // Ne pas afficher les congés sur samedi/dimanche
                           const filteredSlots = (day === 'samedi' || day === 'dimanche') ? slots.filter(s => s.type !== 'vacation') : slots;
                           return (
-                            <div key={day} className="flex items-center gap-2">
-                              <span className="w-20 font-medium">{day}</span>
+                            <div key={day} className="flex items-center gap-2 text-xs sm:text-sm">
+                              <span className="w-16 sm:w-20 font-medium">{day}</span>
                               {filteredSlots.length === 0 ? (
                                 <span className="text-muted-foreground">Repos</span>
                               ) : (
@@ -2533,9 +2532,9 @@ export default function PlanningPage() {
               </div>
             )}
             {viewMode === 'slot' && (
-              <div className="p-6 bg-muted rounded-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold">Vue par créneau</h2>
+              <div className="p-2 sm:p-6 bg-muted rounded-lg">
+                <div className="flex flex-col sm:flex-row items-center justify-between mb-2 sm:mb-4 gap-2 sm:gap-0">
+                  <h2 className="text-lg sm:text-xl font-bold">Vue par créneau</h2>
                   <WeekSelector
                     currentWeekOffset={currentWeekOffset}
                     setCurrentWeekOffset={setCurrentWeekOffset}
@@ -2543,20 +2542,20 @@ export default function PlanningPage() {
                     weekNumber={weekNumber}
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6">
                   {daysOfWeek.map((day, i) => {
                     const slots = getOverlappingTimeSlots(day);
                     // Ne pas afficher les congés sur samedi/dimanche
                     const filteredSlots = (day === 'samedi' || day === 'dimanche') ? slots.filter(({slot}) => slot.type !== 'vacation') : slots;
                     return (
-                      <div key={day} className="bg-background rounded-lg shadow p-4">
-                        <div className="font-bold text-lg mb-2">{day} ({formatDate(currentWeekDates[i])})</div>
+                      <div key={day} className="bg-background rounded-lg shadow p-2 sm:p-4">
+                        <div className="font-bold text-base sm:text-lg mb-2">{day} ({formatDate(currentWeekDates[i])})</div>
                         {filteredSlots.length === 0 ? (
                           <span className="text-muted-foreground">Aucun créneau</span>
                         ) : (
                           filteredSlots.map(({ employee, slot }, idx) => (
-                            <div key={idx} className="flex items-center gap-2 mb-1">
-                              <Avatar className="h-6 w-6">
+                            <div key={idx} className="flex items-center gap-2 mb-1 text-xs sm:text-sm">
+                              <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
                                 <AvatarImage src={`https://avatar.vercel.sh/${employee.id}.png`} alt={employee.name} />
                                 <AvatarFallback className="text-xs">{employee.name.split(" ").map((n) => n[0]).join("")}</AvatarFallback>
                               </Avatar>
@@ -2594,7 +2593,9 @@ export default function PlanningPage() {
           </TabsContent>
 
           <TabsContent value="table">
-            <TableView />
+            <div className="overflow-x-auto">
+              <TableView />
+            </div>
           </TabsContent>
         </Tabs>
       </div>
