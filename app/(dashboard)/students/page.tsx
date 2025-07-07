@@ -1,10 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getStudents } from '@/lib/db/services/students';
 import { StudentsTable } from '../students-table';
-// import promos from 'config/promoConfig.json' assert { type: 'json' };
+import promos from 'config/promoConfig.json' assert { type: 'json' };
 import ClientImport from '@/components/clien-import';
 import AddStudent from '@/components/add-student'; // Import tel quel du tableau
-import React, { useEffect, useState } from 'react';
 
 interface Promo {
   key: string;
@@ -12,15 +11,13 @@ interface Promo {
   title: string;
 }
 
-export default function StudentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const [promos, setPromos] = useState<Promo[]>([]);
-  const [resolvedParams, setResolvedParams] = useState<Record<string, string | undefined>>({});
-  useEffect(() => {
-    fetch('/api/promos')
-      .then((res) => res.json())
-      .then((data) => setPromos(data.promos));
-    searchParams.then(setResolvedParams);
-  }, [searchParams]);
+
+interface StudentsPageProps {
+  searchParams: Promise<Record<string, string | undefined>>;
+}
+
+export default async function StudentsPage({ searchParams }: StudentsPageProps) {
+  const resolvedParams = await searchParams;
   const { q = '', offset = '0', promo = '' } = resolvedParams;
   const search = q;
   const offsetNumber = Number(offset);

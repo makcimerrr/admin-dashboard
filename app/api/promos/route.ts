@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getAllPromoConfig, upsertPromoConfig, deletePromoConfig } from '@/lib/db/services/promoConfig';
+import fs from 'fs';
+import path from 'path';
+import { addPromotion, deletePromotion } from '@/lib/db/services/promotions';
+
+const promoFilePath = path.join(process.cwd(), 'config', 'promoConfig.json');
+
+function getExistingPromos() {
+  return JSON.parse(fs.readFileSync(promoFilePath, 'utf8'));
+}
 
 function isDateValid(date: string): boolean {
   return !isNaN(Date.parse(date));
@@ -13,22 +21,11 @@ function isDateInRange(date: string, start: string, end: string): boolean {
 
 export async function GET(req: Request) {
   try {
-    const promos = await getAllPromoConfig();
-    // Adapter le format pour inclure les dates imbriquées comme dans l'ancien JSON
-    const formattedPromos = promos.map((promo: any) => ({
-      key: promo.key,
-      eventId: promo.eventId,
-      title: promo.title,
-      dates: {
-        start: promo.start,
-        'piscine-js-start': promo.piscineJsStart || 'NaN',
-        'piscine-js-end': promo.piscineJsEnd || 'NaN',
-        'piscine-rust-start': promo.piscineRustStart || 'NaN',
-        'piscine-rust-end': promo.piscineRustEnd || 'NaN',
-        end: promo.end,
-      },
-    }));
-    return NextResponse.json({ promos: formattedPromos }, { status: 200 });
+    // Retrieve existing promotions
+    const promos = getExistingPromos();
+
+    // Send the promotions as a response
+    return NextResponse.json({ promos }, { status: 200 });
   } catch (error) {
     console.error('Erreur lors de la récupération des promos :', error);
     return NextResponse.json(
@@ -123,21 +120,57 @@ export async function POST(req: Request) {
       );
     }
 
-    // Upsert la promotion dans la base de données
-    await upsertPromoConfig({
+    // Ajout de la promotion après validation dans la base de données
+    const dbResult = await addPromotion(eventId, key);
+
+    if (dbResult.includes('existe déjà')) {
+      return NextResponse.json(
+        { error: `Une promotion avec cet ID ou ce titre existe déjà dans la base de données.` },
+        { status: 400 }
+      );
+    }
+
+    // Ajout de la promotion après validation
+    const promoToAdd = {
       key,
       eventId: Number(eventId),
       title,
-      start,
-      piscineJsStart: piscineJsStart !== 'NaN' ? piscineJsStart : null,
-      piscineJsEnd: piscineJsEnd !== 'NaN' ? piscineJsEnd : null,
-      piscineRustStart: piscineRustStart !== 'NaN' ? piscineRustStart : null,
-      piscineRustEnd: piscineRustEnd !== 'NaN' ? piscineRustEnd : null,
-      end,
-    });
+      dates: {
+        start,
+        'piscine-js-start': piscineJsStart || 'NaN',
+        'piscine-js-end': piscineJsEnd || 'NaN',
+        'piscine-rust-start': piscineRustStart || 'NaN',
+        'piscine-rust-end': piscineRustEnd || 'NaN',
+        end,
+      },
+    };
+
+    const promos = getExistingPromos();
+
+    // Vérification des conflits
+    const existingPromo = promos.find(
+      (promo: { key: string; eventId: number; title: string }) =>
+        promo.key === key || promo.eventId === Number(eventId) || promo.title === title
+    );
+
+    if (existingPromo) {
+      const conflictField = existingPromo.key === key
+        ? 'key'
+        : existingPromo.eventId === Number(eventId)
+          ? 'eventId'
+          : 'title';
+
+      return NextResponse.json(
+        { error: `Une promotion avec le même ${conflictField} existe déjà.` },
+        { status: 400 }
+      );
+    }
+
+    promos.push(promoToAdd);
+    fs.writeFileSync(promoFilePath, JSON.stringify(promos, null, 2));
 
     return NextResponse.json(
-      { message: 'Promotion ajoutée ou mise à jour avec succès.' },
+      { message: 'Promotion ajoutée avec succès.' },
       { status: 200 }
     );
   } catch (error) {
@@ -160,7 +193,29 @@ export async function DELETE(req: Request) {
       );
     }
 
-    await deletePromoConfig(key);
+    const promos = getExistingPromos();
+    const promoIndex = promos.findIndex(
+      (promo: { key: string }) => promo.key === key
+    );
+
+    if (promoIndex === -1) {
+      return NextResponse.json(
+        { error: 'Aucune promotion trouvée avec cette clé.' },
+        { status: 404 }
+      );
+    }
+
+    const dbResult = await deletePromotion(key);
+
+    if (dbResult.includes('n\'existe pas')) {
+      return NextResponse.json(
+        { error: 'La promotion n\'existe pas dans la base de données.' },
+        { status: 404 }
+      );
+    }
+
+    promos.splice(promoIndex, 1);
+    fs.writeFileSync(promoFilePath, JSON.stringify(promos, null, 2));
 
     return NextResponse.json(
       { message: 'Promotion supprimée avec succès.' },
