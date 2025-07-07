@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getEmployees, createEmployee, emailExists } from "@/lib/db/services/employees"
 import { validateEmployeeData, getNextAvailableColor } from "@/lib/db/utils"
+import { addHistoryEntry } from '@/lib/db/services/history'
 
 export async function GET() {
   try {
@@ -15,6 +16,8 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json()
+    const userId = request.headers.get('x-user-id') || 'unknown';
+    const userEmail = request.headers.get('x-user-email') || 'unknown';
 
     // Validation
     const errors = validateEmployeeData(data)
@@ -43,6 +46,16 @@ export async function POST(request: NextRequest) {
       email: data.email.toLowerCase().trim(),
       phone: data.phone || "",
     })
+
+    // Audit
+    await addHistoryEntry({
+      type: 'employee',
+      action: 'create',
+      userId,
+      userEmail,
+      entityId: employee.id,
+      details: { payload: employee },
+    });
 
     return NextResponse.json(employee, { status: 201 })
   } catch (error) {

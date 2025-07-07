@@ -8,16 +8,20 @@ import {
 import clsx from 'clsx';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ReactNode } from 'react';
 
 export function NavItem({
   href,
   label,
-  children
+  children,
+  hidden
 }: {
   href: string;
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
+  hidden?: boolean;
 }) {
+  if (hidden) return null;
   const pathname = usePathname();
 
   return (
@@ -31,6 +35,7 @@ export function NavItem({
               'bg-accent text-black': pathname === href
             }
           )}
+          title={label}
         >
           {children}
           <span className="sr-only">{label}</span>

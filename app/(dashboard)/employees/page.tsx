@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useToast } from "@/components/hooks/use-toast"
-import { Users, Plus, Trash2, Edit, Home, Calendar, LayoutTemplate } from "lucide-react"
+import { Users, Plus, Trash2, Edit, Home, Calendar, LayoutTemplate, Clock } from "lucide-react"
 import Link from "next/link"
 import type { Employee } from "@/lib/db/schema/employees"
 import { Separator } from "@radix-ui/react-separator"
+import { useSession } from 'next-auth/react'
 
 const colors = [
   "#3B82F6",
@@ -41,6 +42,8 @@ export default function EmployeesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const { toast } = useToast()
+  const { data: session } = useSession()
+  const planningPermission = session?.user?.planningPermission || 'reader'
 
   useEffect(() => {
     fetchEmployees()
@@ -197,19 +200,26 @@ export default function EmployeesPage() {
               Extraction
             </Button>
           </Link>
-          <Link href="/employees">
-            <Button variant="default">
-              <Users className="h-4 w-4 mr-2" />
-              Employés
-            </Button>
-          </Link>
+          {planningPermission === 'editor' && (
+            <Link href="/history">
+              <Button variant="outline">
+                <Clock className="h-4 w-4 mr-2" />
+                History
+              </Button>
+            </Link>
+          )}
         </div>
+      </div>
+      {/* Badge droits planning */}
+      <div className="mb-2 flex items-center gap-2">
+        <span className="font-semibold">Droits planning :</span>
+        <span className={`px-2 py-1 rounded text-xs font-bold ${planningPermission === 'editor' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</span>
       </div>
       {/* Bouton Ajouter un Employé aligné à droite sous le header */}
       <div className="flex justify-end mb-2">
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="font-semibold" variant="default">
+            <Button className="font-semibold" variant="default" disabled={planningPermission !== 'editor'} title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}>
               <Plus className="h-4 w-4 mr-2" />
               Ajouter un Employé
             </Button>
@@ -295,7 +305,7 @@ export default function EmployeesPage() {
             <div className="text-center py-8">
               <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">Aucun employé pour le moment</p>
-              <Button onClick={() => setShowAddDialog(true)}>
+              <Button onClick={() => setShowAddDialog(true)} disabled={planningPermission !== 'editor'} title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}>
                 <Plus className="h-4 w-4 mr-2" />
                 Ajouter le premier employé
               </Button>
@@ -323,6 +333,8 @@ export default function EmployeesPage() {
                           setEditingEmployee(employee)
                           setShowEditDialog(true)
                         }}
+                        disabled={planningPermission !== 'editor'}
+                        title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -330,6 +342,8 @@ export default function EmployeesPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDeleteEmployee(employee.id)}
+                        disabled={planningPermission !== 'editor'}
+                        title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

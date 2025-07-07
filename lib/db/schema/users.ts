@@ -7,5 +7,6 @@ export const users = pgTable('users', {
     name: varchar('name', { length: 255 }),
     username: varchar('username', { length: 255 }),
     password: varchar('password', { length: 255 }),
-    role: varchar('role', { length: 50 }).default('user')
+    role: varchar('role', { length: 50 }).default('user'),
+    planningPermission: varchar('planning_permission', { length: 20 }).default('reader')
 });

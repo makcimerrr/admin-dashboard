@@ -29,7 +29,8 @@ import {
   Plus,
   Calendar,
   Users,
-  LayoutTemplate
+  LayoutTemplate,
+  Clock
 } from 'lucide-react';
 import {
   Dialog,
@@ -43,6 +44,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Link from 'next/link';
 import { toast as sonnerToast } from 'sonner';
+import { useSession } from 'next-auth/react';
 
 const slotTypeConfig = {
   vacation: { label: 'Congés' },
@@ -189,6 +191,8 @@ export default function AbsencesPage() {
     search: ''
   });
   const { toast } = useToast();
+  const { data: session } = useSession();
+  const planningPermission = session?.user?.planningPermission || 'reader';
 
   // Ajout d'absence
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -428,11 +432,9 @@ export default function AbsencesPage() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Calendar className="h-8 w-8 text-blue-600" />
-            Absences
+            Gestion des Absences
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gérez les absences de votre équipe
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">Ajoutez et gérez les absences de votre équipe</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/planning">
@@ -442,7 +444,7 @@ export default function AbsencesPage() {
             </Button>
           </Link>
           <Link href="/planning/absences">
-            <Button variant="default">
+            <Button variant="outline">
               <Calendar className="h-4 w-4 mr-2" />
               Absences
             </Button>
@@ -459,7 +461,19 @@ export default function AbsencesPage() {
               Employés
             </Button>
           </Link>
+          {planningPermission === 'editor' && (
+            <Link href="/history">
+              <Button variant="outline">
+                <Clock className="h-4 w-4 mr-2" />
+                History
+              </Button>
+            </Link>
+          )}
         </div>
+      </div>
+      <div className="mb-2 flex items-center gap-2">
+        <span className="font-semibold">Droits planning :</span>
+        <span className={`px-2 py-1 rounded text-xs font-bold ${planningPermission === 'editor' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</span>
       </div>
       {/* Contenu principal dans un conteneur harmonisé */}
       <div className="rounded-lg border bg-background p-6">
@@ -470,6 +484,8 @@ export default function AbsencesPage() {
                 <Button
                   variant="default"
                   onClick={() => setAddDialogOpen(true)}
+                  disabled={planningPermission !== 'editor'}
+                  title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter une absence
@@ -817,6 +833,7 @@ export default function AbsencesPage() {
                             variant="outline"
                             title="Éditer"
                             onClick={() => openEdit(group)}
+                            disabled={planningPermission !== 'editor'}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -1037,7 +1054,7 @@ export default function AbsencesPage() {
                             variant="destructive"
                             title="Supprimer"
                             onClick={() => handleDeleteGroup(group)}
-                            disabled={editLoading}
+                            disabled={planningPermission !== 'editor'}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

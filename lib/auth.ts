@@ -6,6 +6,7 @@ import { AdapterUser as NextAuthAdapterUser } from 'next-auth/adapters';
 
 interface User extends NextAuthAdapterUser {
   role: string;
+  planningPermission: 'editor' | 'reader';
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -85,6 +86,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (response.ok) {
           (user as User).role = data.role;
+          (user as User).planningPermission = data.planningPermission;
           return true; // Return true to indicate successful sign-in
         }
         return false; // Return false to indicate failure
@@ -99,6 +101,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.email = user.email;
         token.name = user.name;
         token.role = (user as User).role;
+        token.planningPermission = (user as User).planningPermission;
       }
       return token;
     },
@@ -108,6 +111,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.email = token.email as string;
         session.user.name = token.name as string;
         session.user.role = token.role as string;
+        session.user.planningPermission = token.planningPermission as string;
       }
       return session;
     }

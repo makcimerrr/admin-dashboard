@@ -4,6 +4,7 @@ import { schedules } from "@/lib/db/schema/schedules"
 import { eq, and } from "drizzle-orm"
 import { timeSlotSchema } from "@/lib/db/schema/schedules"
 import { getWeekNumber } from "@/lib/db/utils"
+import { addHistoryEntry } from '@/lib/db/services/history';
 
 // Pour la détection des jours fériés
 const HOLIDAYS_URL = 'https://etalab.github.io/jours-feries-france-data/json/metropole.json';
@@ -72,6 +73,8 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const { employeeId, weekKey, day, timeSlots } = body
+    const userId = request.headers.get('x-user-id') || 'unknown';
+    const userEmail = request.headers.get('x-user-email') || 'unknown';
 
     // Récupérer les jours fériés
     const holidays = await getFrenchHolidays();
@@ -109,7 +112,15 @@ export async function POST(request: Request) {
         })
         .where(eq(schedules.id, existingSchedule.id))
         .returning()
-
+      // Audit
+      await addHistoryEntry({
+        type: 'planning',
+        action: 'update',
+        userId,
+        userEmail,
+        entityId: existingSchedule.id,
+        details: { before: existingSchedule, after: updatedSchedule },
+      });
       return NextResponse.json(updatedSchedule)
     } else {
       // Créer un nouveau planning
@@ -122,7 +133,15 @@ export async function POST(request: Request) {
           timeSlots: validatedTimeSlots,
         })
         .returning()
-
+      // Audit
+      await addHistoryEntry({
+        type: 'planning',
+        action: 'create',
+        userId,
+        userEmail,
+        entityId: newSchedule.id,
+        details: { payload: newSchedule },
+      });
       return NextResponse.json(newSchedule)
     }
   } catch (error) {
@@ -138,11 +157,26 @@ export async function DELETE(request: Request) {
     const employeeId = searchParams.get("employeeId")
     const weekKey = searchParams.get("weekKey")
     const day = searchParams.get("day")
+    const userId = request.headers.get('x-user-id') || 'unknown';
+    const userEmail = request.headers.get('x-user-email') || 'unknown';
 
     if (!employeeId || !weekKey || !day) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 })
     }
 
+    // Récupérer l'ancien planning pour l'audit
+    const oldSchedule = await db
+      .select()
+      .from(schedules)
+      .where(
+        and(
+          eq(schedules.employeeId, employeeId),
+          eq(schedules.weekKey, weekKey),
+          eq(schedules.day, day)
+        )
+      )
+      .limit(1)
+      .then((results) => results[0]);
     await db
       .delete(schedules)
       .where(
@@ -152,7 +186,17 @@ export async function DELETE(request: Request) {
           eq(schedules.day, day)
         )
       )
-
+    // Audit
+    if (oldSchedule) {
+      await addHistoryEntry({
+        type: 'planning',
+        action: 'delete',
+        userId,
+        userEmail,
+        entityId: oldSchedule.id,
+        details: { before: oldSchedule },
+      });
+    }
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting schedule:", error)
