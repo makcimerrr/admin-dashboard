@@ -4,6 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 import LastUpdate from '@/components/last-update';
+import promotions from '../config/promoConfig.json';
+import promoStatus from '../config/promoStatus.json';
+import allProjects from '../config/projects.json' assert { type: 'json' };
 
 interface UpdateProps {
   eventId: string;
@@ -37,7 +40,6 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [loadingDots, setLoadingDots] = useState<string>('.');
   const [lastUpdate, setLastUpdate] = useState<string | null>(null); // State pour la dernière mise à jour
   const [allUpdate, setAllUpdate] = useState<string | null>(null);
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
 
   const [updates, setUpdates] = useState<
     { last_update: string; event_id: string }[]
@@ -65,20 +67,21 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     }
   }
 
-  // Charger dynamiquement les promotions depuis l'API
-  useEffect(() => {
-    async function fetchPromos() {
-      try {
-        const response = await fetch('/api/promos');
-        if (!response.ok) throw new Error('Unable to fetch promotions');
-        const data = await response.json();
-        setPromotions(data.promos);
-      } catch (error) {
-        toast.error('Impossible de récupérer les promotions.');
+  // Récupérer dynamiquement les promotions via l'API
+  const fetchPromotions = async (): Promise<string[]> => {
+    try {
+      const response = await fetch('/api/promos'); // Chemin API pour récupérer les promotions
+      if (!response.ok) {
+        throw new Error('Unable to fetch promotions');
       }
+      const data = await response.json();
+      const promoIds = data.promos.map((promo: Promotion) => promo.eventId);
+      return promoIds; // Retourne les IDs pour une utilisation immédiate
+    } catch (error) {
+      toast.error('Impossible de récupérer les promotions.');
+      return [];
     }
-    fetchPromos();
-  }, []);
+  };
 
   //const promoEventIds = ['32', '148', '216', '303'];
   const cache = new Map<
@@ -195,131 +198,131 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
     // Trouver la promotion liée à l'eventId
     const promotion = promotions.find(
-        (promo) => promo.eventId === Number(eventId)
+      (promo) => promo.eventId === Number(eventId)
     );
     console.log('Promotion trouvée:', promotion);
     if (!promotion) return;
 
     const promotionTitle = promotion.key;
-    if (!promotionTitle) return;
+    if (!promotionTitle || !(promotionTitle in promoStatus)) return;
 
     // Projet lié à la promotion
-    const promoProject = promoProject;
+    const promoProject = promoStatus[promotionTitle as keyof typeof promoStatus];
     console.log('Projet de la promo:', promoProject);
 
     try {
-        const response = await fetch(
-            `http://localhost:8000/api/v1/promotions/${eventId}/students`
+      const response = await fetch(
+        `http://localhost:8000/api/v1/promotions/${eventId}/students`
+      );
+      if (!response.ok) {
+        throw new Error(
+          `Erreur lors de la récupération des données pour l'événement ${eventId}`
         );
-        if (!response.ok) {
-            throw new Error(
-                `Erreur lors de la récupération des données pour l'événement ${eventId}`
-            );
+      }
+      const data = await response.json();
+      console.log('Données reçues de l\'API:', data);
+
+      const userProjects: { [key: string]: any[] } = {};
+      data.progress.forEach((entry: any) => {
+        const { login } = entry.user;
+        const { name: projectName } = entry.object;
+        const { status: projectStatus, id: groupId } = entry.group;
+
+        if (!userProjects[login]) {
+          userProjects[login] = [];
         }
-        const data = await response.json();
-        console.log('Données reçues de l\'API:', data);
 
-        const userProjects: { [key: string]: any[] } = {};
-        data.progress.forEach((entry: any) => {
-            const { login } = entry.user;
-            const { name: projectName } = entry.object;
-            const { status: projectStatus, id: groupId } = entry.group;
+        userProjects[login].push({ projectName, projectStatus, groupId });
+      });
 
-            if (!userProjects[login]) {
-                userProjects[login] = [];
+      currentStudentCount = Object.keys(userProjects).length;
+      console.log('Nombre d\'étudiants trouvés:', currentStudentCount);
+
+      setTotalStudents((prev) => (prev || 0) + currentStudentCount);
+
+      for (const login in userProjects) {
+        const { commonProjects, lastProjectsFinished } =
+          findActiveProjectsByTrack(allProjectsTyped, userProjects[login]);
+
+        const { activeProject, status } = findNextActiveProject(
+          projectsList,
+          userProjects[login]
+        );
+
+        let delayLevel = '';
+
+        try {
+          if (promoProject.toLowerCase() === 'fin') {
+            if (
+              activeProject.toLowerCase() ===
+              projectsList[projectsList.length - 1].toLowerCase() &&
+              status === 'finished'
+            ) {
+              delayLevel = 'spécialité';
+            } else {
+              delayLevel = 'en retard';
             }
+          } else if (promoProject.toLowerCase() === 'spécialité') {
+            delayLevel = 'spécialité';
+          } else {
+            const promoIndex = findProjectIndex(allProjects, promoProject);
+            const studentIndex = findProjectIndex(allProjects, activeProject);
 
-            userProjects[login].push({ projectName, projectStatus, groupId });
-        });
-
-        currentStudentCount = Object.keys(userProjects).length;
-        console.log('Nombre d\'étudiants trouvés:', currentStudentCount);
-
-        setTotalStudents((prev) => (prev || 0) + currentStudentCount);
-
-        for (const login in userProjects) {
-            const { commonProjects, lastProjectsFinished } =
-                findActiveProjectsByTrack(allProjectsTyped, userProjects[login]);
-
-            const { activeProject, status } = findNextActiveProject(
-                projectsList,
-                userProjects[login]
-            );
-
-            let delayLevel = '';
-
-            try {
-                if (promoProject.toLowerCase() === 'fin') {
-                    if (
-                        activeProject.toLowerCase() ===
-                            projectsList[projectsList.length - 1].toLowerCase() &&
-                        status === 'finished'
-                    ) {
-                        delayLevel = 'spécialité';
-                    } else {
-                        delayLevel = 'en retard';
-                    }
-                } else if (promoProject.toLowerCase() === 'spécialité') {
-                    delayLevel = 'spécialité';
-                } else {
-                    const promoIndex = findProjectIndex(allProjectsTyped, promoProject);
-                    const studentIndex = findProjectIndex(allProjectsTyped, activeProject);
-
-                    if (studentIndex > promoIndex) {
-                        delayLevel = 'en avance';
-                    } else if (studentIndex < promoIndex) {
-                        delayLevel = 'en retard';
-                    } else {
-                        delayLevel = 'bien';
-                    }
-                }
-                if (
-                    activeProject.toLowerCase() ===
-                        projectsList[projectsList.length - 1].toLowerCase() &&
-                    status === 'finished'
-                ) {
-                    delayLevel = 'spécialité';
-                }
-            } catch (err) {
-                console.error(
-                    `Erreur lors du calcul du delayLevel pour ${login}:`,
-                    err
-                );
-                delayLevel = 'inconnu';
+            if (studentIndex > promoIndex) {
+              delayLevel = 'en avance';
+            } else if (studentIndex < promoIndex) {
+              delayLevel = 'en retard';
+            } else {
+              delayLevel = 'bien';
             }
-
-            if (shouldUpdate(login, activeProject, status, delayLevel)) {
-                try {
-                    console.log(`Mise à jour requise pour ${login}, envoi à l'API...`);
-                    await fetch('/api/update_project', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            login,
-                            project_name: activeProject,
-                            project_status: status,
-                            delay_level: delayLevel,
-                            last_projects_finished: lastProjectsFinished,
-                            common_projects: commonProjects,
-                            promo_name: promotionTitle
-                        })
-                    });
-                    console.log(`Mise à jour réussie pour ${login}`);
-                } catch (error) {
-                    toast.error(`Erreur de mise à jour du projet pour ${login}.`);
-                    console.error(`Erreur lors de la mise à jour du projet pour ${login}:`, error);
-                    throw error;
-                }
-            }
+          }
+          if (
+            activeProject.toLowerCase() ===
+            projectsList[projectsList.length - 1].toLowerCase() &&
+            status === 'finished'
+          ) {
+            delayLevel = 'spécialité';
+          }
+        } catch (err) {
+          console.error(
+            `Erreur lors du calcul du delayLevel pour ${login}:`,
+            err
+          );
+          delayLevel = 'inconnu';
         }
+
+        if (shouldUpdate(login, activeProject, status, delayLevel)) {
+          try {
+            console.log(`Mise à jour requise pour ${login}, envoi à l'API...`);
+            await fetch('/api/update_project', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                login,
+                project_name: activeProject,
+                project_status: status,
+                delay_level: delayLevel,
+                last_projects_finished: lastProjectsFinished,
+                common_projects: commonProjects,
+                promo_name: promotionTitle
+              })
+            });
+            console.log(`Mise à jour réussie pour ${login}`);
+          } catch (error) {
+            toast.error(`Erreur de mise à jour du projet pour ${login}.`);
+            console.error(`Erreur lors de la mise à jour du projet pour ${login}:`, error);
+            throw error;
+          }
+        }
+      }
     } catch (error) {
-        toast.error(
-            `Erreur lors de la récupération des données pour l'événement ${eventId}. Voici l'erreur: ${error}`
-        );
-        console.error('Erreur dans fetchPromotionProgress:', error);
-        throw error;
+      toast.error(
+        `Erreur lors de la récupération des données pour l'événement ${eventId}. Voici l'erreur: ${error}`
+      );
+      console.error('Erreur dans fetchPromotionProgress:', error);
+      throw error;
     }
-};
+  };
 
   const findProjectIndex = (allProjects: any, projectName: string): number => {
     let globalIndex = 0; // Compteur global pour l'indice
@@ -354,7 +357,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
       // Si eventId est 'all', récupérer toutes les promotions
       if (eventId === 'all') {
-        promoIds = promotions.map((promo) => String(promo.eventId)); // Récupère les IDs des promotions en string
+        promoIds = await fetchPromotions(); // Récupère les IDs des promotions
       }
 
       const results = await Promise.allSettled(

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import PieChart from '@/components/pie-chart-student';
 import BarChartStacked from '@/components/bar-chart-student-stacked';
-// import promos from 'config/promoConfig.json' assert { type: 'json' };
+import promos from 'config/promoConfig.json' assert { type: 'json' };
 import {
   Card,
   CardContent,
@@ -11,12 +11,6 @@ import {
 } from '@/components/ui/card';
 
 export default function AnalyticsPage() {
-  const [promos, setPromos] = useState<any[]>([]);
-  useEffect(() => {
-    fetch('/api/promos')
-      .then((res) => res.json())
-      .then((data) => setPromos(data.promos));
-  }, []);
   return (
     <Card>
       <CardHeader>
