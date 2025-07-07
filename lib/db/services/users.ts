@@ -12,6 +12,7 @@ export async function createUserInDb(user: {
     name: string;
     email: string;
     password: string;
+    planningPermission?: 'editor' | 'reader';
 }) {
     try {
         // Vérifier si l'utilisateur existe déjà dans la base de données
@@ -31,7 +32,7 @@ export async function createUserInDb(user: {
         // Insérer l'utilisateur dans la base de données
         const result = await db
             .insert(users)
-            .values({ name: user.name, email: user.email, password: passwordHash })
+            .values({ name: user.name, email: user.email, password: passwordHash, planningPermission: user.planningPermission || 'reader' })
             .execute();
 
         return { name: user.name, email: user.email };
@@ -56,7 +57,8 @@ export async function getUserFromDb(email: string, password: string) {
                 name: users.name,
                 email: users.email,
                 password: users.password,
-                role: users.role
+                role: users.role,
+                planningPermission: users.planningPermission
             })
             .from(users)
             .where(eq(users.email, email))
@@ -75,7 +77,8 @@ export async function getUserFromDb(email: string, password: string) {
                     id: userRecord.id,
                     name: userRecord.name,
                     email: userRecord.email,
-                    role: userRecord.role
+                    role: userRecord.role,
+                    planningPermission: userRecord.planningPermission
                 };
             }
         }
@@ -139,5 +142,36 @@ export async function getUserRole(email: string): Promise<string | null> {
     } catch (error) {
         console.error('Error fetching user role from database:', error);
         throw new Error('Unable to fetch user role from database.');
+    }
+}
+
+/**
+ * Retrieves a user from the database by their id.
+ * @param id - The id of the user.
+ * @returns The user object if found, or null if not found.
+ */
+export async function getUserById(id: string) {
+    try {
+        const userIdNum = Number(id);
+        if (isNaN(userIdNum)) return null;
+        const user = await db
+            .select({
+                id: users.id,
+                name: users.name,
+                email: users.email,
+                role: users.role,
+                planningPermission: users.planningPermission
+            })
+            .from(users)
+            .where(eq(users.id, userIdNum))
+            .limit(1)
+            .execute();
+        if (user.length > 0) {
+            return user[0];
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching user by id from database:', error);
+        throw new Error('Unable to fetch user by id from database.');
     }
 }

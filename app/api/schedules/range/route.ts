@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteSchedule, upsertSchedule } from '@/lib/db/services/schedules';
+import { deleteSchedule, upsertSchedule, getSchedule } from '@/lib/db/services/schedules';
 import { getWeekNumber } from '@/lib/db/utils';
+import { addHistoryEntry } from '@/lib/db/services/history';
 
 const daysOfWeek = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
 
@@ -17,6 +18,8 @@ function getDayNameFromDate(date: Date): string {
 export async function POST(req: NextRequest) {
   try {
     const { employeeId, startDate, endDate, slotType } = await req.json();
+    const userId = req.headers.get('x-user-id') || 'unknown';
+    const userEmail = req.headers.get('x-user-email') || 'unknown';
     if (!employeeId || !startDate || !endDate || !slotType) {
       return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 });
     }
@@ -31,10 +34,22 @@ export async function POST(req: NextRequest) {
       currentDate.setDate(start.getDate() + i);
       const weekKey = getWeekKeyFromDate(currentDate);
       const day = getDayNameFromDate(currentDate);
+      // Récupérer l'ancien planning pour audit
+      const oldSchedule = await getSchedule(employeeId, weekKey, day);
       // Supprime le planning existant
       await deleteSchedule(employeeId, weekKey, day);
+      if (oldSchedule) {
+        await addHistoryEntry({
+          type: 'absence',
+          action: 'delete',
+          userId,
+          userEmail,
+          entityId: oldSchedule.id,
+          details: { before: oldSchedule },
+        });
+      }
       // Crée le slot d'absence
-      await upsertSchedule({
+      const newSchedule = await upsertSchedule({
         employeeId,
         weekKey,
         day,
@@ -44,6 +59,14 @@ export async function POST(req: NextRequest) {
           isWorking: false,
           type: slotType,
         }],
+      });
+      await addHistoryEntry({
+        type: 'absence',
+        action: 'create',
+        userId,
+        userEmail,
+        entityId: newSchedule.id,
+        details: { payload: newSchedule },
       });
     }
     return NextResponse.json({ success: true });

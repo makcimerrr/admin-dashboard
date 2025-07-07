@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getEmployee, updateEmployee, deleteEmployee, emailExists } from "@/lib/db/services/employees"
 import { validateEmployeeData } from "@/lib/db/utils"
+import { addHistoryEntry } from '@/lib/db/services/history'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -18,6 +19,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const data = await request.json()
+    const userId = request.headers.get('x-user-id') || 'unknown';
+    const userEmail = request.headers.get('x-user-email') || 'unknown';
 
     // Validation des données modifiées
     if (data.name || data.initial || data.role || data.email || data.color) {
@@ -52,6 +55,16 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       email: data.email ? data.email.toLowerCase().trim() : undefined,
     })
 
+    // Audit
+    await addHistoryEntry({
+      type: 'employee',
+      action: 'update',
+      userId,
+      userEmail,
+      entityId: params.id,
+      details: { before: currentEmployee, after: employee },
+    });
+
     if (!employee) {
       return NextResponse.json({ error: "Employee not found" }, { status: 404 })
     }
@@ -65,12 +78,24 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const success = await deleteEmployee(params.id)
-
+    const userId = request.headers.get('x-user-id') || 'unknown';
+    const userEmail = request.headers.get('x-user-email') || 'unknown';
+    const currentEmployee = await getEmployee(params.id);
+    const success = await deleteEmployee(params.id);
+    // Audit
+    if (success && currentEmployee) {
+      await addHistoryEntry({
+        type: 'employee',
+        action: 'delete',
+        userId,
+        userEmail,
+        entityId: params.id,
+        details: { before: currentEmployee },
+      });
+    }
     if (!success) {
       return NextResponse.json({ error: "Employee not found" }, { status: 404 })
     }
-
     return NextResponse.json({ message: "Employee deleted successfully" })
   } catch (error) {
     console.error("Error deleting employee:", error)

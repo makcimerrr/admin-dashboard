@@ -4,6 +4,7 @@ import NextAuth from "next-auth";
 declare module "next-auth" {
     interface User {
         role?: string;
+        planningPermission?: 'editor' | 'reader';
     }
 
     interface Session {
@@ -13,6 +14,7 @@ declare module "next-auth" {
             email?: string;
             image?: string;
             role?: string;
+            planningPermission?: 'editor' | 'reader';
         };
     }
 }

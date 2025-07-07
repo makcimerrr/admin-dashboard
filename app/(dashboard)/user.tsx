@@ -47,6 +47,9 @@ export async function User() {
               {user?.role ?? 'No role assigned'}
             </DropdownMenuItem>
             <DropdownMenuItem>
+              {user?.planningPermission ?? 'No role assigned'}
+            </DropdownMenuItem>
+            <DropdownMenuItem>
               <form
                 action={async () => {
                   'use server';

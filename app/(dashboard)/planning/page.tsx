@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns"
 import { fr } from "date-fns/locale"
 import { CallStack } from 'next/dist/client/components/react-dev-overlay/ui/components/errors/call-stack/call-stack';
+import { useSession } from 'next-auth/react';
 
 // Étendre le type Employee pour inclure les plannings
 interface EmployeeWithSchedule extends Employee {
@@ -144,6 +145,7 @@ function EmployeeManagementView({
   setSchedules,
   setEmployees,
   reloadSchedules,
+  planningPermission,
 }: {
   employees: EmployeeWithSchedule[]
   currentWeekKey: string
@@ -167,6 +169,7 @@ function EmployeeManagementView({
   setSchedules: React.Dispatch<React.SetStateAction<Record<string, TimeSlot[]>>>
   setEmployees: React.Dispatch<React.SetStateAction<EmployeeWithSchedule[]>>
   reloadSchedules: () => Promise<void>
+  planningPermission: string
 }) {
   // Regrouper tous les useState au début
   const [copyFromWeek, setCopyFromWeek] = useState(currentWeekOffset - 1);
@@ -1158,6 +1161,8 @@ function getMultiWeekOptions(range = 4) {
 }
 
 export default function PlanningPage() {
+  const { data: session } = useSession();
+  const planningPermission = session?.user?.planningPermission || 'reader';
   const [employees, setEmployees] = useState<EmployeeWithSchedule[]>([])
   const [schedules, setSchedules] = useState<Record<string, TimeSlot[]>>({})
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
@@ -1962,7 +1967,20 @@ export default function PlanningPage() {
               Employés
             </Button>
           </Link>
+          {planningPermission === 'editor' && (
+            <Link href="/history">
+              <Button variant="outline" className="w-full sm:w-auto text-sm h-10">
+                <Clock className="h-4 w-4 mr-2" />
+                History
+              </Button>
+            </Link>
+          )}
         </div>
+      </div>
+      {/* Juste après le header harmonisé ou avant le contenu principal : */}
+      <div className="mb-2 flex items-center gap-2">
+        <span className="font-semibold">Droits planning :</span>
+        <span className={`px-2 py-1 rounded text-xs font-bold ${planningPermission === 'editor' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</span>
       </div>
       {/* Hackaton toggle + semaine selector */}
       <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-2">
@@ -1976,8 +1994,9 @@ export default function PlanningPage() {
           <input
             type="checkbox"
             checked={isHackaton}
-            onChange={e => handleToggleHackaton(e.target.checked)}
+            onChange={e => planningPermission === 'editor' && handleToggleHackaton(e.target.checked)}
             className="accent-pink-600 w-5 h-5"
+            disabled={planningPermission !== 'editor'}
           />
           <span className="font-semibold text-pink-600">Semaine hackaton (horaires étendus)</span>
         </label>
@@ -1985,15 +2004,17 @@ export default function PlanningPage() {
       {/* Contenu principal dans un conteneur harmonisé */}
       <div className="rounded-lg border bg-background p-2 sm:p-6">
         <Tabs defaultValue="calendar" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-xl text-xs sm:text-base">
+          <TabsList className={`grid w-full ${planningPermission === 'editor' ? 'grid-cols-3' : 'grid-cols-2'} max-w-xl text-xs sm:text-base`}>
             <TabsTrigger value="calendar" className="flex items-center gap-2">
               <Grid className="h-4 w-4" />
               <span className="hidden xs:inline">Calendrier</span>
             </TabsTrigger>
-            <TabsTrigger value="management" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden xs:inline">Gestion</span>
-            </TabsTrigger>
+            {planningPermission === 'editor' && (
+              <TabsTrigger value="management" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                <span className="hidden xs:inline">Gestion</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="table" className="flex items-center gap-2">
               <List className="h-4 w-4" />
               <span className="hidden xs:inline">Tableau</span>
@@ -2043,11 +2064,13 @@ export default function PlanningPage() {
                       <div
                         key={employee.id}
                         className="flex items-center gap-2 cursor-move px-2 py-1 sm:px-3 sm:py-1 rounded-lg shadow border border-muted/40 hover:shadow-md transition-all text-xs sm:text-sm"
-                        draggable
+                        draggable={planningPermission === 'editor'}
+                        style={{ opacity: isVisible ? 1 : 0.5, cursor: planningPermission !== 'editor' ? 'not-allowed' : 'move' }}
+                        title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
                         onDragStart={e => {
+                          if (planningPermission !== 'editor') return;
                           e.dataTransfer.setData('employeeId', employee.id);
                         }}
-                        style={{ opacity: isVisible ? 1 : 0.5 }}
                       >
                         <div className="w-3 h-3 sm:w-4 sm:h-4 rounded" style={{ backgroundColor: employee.color }} />
                         <span className="font-medium">{employee.name}</span>
@@ -2076,7 +2099,13 @@ export default function PlanningPage() {
                 <div className="flex justify-end mb-2">
                   <Popover open={calendarTemplateOpen} onOpenChange={setCalendarTemplateOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2 text-xs sm:text-base">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 text-xs sm:text-base"
+                        disabled={planningPermission !== 'editor'}
+                        title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
+                      >
                         <LayoutTemplate className="h-4 w-4" />
                         Semaine type
                       </Button>
@@ -2211,9 +2240,10 @@ export default function PlanningPage() {
                                         });
                                         return found ? found.id : 'none';
                                       })()}
-                                      onValueChange={empId => handleSaturdayEmployeeChange(empId === 'none' ? '' : empId, day)}
+                                      onValueChange={empId => planningPermission === 'editor' && handleSaturdayEmployeeChange(empId === 'none' ? '' : empId, day)}
+                                      disabled={planningPermission !== 'editor'}
                                     >
-                                      <SelectTrigger className="mt-1 w-full max-w-[160px] mx-auto">
+                                      <SelectTrigger className="mt-1 w-full max-w-[160px] mx-auto" title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}>
                                         <SelectValue placeholder="Choisir..." />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -2256,6 +2286,7 @@ export default function PlanningPage() {
                                   } : {}}
                                   onDragOver={e => e.preventDefault()}
                                   onDrop={async e => {
+                                    if (planningPermission !== 'editor') return;
                                     const employeeId = e.dataTransfer.getData('employeeId');
                                     if (!employeeId) return;
                                     // Only allow drop if employee is visible
@@ -2341,6 +2372,7 @@ export default function PlanningPage() {
                                           }}
                                           title={isWork ? employee.name : `${employee.name} - ${slotTypeConfig[slot.type as keyof typeof slotTypeConfig].label}`}
                                           onMouseDown={e => {
+                                            if (planningPermission !== 'editor') return;
                                             // Drag uniquement si pas sur un handle
                                             if (!(e.target as HTMLElement).classList.contains('resize-handle')) {
                                               e.stopPropagation();
@@ -2377,8 +2409,17 @@ export default function PlanningPage() {
                                           {/* Handle haut */}
                                           <div
                                             className="resize-handle"
-                                            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
+                                            style={{
+                                              position: 'absolute',
+                                              top: 0,
+                                              left: 0,
+                                              right: 0,
+                                              height: 8,
+                                              cursor: planningPermission !== 'editor' ? 'not-allowed' : 'ns-resize',
+                                              zIndex: 10
+                                            }}
                                             onMouseDown={e => {
+                                              if (planningPermission !== 'editor') return;
                                               e.stopPropagation();
                                               setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'start' });
                                               setResizeValue(slot.start);
@@ -2417,8 +2458,17 @@ export default function PlanningPage() {
                                           {/* Handle bas */}
                                           <div
                                             className="resize-handle"
-                                            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 8, cursor: 'ns-resize', zIndex: 10 }}
+                                            style={{
+                                              position: 'absolute',
+                                              bottom: 0,
+                                              left: 0,
+                                              right: 0,
+                                              height: 8,
+                                              cursor: planningPermission !== 'editor' ? 'not-allowed' : 'ns-resize',
+                                              zIndex: 10
+                                            }}
                                             onMouseDown={e => {
+                                              if (planningPermission !== 'editor') return;
                                               e.stopPropagation();
                                               setResizeSlot({ employeeId: employee.id, day, slotIndex, type: 'end' });
                                               setResizeValue(slot.end);
@@ -2573,24 +2623,27 @@ export default function PlanningPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="management">
-            <EmployeeManagementView
-              employees={employees}
-              currentWeekKey={currentWeekKey}
-              currentWeekDates={currentWeekDates}
-              weekNumber={weekNumber}
-              daysOfWeek={daysOfWeek}
-              getTotalHoursForWeek={getTotalHoursForWeek}
-              updateLocalSchedule={updateLocalSchedule}
-              getEmployeeScheduleForDay={getEmployeeScheduleForDay}
-              slotTypeConfig={slotTypeConfig}
-              currentWeekOffset={currentWeekOffset}
-              setCurrentWeekOffset={setCurrentWeekOffset}
-              setSchedules={setSchedules}
-              setEmployees={setEmployees}
-              reloadSchedules={(window as any).reloadSchedules}
-            />
-          </TabsContent>
+          {planningPermission === 'editor' && (
+            <TabsContent value="management">
+              <EmployeeManagementView
+                employees={employees}
+                currentWeekKey={currentWeekKey}
+                currentWeekDates={currentWeekDates}
+                weekNumber={weekNumber}
+                daysOfWeek={daysOfWeek}
+                getTotalHoursForWeek={getTotalHoursForWeek}
+                updateLocalSchedule={updateLocalSchedule}
+                getEmployeeScheduleForDay={getEmployeeScheduleForDay}
+                slotTypeConfig={slotTypeConfig}
+                currentWeekOffset={currentWeekOffset}
+                setCurrentWeekOffset={setCurrentWeekOffset}
+                setSchedules={setSchedules}
+                setEmployees={setEmployees}
+                reloadSchedules={(window as any).reloadSchedules}
+                planningPermission={planningPermission}
+              />
+            </TabsContent>
+          )}
 
           <TabsContent value="table">
             <div className="overflow-x-auto">
