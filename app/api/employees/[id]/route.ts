@@ -3,7 +3,8 @@ import { getEmployee, updateEmployee, deleteEmployee, emailExists } from "@/lib/
 import { validateEmployeeData } from "@/lib/db/utils"
 import { addHistoryEntry } from '@/lib/db/services/history'
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: any) {
+  const params = await context.params;
   try {
     const employee = await getEmployee(params.id)
     if (!employee) {
@@ -16,7 +17,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: any) {
+  const params = await context.params;
+  let currentEmployee = null;
   try {
     const data = await request.json()
     const userId = request.headers.get('x-user-id') || 'unknown';
@@ -24,7 +27,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Validation des données modifiées
     if (data.name || data.initial || data.role || data.email || data.color) {
-      const currentEmployee = await getEmployee(params.id)
+      currentEmployee = await getEmployee(params.id)
       if (!currentEmployee) {
         return NextResponse.json({ error: "Employee not found" }, { status: 404 })
       }
@@ -76,7 +79,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, context: any) {
+  const params = await context.params;
   try {
     const userId = request.headers.get('x-user-id') || 'unknown';
     const userEmail = request.headers.get('x-user-email') || 'unknown';

@@ -120,7 +120,17 @@ export default function EmployeesPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(editingEmployee),
+        body: JSON.stringify({
+          name: editingEmployee.name === '' ? '' : editingEmployee.name,
+          initial: editingEmployee.initial === '' ? '' : editingEmployee.initial,
+          role: editingEmployee.role === '' ? '' : editingEmployee.role,
+          avatar: editingEmployee.avatar === '' ? null : editingEmployee.avatar,
+          color: editingEmployee.color === '' ? '' : editingEmployee.color,
+          email: editingEmployee.email === '' ? '' : editingEmployee.email,
+          phone: editingEmployee.phone === '' ? null : editingEmployee.phone,
+          isActive: editingEmployee.isActive,
+          hoursPerWeek: editingEmployee.hoursPerWeek === '' ? null : editingEmployee.hoursPerWeek,
+        }),
       })
 
       if (response.ok) {
@@ -200,6 +210,10 @@ export default function EmployeesPage() {
               Extraction
             </Button>
           </Link>
+          <Button variant="default">
+            <Users className="h-4 w-4 mr-2" />
+            Employés
+          </Button>
           {planningPermission === 'editor' && (
             <Link href="/history">
               <Button variant="outline">

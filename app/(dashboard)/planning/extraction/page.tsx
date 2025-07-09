@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { addDays, format, isAfter, isBefore, isEqual, parseISO } from "date-fns";
-import { Calendar, Users, LayoutTemplate } from 'lucide-react';
+import { Calendar, Users, LayoutTemplate, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface Employee {
   id: string;
@@ -74,6 +75,8 @@ export default function ExtractionPage() {
   const [rows, setRows] = useState<ExtractionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const { data: session } = useSession();
+  const planningPermission = session?.user?.planningPermission || 'reader';
 
   // Charger la liste des employés
   useEffect(() => {
@@ -219,6 +222,14 @@ export default function ExtractionPage() {
               Employés
             </Button>
           </Link>
+          {planningPermission === 'editor' && (
+            <Link href="/history">
+              <Button variant="outline">
+                <Clock className="h-4 w-4 mr-2" />
+                History
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
       {/* Contenu principal dans un conteneur harmonisé */}

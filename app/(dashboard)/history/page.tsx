@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Clock, Users, LayoutTemplate, Calendar } from "lucide-react";
+import Link from "next/link";
 
 interface HistoryEntry {
   id: number;
@@ -128,8 +130,10 @@ export default function HistoryPage() {
       .finally(() => setLoading(false));
   }, [type, action, userEmail]);
 
+  const planningPermission = session?.user?.planningPermission || 'reader';
+
   // Restriction editor (après tous les hooks)
-  if (session?.user?.planningPermission !== "editor") {
+  if (planningPermission !== "editor") {
     return <div className="p-8 text-center text-lg font-bold text-yellow-700">Accès réservé aux éditeurs.</div>;
   }
 
@@ -205,46 +209,94 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Historique des actions</h1>
-      <div className="flex flex-wrap gap-2 mb-4">
-        <Input placeholder="Type (planning, absence, employee...)" value={type} onChange={e => setType(e.target.value)} className="w-48" />
-        <Input placeholder="Action (create, update, delete)" value={action} onChange={e => setAction(e.target.value)} className="w-48" />
-        <Input placeholder="Email utilisateur" value={userEmail} onChange={e => setUserEmail(e.target.value)} className="w-64" />
-        <Button onClick={() => { setType(""); setAction(""); setUserEmail(""); }}>Réinitialiser</Button>
-      </div>
-      {loading ? (
-        <div className="text-center py-12">Chargement...</div>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border bg-background">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted border-b">
-                <th className="p-2">Date</th>
-                <th className="p-2">Type</th>
-                <th className="p-2">Action</th>
-                <th className="p-2">Utilisateur</th>
-                <th className="p-2">Cible</th>
-                <th className="p-2">Détails</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-8">Aucune action trouvée.</td></tr>
-              ) : history.map(entry => (
-                <tr key={entry.id} className="border-b hover:bg-muted/50 align-top">
-                  <td className="p-2 whitespace-nowrap font-mono text-xs">{format(new Date(entry.date), "dd/MM/yyyy HH:mm:ss", { locale: fr })}</td>
-                  <td className="p-2"><Badge>{entry.type}</Badge></td>
-                  <td className="p-2"><Badge variant="outline">{entry.action}</Badge></td>
-                  <td className="p-2">{renderUserInfo(entry)}</td>
-                  <td className="p-2">{renderEntityInfo(entry)}</td>
-                  <td className="p-2 max-w-xs min-w-[200px]">{renderDetails(entry.details)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="space-y-6">
+      {/* Header harmonisé */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Clock className="h-8 w-8 text-blue-600" />
+            Historique des actions
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">Suivez toutes les modifications du planning, des employés, promos, etc.</p>
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <Link href="/planning">
+            <Button variant="outline">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Planning
+            </Button>
+          </Link>
+          <Link href="/planning/absences">
+            <Button variant="outline">
+              <Calendar className="h-4 w-4 mr-2" />
+              Absences
+            </Button>
+          </Link>
+          <Link href="/planning/extraction">
+            <Button variant="outline">
+              <LayoutTemplate className="h-4 w-4 mr-2" />
+              Extraction
+            </Button>
+          </Link>
+          <Link href="/employees">
+            <Button variant="outline">
+              <Users className="h-4 w-4 mr-2" />
+              Employés
+            </Button>
+          </Link>
+          <Button variant="default">
+            <Clock className="h-4 w-4 mr-2" />
+            History
+          </Button>
+        </div>
+      </div>
+      {/* Badge droits planning */}
+      <div className="mb-2 flex items-center gap-2">
+        <span className="font-semibold">Droits planning :</span>
+        <span className={`px-2 py-1 rounded text-xs font-bold ${planningPermission === 'editor' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</span>
+      </div>
+      {/* Contenu principal dans un conteneur harmonisé */}
+      <div className="rounded-lg border bg-background p-6">
+        {/* Filtres */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Input placeholder="Type (planning, absence, employee...)" value={type} onChange={e => setType(e.target.value)} className="w-48" />
+          <Input placeholder="Action (create, update, delete)" value={action} onChange={e => setAction(e.target.value)} className="w-48" />
+          <Input placeholder="Email utilisateur" value={userEmail} onChange={e => setUserEmail(e.target.value)} className="w-64" />
+          <Button onClick={() => { setType(""); setAction(""); setUserEmail(""); }}>Réinitialiser</Button>
+        </div>
+        {loading ? (
+          <div className="text-center py-12">Chargement...</div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border bg-background">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted border-b">
+                  <th className="p-2">Date</th>
+                  <th className="p-2">Type</th>
+                  <th className="p-2">Action</th>
+                  <th className="p-2">Utilisateur</th>
+                  <th className="p-2">Cible</th>
+                  <th className="p-2">Détails</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-8">Aucune action trouvée.</td></tr>
+                ) : history.map(entry => (
+                  <tr key={entry.id} className="border-b hover:bg-muted/50 align-top">
+                    <td className="p-2 whitespace-nowrap font-mono text-xs">{format(new Date(entry.date), "dd/MM/yyyy HH:mm:ss", { locale: fr })}</td>
+                    <td className="p-2"><Badge>{entry.type}</Badge></td>
+                    <td className="p-2"><Badge variant="outline">{entry.action}</Badge></td>
+                    <td className="p-2">{renderUserInfo(entry)}</td>
+                    <td className="p-2">{renderEntityInfo(entry)}</td>
+                    <td className="p-2 max-w-xs min-w-[200px]">{renderDetails(entry.details)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
