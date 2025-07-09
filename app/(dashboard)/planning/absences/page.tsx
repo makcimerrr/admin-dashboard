@@ -444,7 +444,7 @@ export default function AbsencesPage() {
             </Button>
           </Link>
           <Link href="/planning/absences">
-            <Button variant="outline">
+            <Button variant="default">
               <Calendar className="h-4 w-4 mr-2" />
               Absences
             </Button>
