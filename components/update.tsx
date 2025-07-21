@@ -212,7 +212,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/v1/promotions/${eventId}/students`
+        `https://api-zone01-rouen.deno.dev/api/v1/promotions/${eventId}/students`
+        /*`http://localhost:8000/api/v1/promotions/${eventId}/students`*/
       );
       if (!response.ok) {
         throw new Error(
