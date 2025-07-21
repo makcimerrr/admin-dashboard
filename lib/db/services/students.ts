@@ -68,7 +68,8 @@ export async function getStudents(
     'project_name',
     'progress_status',
     'delay_level',
-    'availableAt'
+    'availableAt',
+    'actual_project_name'
   ];
   const orderByColumn = allowedFilters.includes(filter) ? filter : null;
 
@@ -110,9 +111,11 @@ export async function getStudents(
   // Appliquer le tri, si spécifié
   if (orderByColumn) {
     const columnToOrder =
-      orderByColumn in students
-        ? (students as any)[orderByColumn]
-        : (studentProjects as any)[orderByColumn];
+      orderByColumn === 'actual_project_name'
+        ? studentProjects.project_name
+        : orderByColumn in students
+          ? (students as any)[orderByColumn]
+          : (studentProjects as any)[orderByColumn];
 
     if (columnToOrder) {
       studentsQuery.orderBy(
@@ -350,7 +353,7 @@ export async function updateStudentProject(
         `Tentative de récupération des données pour l'étudiant ${login}`
       );
       const response = await fetch(
-        `https://api-zone01-rouen.deno.dev/api/v1/user-info/${login}` /*`http://localhost:8000/api/v1/user-info/${login}`*/
+        /*`https://api-zone01-rouen.deno.dev/api/v1/user-info/${login}`*/ `http://localhost:8000/api/v1/user-info/${login}`
       );
       if (!response.ok) {
         throw new Error(
