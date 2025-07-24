@@ -1,13 +1,13 @@
 import { db } from '../config';
 import {
-  students,
-  studentProjects,
-  promotions,
   delayStatus,
+  promotions,
   studentCurrentProjects,
+  studentProjects,
+  students,
   studentSpecialtyProgress
 } from '../schema';
-import { count, eq, ilike, or, and, sql, desc, asc, SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
 import { SelectStudent } from '@/lib/db/schema/students';
 
 export async function getStudents(
@@ -69,9 +69,22 @@ export async function getStudents(
     'progress_status',
     'delay_level',
     'availableAt',
-    'actual_project_name'
+    'actual_project_name',
+    'golang_project',
+    'javascript_project',
+    'rust_project',
+    'golang_completed',
+    'javascript_completed',
+    'rust_completed'
   ];
   const orderByColumn = allowedFilters.includes(filter) ? filter : null;
+
+  // Colonnes des projets à trier en ignorant les emojis
+  const projectColumns = [
+    'golang_project',
+    'javascript_project',
+    'rust_project'
+  ];
 
   // Requête pour récupérer les étudiants avec les filtres et la jointure
   const studentsQuery = db
@@ -108,19 +121,75 @@ export async function getStudents(
     studentsQuery.where(finalFilter);
   }
 
-  // Appliquer le tri, si spécifié
+  // Appliquer le tri insensible à la casse pour les colonnes textuelles, sinon tri classique
   if (orderByColumn) {
-    const columnToOrder =
-      orderByColumn === 'actual_project_name'
-        ? studentProjects.project_name
-        : orderByColumn in students
-          ? (students as any)[orderByColumn]
-          : (studentProjects as any)[orderByColumn];
+    // Assure-toi que les clés 'golang_project', 'javascript_project' et 'rust_project' sont bien présentes dans columnMap
+    const columnMap = {
+      last_name: students.last_name,
+      first_name: students.first_name,
+      login: students.login,
+      promos: students.promoName,
+      availableAt: students.availableAt,
+      actual_project_name: studentProjects.project_name,
+      project_name: studentProjects.project_name,
+      progress_status: studentProjects.progress_status,
+      delay_level: studentProjects.delay_level,
+      golang_project: studentCurrentProjects.golang_project,
+      javascript_project: studentCurrentProjects.javascript_project,
+      rust_project: studentCurrentProjects.rust_project,
+      golang_completed: studentSpecialtyProgress.golang_completed,
+      javascript_completed: studentSpecialtyProgress.javascript_completed,
+      rust_completed: studentSpecialtyProgress.rust_completed
+    };
+
+    const columnToOrder = columnMap[orderByColumn as keyof typeof columnMap];
 
     if (columnToOrder) {
-      studentsQuery.orderBy(
-        direction === 'desc' ? desc(columnToOrder) : asc(columnToOrder)
-      );
+      // Colonnes à trier en nettoyant les caractères non alphanumériques ni espaces (par exemple, les emojis)
+      if (projectColumns.includes(orderByColumn)) {
+        // Utiliser regexp_replace pour supprimer tous les caractères non alphanumériques ni espaces
+        const cleanText = sql`regexp_replace
+                    (${columnToOrder}::text, '[^a-zA-Z0-9 ]', '', 'g')`;
+        const orderSql =
+          direction === 'desc'
+            ? sql`LOWER
+                                (${cleanText})
+                                DESC NULLS LAST`
+            : sql`LOWER
+                                (${cleanText})
+                                ASC NULLS FIRST`;
+        studentsQuery.orderBy(orderSql);
+        console.log('SQL ORDER appliqué');
+      } else {
+        // Appliquer LOWER() uniquement sur les colonnes textuelles
+        const textColumns = [
+          'last_name',
+          'first_name',
+          'login',
+          'promos',
+          'actual_project_name',
+          'project_name',
+          'progress_status',
+          'delay_level'
+        ];
+        if (textColumns.includes(orderByColumn)) {
+          const orderSql =
+            direction === 'desc'
+              ? sql`LOWER
+                                    (${columnToOrder})
+                                    DESC NULLS LAST`
+              : sql`LOWER
+                                    (${columnToOrder})
+                                    ASC NULLS FIRST`;
+          studentsQuery.orderBy(orderSql);
+          console.log('SQL ORDER appliqué');
+        } else {
+          studentsQuery.orderBy(
+            direction === 'desc' ? desc(columnToOrder) : asc(columnToOrder)
+          );
+          console.log('SQL ORDER appliqué');
+        }
+      }
     }
   }
 
