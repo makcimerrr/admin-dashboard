@@ -60,6 +60,11 @@ const data = {
       url: "/01deck",
       icon: UsersIcon,
     },
+    {
+      title: "Planning",
+      url: "/planning",
+      icon: ClipboardListIcon,
+    },
   ],
   navClouds: [
     {
