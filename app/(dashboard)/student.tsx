@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import { SelectStudent } from '@/lib/db/schema/students';
 import { deleteStudent } from './actions';
 import {
@@ -76,7 +77,7 @@ interface currentUser {
   last_contribution: string;
 }
 
-export function Student({ student }: { student: SelectStudent }) {
+export function Student({ student, rowClassName, cellClassName }: { student: SelectStudent; rowClassName?: string, cellClassName?: string }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [userData, setUserData] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -218,47 +219,45 @@ export function Student({ student }: { student: SelectStudent }) {
 
   return (
     <>
-      <TableRow onClick={handleClick} className="cursor-pointer">
-        <TableCell className="font-medium">{student.first_name}</TableCell>
-        <TableCell>{student.last_name}</TableCell>
-        <TableCell>{student.login}</TableCell>
+      <TableRow
+        onClick={handleClick}
+        data-state={undefined}
+        className={cn("transition-colors hover:bg-muted/50", rowClassName)}
+      >
+        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{student.first_name}</TableCell>
+        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{student.last_name}</TableCell>
+        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{student.login}</TableCell>
         <TableCell>
-          <Badge variant="outline" className="capitalize">
+          <Badge className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
             {student.promos}
           </Badge>
         </TableCell>
-        <TableCell>
+        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
           {student.golang_project} {student.golang_completed ? '✅' : '❌'}
         </TableCell>
-        <TableCell>
+        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
           {student.javascript_project} {student.javascript_completed ? '✅' : '❌'}
         </TableCell>
-        <TableCell>
+        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
           {student.rust_project} {student.rust_completed ? '✅' : '❌'}
         </TableCell>
         {/* Ajout des nouvelles colonnes */}
         <TableCell>
-          <Badge variant="outline" className="capitalize">
+          <Badge className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
             {student.actual_project_name || 'N/A'}
           </Badge>
         </TableCell>
         <TableCell>
-          <Badge
-            variant="outline"
-            className={`capitalize ${getProgressStatusClass(student.progress_status)}`}
-          >
+          <Badge className={cn("rounded-md px-2 py-1 text-xs font-medium capitalize", getProgressStatusClass(student.progress_status))}>
             {student.progress_status || 'N/A'}
           </Badge>
         </TableCell>
         <TableCell>
-          <Badge
-            variant="outline"
-            className={`capitalize ${getDelayLevelClass(student.delay_level)}`}
-          >
+          <Badge className={cn("rounded-md px-2 py-1 text-xs font-medium capitalize", getDelayLevelClass(student.delay_level))}>
             {student.delay_level || 'N/A'}
           </Badge>
         </TableCell>
-        <TableCell className="hidden md:table-cell">
+        <TableCell className="hidden md:table-cell whitespace-nowrap text-sm text-muted-foreground">
           {new Date(student.availableAt).toLocaleDateString('en-US')}
         </TableCell>
         <TableCell>

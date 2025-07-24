@@ -1,21 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  TableHead,
-  TableRow,
-  TableHeader,
+  Table,
   TableBody,
-  Table
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
 import { Student } from './student';
 import { SelectStudent } from '@/lib/db/schema/students';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -23,7 +15,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp
+  ChevronUp,
+  Trash
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Update from '@/components/update';
@@ -31,10 +24,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Trash } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function StudentsTable({
   students,
@@ -217,114 +212,96 @@ export function StudentsTable({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Students</CardTitle>
-        <CardDescription>
-          Manage your students and view their details.
-        </CardDescription>
-        <div className="flex justify-start">
-          {promo === '' ? (
-            <Update eventId="all" onUpdate={handleUpdate} />
-          ) : (
-            <Update eventId={eventId} onUpdate={handleUpdate} />
-          )}
+    <div className="rounded-lg border bg-background p-6 shadow-sm scroll-smooth">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-semibold">Étudiants</h2>
+          <p className="text-muted-foreground text-sm">
+            Gérez les étudiants et visualisez leurs informations.
+          </p>
         </div>
-        <div className="flex justify-end space-x-4 items-center">
-          {/* Dropdown Menu for Select Status */}
+        <div className="flex flex-wrap gap-2">
+          {/* Filtres modernisés */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" size="sm">
-                Select Status
+              <Button variant="outline" size="sm">
+                Statut
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="z-50 rounded-md shadow-lg border mt-2 w-44">
-              <DropdownMenuItem
-                onSelect={() => requestStatus('')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
-              >
-                All
+            <DropdownMenuContent className="w-44">
+              <DropdownMenuLabel>Filtrer par statut</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => requestStatus('')}>
+                Tous
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => requestStatus('audit')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
-              >
+              <DropdownMenuItem onSelect={() => requestStatus('audit')}>
                 Audit
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => requestStatus('working')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
-              >
+              <DropdownMenuItem onSelect={() => requestStatus('working')}>
                 Working
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => requestStatus('without group')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
-              >
+              <DropdownMenuItem onSelect={() => requestStatus('without group')}>
                 Without Group
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Dropdown Menu for Select Delay Level */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="default" size="sm">
-                Select Delay Level
+              <Button variant="outline" size="sm">
+                Retard
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="z-50 rounded-md shadow-lg border mt-2 w-44">
-              <DropdownMenuItem
-                onSelect={() => requestDelayLevel('')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
-              >
-                All
+            <DropdownMenuContent className="w-44">
+              <DropdownMenuLabel>Filtrer par retard</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => requestDelayLevel('')}>
+                Tous
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => requestDelayLevel('bien')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
-              >
+              <DropdownMenuItem onSelect={() => requestDelayLevel('bien')}>
                 Bien
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => requestDelayLevel('en retard')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
-              >
+              <DropdownMenuItem onSelect={() => requestDelayLevel('en retard')}>
                 En Retard
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => requestDelayLevel('en avance')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
-              >
+              <DropdownMenuItem onSelect={() => requestDelayLevel('en avance')}>
                 En Avance
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => requestDelayLevel('spécialité')}
-                className="hover:bg-gray-100 p-2 rounded-md cursor-pointer"
               >
                 Spécialité
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Clear Filters Button */}
           <Button
             onClick={clearFilters}
             variant="ghost"
             size="sm"
-            className="bg-transparent text-gray-600 hover:text-gray-800 border-none focus:outline-none"
+            className="text-muted-foreground hover:text-foreground"
           >
-            <Trash className="inline h-4 w-4" />
+            <Trash className="h-4 w-4 mr-1" /> Réinitialiser
           </Button>
         </div>
-      </CardHeader>
-
-      <CardContent>
-        <Table>
+      </div>
+      {/* Update button */}
+      <div className="flex justify-start mb-2">
+        {promo === '' ? (
+          <Update eventId="all" onUpdate={handleUpdate} />
+        ) : (
+          <Update eventId={eventId} onUpdate={handleUpdate} />
+        )}
+      </div>
+      {/* Table */}
+      <div className="overflow-x-auto rounded-lg shadow-sm ring-1 ring-muted/40">
+        <Table className="bg-muted/30 rounded-md">
           <TableHeader>
             <TableRow>
-              <TableHead onClick={() => requestSort('first_name')}>
-                First Name{' '}
+              <TableHead
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+                onClick={() => requestSort('first_name')}
+              >
+                Prénom{' '}
                 {sortConfig.key === 'first_name' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
@@ -335,8 +312,11 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('last_name')}>
-                Last Name{' '}
+              <TableHead
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+                onClick={() => requestSort('last_name')}
+              >
+                Nom{' '}
                 {sortConfig.key === 'last_name' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
@@ -347,7 +327,10 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('login')}>
+              <TableHead
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+                onClick={() => requestSort('login')}
+              >
                 Login{' '}
                 {sortConfig.key === 'login' && (
                   <span>
@@ -359,7 +342,10 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('promos')}>
+              <TableHead
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+                onClick={() => requestSort('promos')}
+              >
                 Promo{' '}
                 {sortConfig.key === 'promos' && (
                   <span>
@@ -371,9 +357,12 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('golang_completed')}>
+              <TableHead
+                onClick={() => requestSort('golang_project')}
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+              >
                 Golang Project{' '}
-                {sortConfig.key === 'golang_completed' && (
+                {sortConfig.key === 'golang_project' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
                       <ChevronUp className="inline h-4 w-4" />
@@ -383,9 +372,12 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('javascript_completed')}>
+              <TableHead
+                onClick={() => requestSort('javascript_project')}
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+              >
                 JavaScript Project{' '}
-                {sortConfig.key === 'javascript_completed' && (
+                {sortConfig.key === 'javascript_project' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
                       <ChevronUp className="inline h-4 w-4" />
@@ -395,9 +387,12 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('rust_completed')}>
+              <TableHead
+                onClick={() => requestSort('rust_project')}
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+              >
                 Rust Project{' '}
-                {sortConfig.key === 'rust_completed' && (
+                {sortConfig.key === 'rust_project' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
                       <ChevronUp className="inline h-4 w-4" />
@@ -407,7 +402,10 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('actual_project_name')}>
+              <TableHead
+                onClick={() => requestSort('actual_project_name')}
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+              >
                 Actual Project{' '}
                 {sortConfig.key === 'actual_project_name' && (
                   <span>
@@ -419,8 +417,11 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('progress_status')}>
-                Status{' '}
+              <TableHead
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+                onClick={() => requestSort('progress_status')}
+              >
+                Statut{' '}
                 {sortConfig.key === 'progress_status' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
@@ -431,7 +432,10 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('delay_level')}>
+              <TableHead
+                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
+                onClick={() => requestSort('delay_level')}
+              >
                 Retard{' '}
                 {sortConfig.key === 'delay_level' && (
                   <span>
@@ -443,82 +447,80 @@ export function StudentsTable({
                   </span>
                 )}
               </TableHead>
-              <TableHead onClick={() => requestSort('availableAt')}>
-                Available At{' '}
-                {sortConfig.key === 'availableAt' && (
-                  <span>
-                    {sortConfig.direction === 'asc' ? (
-                      <ChevronUp className="inline h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="inline h-4 w-4" />
-                    )}
-                  </span>
-                )}
+              <TableHead className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2">
+                <span>Availability</span>
               </TableHead>
-              <TableHead>
-                <span className="sr-only">Actions</span>
+              <TableHead className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2">
+                <span>Actions</span>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <tr>
-                <td colSpan={8} className="text-center py-5">
-                  <span>Loading...</span>
+                <td colSpan={6} className="px-4 py-3 text-sm">
+                  <div className="space-y-2 py-4">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
                 </td>
               </tr>
             ) : studentsList.length > 0 ? (
               studentsList.map((student) => (
-                <Student key={student.id} student={student} />
+                <Student
+                  key={student.id}
+                  student={student}
+                  rowClassName="hover:bg-muted transition-colors rounded-md border-b"
+                  cellClassName="px-4 py-3 text-sm text-foreground/90"
+                />
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="text-center py-5">
-                  <span>No students found</span>
+                <td colSpan={6} className="px-4 py-3 text-sm">
+                  <span>Aucun étudiant trouvé</span>
                 </td>
               </tr>
             )}
           </TableBody>
         </Table>
-      </CardContent>
-      <CardFooter>
-        <div className="flex w-full justify-between items-center">
-          <div className="text-xs text-muted-foreground">
-            Showing{' '}
-            <strong>
-              {currentOffsetState !== null ? currentOffsetState + 1 : 0}-
-              {currentOffsetState !== null
-                ? Math.min(
-                    currentOffsetState + studentsPerPage,
-                    totalStudentsState
-                  )
-                : 0}
-            </strong>{' '}
-            of <strong>{totalStudentsState}</strong> students
-          </div>
-
-          <div className="flex">
-            <Button
-              onClick={prevPage}
-              variant="ghost"
-              size="sm"
-              disabled={previousOffsetState === null}
-            >
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Prev
-            </Button>
-            <Button
-              onClick={nextPage}
-              variant="ghost"
-              size="sm"
-              disabled={newOffsetState === null}
-            >
-              Next
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+      </div>
+      {/* Footer */}
+      <div className="flex w-full justify-between items-center mt-4">
+        <div className="text-xs text-muted-foreground">
+          Affichage{' '}
+          <strong>
+            {currentOffsetState !== null ? currentOffsetState + 1 : 0}-
+            {currentOffsetState !== null
+              ? Math.min(
+                  currentOffsetState + studentsPerPage,
+                  totalStudentsState
+                )
+              : 0}
+          </strong>{' '}
+          sur <strong>{totalStudentsState}</strong> étudiants
         </div>
-      </CardFooter>
-    </Card>
+        <div className="flex">
+          <Button
+            onClick={prevPage}
+            variant="ghost"
+            size="sm"
+            disabled={previousOffsetState === null}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Précédent
+          </Button>
+          <Button
+            onClick={nextPage}
+            variant="ghost"
+            size="sm"
+            disabled={newOffsetState === null}
+          >
+            Suivant
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
