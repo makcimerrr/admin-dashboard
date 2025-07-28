@@ -45,7 +45,7 @@ const HeroSection = ({
                     ],
                 }: Hero45Props) => {
     return (
-        <section className="py-32">
+        <section className="py-8">
             <div className="container overflow-hidden">
                 <div className="mb-20 flex flex-col items-center gap-6 text-center">
                     <Badge variant="outline">{badge}</Badge>
