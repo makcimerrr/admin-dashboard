@@ -209,7 +209,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-6 py-8">
       {/* Header harmonisé */}
       <div className="flex items-center justify-between">
         <div>
