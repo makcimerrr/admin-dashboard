@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   ArrowUpCircleIcon,
   BarChartIcon,
@@ -17,6 +18,7 @@ import {
   SearchIcon,
   SettingsIcon,
   UsersIcon,
+  MoreHorizontalIcon,
 } from "lucide-react"
 
 import { NavDocuments } from "@/components/nav-documents"
@@ -51,6 +53,29 @@ const data = {
       icon: BarChartIcon,
     },
     {
+      title: "Planning",
+      url: "/planning",
+      icon: ClipboardListIcon,
+      items: [
+        {
+          title: "Absences",
+          url: "/planning/absences",
+        },
+        {
+          title: "Extraction",
+          url: "/planning/extraction",
+        },
+        {
+          title: "Employés",
+          url: "/employees",
+        },
+        {
+          title: "Historique",
+          url: "/history",
+        }
+      ],
+    },
+    {
       title: "Config",
       url: "/config",
       icon: FolderIcon,
@@ -59,11 +84,6 @@ const data = {
       title: "01 Deck",
       url: "/01deck",
       icon: UsersIcon,
-    },
-    {
-      title: "Planning",
-      url: "/planning",
-      icon: ClipboardListIcon,
     },
   ],
   navClouds: [
@@ -158,6 +178,55 @@ let User: {
   role?: string
 } | undefined
 
+function NavMenu({ items }: { items: typeof data.navMain }) {
+  const [openMenus, setOpenMenus] = React.useState<string | null>(null)
+  const toggleMenu = (title: string) => {
+    setOpenMenus((prev) => (prev === title ? null : title))
+  }
+  return (
+    <nav className="space-y-1 relative">
+      {items.map((item) => {
+        const isOpen = openMenus === item.title
+        return (
+          <div key={item.title}>
+            <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-muted hover:text-foreground">
+              <Link
+                href={item.url}
+                className="flex items-center gap-2 text-sm font-medium"
+              >
+                <item.icon className="h-4 w-4" />
+                {item.title}
+              </Link>
+              {Array.isArray(item.items) && item.items.length > 0 && (
+                <button
+                  onClick={() => toggleMenu(item.title)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <MoreHorizontalIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {Array.isArray(item.items) && item.items.length > 0 && isOpen && (
+              <div className="ml-6 mt-1 space-y-1">
+                {item.items.map((subItem) => (
+                  <Link
+                    key={subItem.title}
+                    href={subItem.url}
+                    className="flex items-center gap-2 rounded-md px-3 py-1 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    <span className="text-xs">•</span>
+                    {subItem.title}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </nav>
+  )
+}
+
 export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sidebar> & { user?: typeof User }) {
   return (
       <Sidebar collapsible="offcanvas" {...props}>
@@ -177,7 +246,7 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent>
-          <NavMain items={data.navMain} />
+          <NavMenu items={data.navMain} />
           <NavDocuments items={data.documents} />
           <NavSecondary items={data.navSecondary} className="mt-auto" />
         </SidebarContent>
