@@ -1,15 +1,17 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { DatePickerDemo } from "@/components/date-picker";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { addDays, format, isAfter, isBefore, isEqual, parseISO } from "date-fns";
-import { Calendar, Users, LayoutTemplate, Clock } from 'lucide-react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { DatePickerDemo } from '@/components/date-picker';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { addDays, isAfter, parseISO } from 'date-fns';
+import { Calendar, Clock, LayoutTemplate, Users } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { PageHeader } from '@/components/planning/page-header';
+import { PageContainer } from '@/components/planning/page-container';
+import { ContentCard } from '@/components/planning/content-card';
+import { DataTable } from '@/components/planning/data-table';
+import { LoadingState } from '@/components/planning/loading-state';
 
 interface Employee {
   id: string;
@@ -30,15 +32,24 @@ interface ExtractionRow {
 
 function getWeekKey(date: Date) {
   const year = date.getFullYear();
-  // getWeekNumber utilitaire simplifié
   const firstJan = new Date(date.getFullYear(), 0, 1);
-  const days = Math.floor((date.getTime() - firstJan.getTime()) / (24 * 60 * 60 * 1000));
+  const days = Math.floor(
+    (date.getTime() - firstJan.getTime()) / (24 * 60 * 60 * 1000)
+  );
   const week = Math.ceil((days + firstJan.getDay() + 1) / 7);
-  return `${year}-W${week.toString().padStart(2, "0")}`;
+  return `${year}-W${week.toString().padStart(2, '0')}`;
 }
 
 function getDayName(date: Date) {
-  return ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"][date.getDay()];
+  return [
+    'dimanche',
+    'lundi',
+    'mardi',
+    'mercredi',
+    'jeudi',
+    'vendredi',
+    'samedi'
+  ][date.getDay()];
 }
 
 function getDaysInRange(start: string, end: string): Date[] {
@@ -53,16 +64,15 @@ function getDaysInRange(start: string, end: string): Date[] {
 }
 
 function slotDuration(start: string, end: string) {
-  const [h1, m1] = start.split(":").map(Number);
-  const [h2, m2] = end.split(":").map(Number);
+  const [h1, m1] = start.split(':').map(Number);
+  const [h2, m2] = end.split(':').map(Number);
   return (h2 * 60 + m2 - (h1 * 60 + m1)) / 60;
 }
 
 function nightHours(start: string, end: string) {
-  // Calcule la partie du créneau après 21h
   const nightStart = 21 * 60;
-  const [h1, m1] = start.split(":").map(Number);
-  const [h2, m2] = end.split(":").map(Number);
+  const [h1, m1] = start.split(':').map(Number);
+  const [h2, m2] = end.split(':').map(Number);
   const s = h1 * 60 + m1;
   const e = h2 * 60 + m2;
   if (e <= nightStart) return 0;
@@ -78,26 +88,27 @@ export default function ExtractionPage() {
   const { data: session } = useSession();
   const planningPermission = session?.user?.planningPermission || 'reader';
 
-  // Charger la liste des employés
   useEffect(() => {
-    fetch("/api/employees")
+    fetch('/api/employees')
       .then((res) => res.json())
       .then((data) => setEmployees(data));
   }, []);
 
-  // Handler pour lancer l'extraction (à compléter avec la logique réelle)
   const handleExtract = async () => {
     if (!start || !end) return;
     setLoading(true);
+
     const days = getDaysInRange(start, end);
     const weekKeys = Array.from(new Set(days.map(getWeekKey)));
-    const dayMap = days.reduce((acc, d) => {
-      const key = `${getWeekKey(d)}|${getDayName(d)}`;
-      acc[key] = d;
-      return acc;
-    }, {} as Record<string, Date>);
+    const dayMap = days.reduce(
+      (acc, d) => {
+        const key = `${getWeekKey(d)}|${getDayName(d)}`;
+        acc[key] = d;
+        return acc;
+      },
+      {} as Record<string, Date>
+    );
 
-    // Pour chaque employé, charger tous les schedules de la période
     const results: ExtractionRow[] = [];
     for (const emp of employees) {
       let night = 0;
@@ -109,68 +120,72 @@ export default function ExtractionPage() {
       let slotsCounted: Set<string> = new Set();
       let weekCount = new Set<string>();
       let totalHours = 0;
-      let daysWorked = 0; // Pour le cas spécial
-      let daysWithAnyWork = 0; // Pour l'employé spécial
+      let daysWorked = 0;
+      let daysWithAnyWork = 0;
+
       for (const weekKey of weekKeys) {
-        const res = await fetch(`/api/schedules?employeeId=${emp.id}&weekKey=${weekKey}`);
+        const res = await fetch(
+          `/api/schedules?employeeId=${emp.id}&weekKey=${weekKey}`
+        );
         const schedules = await res.json();
+
         for (const sched of schedules) {
           if (sched.employeeId !== emp.id) continue;
           const key = `${sched.weekKey}|${sched.day}`;
-          if (!dayMap[key]) continue; // hors période
-          // Ajout : ignorer samedi/dimanche pour les congés
+          if (!dayMap[key]) continue;
+
           const isWeekend = sched.day === 'samedi' || sched.day === 'dimanche';
           weekCount.add(sched.weekKey);
           let workHoursForDay = 0;
           let isVacation = false;
           let isSick = false;
           let hasAnyWork = false;
+
           for (const slot of sched.timeSlots) {
-            if (slot.type === "work") {
+            if (slot.type === 'work') {
               let dur = slotDuration(slot.start, slot.end);
               totalHours += dur;
               night += nightHours(slot.start, slot.end);
-              if (slot.isHoliday) nightAndHoliday += nightHours(slot.start, slot.end);
+              if (slot.isHoliday)
+                nightAndHoliday += nightHours(slot.start, slot.end);
               if (slot.isHoliday || slot.isSunday) holidayAndSunday += dur;
               workHoursForDay += dur;
               hasAnyWork = true;
             }
             if (
-              slot.type === "vacation" &&
+              slot.type === 'vacation' &&
               !slotsCounted.has(key) &&
-              !isWeekend // <-- Ajout ici : ne compte pas samedi/dimanche
+              !isWeekend
             ) {
               vacationDays++;
               slotsCounted.add(key);
               isVacation = true;
             }
-            if (
-              slot.type === "sick" &&
-              !slotsCounted.has(key)
-            ) {
+            if (slot.type === 'sick' && !slotsCounted.has(key)) {
               sickDays++;
               slotsCounted.add(key);
               isSick = true;
             }
           }
-          // Pour l'employé spécial : compte tout jour avec au moins un créneau work
+
           if (!isVacation && !isSick && hasAnyWork) {
             daysWithAnyWork++;
           }
-          // Pour les autres : on compte tous les jours (y compris samedi/dimanche) avec au moins 6h
           if (!isVacation && !isSick && workHoursForDay >= 6) {
             daysWorked++;
           }
         }
       }
-      // Cas spécial pour un employé
+
       if (emp.id === '98985543-5c55-4185-9fb9-2ee3d516113b') {
         trCount = Math.ceil(daysWithAnyWork / 2);
       } else {
         trCount = daysWorked;
       }
+
       const quota = emp.hoursPerWeek ? parseFloat(emp.hoursPerWeek) : 35;
       const overtime = totalHours - weekCount.size * quota;
+
       results.push({
         employee: emp,
         overtime: Math.round(overtime * 100) / 100,
@@ -179,111 +194,131 @@ export default function ExtractionPage() {
         holidayAndSunday: Math.round(holidayAndSunday * 100) / 100,
         vacationDays,
         sickDays,
-        trCount,
+        trCount
       });
     }
+
     setRows(results);
     setLoading(false);
   };
 
+  const columns = [
+    {
+      key: 'employee' as keyof ExtractionRow,
+      header: 'Employé',
+      render: (value: Employee) => (
+        <div className="font-medium">{value.name}</div>
+      )
+    },
+    {
+      key: 'nightHours' as keyof ExtractionRow,
+      header: 'Heures nuit',
+      render: (value: number) => <Badge variant="outline">{value}</Badge>
+    },
+    {
+      key: 'nightAndHoliday' as keyof ExtractionRow,
+      header: 'Heures nuits + férié',
+      render: (value: number) => <Badge variant="outline">{value}</Badge>
+    },
+    {
+      key: 'holidayAndSunday' as keyof ExtractionRow,
+      header: 'Heures fériés / dimanche',
+      render: (value: number) => <Badge variant="outline">{value}</Badge>
+    },
+    {
+      key: 'vacationDays' as keyof ExtractionRow,
+      header: 'Congés',
+      render: (value: number) => <Badge variant="secondary">{value}</Badge>
+    },
+    {
+      key: 'sickDays' as keyof ExtractionRow,
+      header: 'Maladie',
+      render: (value: number) => <Badge variant="destructive">{value}</Badge>
+    },
+    {
+      key: 'trCount' as keyof ExtractionRow,
+      header: 'TR',
+      render: (value: number) => <Badge variant="default">{value}</Badge>
+    }
+  ];
+
+  const headerActions = [
+    {
+      label: 'Planning',
+      href: '/planning',
+      icon: LayoutTemplate,
+      variant: 'outline' as const
+    },
+    {
+      label: 'Absences',
+      href: '/planning/absences',
+      icon: Calendar,
+      variant: 'outline' as const
+    },
+    {
+      label: 'Employés',
+      href: '/employees',
+      icon: Users,
+      variant: 'outline' as const
+    },
+    ...(planningPermission === 'editor'
+      ? [
+          {
+            label: 'History',
+            href: '/history',
+            icon: Clock,
+            variant: 'outline' as const
+          }
+        ]
+      : [])
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header harmonisé */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <LayoutTemplate className="h-8 w-8 text-blue-600" />
-            Extraction
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Extraction des heures et statistiques</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/planning">
-            <Button variant="outline">
-              <LayoutTemplate className="h-4 w-4 mr-2" />
-              Planning
+    <div
+      className="space-y-6 w-full max-w-full px-6 py-8"
+      style={{ overflowX: 'hidden' }}
+    >
+      <PageContainer>
+        <PageHeader
+          title="Extraction"
+          subtitle="Extraction des heures et statistiques"
+          icon={LayoutTemplate}
+          actions={headerActions}
+        />
+
+        <ContentCard>
+          <div className="flex gap-4 mb-6 items-end">
+            <div>
+              <label className="block mb-1 text-sm font-medium">Début</label>
+              <DatePickerDemo
+                value={start}
+                onChange={setStart}
+                className="w-36"
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-medium">Fin</label>
+              <DatePickerDemo value={end} onChange={setEnd} className="w-36" />
+            </div>
+            <Button
+              onClick={handleExtract}
+              disabled={!start || !end || loading}
+            >
+              {loading ? 'Chargement...' : 'Extraire'}
             </Button>
-          </Link>
-          <Link href="/planning/absences">
-            <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Absences
-            </Button>
-          </Link>
-          <Link href="/planning/extraction">
-            <Button variant="default">
-              <LayoutTemplate className="h-4 w-4 mr-2" />
-              Extraction
-            </Button>
-          </Link>
-          <Link href="/employees">
-            <Button variant="outline">
-              <Users className="h-4 w-4 mr-2" />
-              Employés
-            </Button>
-          </Link>
-          {planningPermission === 'editor' && (
-            <Link href="/history">
-              <Button variant="outline">
-                <Clock className="h-4 w-4 mr-2" />
-                History
-              </Button>
-            </Link>
+          </div>
+
+          {loading ? (
+            <LoadingState type="spinner" />
+          ) : (
+            <DataTable
+              data={rows}
+              columns={columns}
+              emptyMessage="Aucune donnée à afficher. Sélectionnez une période et cliquez sur 'Extraire'."
+            />
           )}
-        </div>
-      </div>
-      {/* Contenu principal dans un conteneur harmonisé */}
-      <div className="rounded-lg border bg-background p-6">
-        <div className="flex gap-4 mb-6 items-end">
-          <div>
-            <label className="block mb-1 text-sm font-medium">Début</label>
-            <DatePickerDemo value={start} onChange={setStart} className="w-36" />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium">Fin</label>
-            <DatePickerDemo value={end} onChange={setEnd} className="w-36" />
-          </div>
-          <Button onClick={handleExtract} disabled={!start || !end || loading}>
-            {loading ? "Chargement..." : "Extraire"}
-          </Button>
-        </div>
-        <div className="rounded-lg border bg-background overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employé</TableHead>
-                <TableHead>Heures nuit</TableHead>
-                <TableHead>Heures nuits + férié</TableHead>
-                <TableHead>Heures fériés / dimanche</TableHead>
-                <TableHead>Congés</TableHead>
-                <TableHead>Maladie</TableHead>
-                <TableHead>TR</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
-                    Aucune donnée à afficher
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rows.map((row) => (
-                  <TableRow key={row.employee.id}>
-                    <TableCell>{row.employee.name}</TableCell>
-                    <TableCell>{row.nightHours}</TableCell>
-                    <TableCell>{row.nightAndHoliday}</TableCell>
-                    <TableCell>{row.holidayAndSunday}</TableCell>
-                    <TableCell>{row.vacationDays}</TableCell>
-                    <TableCell>{row.sickDays}</TableCell>
-                    <TableCell>{row.trCount}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+        </ContentCard>
+      </PageContainer>
     </div>
   );
 }

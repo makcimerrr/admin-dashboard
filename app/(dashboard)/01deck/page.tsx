@@ -22,13 +22,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -336,69 +329,69 @@ const AdminScreen: React.FC = () => {
 
   const renderCardPreview = () => {
     return (
-      <Card className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mt-8 shadow-lg w-full">
-        <CardTitle className="text-xl font-semibold mb-2">
+      <section className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mt-8 shadow-lg w-full">
+        <h3 className="text-xl font-semibold mb-2">
           {formData.name || 'Nom de la carte'}
-        </CardTitle>
+        </h3>
 
         {/* Complément */}
         {selectedType === 'complement' && (
-          <CardContent>
-            <p className="text-sm ">
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Définition:</strong>{' '}
               {formData.definition || 'Aucune définition'}
             </p>
-            <p className="text-sm ">
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Réponse:</strong> {formData.answer || 'Aucune réponse'}
             </p>
-            <p className="text-sm ">
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Indices:</strong>{' '}
               {formData.hints
                 ? formData.hints.split(',').join(', ')
                 : 'Aucun indice'}
             </p>
-          </CardContent>
+          </div>
         )}
 
         {/* Définition */}
         {selectedType === 'definition' && (
-          <CardContent>
-            <p className="text-sm">
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Options:</strong>{' '}
               {formData.options
                 ? formData.options.split(';').join(', ')
                 : 'Aucune option'}
             </p>
-            <p className="text-sm">
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Index de la bonne réponse:</strong>{' '}
               {formData.correctOptionIndex || 'Pas de réponse spécifiée'}
             </p>
-            <p className="text-sm">
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Explication:</strong>{' '}
               {formData.explanation || 'Aucune explication'}
             </p>
-          </CardContent>
+          </div>
         )}
 
         {/* Graphique */}
         {selectedType === 'graphique' && (
-          <CardContent>
-            <p className="text-sm text-gray-600">
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Options:</strong>{' '}
               {formData.options
                 ? formData.options.split(';').join(', ')
                 : 'Aucune option'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Index de la bonne réponse:</strong>{' '}
               {formData.correctOptionIndex || 'Pas de réponse spécifiée'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Explication:</strong>{' '}
               {formData.explanation || 'Aucune explication'}
             </p>
-            <p className="text-sm text-gray-600">
-              <strong>Image:</strong>
+            <div className="text-sm text-gray-700 dark:text-gray-400">
+              <strong>Image:</strong>{' '}
               {formData.imageUrl ? (
                 <img
                   src={formData.imageUrl}
@@ -408,120 +401,116 @@ const AdminScreen: React.FC = () => {
               ) : (
                 'Aucune image'
               )}
-            </p>
-          </CardContent>
+            </div>
+          </div>
         )}
 
         {/* Trou */}
         {selectedType === 'trou' && (
-          <CardContent>
-            <p className="text-sm text-gray-600">
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Phrase avec des trous:</strong>{' '}
               {formData.sentence || 'Aucune phrase définie'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Réponses attendues:</strong>{' '}
               {formData.answers
                 ? formData.answers.split(',').join(', ')
                 : 'Aucune réponse attendue'}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-700 dark:text-gray-400">
               <strong>Indices:</strong>{' '}
               {formData.hints
                 ? formData.hints.split(',').join(', ')
                 : 'Aucun indice'}
             </p>
-          </CardContent>
+          </div>
         )}
-      </Card>
+      </section>
     );
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>01Deck</CardTitle>
-        <CardDescription>
-          Create educational cards for the mobile app.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col justify-center items-center p-6">
-          {!user ? (
-            <>
-              <Button variant="default" onClick={handleGoogleSignIn}>
-                Connexion avec Google
+    <div className="space-y-6 px-6 py-8 max-w-4xl mx-auto">
+      <header className="space-y-1">
+        <h1 className="text-3xl font-bold tracking-tight">01Deck</h1>
+        <p className="text-muted-foreground">Create educational cards for the mobile app.</p>
+      </header>
+      <div className="flex flex-col justify-center items-center p-6">
+        {!user ? (
+          <>
+            <Button variant="default" onClick={handleGoogleSignIn}>
+              Connexion avec Google
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="flex justify-between w-full max-w-3xl mb-6">
+              <h1 className="text-2xl font-semibold">
+                Bienvenue, {user.displayName}
+              </h1>
+              <Button onClick={handleSignOut} variant="destructive">
+                Déconnexion
               </Button>
-            </>
-          ) : (
-            <>
-              <div className="flex justify-between w-full max-w-3xl mb-6">
-                <h1 className="text-2xl font-semibold">
-                  Bienvenue, {user.displayName}
-                </h1>
-                <Button onClick={handleSignOut} variant="destructive">
-                  Déconnexion
-                </Button>
-              </div>
-              <div className="bg-white dark:bg-gray-900 shadow-xl rounded-lg p-8 max-w-3xl w-full">
-                <h2 className="text-2xl font-semibold mb-4">Créer une carte</h2>
-                <form onSubmit={handleSubmit}>
-                  <Label>Type de carte</Label>
-                  <Select
-                    value={selectedType}
-                    onValueChange={(e:any) => setSelectedType(e)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="complement">Complément</SelectItem>
-                      <SelectItem value="definition">Définition</SelectItem>
-                      <SelectItem value="graphique">Graphique</SelectItem>
-                      <SelectItem value="trou">Trou</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Label>Catégorie</Label>
-                  <Select
-                    value={selectedCategory}
-                    onValueChange={(e: any) => setSelectedCategory(e)}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Catégorie" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Conception">Conception</SelectItem>
-                      <SelectItem value="Maquettage">Maquettage</SelectItem>
-                      <SelectItem value="Développement">
-                        Développement
-                      </SelectItem>
-                      <SelectItem value="Versionning et Travail en Groupe">
-                        Versionning et Travail en Groupe
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Label>Nom de la carte</Label>
-                  <Input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Entrez le nom de la carte..."
-                  />
-                  {renderFields()}
-                  <div className="flex justify-center mt-4">
-                    <Button type="submit" variant="outline">
-                      Enregistrer
-                    </Button>
-                  </div>
-                </form>
-                {renderCardPreview()}
-              </div>
-            </>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            </div>
+            <div className="bg-white dark:bg-gray-900 shadow-xl rounded-lg p-8 max-w-3xl w-full">
+              <h2 className="text-2xl font-semibold mb-4">Créer une carte</h2>
+              <form onSubmit={handleSubmit}>
+                <Label>Type de carte</Label>
+                <Select
+                  value={selectedType}
+                  onValueChange={(e:any) => setSelectedType(e)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="complement">Complément</SelectItem>
+                    <SelectItem value="definition">Définition</SelectItem>
+                    <SelectItem value="graphique">Graphique</SelectItem>
+                    <SelectItem value="trou">Trou</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Label>Catégorie</Label>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={(e: any) => setSelectedCategory(e)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Conception">Conception</SelectItem>
+                    <SelectItem value="Maquettage">Maquettage</SelectItem>
+                    <SelectItem value="Développement">
+                      Développement
+                    </SelectItem>
+                    <SelectItem value="Versionning et Travail en Groupe">
+                      Versionning et Travail en Groupe
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Label>Nom de la carte</Label>
+                <Input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Entrez le nom de la carte..."
+                />
+                {renderFields()}
+                <div className="flex justify-center mt-4">
+                  <Button type="submit" variant="outline">
+                    Enregistrer
+                  </Button>
+                </div>
+              </form>
+              {renderCardPreview()}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 };
 

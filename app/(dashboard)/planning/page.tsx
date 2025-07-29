@@ -1588,13 +1588,13 @@ export default function PlanningPage() {
         </div>
         <div className="p-6">
         <ScrollArea className="h-[600px]">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+          <div className="w-full">
+            <table className="w-full border-collapse table-auto">
               <thead>
                   <tr className="border-b">
                     <th className="text-left p-3 font-medium sticky left-0 bg-background z-10">Employé</th>
                 {daysOfWeek.map((day, index) => (
-                      <th key={day} className="text-center p-3 font-medium min-w-32 border-b">
+                      <th key={day} className="text-center p-3 font-medium w-32 border-b">
                         <div className="font-semibold">{day}</div>
                         <div className="text-xs text-muted-foreground font-normal">{formatDate(currentWeekDates[index])}</div>
                   </th>
@@ -1932,7 +1932,7 @@ export default function PlanningPage() {
     : hours;
 
   return (
-    <div className="space-y-6 overflow-x-hidden">
+    <div className="space-y-6 w-full max-w-full px-6 py-8" style={{ overflowX: 'hidden' }}>
       {/* Header harmonisé */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
         <div>
@@ -2195,19 +2195,20 @@ export default function PlanningPage() {
                     </Button>
                   </div>
                 </div>
-                <section className="rounded-lg border bg-background overflow-x-auto max-h-[700px] overflow-y-auto w-full">
-                  <div className="p-6">
-                    {loading ? (
-                      <div className="flex items-center justify-center h-[600px]">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                      </div>
-                    ) : (
-                      <div className="w-full min-w-[2150px]">
+                  <section className="rounded-lg border bg-background max-h-[700px] overflow-y-auto w-full">
+                    <div className="p-6">
+                      {loading ? (
+                        <div className="flex items-center justify-center h-[600px]">
+                          <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
+                      ) : (
+                        <div className="w-full">
+                          <div className="w-full">
                         {/* Jours semaine + weekend dans la même grille */}
                         <div className="mb-2">
                           <div className="font-bold text-lg mb-1">Semaine complète (lundi à dimanche)</div>
                           {/* Header sticky pour tous les jours */}
-                          <div className="grid grid-cols-[40px_repeat(7,minmax(160px,1fr))] md:grid-cols-[50px_repeat(7,minmax(260px,1fr))] gap-1 mb-0 sticky top-0 z-20 bg-background w-full min-w-full md:min-w-[2150px]">
+                          <div className="grid grid-cols-[40px_repeat(7,minmax(80px,1fr))] gap-1 mb-0 sticky top-0 z-20 bg-background w-full">
                             <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
                             {daysOfWeek.map((day, dayIndex) => {
                               const dateStr = currentWeekDates[dayIndex].toISOString().slice(0, 10);
@@ -2265,10 +2266,10 @@ export default function PlanningPage() {
                             })}
                           </div>
                           {/* Grille des créneaux pour tous les jours */}
-                          <div className="grid grid-cols-[40px_repeat(7,minmax(160px,1fr))] md:grid-cols-[50px_repeat(7,minmax(260px,1fr))] gap-1 mb-2 w-full min-w-full md:min-w-[2150px]">
+                          <div className="grid grid-cols-[40px_repeat(7,minmax(80px,1fr))] gap-1 mb-2 w-full">
                             <div className="space-y-1">
                               {calendarHours.map((hour) => (
-                                <div key={hour} className="h-16 p-2 text-center text-base text-muted-foreground font-semibold w-[50px] min-w-[50px] max-w-[50px]">
+                                <div key={hour} className="h-16 p-2 text-center text-xs text-muted-foreground font-semibold w-full">
                                   {hour}h
                                 </div>
                               ))}
@@ -2279,7 +2280,7 @@ export default function PlanningPage() {
                               return (
                                 <div
                                   key={day}
-                                  className="relative space-y-1 overflow-visible min-w-[260px]"
+                                  className="relative space-y-1 overflow-visible w-full"
                                   id={`day-grid-${day}`}
                                   style={holidayName ? {
                                     background: `repeating-linear-gradient(135deg, #f87171 0px, #f87171 8px, #fff 8px, #fff 16px)`
@@ -2526,11 +2527,12 @@ export default function PlanningPage() {
                               );
                             })}
                           </div>
+                          </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </section>
+                      )}
+                    </div>
+                  </section>
               </>
             )}
             {viewMode === 'person' && (
