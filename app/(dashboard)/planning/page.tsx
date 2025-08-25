@@ -1699,15 +1699,19 @@ export default function PlanningPage() {
       const rect = grid.getBoundingClientRect();
       let y = e.clientY - rect.top - dragOffsetRef.current;
       y = Math.max(0, Math.min(y, rect.height - 1));
-      const hour = 8 + (y / rect.height) * 14;
+      const hour =
+        (isHackaton ? 6 : 8) + (y / rect.height) * (isHackaton ? 24 : 14);
       const h = Math.floor(hour);
       const m = Math.round(((hour - h) * 60) / 5) * 5;
       let time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
       // Clamp pour ne pas dépasser la journée
       const [origH, origM] = dragSlot.originalStart.split(':').map(Number);
-      const maxMinutes = 22 * 60 - dragSlot.duration;
+      const maxMinutes =
+        ((isHackaton ? 6 : 8) + (isHackaton ? 24 : 14)) * 60 -
+        dragSlot.duration;
       let minutes = h * 60 + m;
-      if (minutes < 8 * 60) minutes = 8 * 60;
+      if (minutes < (isHackaton ? 6 : 8) * 60)
+        minutes = (isHackaton ? 6 : 8) * 60;
       if (minutes > maxMinutes) minutes = maxMinutes;
       const ch = Math.floor(minutes / 60);
       const cm = minutes % 60;
@@ -2363,7 +2367,8 @@ export default function PlanningPage() {
       const rect = slotDragRef.current.parentElement!.getBoundingClientRect();
       const y = e.clientY - rect.top;
       const totalHeight = rect.height;
-      const hour = 8 + (y / totalHeight) * 14;
+      const hour =
+        (isHackaton ? 6 : 8) + (y / totalHeight) * (isHackaton ? 24 : 14);
       const h = Math.floor(hour);
       const m = Math.round(((hour - h) * 60) / 5) * 5;
       const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
@@ -2576,7 +2581,7 @@ export default function PlanningPage() {
     : hours;
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col w-full max-w-full px-6 py-8" style={{ overflowX: 'hidden' }}>
+    <div className="flex flex-col w-full min-h-screen overflow-x-auto px-6 py-8">
       {/* Toggle compact/full view button */}
       <div className="flex justify-end">
         <Button
@@ -2585,7 +2590,7 @@ export default function PlanningPage() {
           onClick={() => setCompactView(!compactView)}
           className="text-xs"
         >
-          {compactView ? "Afficher tout" : "Mode compact"}
+          {compactView ? 'Afficher tout' : 'Mode compact'}
         </Button>
       </div>
       {/* Everything except the calendar is hidden in compactView */}
@@ -2604,25 +2609,37 @@ export default function PlanningPage() {
             </div>
             <div className="flex flex-wrap items-center gap-1 sm:gap-2">
               <Link href="/planning">
-                <Button variant="default" className="w-full sm:w-auto text-sm h-8">
+                <Button
+                  variant="default"
+                  className="w-full sm:w-auto text-sm h-8"
+                >
                   <LayoutTemplate className="h-4 w-4 mr-2" />
                   Planning
                 </Button>
               </Link>
               <Link href="/planning/absences">
-                <Button variant="outline" className="w-full sm:w-auto text-sm h-8">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto text-sm h-8"
+                >
                   <CalendarIcon className="h-4 w-4 mr-2" />
                   Absences
                 </Button>
               </Link>
               <Link href="/planning/extraction">
-                <Button variant="outline" className="w-full sm:w-auto text-sm h-8">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto text-sm h-8"
+                >
                   <LayoutTemplate className="h-4 w-4 mr-2" />
                   Extraction
                 </Button>
               </Link>
               <Link href="/employees">
-                <Button variant="outline" className="w-full sm:w-auto text-sm h-8">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto text-sm h-8"
+                >
                   <Users className="h-4 w-4 mr-2" />
                   Employés
                 </Button>
@@ -2676,8 +2693,11 @@ export default function PlanningPage() {
         </>
       )}
       {/* Contenu principal dans un conteneur harmonisé */}
-      <div className="flex flex-col flex-1 min-h-0 w-full">
-        <Tabs defaultValue="calendar" className="w-full flex-1 flex flex-col min-h-0">
+      <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
+        <Tabs
+          defaultValue="calendar"
+          className="w-full flex-1 flex flex-col min-h-0"
+        >
           <TabsList
             className={`grid w-full ${planningPermission === 'editor' ? 'grid-cols-3' : 'grid-cols-2'} max-w-xl text-xs sm:text-base`}
           >
@@ -2699,7 +2719,10 @@ export default function PlanningPage() {
               <span className="hidden xs:inline">Tableau</span>
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="calendar" className="flex-1 flex flex-col min-h-0">
+          <TabsContent
+            value="calendar"
+            className="flex-1 flex flex-col min-h-0"
+          >
             {/* View mode switcher: segmented control */}
             {!compactView && (
               <div className="flex justify-end my-2 sm:my-4">
@@ -2737,84 +2760,8 @@ export default function PlanningPage() {
             {/* Affichage exclusif de la vue sélectionnée */}
             {viewMode === 'calendar' && (
               <>
-                {!compactView && (
-                  <div>
-                    {/* Bouton semaine type calendrier */}
-                    <div className="flex justify-end mb-1">
-                      {/* ...Popover etc. unchanged... */}
-                      {/* [keep existing code for Popover, employee legend, etc.] */}
-                      {/* The entire block, as above, is wrapped in {!compactView && (...)} */}
-                      {/* ... */}
-                    </div>
-                    {/* Légende des employés */}
-                    <div className="flex flex-wrap gap-1 sm:gap-2 mb-2 p-1 sm:p-2 bg-muted rounded-lg">
-                      {employees.map((employee) => {
-                        const isVisible = visibleEmployeeIds.includes(
-                          employee.id
-                        );
-                        return (
-                          <div
-                            key={employee.id}
-                            className="flex items-center gap-2 cursor-move px-2 py-1 sm:px-3 sm:py-1 rounded-lg shadow border border-muted/40 hover:shadow-md transition-all text-xs sm:text-sm"
-                            draggable={planningPermission === 'editor'}
-                            style={{
-                              opacity: isVisible ? 1 : 0.5,
-                              cursor:
-                                planningPermission !== 'editor'
-                                  ? 'not-allowed'
-                                  : 'move'
-                            }}
-                            title={
-                              planningPermission !== 'editor'
-                                ? 'Accès en lecture seule'
-                                : undefined
-                            }
-                            onDragStart={(e) => {
-                              if (planningPermission !== 'editor') return;
-                              e.dataTransfer.setData('employeeId', employee.id);
-                            }}
-                          >
-                            <div
-                              className="w-3 h-3 sm:w-4 sm:h-4 rounded"
-                              style={{ backgroundColor: employee.color }}
-                            />
-                            <span className="font-medium">{employee.name}</span>
-                            <span className="hidden sm:inline text-xs text-muted-foreground">
-                              ({getTotalHoursForWeek(employee.id)}h)
-                            </span>
-                            {/* Toggle visibility button */}
-                            <button
-                              type="button"
-                              aria-label={
-                                isVisible
-                                  ? 'Cacher du planning'
-                                  : 'Afficher sur le planning'
-                              }
-                              onClick={() => {
-                                setVisibleEmployeeIds((ids) =>
-                                  isVisible
-                                    ? ids.filter((id) => id !== employee.id)
-                                    : [...ids, employee.id]
-                                );
-                              }}
-                              className={`ml-2 flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-all duration-150
-                              ${isVisible ? 'bg-blue-100 border-blue-400 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 border-gray-300 text-gray-400 hover:bg-gray-200'}
-                              shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40`}
-                              style={{ fontSize: 16 }}
-                            >
-                              {isVisible ? (
-                                <EyeIcon className="w-4 h-4" />
-                              ) : (
-                                <EyeOffIcon className="w-4 h-4" />
-                              )}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                <section className="rounded-lg border bg-background flex-1 overflow-y-auto min-h-0 w-full">
+                {/* Legend is moved inside the scrollable section to ensure stickiness */}
+                <section className="rounded-lg border bg-background flex-1 overflow-y-auto min-h-0 w-full relative">
                   <div className="p-6">
                     {loading ? (
                       <div className="flex items-center justify-center h-[600px]">
@@ -2822,14 +2769,157 @@ export default function PlanningPage() {
                       </div>
                     ) : (
                       <div className="w-full">
+                        {/* Sticky employee legend placed inside the scroll container */}
+                        {!compactView ? (
+                          <div className="sticky top-0 z-50 flex flex-wrap gap-1 sm:gap-2 mb-2 p-1 sm:p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
+                            {employees.map((employee) => {
+                              const isVisible = visibleEmployeeIds.includes(
+                                employee.id
+                              );
+                              return (
+                                <div
+                                  key={`legend-${employee.id}`}
+                                  className="flex items-center gap-2 cursor-move px-2 py-1 sm:px-3 sm:py-1 rounded-lg shadow border border-muted/40 hover:shadow-md transition-all text-xs sm:text-sm"
+                                  draggable={planningPermission === 'editor'}
+                                  style={{
+                                    opacity: isVisible ? 1 : 0.5,
+                                    cursor:
+                                      planningPermission !== 'editor'
+                                        ? 'not-allowed'
+                                        : 'move'
+                                  }}
+                                  title={
+                                    planningPermission !== 'editor'
+                                      ? 'Accès en lecture seule'
+                                      : undefined
+                                  }
+                                  onDragStart={(e) => {
+                                    if (planningPermission !== 'editor') return;
+                                    e.dataTransfer.setData(
+                                      'employeeId',
+                                      employee.id
+                                    );
+                                  }}
+                                >
+                                  <div
+                                    className="w-3 h-3 sm:w-4 sm:h-4 rounded"
+                                    style={{ backgroundColor: employee.color }}
+                                  />
+                                  <span className="font-medium">
+                                    {employee.name}
+                                  </span>
+                                  <span className="hidden sm:inline text-xs text-muted-foreground">
+                                    ({getTotalHoursForWeek(employee.id)}h)
+                                  </span>
+                                  <button
+                                    type="button"
+                                    aria-label={
+                                      isVisible
+                                        ? 'Cacher du planning'
+                                        : 'Afficher sur le planning'
+                                    }
+                                    onClick={() => {
+                                      setVisibleEmployeeIds((ids) =>
+                                        isVisible
+                                          ? ids.filter(
+                                              (id) => id !== employee.id
+                                            )
+                                          : [...ids, employee.id]
+                                      );
+                                    }}
+                                    className={`ml-2 flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-all duration-150 ${
+                                      isVisible
+                                        ? 'bg-blue-100 border-blue-400 text-blue-700 hover:bg-blue-200'
+                                        : 'bg-gray-100 border-gray-300 text-gray-400 hover:bg-gray-200'
+                                    } shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40`}
+                                    style={{ fontSize: 16 }}
+                                  >
+                                    {isVisible ? (
+                                      <EyeIcon className="w-4 h-4" />
+                                    ) : (
+                                      <EyeOffIcon className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="sticky top-0 z-50 flex flex-wrap gap-1 sm:gap-2 mb-2 p-1 sm:p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
+                            {employees.map((employee) => {
+                              const isVisible = visibleEmployeeIds.includes(
+                                employee.id
+                              );
+                              return (
+                                <div
+                                  key={`legend-compact-${employee.id}`}
+                                  className="flex items-center gap-2 cursor-move px-2 py-1 rounded-lg border text-xs"
+                                  draggable={planningPermission === 'editor'}
+                                  style={{
+                                    opacity: isVisible ? 1 : 0.5,
+                                    cursor:
+                                      planningPermission !== 'editor'
+                                        ? 'not-allowed'
+                                        : 'move'
+                                  }}
+                                  title={
+                                    planningPermission !== 'editor'
+                                      ? 'Accès en lecture seule'
+                                      : 'Glissez-déposez un employé sur un jour pour créer 9h-17h'
+                                  }
+                                  onDragStart={(e) => {
+                                    if (planningPermission !== 'editor') return;
+                                    e.dataTransfer.setData(
+                                      'employeeId',
+                                      employee.id
+                                    );
+                                  }}
+                                >
+                                  <div
+                                    className="w-3 h-3 rounded"
+                                    style={{ backgroundColor: employee.color }}
+                                  />
+                                  <span className="font-medium truncate max-w-[9rem]">
+                                    {employee.name}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    aria-label={
+                                      isVisible
+                                        ? 'Cacher du planning'
+                                        : 'Afficher sur le planning'
+                                    }
+                                    onClick={() => {
+                                      setVisibleEmployeeIds((ids) =>
+                                        isVisible
+                                          ? ids.filter(
+                                              (id) => id !== employee.id
+                                            )
+                                          : [...ids, employee.id]
+                                      );
+                                    }}
+                                    className={`ml-1 flex items-center justify-center w-6 h-6 rounded-full border ${
+                                      isVisible
+                                        ? 'bg-blue-100 border-blue-400 text-blue-700'
+                                        : 'bg-gray-100 border-gray-300 text-gray-400'
+                                    }`}
+                                  >
+                                    {isVisible ? (
+                                      <EyeIcon className="w-3.5 h-3.5" />
+                                    ) : (
+                                      <EyeOffIcon className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                         <div className="w-full">
                           {/* Jours semaine + weekend dans la même grille */}
                           <div className="mb-2">
-                            <div className="font-bold text-lg mb-1">
-                              Semaine complète (lundi à dimanche)
-                            </div>
-                            {/* Header sticky pour tous les jours */}
-                            <div className="grid grid-cols-[40px_repeat(7,minmax(80px,1fr))] gap-1 mb-0 sticky top-0 z-20 bg-background w-full">
+                            {/* Header sticky pour tous les jours (offset to sit below legend) */}
+                            <div className="grid grid-cols-[40px_repeat(7,minmax(80px,1fr))] gap-1 mb-0 sticky top-12 z-40 bg-background w-full">
                               <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
                               {daysOfWeek.map((day, dayIndex) => {
                                 const dateStr = currentWeekDates[dayIndex]
@@ -2935,7 +3025,7 @@ export default function PlanningPage() {
                               })}
                             </div>
                             {/* Grille des créneaux pour tous les jours */}
-                            <div className="grid grid-cols-[40px_repeat(7,minmax(80px,1fr))] gap-1 mb-2 w-full">
+                            <div className="grid grid-cols-[40px_repeat(7,minmax(80px,1fr))] gap-1 mb-2 mt-2 w-full">
                               <div className="space-y-1">
                                 {calendarHours.map((hour) => (
                                   <div
@@ -3045,7 +3135,7 @@ export default function PlanningPage() {
                                                 : slot.start,
                                               slot.type !== 'work'
                                                 ? isHackaton
-                                                  ? '06:00'
+                                                  ? '30:00'
                                                   : '22:00'
                                                 : slot.end
                                             );
@@ -3143,7 +3233,7 @@ export default function PlanningPage() {
                                                   dragSlot.slotIndex ===
                                                     slotIndex &&
                                                   dragGhostTime
-                                                    ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% )`
+                                                    ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}% )`
                                                     : top,
                                                 height: `calc(${height} - 4px)`,
                                                 width,
@@ -3316,14 +3406,14 @@ export default function PlanningPage() {
                                                       style={{
                                                         ...ghostLineStyle,
                                                         top: 0,
-                                                        transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}%))`,
+                                                        transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}%))`,
                                                         background: '#2563eb'
                                                       }}
                                                     />
                                                     <div
                                                       style={{
                                                         ...ghostLabelStyle,
-                                                        top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% - 12px)`
+                                                        top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}% - 12px)`
                                                       }}
                                                     >
                                                       {resizeValue}
@@ -3411,14 +3501,14 @@ export default function PlanningPage() {
                                                       style={{
                                                         ...ghostLineStyle,
                                                         bottom: 0,
-                                                        transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}%))`,
+                                                        transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}%))`,
                                                         background: '#2563eb'
                                                       }}
                                                     />
                                                     <div
                                                       style={{
                                                         ...ghostLabelStyle,
-                                                        top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - 8) / (isHackaton ? 22 : 14)) * 100}% - 12px)`
+                                                        top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}% - 12px)`
                                                       }}
                                                     >
                                                       {resizeValue}
