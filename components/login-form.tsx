@@ -59,7 +59,7 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<'div'>) {
-  const [email, setEmail] = useState('');
+  const [pseudo, setPseudo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
@@ -71,7 +71,7 @@ export function LoginForm({
     try {
         const result = await signIn('credentials', {
           redirect: false,
-          email,
+          pseudo,
           password
         });
 
@@ -134,13 +134,13 @@ export function LoginForm({
               </div>
               <div className="grid gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="pseudo">Pseudo</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    placeholder="m@example.com"
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="pseudo"
+                    type="text"
+                    value={pseudo}
+                    placeholder="john-doe"
+                    onChange={(e) => setPseudo(e.target.value)}
                     required
                   />
                 </div>
