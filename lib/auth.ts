@@ -16,42 +16,79 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Credentials({
       name: 'Credentials',
       credentials: {
-        email: {
-          label: 'Email',
-          type: 'email',
-          placeholder: 'jsmith@example.com'
+        pseudo: {
+          label: 'Pseudo',
+          type: 'text',
+          placeholder: 'john-doe'
         },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials, req) {
+      async authorize(credentials) {
         if (!credentials) {
           throw new Error('No credentials provided');
         }
 
         try {
           const response = await fetch(
-            `${process.env.NEXTAUTH_URL}/api/authenticate`,
+            `${process.env.AUTHENDPOINT}/api/auth/login`,
             {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
+              // Server-side login; the external service will set cookies for its own domain.
               body: JSON.stringify({
-                email: credentials.email,
+                pseudo: credentials.pseudo,
                 password: credentials.password
               })
             }
           );
 
-          const data = await response.json();
-
-          if (response.ok) {
-            return data; // Renvoie la réponse de l'API
-          } else if (response.status === 429) {
-            throw new Error('Too many requests, please try again later');
-          } else {
-            throw new Error('Invalid email or password');
+          if (!response.ok) {
+            if (response.status === 429) {
+              throw new Error('Too many requests, please try again later');
+            }
+            throw new Error('Invalid pseudo or password');
           }
+
+          const data = await response.json();
+          console.log('Login response', data);
+
+          if (!data.ok) {
+            throw new Error('Login failed');
+          }
+
+          // Fetch user profile after successful login
+          const profileResponse = await fetch(`${process.env.AUTHENDPOINT}/api/auth/profile`, {
+
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Cookie: response.headers.get('set-cookie') || ''
+            }
+          });
+
+          if (!profileResponse.ok) {
+            throw new Error('Failed to fetch user profile');
+          }
+
+          const profile = await profileResponse.json();
+          console.log('Profile', profile);
+
+          const emargementRole = profile.apps.find((app: any) => app.name === 'emargement')?.role ?? 'user';
+          const hubRole = profile.apps.find((app: any) => app.name === 'hub')?.role ?? 'user';
+          const planningRole = profile.apps.find((app: any) => app.name === 'planning')?.role ?? 'reader';
+
+          return {
+            id: String(profile.id ?? profile.user?.id ?? profile.pseudo),
+            name: profile.pseudo ?? profile.name ?? 'User',
+            email: profile.email ?? undefined,
+            image: profile.image ?? undefined,
+            role: profile.role ?? 'user',
+            planningPermission: planningRole,
+            emargementPermission: emargementRole,
+            hubPermission: hubRole
+          } as any;
         } catch (error: any) {
           throw new Error(`Authentication failed: ${error.message}`);
         }

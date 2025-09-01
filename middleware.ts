@@ -5,8 +5,10 @@ export async function middleware(req: NextRequest) {
     const session = await auth();
     const user = session?.user;
 
+    console.log(user);
+
     // Si l'utilisateur est connecté et a un rôle 'admin', on permet l'accès
-    if (user && user.role === 'admin') {
+    if (user && user.role === 'Admin' || user && user.role === 'Super Admin') {
         return NextResponse.next();
     }
 
