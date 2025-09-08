@@ -43,4 +43,8 @@ export async function upsertPromoStatus(data: PromoStatusUpsert) {
 
 export async function deletePromoStatus(promoKey: string) {
   await db.delete(promoStatus).where(eq(promoStatus.promoKey, promoKey));
-} 
+}
+
+export async function getPromoStatusForDisplay() {
+  return db.select().from(promoStatus).orderBy(promoStatus.promoKey);
+}

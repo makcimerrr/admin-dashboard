@@ -18,9 +18,9 @@ export async function GET(req: Request) {
     // Mets à jour chaque promo dans la DB
     for (const promo of promos) {
       await upsertPromoStatus({
-        promoKey: `promo-${promo.promoIndex}`, // ou autre clé unique
+        promoKey: promo.promotionName,
         status: promo.success ? "OK" : "ERROR",
-        promotionName: promo.promotionName,
+        promotionName: `Promo ${promo.promotionName}`,
         currentProject: promo.currentProject,
         progress: promo.progress,
         agenda: promo.agenda,
