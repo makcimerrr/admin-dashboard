@@ -154,7 +154,7 @@ const data = {
   documents: [
     {
       name: "Data Library",
-      url: "#",
+      url: "/promos/status",
       icon: DatabaseIcon,
     },
     {
