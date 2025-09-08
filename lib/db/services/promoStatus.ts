@@ -10,10 +10,34 @@ export async function getPromoStatusByKey(promoKey: string) {
   return db.select().from(promoStatus).where(eq(promoStatus.promoKey, promoKey));
 }
 
-export async function upsertPromoStatus(promoKey: string, status: string) {
-  await db.insert(promoStatus).values({ promoKey, status }).onConflictDoUpdate({
+export type PromoStatusUpsert = {
+  promoKey: string;
+  status: string;
+  promotionName: string;
+  currentProject?: string | null;
+  progress?: number;
+  agenda?: string[] | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  lastUpdated?: Date | string;
+};
+
+export async function upsertPromoStatus(data: PromoStatusUpsert) {
+  // Remove undefined fields so drizzle doesn't try to insert them as undefined
+  const filteredData: Partial<PromoStatusUpsert> = {};
+  for (const key of Object.keys(data) as Array<keyof PromoStatusUpsert>) {
+    if (data[key] !== undefined && data[key] !== null) filteredData[key] = data[key] as any;
+  }
+  await db.insert(promoStatus).values(filteredData as any).onConflictDoUpdate({
     target: promoStatus.promoKey,
-    set: { status },
+    set: {
+      ...filteredData,
+      lastUpdated: filteredData.lastUpdated instanceof Date
+        ? filteredData.lastUpdated
+        : filteredData.lastUpdated
+          ? new Date(filteredData.lastUpdated)
+          : undefined,
+    },
   });
 }
 
