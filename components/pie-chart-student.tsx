@@ -70,12 +70,12 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
       }
 
       const data: DelayData[] = [
-        { level: 'bien', count: goodLateCount, fill: 'var(--color-bien)' },
+        { level: 'bien', count: goodLateCount, fill: 'var(--color-avance)' },
         { level: 'retard', count: lateCount, fill: 'var(--color-retard)' },
         {
           level: 'avance',
           count: advanceLateCount,
-          fill: 'var(--color-avance)'
+          fill: 'var(--color-bien)'
         },
         {
           level: 'spécialité',

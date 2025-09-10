@@ -237,12 +237,19 @@ export async function getStudents(
 
       const lastUpdate = lastUpdateRecord[0]?.lastUpdate || null;
 
-      // Vérifier si une mise à jour a déjà été effectuée dans les 24 dernières heures
-      if (
-        lastUpdate &&
-        new Date().getTime() - new Date(lastUpdate).getTime() <
-          24 * 60 * 60 * 1000
-      ) {
+      // Autoriser jusqu'à 5 mises à jour par jour par promo
+      const updatesToday = await db
+        .select({ count: count() })
+        .from(delayStatus)
+        .where(
+          and(
+            eq(delayStatus.promoId, promoId),
+            sql`DATE("last_update") = CURRENT_DATE`
+          )
+        )
+        .execute();
+
+      if (updatesToday[0].count >= 5) {
         continue; // Passer à la prochaine promotion
       }
 
