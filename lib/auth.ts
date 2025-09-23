@@ -106,7 +106,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                         console.log('user', user);*/
 
         const response = await fetch(
-          `${process.env.NEXTAUTH_URL}/api/save-oauth-user`,
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/save-oauth-user`,
           {
             method: 'POST',
             headers: {

@@ -1,6 +1,10 @@
+// config.ts
 import 'server-only';
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
 
-// Database connection configuration
-export const db = drizzle(neon(process.env.POSTGRES_URL!));
+const sql = postgres(process.env.POSTGRES_URL!, {
+    ssl: false // désactive SSL
+});
+
+export const db = drizzle(sql);
