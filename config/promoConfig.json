@@ -57,8 +57,8 @@
     "title": "Promotion 1 - Année 2025",
     "dates": {
       "start": "2025-05-26",
-      "piscine-js-start": "NaN",
-      "piscine-js-end": "NaN",
+      "piscine-js-start": "2025-03-11",
+      "piscine-js-end": "2025-21-11",
       "piscine-rust-start": "NaN",
       "piscine-rust-end": "NaN",
       "end": "2027-05-19"
