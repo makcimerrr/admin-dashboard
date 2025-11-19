@@ -27,7 +27,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { stackClientApp } from "@/lib/stack-client"
 
 let User: {
   id?: string
@@ -43,6 +44,17 @@ export function NavUser({
   user?: typeof User | null
 }) {
   const { isMobile } = useSidebar()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    try {
+      await stackClientApp.signOut()
+      router.push('/login')
+      router.refresh()
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
+  }
 
   return (
       <SidebarMenu>
@@ -88,7 +100,7 @@ export function NavUser({
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/account')}>
                   <UserCircleIcon />
                   Account
                 </DropdownMenuItem>
@@ -98,9 +110,7 @@ export function NavUser({
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={async () => {
-                await signOut();
-              }}>
+              <DropdownMenuItem onClick={handleSignOut}>
                 <LogOutIcon />
                 Log out
               </DropdownMenuItem>
