@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/hooks/use-toast';
+import { LayoutGrid } from 'lucide-react';
 
 const AdminScreen: React.FC = () => {
   const db = getFirestore(firebaseApp); // Firestore Initialization
@@ -431,11 +432,17 @@ const AdminScreen: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 px-6 py-8 max-w-4xl mx-auto">
-      <header className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">01Deck</h1>
-        <p className="text-muted-foreground">Create educational cards for the mobile app.</p>
-      </header>
+    <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
+      {/* Header moderne */}
+      <div className="flex items-center gap-3">
+        <div className="p-3 bg-primary/10 rounded-lg">
+          <LayoutGrid className="h-6 w-6 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">01Deck</h1>
+          <p className="text-muted-foreground">Créez des cartes éducatives pour l'application mobile</p>
+        </div>
+      </div>
       <div className="flex flex-col justify-center items-center p-6">
         {!user ? (
           <>
