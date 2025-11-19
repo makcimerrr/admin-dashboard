@@ -429,7 +429,7 @@ export async function updateStudentProject(
         `Tentative de récupération des données pour l'étudiant ${login}`
       );
       const response = await fetch(
-        /*`https://api-zone01-rouen.deno.dev/api/v1/user-info/${login}`*/ `http://localhost:8000/api/v1/user-info/${login}`
+        `https://api-zone01-rouen.deno.dev/api/v1/user-info/${login}`
       );
       if (!response.ok) {
         throw new Error(
