@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { DatePickerDemo } from '@/components/date-picker';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { addDays, isAfter, parseISO } from 'date-fns';
-import { Calendar, Clock, LayoutTemplate, Users } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { Calendar, Clock, LayoutTemplate, Users, Loader2 } from 'lucide-react';
+import { useUser } from "@stackframe/stack";
 import { PageHeader } from '@/components/planning/page-header';
-import { PageContainer } from '@/components/planning/page-container';
-import { ContentCard } from '@/components/planning/content-card';
+import { PlanningNavigation } from '@/components/planning/planning-navigation';
 import { DataTable } from '@/components/planning/data-table';
 import { LoadingState } from '@/components/planning/loading-state';
 
@@ -85,8 +85,12 @@ export default function ExtractionPage() {
   const [rows, setRows] = useState<ExtractionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const { data: session } = useSession();
-  const planningPermission = session?.user?.planningPermission || 'reader';
+  const stackUser = useUser();
+  const planningPermission = stackUser
+    ? (stackUser.clientReadOnlyMetadata?.planningPermission ||
+       stackUser.clientMetadata?.planningPermission ||
+       'reader')
+    : 'reader';
 
   useEffect(() => {
     fetch('/api/employees')
@@ -242,72 +246,84 @@ export default function ExtractionPage() {
     }
   ];
 
-  const headerActions = [
-    {
-      label: 'Planning',
-      href: '/planning',
-      icon: LayoutTemplate,
-      variant: 'outline' as const
-    },
-    {
-      label: 'Absences',
-      href: '/planning/absences',
-      icon: Calendar,
-      variant: 'outline' as const
-    },
-    {
-      label: 'Employés',
-      href: '/employees',
-      icon: Users,
-      variant: 'outline' as const
-    },
-    ...(planningPermission === 'editor'
-      ? [
-          {
-            label: 'History',
-            href: '/history',
-            icon: Clock,
-            variant: 'outline' as const
-          }
-        ]
-      : [])
-  ];
-
   return (
-    <div
-      className="space-y-6 w-full max-w-full px-6 py-8"
-      style={{ overflowX: 'hidden' }}
-    >
-      <PageContainer>
-        <PageHeader
-          title="Extraction"
-          subtitle="Extraction des heures et statistiques"
-          icon={LayoutTemplate}
-          actions={headerActions}
-        />
+    <div className="flex flex-col gap-6 p-6">
+      <PageHeader
+        title="Extraction"
+        subtitle="Extraction des heures et statistiques"
+        icon={LayoutTemplate}
+      />
 
-        <ContentCard>
-          <div className="flex gap-4 mb-6 items-end">
-            <div>
-              <label className="block mb-1 text-sm font-medium">Début</label>
+      {/* Navigation */}
+      <PlanningNavigation planningPermission={planningPermission} />
+
+      {/* Filter Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Paramètres d'extraction</CardTitle>
+          <CardDescription>
+            Sélectionnez la période pour extraire les données de planning
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date de début</label>
               <DatePickerDemo
                 value={start}
                 onChange={setStart}
-                className="w-36"
+                className="w-[180px]"
               />
             </div>
-            <div>
-              <label className="block mb-1 text-sm font-medium">Fin</label>
-              <DatePickerDemo value={end} onChange={setEnd} className="w-36" />
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date de fin</label>
+              <DatePickerDemo
+                value={end}
+                onChange={setEnd}
+                className="w-[180px]"
+              />
             </div>
             <Button
               onClick={handleExtract}
               disabled={!start || !end || loading}
+              className="gap-2"
             >
-              {loading ? 'Chargement...' : 'Extraire'}
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Extraction en cours...
+                </>
+              ) : (
+                <>
+                  <LayoutTemplate className="h-4 w-4" />
+                  Extraire les données
+                </>
+              )}
             </Button>
+            {start && end && (
+              <div className="flex-1 min-w-[200px]">
+                <p className="text-sm text-muted-foreground">
+                  Période : <span className="font-medium text-foreground">
+                    {Math.ceil((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24))} jours
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
 
+      {/* Results Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Résultats de l'extraction</CardTitle>
+          <CardDescription>
+            {rows.length > 0
+              ? `${rows.length} employé(s) trouvé(s) pour la période sélectionnée`
+              : 'Aucune donnée à afficher'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           {loading ? (
             <LoadingState type="spinner" />
           ) : (
@@ -317,8 +333,8 @@ export default function ExtractionPage() {
               emptyMessage="Aucune donnée à afficher. Sélectionnez une période et cliquez sur 'Extraire'."
             />
           )}
-        </ContentCard>
-      </PageContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 }
