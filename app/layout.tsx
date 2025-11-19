@@ -2,7 +2,7 @@ import './globals.css';
 
 import { Analytics } from '@vercel/analytics/react';
 import { Toaster } from '@/components/ui/toaster';
-import ThemeProviderWrapper from '@/components/theme-provider-wrapper';
+import { Providers } from './providers';
 
 export const metadata = {
     title: 'Zone01 Admin Dashboard',
@@ -18,10 +18,10 @@ export default function RootLayout({
     return (
         <html lang="en">
         <body className="flex min-h-screen w-full flex-col">
-        <ThemeProviderWrapper>
+          <Providers>
             {children}
             <Toaster />
-        </ThemeProviderWrapper>
+          </Providers>
         </body>
         <Analytics />
         </html>
