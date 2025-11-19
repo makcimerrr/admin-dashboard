@@ -37,7 +37,7 @@ export default async function DashboardLayout({
                        'reader',
   };
 
-  console.log('✅ Dashboard - Utilisateur connecté:', user.email, 'Role:', user.role);
+  console.log('✅ Dashboard - Utilisateur connecté:', user.email, 'Role:', user.role, 'Planning Permission:', user.planningPermission);
 
   // Protection des routes : seuls les Admin et Super Admin ont accès au dashboard
   if (user.role !== 'Admin' && user.role !== 'Super Admin') {
