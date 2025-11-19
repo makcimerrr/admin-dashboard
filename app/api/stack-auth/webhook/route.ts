@@ -31,7 +31,10 @@ export async function POST(req: NextRequest) {
           },
           body: JSON.stringify({
             server_metadata: {
-              role: 'user', // Pas d'accès par défaut
+              role: 'user', // Stocké côté serveur pour sécurité
+            },
+            client_read_only_metadata: {
+              role: 'user', // Accessible côté client (lecture seule)
               planningPermission: 'reader', // Lecture seule par défaut
             },
           }),
@@ -74,6 +77,9 @@ export async function POST(req: NextRequest) {
             },
             body: JSON.stringify({
               server_metadata: {
+                role: 'user',
+              },
+              client_read_only_metadata: {
                 role: 'user',
                 planningPermission: 'reader',
               },
