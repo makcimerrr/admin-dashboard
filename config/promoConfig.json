@@ -63,5 +63,18 @@
       "piscine-rust-end": "NaN",
       "end": "2027-05-19"
     }
+  },
+  {
+    "key": "P2 2025",
+    "eventId": 904,
+    "title": "Promotion 2 - Année 2025",
+    "dates": {
+      "start": "2025-11-11",
+      "piscine-js-start": "NaN",
+      "piscine-js-end": "NaN",
+      "piscine-rust-start": "NaN",
+      "piscine-rust-end": "NaN",
+      "end": "2027-11-11"
+    }
   }
 ]
