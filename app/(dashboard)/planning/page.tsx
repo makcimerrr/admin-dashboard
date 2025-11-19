@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Separator } from '@radix-ui/react-separator';
 import Link from 'next/link';
+import { PlanningNavigation } from '@/components/planning/planning-navigation';
 import {
   getWeekDates,
   getWeekNumber,
@@ -63,7 +64,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CallStack } from 'next/dist/client/components/react-dev-overlay/ui/components/errors/call-stack/call-stack';
-import { useSession } from 'next-auth/react';
+import { useUser } from "@stackframe/stack";
 
 // Étendre le type Employee pour inclure les plannings
 interface EmployeeWithSchedule extends Employee {
@@ -1640,8 +1641,12 @@ function getMultiWeekOptions(range = 4) {
 }
 
 export default function PlanningPage() {
-  const { data: session } = useSession();
-  const planningPermission = session?.user?.planningPermission || 'reader';
+  const stackUser = useUser();
+  const planningPermission = stackUser
+    ? (stackUser.clientReadOnlyMetadata?.planningPermission ||
+       stackUser.clientMetadata?.planningPermission ||
+       'reader')
+    : 'reader';
   const [employees, setEmployees] = useState<EmployeeWithSchedule[]>([]);
   // Compact view state
   const [compactView, setCompactView] = useState(false);
@@ -2581,82 +2586,34 @@ export default function PlanningPage() {
     : hours;
 
   return (
-    <div className="flex flex-col w-full min-h-screen overflow-x-auto px-6 py-8">
-      {/* Toggle compact/full view button */}
-      <div className="flex justify-end">
+    <div className="flex flex-col gap-6 p-6">
+      {/* Header moderne */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-primary/10 rounded-lg">
+            <LayoutTemplate className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
+            <p className="text-muted-foreground">
+              Gérez les plannings et les horaires de votre équipe
+            </p>
+          </div>
+        </div>
         <Button
           variant="outline"
           size="sm"
           onClick={() => setCompactView(!compactView)}
-          className="text-xs"
         >
           {compactView ? 'Afficher tout' : 'Mode compact'}
         </Button>
       </div>
+
       {/* Everything except the calendar is hidden in compactView */}
       {!compactView && (
         <>
-          {/* Header harmonisé */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 mt-0.5">
-                <LayoutTemplate className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600" />
-                Planning
-              </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                Gérez les plannings de votre équipe
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-              <Link href="/planning">
-                <Button
-                  variant="default"
-                  className="w-full sm:w-auto text-sm h-8"
-                >
-                  <LayoutTemplate className="h-4 w-4 mr-2" />
-                  Planning
-                </Button>
-              </Link>
-              <Link href="/planning/absences">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto text-sm h-8"
-                >
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  Absences
-                </Button>
-              </Link>
-              <Link href="/planning/extraction">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto text-sm h-8"
-                >
-                  <LayoutTemplate className="h-4 w-4 mr-2" />
-                  Extraction
-                </Button>
-              </Link>
-              <Link href="/employees">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto text-sm h-8"
-                >
-                  <Users className="h-4 w-4 mr-2" />
-                  Employés
-                </Button>
-              </Link>
-              {planningPermission === 'editor' && (
-                <Link href="/history">
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto text-sm h-8"
-                  >
-                    <Clock className="h-4 w-4 mr-2" />
-                    History
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </div>
+          {/* Navigation links */}
+          <PlanningNavigation planningPermission={planningPermission} />
           {/* Juste après le header harmonisé ou avant le contenu principal : */}
           <div className="mb-1 flex items-center gap-1">
             <span className="font-semibold">Droits planning :</span>
