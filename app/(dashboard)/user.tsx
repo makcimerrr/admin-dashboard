@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { auth, signOut } from '@/lib/auth';
+import { stackServerApp } from '@/lib/stack-server';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -12,8 +12,22 @@ import {
 import Link from 'next/link';
 
 export async function User() {
-  let session = await auth();
-  let user = session?.user;
+  const stackUser = await stackServerApp.getUser();
+  const user = stackUser ? {
+    id: stackUser.id,
+    email: stackUser.primaryEmail,
+    name: stackUser.displayName,
+    image: stackUser.profileImageUrl,
+    // Essayer Server Metadata en premier, puis Client Read-Only, puis Client
+    role: stackUser.serverMetadata?.role ||
+          stackUser.clientReadOnlyMetadata?.role ||
+          stackUser.clientMetadata?.role ||
+          'user',
+    planningPermission: stackUser.serverMetadata?.planningPermission ||
+                       stackUser.clientReadOnlyMetadata?.planningPermission ||
+                       stackUser.clientMetadata?.planningPermission ||
+                       'reader',
+  } : null;
 
   return (
     <DropdownMenu>
@@ -53,7 +67,7 @@ export async function User() {
               <form
                 action={async () => {
                   'use server';
-                  await signOut();
+                  await stackServerApp.signOut();
                 }}
               >
                 <button type="submit">Sign Out</button>
