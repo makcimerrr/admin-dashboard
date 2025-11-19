@@ -6,20 +6,43 @@ import {
   SidebarTrigger
 } from '@/components/ui/sidebar';
 import { DashboardBreadcrumb } from '../(dashboard)/get-breadcrumb-items';
-import { auth, signOut } from '@/lib/auth';
+import { stackServerApp } from '@/lib/stack-server';
+import { redirect } from 'next/navigation';
 
 export default async function Layout({
   children
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth(); // 🚀 Récupérer les données côté serveur
-  async function logout() {
-    'use server';
-    await signOut();
+  const stackUser = await stackServerApp.getUser();
+
+  // Protection : rediriger vers /login si pas connecté
+  if (!stackUser) {
+    redirect('/login');
   }
 
-  const user = session?.user || null;
+  async function logout() {
+    'use server';
+    await stackServerApp.signOut();
+  }
+
+  const user = {
+    id: stackUser.id,
+    email: stackUser.primaryEmail,
+    name: stackUser.displayName,
+    image: stackUser.profileImageUrl,
+    // Essayer Server Metadata en premier, puis Client Read-Only, puis Client
+    role: stackUser.serverMetadata?.role ||
+          stackUser.clientReadOnlyMetadata?.role ||
+          stackUser.clientMetadata?.role ||
+          'user',
+    planningPermission: stackUser.serverMetadata?.planningPermission ||
+                       stackUser.clientReadOnlyMetadata?.planningPermission ||
+                       stackUser.clientMetadata?.planningPermission ||
+                       'reader',
+  };
+
+  console.log('✅ Home - Utilisateur connecté:', user.email, 'Role:', user.role);
   return (
     <SidebarProvider>
       <AppSidebar user={user} logout={logout} />
