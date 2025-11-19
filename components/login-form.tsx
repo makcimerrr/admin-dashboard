@@ -13,8 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { stackClientApp } from '@/lib/stack-client';
 
 const GoogleIcon = () => (
   <svg
@@ -64,23 +64,40 @@ export function LoginForm({
   const [error, setError] = useState('');
   const router = useRouter();
 
+  const initiateOAuth = async (provider: 'google' | 'github') => {
+    try {
+      await stackClientApp.signInWithOAuth(provider);
+    } catch (error) {
+      console.error('OAuth error:', error);
+      toast.error('Failed to initiate OAuth login');
+    }
+  };
+
   const handleSubmit = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     setError('');
 
     try {
-        const result = await signIn('credentials', {
-          redirect: false,
-          pseudo,
-          password
+        const response = await fetch('/api/stack-auth/signin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: pseudo, // Stack Auth uses email instead of pseudo
+            password,
+          }),
         });
 
-        if (result?.error) {
-          toast.error('Invalid credentials');
-          setError('Invalid credentials');
+        const data = await response.json();
+
+        if (!response.ok) {
+          toast.error(data.error || 'Invalid credentials');
+          setError(data.error || 'Invalid credentials');
         } else {
           toast.success('Logged in successfully');
           router.push('/');
+          router.refresh();
         }
       } catch (error) {
         console.error(error);
@@ -110,7 +127,8 @@ export function LoginForm({
             <Button
               variant="outline"
               className="w-full flex items-center gap-2"
-              onClick={() => signIn('google', { callbackUrl: '/' })}
+              type="button"
+              onClick={() => initiateOAuth('google')}
             >
               <GoogleIcon />
               Login with Google
@@ -119,7 +137,8 @@ export function LoginForm({
             <Button
               variant="outline"
               className="w-full flex items-center gap-2"
-              onClick={() => signIn('github', { callbackUrl: '/' })}
+              type="button"
+              onClick={() => initiateOAuth('github')}
             >
               <GithubIcon />
               Login with Github
@@ -134,12 +153,12 @@ export function LoginForm({
               </div>
               <div className="grid gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="pseudo">Pseudo</Label>
+                  <Label htmlFor="pseudo">Email</Label>
                   <Input
                     id="pseudo"
-                    type="text"
+                    type="email"
                     value={pseudo}
-                    placeholder="john-doe"
+                    placeholder="john.doe@example.com"
                     onChange={(e) => setPseudo(e.target.value)}
                     required
                   />
