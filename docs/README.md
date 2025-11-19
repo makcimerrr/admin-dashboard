@@ -20,8 +20,8 @@ Bienvenue dans la documentation complète du Zone01 Admin Dashboard. Cette docum
 - **Analytics Dashboard** - Tableaux de bord et statistiques
 
 ### 🚢 Déploiement & DevOps
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Guide de déploiement complet (À venir)
-- **Vercel Deployment** - Déploiement sur Vercel
+- **[VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md)** - Guide de déploiement Vercel complet
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Guide de déploiement général (À venir)
 - **Docker Setup** - Configuration Docker
 - **CI/CD Pipeline** - Pipeline d'intégration continue
 
@@ -32,13 +32,15 @@ Bienvenue dans la documentation complète du Zone01 Admin Dashboard. Cette docum
 - **Troubleshooting** - Résolution des problèmes courants
 
 ### 🔐 Authentification
-- **[../STACK_AUTH_MIGRATION.md](../STACK_AUTH_MIGRATION.md)** - Migration NextAuth → Stack Auth
-- **[../STACK_AUTH_OAUTH_SETUP.md](../STACK_AUTH_OAUTH_SETUP.md)** - Configuration OAuth
-- **[../STACK_AUTH_TROUBLESHOOTING.md](../STACK_AUTH_TROUBLESHOOTING.md)** - Dépannage Stack Auth
-- **[../STACK_METADATA_GUIDE.md](../STACK_METADATA_GUIDE.md)** - Gestion des métadonnées utilisateur
+- **[STACK_AUTH_MIGRATION.md](./STACK_AUTH_MIGRATION.md)** - Migration NextAuth → Stack Auth
+- **[STACK_AUTH_OAUTH_SETUP.md](./STACK_AUTH_OAUTH_SETUP.md)** - Configuration OAuth
+- **[STACK_AUTH_TROUBLESHOOTING.md](./STACK_AUTH_TROUBLESHOOTING.md)** - Dépannage Stack Auth
+- **[STACK_METADATA_GUIDE.md](./STACK_METADATA_GUIDE.md)** - Gestion des métadonnées utilisateur
+- **[STACK_AUTO_METADATA_SETUP.md](./STACK_AUTO_METADATA_SETUP.md)** - Configuration métadonnées automatiques
+- **[AUTH_STATUS.md](./AUTH_STATUS.md)** - État de l'authentification
 
 ### 👥 Contribution
-- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Guide de contribution (À venir)
+- **[../CONTRIBUTING.md](../CONTRIBUTING.md)** - Guide de contribution
 - **Code Style** - Conventions de code
 - **Pull Request Process** - Processus de PR
 
@@ -102,6 +104,8 @@ Si vous ne trouvez pas ce que vous cherchez dans cette documentation :
 | README.md | ✅ Complet | 2025-01-19 |
 | .env.example | ✅ Complet | 2025-01-19 |
 | STACK_AUTH_*.md | ✅ Complet | 2025-01-19 |
+| VERCEL_DEPLOYMENT.md | ✅ Complet | 2025-01-19 |
+| AUTH_STATUS.md | ✅ Complet | 2025-01-19 |
 | DEPLOYMENT.md | 🚧 En cours | - |
 | FEATURES.md | 🚧 En cours | - |
 | ARCHITECTURE.md | 🚧 En cours | - |

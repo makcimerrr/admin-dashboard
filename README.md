@@ -258,7 +258,7 @@ Pour activer l'authentification Google et GitHub :
    Production: https://votre-domaine.vercel.app/api/stack-auth/oauth/callback
    ```
 
-📖 **Documentation détaillée** : Voir [STACK_AUTH_OAUTH_SETUP.md](./STACK_AUTH_OAUTH_SETUP.md)
+📖 **Documentation détaillée** : Voir [docs/STACK_AUTH_OAUTH_SETUP.md](./docs/STACK_AUTH_OAUTH_SETUP.md)
 
 ---
 
@@ -449,10 +449,10 @@ admin-dashboard/
 
 ### Documentation Stack Auth
 
-- 🔐 **[STACK_AUTH_MIGRATION.md](./STACK_AUTH_MIGRATION.md)** - Migration NextAuth → Stack Auth
-- 🌐 **[STACK_AUTH_OAUTH_SETUP.md](./STACK_AUTH_OAUTH_SETUP.md)** - Configuration OAuth
-- 🔍 **[STACK_AUTH_TROUBLESHOOTING.md](./STACK_AUTH_TROUBLESHOOTING.md)** - Dépannage
-- 📊 **[STACK_METADATA_GUIDE.md](./STACK_METADATA_GUIDE.md)** - Gestion métadonnées
+- 🔐 **[docs/STACK_AUTH_MIGRATION.md](./STACK_AUTH_MIGRATION.md)** - Migration NextAuth → Stack Auth
+- 🌐 **[docs/STACK_AUTH_OAUTH_SETUP.md](./docs/STACK_AUTH_OAUTH_SETUP.md)** - Configuration OAuth
+- 🔍 **[docs/STACK_AUTH_TROUBLESHOOTING.md](./STACK_AUTH_TROUBLESHOOTING.md)** - Dépannage
+- 📊 **[docs/STACK_METADATA_GUIDE.md](./STACK_METADATA_GUIDE.md)** - Gestion métadonnées
 
 ### API Documentation
 
