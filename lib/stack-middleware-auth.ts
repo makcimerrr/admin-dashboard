@@ -101,24 +101,30 @@ export async function getStackUserFromRequest(req: NextRequest): Promise<StackUs
 
     // Vérifier le token avec l'API Stack Auth
     console.log('🌐 Appel API Stack Auth /users/me...');
+    console.log('🔑 Token length:', accessToken.length);
+    console.log('🔑 Token start:', accessToken.substring(0, 50));
 
-    // Essai 1: Sans x-stack-access-type (le JWT devrait être auto-détecté)
+    // Essayer différentes configurations pour l'authentification
+    // Configuration 1: Avec x-stack-access-type: 'client'
     let response = await fetch('https://api.stack-auth.com/api/v1/users/me', {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'x-stack-project-id': process.env.NEXT_PUBLIC_STACK_PROJECT_ID!,
+        'x-stack-publishable-client-key': process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
+        'x-stack-access-type': 'client',
       },
       cache: 'no-store',
     });
 
-    // Si échec, essayer avec x-stack-publishable-client-key
-    if (!response.ok && response.status === 400) {
-      console.log('🔄 Retry avec publishable key...');
+    // Si échec, essayer sans Authorization header (juste le token dans x-stack-access-token)
+    if (!response.ok) {
+      console.log('🔄 Retry avec x-stack-access-token header...');
       response = await fetch('https://api.stack-auth.com/api/v1/users/me', {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          'x-stack-access-token': accessToken,
           'x-stack-project-id': process.env.NEXT_PUBLIC_STACK_PROJECT_ID!,
           'x-stack-publishable-client-key': process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
+          'x-stack-access-type': 'client',
         },
         cache: 'no-store',
       });
