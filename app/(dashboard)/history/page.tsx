@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useUser } from "@stackframe/stack";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Clock, Users, LayoutTemplate, Calendar } from "lucide-react";
 import Link from "next/link";
+import { PlanningNavigation } from '@/components/planning/planning-navigation';
 
 interface HistoryEntry {
   id: number;
@@ -35,7 +36,7 @@ interface EntityInfo {
 }
 
 export default function HistoryPage() {
-  const { data: session } = useSession();
+  const stackUser = useUser();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [type, setType] = useState("");
@@ -130,7 +131,12 @@ export default function HistoryPage() {
       .finally(() => setLoading(false));
   }, [type, action, userEmail]);
 
-  const planningPermission = session?.user?.planningPermission || 'reader';
+  // Get planning permission from Stack Auth user metadata
+  const planningPermission = stackUser
+    ? (stackUser.clientReadOnlyMetadata?.planningPermission ||
+       stackUser.clientMetadata?.planningPermission ||
+       'reader')
+    : 'reader';
 
   // Restriction editor (après tous les hooks)
   if (planningPermission !== "editor") {
@@ -209,51 +215,27 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="space-y-6 px-6 py-8">
-      {/* Header harmonisé */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Clock className="h-8 w-8 text-blue-600" />
-            Historique des actions
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Suivez toutes les modifications du planning, des employés, promos, etc.</p>
+    <div className="flex flex-col gap-6 p-6">
+      {/* Header moderne */}
+      <div className="flex items-center gap-3">
+        <div className="p-3 bg-primary/10 rounded-lg">
+          <Clock className="h-6 w-6 text-primary" />
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/planning">
-            <Button variant="outline">
-              <LayoutTemplate className="h-4 w-4 mr-2" />
-              Planning
-            </Button>
-          </Link>
-          <Link href="/planning/absences">
-            <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Absences
-            </Button>
-          </Link>
-          <Link href="/planning/extraction">
-            <Button variant="outline">
-              <LayoutTemplate className="h-4 w-4 mr-2" />
-              Extraction
-            </Button>
-          </Link>
-          <Link href="/employees">
-            <Button variant="outline">
-              <Users className="h-4 w-4 mr-2" />
-              Employés
-            </Button>
-          </Link>
-          <Button variant="default">
-            <Clock className="h-4 w-4 mr-2" />
-            History
-          </Button>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Historique des actions</h1>
+          <p className="text-muted-foreground">Suivez toutes les modifications du planning, des employés et des promos</p>
         </div>
       </div>
+
+      {/* Navigation */}
+      <PlanningNavigation planningPermission={planningPermission} />
+
       {/* Badge droits planning */}
-      <div className="mb-2 flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <span className="font-semibold">Droits planning :</span>
-        <span className={`px-2 py-1 rounded text-xs font-bold ${planningPermission === 'editor' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</span>
+        <span className={`px-2 py-1 rounded text-xs font-bold ${planningPermission === 'editor' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+          {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
+        </span>
       </div>
       {/* Contenu principal dans un conteneur harmonisé */}
       <div className="rounded-lg border bg-background p-6">
