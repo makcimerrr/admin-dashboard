@@ -26,7 +26,7 @@ export async function ensureUserMetadata(userId: string): Promise<void> {
     const user = await response.json();
 
     // Vérifier si les métadonnées existent déjà
-    if (user.server_metadata?.role && user.server_metadata?.planningPermission) {
+    if (user.server_metadata?.role && user.client_read_only_metadata?.planningPermission) {
       console.log('✅ Métadonnées déjà définies pour:', userId);
       return;
     }
@@ -46,7 +46,10 @@ export async function ensureUserMetadata(userId: string): Promise<void> {
         body: JSON.stringify({
           server_metadata: {
             role: user.server_metadata?.role || 'user',
-            planningPermission: user.server_metadata?.planningPermission || 'reader',
+          },
+          client_read_only_metadata: {
+            role: user.server_metadata?.role || user.client_read_only_metadata?.role || 'user',
+            planningPermission: user.client_read_only_metadata?.planningPermission || 'reader',
           },
         }),
       }
