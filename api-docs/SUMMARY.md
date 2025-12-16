@@ -10,6 +10,10 @@
 * [Authentication](getting-started/authentication.md)
 * [Errors & Status Codes](getting-started/errors.md)
 
+## Security
+
+* [Security Overview](security/security-overview.md)
+
 ## Endpoints
 
 ### Promotions

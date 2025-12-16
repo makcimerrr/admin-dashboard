@@ -1,8 +1,8 @@
-# API Documentation - Admin Dashboard
+# 📚 API Documentation - Admin Dashboard
 
 Bienvenue dans la documentation de l'API Admin Dashboard. Cette API permet de gérer les promotions, étudiants, projets, employés et plannings de votre établissement.
 
-## Vue d'ensemble
+## 🔍 Vue d'ensemble
 
 L'API Admin Dashboard est une API RESTful construite avec Next.js 15 qui fournit des endpoints pour :
 
@@ -13,13 +13,13 @@ L'API Admin Dashboard est une API RESTful construite avec Next.js 15 qui fournit
 - **Gestion des plannings** : Planifier et organiser les emplois du temps hebdomadaires
 - **Authentification** : Système d'authentification sécurisé avec rate limiting
 
-## URL de base
+## 🔗  URL de base
 
 ```
 https://votre-domaine.com/api
 ```
 
-## Format des données
+## 📊 Format des données
 
 Toutes les requêtes et réponses utilisent le format **JSON**.
 
@@ -40,7 +40,7 @@ x-user-email: <user-email>
 
 Toutes les réponses de l'API suivent une structure cohérente :
 
-### Réponse réussie
+### ✅ Réponse réussie
 ```json
 {
   "success": true,
@@ -48,7 +48,7 @@ Toutes les réponses de l'API suivent une structure cohérente :
 }
 ```
 
-### Réponse avec erreur
+### ⛔️ Réponse avec erreur
 ```json
 {
   "success": false,
@@ -57,7 +57,7 @@ Toutes les réponses de l'API suivent une structure cohérente :
 }
 ```
 
-## Codes de statut HTTP
+## 🆘 Codes de statut HTTP
 
 | Code | Description |
 |------|-------------|
@@ -69,7 +69,7 @@ Toutes les réponses de l'API suivent une structure cohérente :
 | 429 | Trop de requêtes (rate limiting) |
 | 500 | Erreur interne du serveur |
 
-## Pagination
+## 📜 Pagination
 
 Les endpoints qui retournent des listes supportent la pagination via les paramètres :
 
@@ -81,13 +81,13 @@ Exemple :
 GET /api/get_students?offset=0&promo=B3
 ```
 
-## Rate Limiting
+## ⌚️ Rate Limiting
 
 L'endpoint d'authentification implémente un système de rate limiting :
 - **5 tentatives maximum** par minute par IP
 - **Blocage de 15 minutes** après 5 échecs consécutifs
 
-## Audit et historique
+## 📫 Audit et historique
 
 Les opérations de création, modification et suppression sont automatiquement enregistrées dans l'historique avec :
 - Type d'opération
