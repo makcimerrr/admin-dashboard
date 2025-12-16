@@ -1,56 +1,81 @@
-# Table of Contents
+# Table des Matières
 
-## Introduction
+## 👋 Introduction
 
-* [Documentation API](README.md)
+* [Bienvenue](README.md)
 
-## Getting Started
+## 🚀 Pour Commencer
 
-* [Introduction](getting-started/introduction.md)
-* [Authentication](getting-started/authentication.md)
-* [Errors & Status Codes](getting-started/errors.md)
+* [Guide de Démarrage](getting-started/introduction.md)
+* [Authentification](getting-started/authentication.md)
+* [Erreurs & Codes de Statut](getting-started/errors.md)
 
-## Security
+## 🔐 Sécurité
 
-* [Security Overview](security/security-overview.md)
+* [Vue d'ensemble de la Sécurité](security/security-overview.md)
 
-## Endpoints
+## 📖 Référence API
+
+### Authentification
+* [Authentifier un utilisateur](endpoints/authentication/authenticate.md)
+
+### Hub
+* [Connexion Hub](endpoints/hub/login.md)
+* [Déconnexion Hub](endpoints/hub/logout.md)
+* [Profil Hub](endpoints/hub/profile.md)
+
+### Utilisateurs
+* [Obtenir/Modifier/Supprimer un utilisateur](endpoints/users/user-by-id.md)
 
 ### Promotions
+* [Lister toutes les promotions](endpoints/promotions/list-promotions.md)
+* [Obtenir une promotion par ID](endpoints/promotions/get-promotion.md)
+* [Projets d'une promotion (3 derniers)](endpoints/promotions/get-promotion-projects.md)
+* [Projets de toutes les promotions (3 derniers)](endpoints/promotions/get-all-promotions-projects.md)
+* [Statut de la promotion](endpoints/promotions/get-promo-status.md)
 
-* [List all promotions](endpoints/promotions/list-promotions.md)
-* [Get promotion by ID](endpoints/promotions/get-promotion.md)
-* [Get promotion's last 3 projects](endpoints/promotions/get-promotion-projects.md)
-* [Get all promotions' last 3 projects](endpoints/promotions/get-all-promotions-projects.md)
+### Projets
+* [Lister tous les projets](endpoints/projects/list-projects.md)
+* [Créer un projet](endpoints/projects/create-project.md)
+* [Mettre à jour un projet](endpoints/projects/update-project.md)
+* [Supprimer un projet](endpoints/projects/delete-project.md)
 
-### Projects
+### Étudiants
+* [Obtenir les étudiants (avec filtres)](endpoints/students/get-students.md)
 
-* [List all projects](endpoints/projects/list-projects.md)
-* [Create a project](endpoints/projects/create-project.md)
-* [Update a project](endpoints/projects/update-project.md)
-* [Delete a project](endpoints/projects/delete-project.md)
+### Employés
+* [Lister tous les employés](endpoints/employees/list-employees.md)
+* [Créer un employé](endpoints/employees/create-employee.md)
+* [Mettre à jour un employé](endpoints/employees/update-employee.md)
+* [Supprimer un employé](endpoints/employees/delete-employee.md)
 
-### Students
+### Plannings
+* [Obtenir les plannings par semaine](endpoints/schedules/get-schedules.md)
+* [Créer ou mettre à jour un planning](endpoints/schedules/create-schedule.md)
+* [Supprimer un planning](endpoints/schedules/delete-schedule.md)
 
-* [Get students with filters](endpoints/students/get-students.md)
+### Historique
+* [Obtenir l'historique](endpoints/history/get-history.md)
 
-### Employees
+### Autres Endpoints
+* [Jours Fériés](endpoints/other/get-holidays.md)
+* [Dernière Mise à Jour](endpoints/other/get-last-update.md)
+* [Timeline Projet](endpoints/other/get-timeline-project.md)
+* [Statut des Retards](endpoints/other/get-delay-status.md)
+* [Semaine Hackathon](endpoints/other/hackaton-week.md)
 
-* [List all employees](endpoints/employees/list-employees.md)
-* [Create an employee](endpoints/employees/create-employee.md)
-* [Update an employee](endpoints/employees/update-employee.md)
-* [Delete an employee](endpoints/employees/delete-employee.md)
+### Système & Interne
+* [Tâches Cron](endpoints/system/cron.md)
+* [Initialisation BDD (Seed)](endpoints/system/seed.md)
+* [Mise à jour Système](endpoints/system/update.md)
+* [Inscription Utilisateur](endpoints/system/register.md)
+* [Authentification Stack](endpoints/system/stack-auth.md)
+* [Mise à jour Projet (Interne)](endpoints/system/update-project.md)
 
-### Schedules
+## 🪝 Webhooks
 
-* [Get schedules by week](endpoints/schedules/get-schedules.md)
-* [Create or update schedule](endpoints/schedules/create-schedule.md)
-* [Delete schedule](endpoints/schedules/delete-schedule.md)
+* [Bientôt disponible]()
 
-### Authentication
+## 📚 Exemples
 
-* [Authenticate user](endpoints/authentication/authenticate.md)
-
-## Examples
-
-* [Common Workflows](examples/common-workflows.md)
+* [Flux de travail courants](examples/common-workflows.md)
