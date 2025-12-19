@@ -1,20 +1,29 @@
-# Mise à jour Système
+# 🔄 Mise à jour Système
 
-Cet endpoint est utilisé pour déclencher une mise à jour du système.
+Cet endpoint déclenche une mise à jour manuelle des données du système en appelant l'API de timeline et en mettant à jour les statuts.
 
-**Méthode**: `POST`  
-**Endpoint**: `/api/update`
+## 📝 Détails de l'Endpoint
 
-## Sécurité
+- **URL** : `/api/update`
+- **Méthode** : `POST`
 
-Cet endpoint doit être protégé et accessible uniquement par les administrateurs.
+## 📤 Réponses
 
-## Réponse
+### ✅ Succès (200 OK)
 
-**Succès (200 OK)**
 ```json
 {
   "success": true,
-  "message": "Mise à jour du système démarrée"
+  "message": "Data updated successfully",
+  "response": { ... }
+}
+```
+
+### ❌ Erreur Serveur (500 Internal Server Error)
+
+```json
+{
+  "success": false,
+  "message": "Error updating data"
 }
 ```
