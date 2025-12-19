@@ -1,57 +1,46 @@
-# Obtenir/Modifier/Supprimer un utilisateur par ID
+# 👤 Obtenir un Utilisateur par ID
 
-Cet endpoint permet d'obtenir, mettre à jour ou supprimer un utilisateur via son identifiant.
+Cet endpoint permet de récupérer les informations d'un utilisateur spécifique via son ID.
 
-## Obtenir un utilisateur
+## 📝 Détails de l'Endpoint
 
-**Méthode**: `GET`  
-**Endpoint**: `/api/users/{id}`
+- **URL** : `/api/users/[id]`
+- **Méthode** : `GET`
+- **Authentification** : Requise (Session)
 
-### Réponse
+## 📥 Paramètres d'URL
+
+| Paramètre | Type   | Requis | Description                     |
+| :-------- | :----- | :----- | :------------------------------ |
+| `id`      | String | ✅ Oui | L'identifiant unique de l'utilisateur. |
+
+## 📤 Réponses
+
+### ✅ Succès (200 OK)
+
+Retourne l'objet utilisateur trouvé.
+
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "user-id",
-    "name": "Nom de l'utilisateur",
-    "email": "utilisateur@example.com"
-  }
+  "id": "user_12345",
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "role": "user",
+  "createdAt": "2024-01-15T10:00:00.000Z",
+  "updatedAt": "2024-01-15T10:00:00.000Z"
 }
 ```
 
-## Mettre à jour un utilisateur
+### ❌ Non Trouvé (404 Not Found)
 
-**Méthode**: `PUT` ou `PATCH`  
-**Endpoint**: `/api/users/{id}`
+L'utilisateur avec l'ID spécifié n'existe pas.
 
-### Corps de la requête
 ```json
 {
-  "name": "Nouveau nom de l'utilisateur"
+  "error": "User not found"
 }
 ```
 
-### Réponse
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user-id",
-    "name": "Nouveau nom de l'utilisateur",
-    "email": "utilisateur@example.com"
-  }
-}
-```
+### ❌ Erreur Serveur (500 Internal Server Error)
 
-## Supprimer un utilisateur
-
-**Méthode**: `DELETE`  
-**Endpoint**: `/api/users/{id}`
-
-### Réponse
-```json
-{
-  "success": true,
-  "message": "Utilisateur supprimé avec succès"
-}
-```
+Une erreur interne s'est produite lors de la récupération.

@@ -1,24 +1,10 @@
-# Profil Hub
+# 👤 Profil Hub
 
-Cet endpoint récupère le profil de l'utilisateur actuellement authentifié dans le Hub.
+Cet endpoint permet de récupérer le profil Hub (actuellement vide/placeholder).
 
-**Méthode**: `GET`  
-**Endpoint**: `/api/hub/profile`
+## 📝 Détails de l'Endpoint
 
-## En-têtes
+- **URL** : `/api/hub/profile`
+- **Méthode** : `GET` (Supposé, dossier vide actuellement)
 
-- `Authorization`: `Bearer votre-jeton-jwt`
-
-## Réponse
-
-**Succès (200 OK)**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user-id",
-    "name": "Nom de l'utilisateur",
-    "email": "utilisateur@example.com"
-  }
-}
-```
+> ⚠️ **Note** : Le dossier `/api/hub/profile` est actuellement vide dans le projet. Cette documentation est un placeholder.

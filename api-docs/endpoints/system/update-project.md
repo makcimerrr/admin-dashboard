@@ -1,20 +1,38 @@
-# Mise à jour Projet (Interne)
+# 🔄 Mise à jour Projet (Interne)
 
-Cet endpoint est une route interne pour la mise à jour d'un projet.
+Cet endpoint permet de mettre à jour le statut d'un projet pour un étudiant spécifique. Il est probablement utilisé par des webhooks ou des processus internes.
 
-**Méthode**: `POST`  
-**Endpoint**: `/api/update_project`
+## 📝 Détails de l'Endpoint
 
-## Notes
+- **URL** : `/api/update_project`
+- **Méthode** : `POST`
 
-Cet endpoint peut faire partie d'un flux de travail plus large et n'est pas destiné à une utilisation publique directe. Il peut avoir des règles de validation ou des effets de bord différents de l'endpoint public `PUT /api/projects/{id}`.
+## 📥 Corps de la Requête (JSON)
 
-## Réponse
+| Champ                    | Type   | Description                                      |
+| :----------------------- | :----- | :----------------------------------------------- |
+| `login`                  | String | Login de l'étudiant.                             |
+| `project_name`           | String | Nom du projet.                                   |
+| `project_status`         | String | Statut du projet (ex: `finished`).               |
+| `delay_level`            | String | Niveau de retard.                                |
+| `last_projects_finished` | Array  | Liste des derniers projets finis.                |
+| `common_projects`        | Array  | Projets communs.                                 |
+| `promo_name`             | String | Nom de la promotion.                             |
 
-**Succès (200 OK)**
+## 📤 Réponses
+
+### ✅ Succès (200 OK)
+
 ```json
 {
-  "success": true,
-  "message": "Projet mis à jour via l'endpoint interne"
+  "message": "Project updated successfully"
+}
+```
+
+### ❌ Erreur Serveur (500 Internal Server Error)
+
+```json
+{
+  "message": "Error updating project"
 }
 ```

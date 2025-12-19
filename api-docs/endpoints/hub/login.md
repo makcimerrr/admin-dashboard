@@ -1,27 +1,10 @@
-# Connexion Hub
+# 🔐 Connexion Hub
 
-Cet endpoint est utilisé pour la connexion d'un utilisateur au Hub.
+Cet endpoint permet de se connecter au Hub (actuellement vide/placeholder).
 
-**Méthode**: `POST`  
-**Endpoint**: `/api/hub/login`
+## 📝 Détails de l'Endpoint
 
-## Corps de la requête
+- **URL** : `/api/hub/login`
+- **Méthode** : `POST` (Supposé, dossier vide actuellement)
 
-```json
-{
-  "email": "utilisateur@example.com",
-  "password": "votremotdepasse"
-}
-```
-
-## Réponse
-
-**Succès (200 OK)**
-```json
-{
-  "success": true,
-  "data": {
-    "token": "votre-jeton-jwt"
-  }
-}
-```
+> ⚠️ **Note** : Le dossier `/api/hub/login` est actuellement vide dans le projet. Cette documentation est un placeholder.

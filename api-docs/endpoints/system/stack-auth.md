@@ -1,20 +1,14 @@
-# Authentification Stack
+# 🔐 Authentification Stack
 
-Cet endpoint est utilisé pour un flux d'authentification spécifique lié à la stack technique.
+Ce dossier contient les endpoints liés à l'authentification via Stack Auth (OAuth, Session, etc.).
 
-**Méthode**: `POST`  
-**Endpoint**: `/api/stack-auth`
+## 📝 Endpoints Disponibles
 
-## Notes
+- `/api/stack-auth/oauth`
+- `/api/stack-auth/signin`
+- `/api/stack-auth/signup`
+- `/api/stack-auth/session`
+- `/api/stack-auth/signout`
+- `/api/stack-auth/webhook`
 
-Il s'agit d'un endpoint interne qui ne doit pas être utilisé directement par les utilisateurs finaux.
-
-## Réponse
-
-**Succès (200 OK)**
-```json
-{
-  "success": true,
-  "message": "Authentification de la stack réussie"
-}
-```
+> ℹ️ Ces endpoints sont gérés par la librairie Stack Auth et suivent ses spécifications.

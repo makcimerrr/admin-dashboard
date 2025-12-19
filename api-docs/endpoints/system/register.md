@@ -1,30 +1,39 @@
-# Inscription Utilisateur
+# 📝 Inscription Utilisateur
 
-Cet endpoint est utilisé pour l'inscription d'un nouvel utilisateur.
+Cet endpoint permet de créer un nouveau compte utilisateur administrateur/staff.
 
-**Méthode**: `POST`  
-**Endpoint**: `/api/register`
+## 📝 Détails de l'Endpoint
 
-## Corps de la requête
+- **URL** : `/api/register`
+- **Méthode** : `POST`
+
+## 📥 Corps de la Requête (JSON)
+
+| Champ             | Type   | Requis | Description                                      |
+| :---------------- | :----- | :----- | :----------------------------------------------- |
+| `name`            | String | ✅ Oui | Nom complet.                                     |
+| `email`           | String | ✅ Oui | Adresse email valide.                            |
+| `password`        | String | ✅ Oui | Mot de passe fort (8+ chars, majuscule, chiffre, spécial). |
+| `confirmPassword` | String | ✅ Oui | Confirmation du mot de passe.                    |
+
+## 📤 Réponses
+
+### ✅ Succès (201 Created)
+
+Retourne l'utilisateur créé.
 
 ```json
 {
-  "email": "nouvelutilisateur@example.com",
-  "password": "motdepassesolide",
-  "name": "Nouvel Utilisateur"
+  "id": "user_123",
+  "name": "New Admin",
+  "email": "admin@example.com"
 }
 ```
 
-## Réponse
+### ❌ Erreur Client (400 Bad Request)
 
-**Succès (201 Created)**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "new-user-id",
-    "name": "Nouvel Utilisateur",
-    "email": "nouvelutilisateur@example.com"
-  }
-}
-```
+Données invalides (mots de passe ne correspondent pas, format email incorrect, mot de passe trop faible).
+
+### ❌ Trop de requêtes (429 Too Many Requests)
+
+Trop de tentatives d'inscription depuis la même IP.

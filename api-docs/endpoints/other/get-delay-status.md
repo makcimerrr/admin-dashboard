@@ -1,26 +1,46 @@
-# Statut des Retards
+# 🐢 Statut des Retards
 
-Cet endpoint récupère le statut des retards des étudiants.
+Cet endpoint fournit des statistiques sur les retards des étudiants pour une promotion donnée.
 
-**Méthode**: `GET`  
-**Endpoint**: `/api/delay-status`
+## 📝 Détails de l'Endpoint
 
-## Paramètres de requête
+- **URL** : `/api/delay-status`
+- **Méthode** : `GET`
 
-- `promo` (string, optionnel) : Filtrer par promotion.
+## 📥 Paramètres d'URL (Query Params)
 
-## Réponse
+| Paramètre | Type   | Requis | Description                                      |
+| :-------- | :----- | :----- | :----------------------------------------------- |
+| `promoId` | String | ✅ Oui | L'ID de la promotion.                            |
+| `action`  | String | ✅ Oui | Type d'action : `status` ou `summary`.           |
 
-**Succès (200 OK)**
+## 📥 Opérations
+
+### Action: `status`
+
+Retourne le statut détaillé des retards.
+
+**Exemple de requête :** `/api/delay-status?promoId=123&action=status`
+
+**Réponse :**
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "studentId": "student-id",
-      "delay": 2,
-      "status": "en_retard"
-    }
-  ]
+  "totalStudents": 20,
+  "delayedStudents": 5,
+  "details": [ ... ]
 }
+```
+
+### Action: `summary`
+
+Retourne un résumé mensuel des retards moyens.
+
+**Exemple de requête :** `/api/delay-status?promoId=123&action=summary`
+
+**Réponse :**
+```json
+[
+  { "month": "Janvier", "averageDelay": 2.5 },
+  { "month": "Février", "averageDelay": 1.8 }
+]
 ```

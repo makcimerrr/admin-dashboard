@@ -29,6 +29,7 @@
 
 ### Promotions
 * [Lister toutes les promotions](endpoints/promotions/list-promotions.md)
+* [Gérer les promotions (CRUD)](endpoints/promotions/manage-promotions.md)
 * [Obtenir une promotion par ID](endpoints/promotions/get-promotion.md)
 * [Projets d'une promotion (3 derniers)](endpoints/promotions/get-promotion-projects.md)
 * [Projets de toutes les promotions (3 derniers)](endpoints/promotions/get-all-promotions-projects.md)
@@ -39,6 +40,7 @@
 * [Créer un projet](endpoints/projects/create-project.md)
 * [Mettre à jour un projet](endpoints/projects/update-project.md)
 * [Supprimer un projet](endpoints/projects/delete-project.md)
+* [Statistiques de progression projet](endpoints/projects/project-progress-stats.md)
 
 ### Étudiants
 * [Obtenir les étudiants (avec filtres)](endpoints/students/get-students.md)
@@ -52,6 +54,8 @@
 ### Plannings
 * [Obtenir les plannings par semaine](endpoints/schedules/get-schedules.md)
 * [Créer ou mettre à jour un planning](endpoints/schedules/create-schedule.md)
+* [Copier des plannings](endpoints/schedules/copy-schedules.md)
+* [Gérer les absences](endpoints/schedules/manage-absences.md)
 * [Supprimer un planning](endpoints/schedules/delete-schedule.md)
 
 ### Historique

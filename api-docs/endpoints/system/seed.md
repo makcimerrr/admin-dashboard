@@ -1,20 +1,28 @@
-# Initialisation BDD (Seed)
+# 🌱 Initialisation BDD (Seed)
 
-Cet endpoint est utilisé pour initialiser la base de données avec des données de départ.
+Cet endpoint permet d'initialiser la base de données avec des données de test ou d'importation (ex: CSV).
 
-**Méthode**: `POST`  
-**Endpoint**: `/api/seed`
+> ⚠️ **Attention** : Cet endpoint est généralement utilisé uniquement en développement ou lors de la configuration initiale.
 
-## Sécurité
+## 📝 Détails de l'Endpoint
 
-Cet endpoint doit être protégé et utilisé uniquement dans des environnements de développement ou de configuration.
+- **URL** : `/api/seed`
+- **Méthode** : `GET`
 
-## Réponse
+## 📤 Réponses
 
-**Succès (200 OK)**
+### ✅ Succès (200 OK)
+
 ```json
 {
-  "success": true,
-  "message": "Base de données initialisée avec succès"
+  "message": "Données insérées avec succès !"
+}
+```
+
+### ❌ Erreur Serveur (500 Internal Server Error)
+
+```json
+{
+  "message": "Une erreur est survenue lors de l'insertion."
 }
 ```

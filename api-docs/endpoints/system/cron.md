@@ -1,20 +1,36 @@
-# Tâches Cron
+# ⏰ Tâches Cron
 
-Cet endpoint est utilisé pour déclencher des tâches planifiées (cron jobs).
+Cet endpoint est utilisé par un planificateur de tâches (Cron Job) pour mettre à jour périodiquement les statuts des promotions.
 
-**Méthode**: `POST`  
-**Endpoint**: `/api/cron`
+## 📝 Détails de l'Endpoint
 
-## Sécurité
+- **URL** : `/api/cron`
+- **Méthode** : `GET`
+- **Authentification** : Bearer Token (via `CRON_SECRET`)
 
-Cet endpoint doit être protégé et accessible uniquement par des services de confiance.
+## 📥 Headers Requis
 
-## Réponse
+| Header          | Valeur                  |
+| :-------------- | :---------------------- |
+| `Authorization` | `Bearer <CRON_SECRET>`  |
 
-**Succès (200 OK)**
+## 📤 Réponses
+
+### ✅ Succès (200 OK)
+
+La mise à jour a été effectuée.
+
 ```json
 {
   "success": true,
-  "message": "Tâches Cron exécutées avec succès"
+  "updated": 2
 }
 ```
+
+### ❌ Non Autorisé (401 Unauthorized)
+
+Le token secret est manquant ou invalide.
+
+### ❌ Erreur Serveur (500 Internal Server Error)
+
+Une erreur est survenue lors de l'exécution du cron.

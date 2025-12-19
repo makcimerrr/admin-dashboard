@@ -1,28 +1,45 @@
-# Obtenir l'historique
+# 📜 Obtenir l'historique
 
-Cet endpoint récupère l'historique des opérations.
+Cet endpoint permet de consulter l'historique des actions effectuées sur le système (audit logs).
 
-**Méthode**: `GET`  
-**Endpoint**: `/api/history`
+## 📝 Détails de l'Endpoint
 
-## Paramètres de requête
+- **URL** : `/api/history`
+- **Méthode** : `GET`
 
-- `limit` (number, optionnel) : Le nombre d'entrées d'historique à récupérer.
-- `offset` (number, optionnel) : Le point de départ des entrées d'historique.
+## 📥 Paramètres d'URL (Query Params)
 
-## Réponse
+| Paramètre | Type   | Description                                      | Défaut |
+| :-------- | :----- | :----------------------------------------------- | :----- |
+| `type`    | String | Filtrer par type d'entité (ex: `employee`, `planning`). | -      |
+| `userId`  | String | Filtrer par ID utilisateur ayant fait l'action.  | -      |
+| `action`  | String | Filtrer par type d'action (ex: `create`, `update`). | -      |
+| `limit`   | Number | Nombre maximum d'entrées à retourner.            | `100`  |
 
-**Succès (200 OK)**
+## 📤 Réponses
+
+### ✅ Succès (200 OK)
+
+Retourne la liste des entrées d'historique.
+
+```json
+[
+  {
+    "id": "hist_1",
+    "type": "employee",
+    "action": "create",
+    "userId": "user_1",
+    "timestamp": "2024-01-01T12:00:00Z",
+    "details": { ... }
+  }
+  // ...
+]
+```
+
+### ❌ Erreur Serveur (500 Internal Server Error)
+
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "id": "history-id",
-      "operation": "create_project",
-      "userId": "user-id",
-      "timestamp": "2024-07-30T10:00:00.000Z"
-    }
-  ]
+  "error": "Erreur lors de la récupération de l'historique"
 }
 ```

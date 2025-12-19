@@ -1,20 +1,39 @@
-# Semaine Hackathon
+# 💻 Semaine Hackathon
 
-Cet endpoint fournit des informations sur la semaine du hackathon.
+Cet endpoint permet de définir ou de vérifier si une semaine donnée est une semaine de Hackathon.
 
-**Méthode**: `GET`  
-**Endpoint**: `/api/hackaton-week`
+## 📝 Détails de l'Endpoint
 
-## Réponse
+- **URL** : `/api/hackaton-week`
+- **Méthode** : `GET`, `POST`
 
-**Succès (200 OK)**
+## 📥 Opérations
+
+### GET - Vérifier une semaine
+
+**Paramètres :** `weekKey` (ex: `2024-W10`)
+
+**Réponse :**
 ```json
 {
-  "success": true,
-  "data": {
-    "startDate": "2024-08-05",
-    "endDate": "2024-08-09",
-    "topic": "L'IA pour le bien commun"
-  }
+  "weekKey": "2024-W10",
+  "isHackaton": true
+}
+```
+
+### POST - Définir une semaine de Hackathon
+
+**Corps de la requête :**
+```json
+{
+  "weekKey": "2024-W10",
+  "isHackaton": true
+}
+```
+
+**Réponse :**
+```json
+{
+  "success": true
 }
 ```

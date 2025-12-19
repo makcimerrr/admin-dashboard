@@ -1,16 +1,10 @@
-# Déconnexion Hub
+# 🚪 Déconnexion Hub
 
-Cet endpoint est utilisé pour la déconnexion d'un utilisateur du Hub.
+Cet endpoint permet de se déconnecter du Hub (actuellement vide/placeholder).
 
-**Méthode**: `POST`  
-**Endpoint**: `/api/hub/logout`
+## 📝 Détails de l'Endpoint
 
-## Réponse
+- **URL** : `/api/hub/logout`
+- **Méthode** : `POST` (Supposé, dossier vide actuellement)
 
-**Succès (200 OK)**
-```json
-{
-  "success": true,
-  "message": "Déconnexion réussie"
-}
-```
+> ⚠️ **Note** : Le dossier `/api/hub/logout` est actuellement vide dans le projet. Cette documentation est un placeholder.

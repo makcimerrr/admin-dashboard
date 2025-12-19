@@ -1,22 +1,38 @@
-# Statut de la promotion
+# 🚦 Statut de la promotion
 
-Cet endpoint récupère le statut d'une promotion.
+Cet endpoint retourne le statut actuel des promotions pour l'affichage (ex: dashboard).
 
-**Méthode**: `GET`  
-**Endpoint**: `/api/promos/status`
+## 📝 Détails de l'Endpoint
 
-## Paramètres de requête
+- **URL** : `/api/promos/status`
+- **Méthode** : `GET`
 
-- `promoId` (string, requis) : L'identifiant de la promotion.
+## 📤 Réponses
 
-## Réponse
+### ✅ Succès (200 OK)
 
-**Succès (200 OK)**
+Retourne le statut des promotions.
+
 ```json
 {
   "success": true,
-  "data": {
-    "status": "in_progress"
-  }
+  "promos": [
+    {
+      "promoKey": "P2024",
+      "status": "OK",
+      "currentProject": "Projet X",
+      "progress": 85,
+      "lastUpdated": "2024-03-15T10:00:00Z"
+    }
+    // ...
+  ]
+}
+```
+
+### ❌ Erreur Serveur (500 Internal Server Error)
+
+```json
+{
+  "status": 500
 }
 ```
