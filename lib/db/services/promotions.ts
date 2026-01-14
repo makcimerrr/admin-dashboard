@@ -123,6 +123,8 @@ export async function getDelayStatus(promoId: string): Promise<{
   goodLateCount: number;
   advanceLateCount: number;
   specialityCount: number;
+  validatedCount: number;
+  notValidatedCount: number;
 }> {
   try {
     // Récupérer les données de delayStatus en fonction du promoId
@@ -131,7 +133,9 @@ export async function getDelayStatus(promoId: string): Promise<{
         lateCount: delayStatus.lateCount,
         goodLateCount: delayStatus.goodLateCount,
         advanceLateCount: delayStatus.advanceLateCount,
-        specialityCount: delayStatus.specialityCount
+        specialityCount: delayStatus.specialityCount,
+        validatedCount: delayStatus.validatedCount,
+        notValidatedCount: delayStatus.notValidatedCount
       })
       .from(delayStatus)
       .where(eq(delayStatus.promoId, promoId))
@@ -151,7 +155,9 @@ export async function getDelayStatus(promoId: string): Promise<{
       lateCount: delayStatusData[0].lateCount || 0,
       goodLateCount: delayStatusData[0].goodLateCount || 0,
       advanceLateCount: delayStatusData[0].advanceLateCount || 0,
-      specialityCount: delayStatusData[0].specialityCount || 0
+      specialityCount: delayStatusData[0].specialityCount || 0,
+      validatedCount: delayStatusData[0].validatedCount || 0,
+      notValidatedCount: delayStatusData[0].notValidatedCount || 0
     };
   } catch (error) {
     console.error(

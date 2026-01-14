@@ -4,6 +4,7 @@ import { StudentsTable } from '../students-table';
 import promos from 'config/promoConfig.json' assert { type: 'json' };
 import ClientImport from '@/components/clien-import';
 import AddStudent from '@/components/add-student';
+import TrackStatsDisplay from '@/components/track-stats-display';
 import { Users, GraduationCap } from 'lucide-react';
 
 interface Promo {
@@ -18,7 +19,7 @@ interface StudentsPageProps {
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const resolvedParams = await searchParams;
-  const { q = '', offset = '0', promo = '' } = resolvedParams;
+  const { q = '', offset = '0', promo = '', filter = '', direction = '', status = null, delay_level = null, track = null, track_completed = null } = resolvedParams;
   const search = q;
   const offsetNumber = Number(offset);
 
@@ -28,7 +29,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
   // Appel au backend pour récupérer les données des étudiants
   const { students, newOffset, totalStudents, previousOffset, currentOffset } =
-    await getStudents(search, offsetNumber, promo, '', '', null, null);
+    await getStudents(search, offsetNumber, promo, filter, direction, status, delay_level, track, track_completed);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -44,6 +45,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
           </p>
         </div>
       </div>
+
+      {/* Track Statistics */}
+      <TrackStatsDisplay selectedPromo={promo || 'all'} />
 
       <Tabs value={promo || 'all'} className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">

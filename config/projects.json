@@ -89,5 +89,58 @@
       "name": "0-shell",
       "project_time_week": 4
     }
+  ],
+  "Java": [
+    {
+      "id": 18,
+      "name": "Lets-Play",
+      "project_time_week": 1
+    },
+    {
+      "id": 19,
+      "name": "Angul-It",
+      "project_time_week": 1
+    },
+    {
+      "id": 20,
+      "name": "Buy-01",
+      "project_time_week": 1
+    },
+
+    {
+      "id": 21,
+      "name": "MR-Jenk",
+      "project_time_week": 2
+    },
+    {
+      "id": 22,
+      "name": "Safe-Zone",
+      "project_time_week": 2
+    },
+    {
+      "id": 23,
+      "name": "Buy-02",
+      "project_time_week": 3
+    },
+    {
+      "id": 24,
+      "name": "Nexus",
+      "project_time_week": 2
+    },
+    {
+      "id": 25,
+      "name": "Neo-4-Flix",
+      "project_time_week": 3
+    },
+    {
+      "id": 26,
+      "name": "Travel-Plan",
+      "project_time_week": 2
+    },
+    {
+      "id": 27,
+      "name": "Lets-Travel",
+      "project_time_week": 3
+    }
   ]
 }

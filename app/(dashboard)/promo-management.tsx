@@ -16,8 +16,8 @@ interface Promo {
     start: string;
     'piscine-js-start': string;
     'piscine-js-end': string;
-    'piscine-rust-start': string;
-    'piscine-rust-end': string;
+    'piscine-rust-java-start': string;
+    'piscine-rust-java-end': string;
     end: string;
   };
 }
@@ -32,8 +32,8 @@ export default function PromoManager() {
       start: '',
       'piscine-js-start': '',
       'piscine-js-end': '',
-      'piscine-rust-start': '',
-      'piscine-rust-end': '',
+      'piscine-rust-java-start': '',
+      'piscine-rust-java-end': '',
       end: ''
     }
   });
@@ -96,8 +96,8 @@ export default function PromoManager() {
           start: '',
           'piscine-js-start': '',
           'piscine-js-end': '',
-          'piscine-rust-start': '',
-          'piscine-rust-end': '',
+          'piscine-rust-java-start': '',
+          'piscine-rust-java-end': '',
           end: ''
         }
       });
@@ -249,25 +249,25 @@ export default function PromoManager() {
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="start-date-rust" className="block text-sm font-medium">Piscine Rust Start (optionnel)</label>
+            <label htmlFor="start-date-rust-java" className="block text-sm font-medium">Piscine Rust/Java Start (optionnel)</label>
             <DatePickerDemo
-              value={newPromo.dates['piscine-rust-start']}
+              value={newPromo.dates['piscine-rust-java-start']}
               onChange={date => setNewPromo((prev) => ({
                 ...prev,
-                dates: { ...prev.dates, 'piscine-rust-start': date }
+                dates: { ...prev.dates, 'piscine-rust-java-start': date }
               }))}
-              id="start-date-rust"
+              id="start-date-rust-java"
             />
           </div>
           <div className="mb-4">
-            <label htmlFor="end-date-rust" className="block text-sm font-medium">Piscine Rust End (optionnel)</label>
+            <label htmlFor="end-date-rust-java" className="block text-sm font-medium">Piscine Rust/Java End (optionnel)</label>
             <DatePickerDemo
-              value={newPromo.dates['piscine-rust-end']}
+              value={newPromo.dates['piscine-rust-java-end']}
               onChange={date => setNewPromo((prev) => ({
                 ...prev,
-                dates: { ...prev.dates, 'piscine-rust-end': date }
+                dates: { ...prev.dates, 'piscine-rust-java-end': date }
               }))}
-              id="end-date-rust"
+              id="end-date-rust-java"
             />
           </div>
           <div className="mb-4">

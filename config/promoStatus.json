@@ -1,8 +1,11 @@
 {
-  "P1 2024": "Multiplayer-fps",
+  "P1 2024": {
+    "rust": "0-shell",
+    "java": "Lets-Travel"
+  },
   "P2 2023": "Fin",
   "P1 2023": "Fin",
   "P1 2022": "Fin",
-  "P1 2025": "Make-your-game",
-  "P2 2025": "Ascii-art-web"
+  "P1 2025": "Real-time-forum",
+  "P2 2025": "Groupie-tracker"
 }

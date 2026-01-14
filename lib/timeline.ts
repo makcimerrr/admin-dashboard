@@ -32,6 +32,36 @@ export async function updateEnv(projectName: string, promotionKey: string) {
   }
 }
 
+// Fonction pour mettre à jour le fichier JSON avec plusieurs tracks (rust/java)
+export async function updateEnvMultiTrack(
+  tracks: { rust?: string; java?: string },
+  promotionKey: string
+) {
+  const __dirname = path.dirname(new URL(import.meta.url).pathname);
+  const rootDir = path.join(__dirname, '../');
+  const jsonFilePath = path.join(rootDir, 'config', 'promoStatus.json');
+
+  try {
+    if (!fs.existsSync(jsonFilePath)) {
+      fs.writeFileSync(jsonFilePath, JSON.stringify({}, null, 2), 'utf8');
+    }
+
+    let data = fs.readFileSync(jsonFilePath, 'utf8');
+    let jsonData = JSON.parse(data);
+
+    // Mettre à jour la promotion avec les tracks
+    jsonData[promotionKey] = tracks;
+
+    fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData, null, 2), 'utf8');
+    return {
+      success: true,
+      message: `La variable ${promotionKey} a été mise à jour avec les tracks: ${JSON.stringify(tracks)}`
+    };
+  } catch (err) {
+    return { success: false, message: `Erreur: ${err}` };
+  }
+}
+
 type Project = {
   id: number;
   name: string;
@@ -42,8 +72,8 @@ type PromotionDates = {
   start: string;
   'piscine-js-start': string;
   'piscine-js-end': string;
-  'piscine-rust-start': string;
-  'piscine-rust-end': string;
+  'piscine-rust-java-start': string;
+  'piscine-rust-java-end': string;
   end: string;
 };
 
@@ -60,6 +90,7 @@ type AllProjects = {
   Golang: Project[];
   Javascript: Project[];
   Rust: Project[];
+  Java: Project[];
 };
 
 // Comparer les dates sans prendre en compte l'heure
@@ -254,37 +285,130 @@ export async function displayAgenda(
     }
   }
 
-  if (promotion.dates['piscine-rust-start'] !== 'NaN') {
-    const piscineRustStart = new Date(promotion.dates['piscine-rust-start']);
-    const piscineRustEnd = new Date(promotion.dates['piscine-rust-end']);
+  // Traitement de la piscine Rust/Java (les étudiants choisissent l'un ou l'autre)
+  if (promotion.dates['piscine-rust-java-start'] !== 'NaN') {
+    const piscineRustJavaStart = new Date(promotion.dates['piscine-rust-java-start']);
+    const piscineRustJavaEnd = new Date(promotion.dates['piscine-rust-java-end']);
 
-    if (compareDates(piscineRustStart, piscineRustEnd, current_date)) {
+    if (compareDates(piscineRustJavaStart, piscineRustJavaEnd, current_date)) {
+      // Pendant la piscine, on affiche le premier projet de chaque track
+      const tracks: { rust?: string; java?: string } = {};
+
       if (allProjects.Rust.length > 0) {
-        const nextProject = allProjects.Rust[0];
-        currentProject = nextProject.name;
+        tracks.rust = allProjects.Rust[0].name;
+      }
+      if (allProjects.Java.length > 0) {
+        tracks.java = allProjects.Java[0].name;
+      }
+
+      if (tracks.rust || tracks.java) {
+        currentProject = tracks.rust || tracks.java || 'Aucun';
         progress = 0;
         console.log(
-          `Current project: ${nextProject.name}, Progress: 0% for Promo ${promotion.key}`
+          `Current projects - Rust: ${tracks.rust || 'N/A'}, Java: ${tracks.java || 'N/A'}, Progress: 0% for Promo ${promotion.key}`
         );
-        await updateEnv(nextProject.name, promotion.key);
+        await updateEnvMultiTrack(tracks, promotion.key);
       }
     }
 
-    startDate = new Date(piscineRustEnd);
-    startDate.setDate(piscineRustEnd.getDate() + 1);
+    startDate = new Date(piscineRustJavaEnd);
+    startDate.setDate(piscineRustJavaEnd.getDate() + 1);
+
+    // Traiter les projets Rust et Java en parallèle
+    let rustStartDate = new Date(startDate);
+    let javaStartDate = new Date(startDate);
+    let rustEndDate = new Date(startDate);
+    let javaEndDate = new Date(startDate);
+
+    // Calculer les dates de fin pour chaque track
+    for (let i = 0; i < allProjects.Rust.length; i++) {
+      const project = allProjects.Rust[i];
+      rustEndDate = await processProject(
+        project.name,
+        rustStartDate,
+        project.project_time_week,
+        holidays,
+        new Date('1900-01-01'), // Date dans le passé pour ne pas matcher avec current_date
+        false
+      );
+      rustStartDate = new Date(rustEndDate);
+    }
+
+    for (let i = 0; i < allProjects.Java.length; i++) {
+      const project = allProjects.Java[i];
+      javaEndDate = await processProject(
+        project.name,
+        javaStartDate,
+        project.project_time_week,
+        holidays,
+        new Date('1900-01-01'), // Date dans le passé pour ne pas matcher avec current_date
+        false
+      );
+      javaStartDate = new Date(javaEndDate);
+    }
+
+    // Maintenant vérifier sur quel projet actuel on est
+    rustStartDate = new Date(startDate);
+    javaStartDate = new Date(startDate);
+    let currentTracks: { rust?: string; java?: string } = {};
+    let foundCurrentProject = false;
 
     for (let i = 0; i < allProjects.Rust.length; i++) {
       const project = allProjects.Rust[i];
       const isLastProject = i === allProjects.Rust.length - 1;
-      startDate = await processProject(
+      const projectEndDate = await processProject(
         project.name,
-        startDate,
+        rustStartDate,
         project.project_time_week,
         holidays,
-        current_date,
-        isLastProject
+        new Date('1900-01-01'),
+        false
       );
+
+      if (compareDates(rustStartDate, projectEndDate, current_date)) {
+        currentTracks.rust = project.name;
+        foundCurrentProject = true;
+      }
+      rustStartDate = new Date(projectEndDate);
     }
+
+    for (let i = 0; i < allProjects.Java.length; i++) {
+      const project = allProjects.Java[i];
+      const isLastProject = i === allProjects.Java.length - 1;
+      const projectEndDate = await processProject(
+        project.name,
+        javaStartDate,
+        project.project_time_week,
+        holidays,
+        new Date('1900-01-01'),
+        false
+      );
+
+      if (compareDates(javaStartDate, projectEndDate, current_date)) {
+        currentTracks.java = project.name;
+        foundCurrentProject = true;
+      }
+      javaStartDate = new Date(projectEndDate);
+    }
+
+    if (foundCurrentProject && (currentTracks.rust || currentTracks.java)) {
+      currentProject = currentTracks.rust || currentTracks.java || 'Aucun';
+      const projectStart = new Date(startDate);
+      const projectEnd = rustEndDate > javaEndDate ? rustEndDate : javaEndDate;
+      const totalDays =
+        (projectEnd.getTime() - projectStart.getTime()) / (24 * 60 * 60 * 1000) + 1;
+      const elapsedDays =
+        (current_date.getTime() - projectStart.getTime()) / (24 * 60 * 60 * 1000);
+      progress = (elapsedDays / totalDays) * 100;
+
+      console.log(
+        `Current projects - Rust: ${currentTracks.rust || 'N/A'}, Java: ${currentTracks.java || 'N/A'}, Progress: ${progress.toFixed(2)}% for Promo ${promotion.key}`
+      );
+      await updateEnvMultiTrack(currentTracks, promotion.key);
+    }
+
+    // Utiliser la date de fin la plus éloignée
+    startDate = rustEndDate > javaEndDate ? rustEndDate : javaEndDate;
   }
 
   const promoEndDate = new Date(promotion.dates.end);

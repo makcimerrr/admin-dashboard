@@ -49,6 +49,7 @@ const TECH_COLORS: Record<string, string> = {
   Golang: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400',
   Javascript: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
   Rust: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+  Java: 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
 };
 
 export default function ProjectManagement() {

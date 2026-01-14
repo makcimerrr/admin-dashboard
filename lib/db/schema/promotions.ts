@@ -22,5 +22,7 @@ export const delayStatus = pgTable('delays_status', {
     goodLateCount: integer('good_late_count').default(0),
     advanceLateCount: integer('advance_late_count').default(0),
     specialityCount: integer('speciality_count').default(0),
+    validatedCount: integer('validated_count').default(0),
+    notValidatedCount: integer('not_validated_count').default(0),
     lastUpdate: timestamp('last_update').defaultNow()
 });

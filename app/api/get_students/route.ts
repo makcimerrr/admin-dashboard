@@ -14,6 +14,9 @@ export async function GET(request: Request) {
     const direction = url.searchParams.get('direction') || 'asc'; // Direction du tri (par défaut 'asc')
     const status = url.searchParams.get('status') || ''; // Statut (par défaut '')
     const delayLevel = url.searchParams.get('delay_level') || ''; // Niveau de retard (par défaut '')
+    const track = url.searchParams.get('track') || null; // Tronc (par défaut null)
+    const trackCompleted = url.searchParams.get('track_completed') || null; // Tronc terminé (par défaut null)
+
     // Appel à la fonction getStudents dans la base de données
     const {
       students,
@@ -21,7 +24,7 @@ export async function GET(request: Request) {
       totalStudents,
       previousOffset,
       currentOffset
-    } = await getStudents(search, offsetNumber, promo, filter, direction, status, delayLevel);
+    } = await getStudents(search, offsetNumber, promo, filter, direction, status, delayLevel, track, trackCompleted);
 
     // Envoi des résultats sous forme JSON
     return NextResponse.json({

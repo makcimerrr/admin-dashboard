@@ -1,4 +1,5 @@
-import Image from 'next/image';
+'use client';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,328 +9,234 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, CheckCircle2, ExternalLink } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { SelectStudent } from '@/lib/db/schema/students';
 import { deleteStudent } from './actions';
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger
-} from '@/components/ui/drawer';
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useRouter } from 'next/navigation';
 
 const getProgressStatusClass = (status: string | null) => {
   switch (status) {
     case 'audit':
-      return 'bg-orange-500 text-white'; // Couleur orange pour 'audit'
+      return 'bg-orange-500/10 text-orange-700 hover:bg-orange-500/20 border-orange-200';
     case 'setup':
-      return 'bg-purple-500 text-white'; // Couleur violet pour 'setup'
+      return 'bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 border-purple-200';
     case 'working':
-      return 'bg-blue-500 text-white'; // Couleur bleue pour 'working'
+      return 'bg-blue-500/10 text-blue-700 hover:bg-blue-500/20 border-blue-200';
     case 'finished':
-      return 'bg-green-500 text-white'; // Couleur verte pour 'finished'
+      return 'bg-green-500/10 text-green-700 hover:bg-green-500/20 border-green-200';
     case 'without group':
-      return 'bg-red-500 text-white'; // Couleur rouge pour 'without group'
+      return 'bg-red-500/10 text-red-700 hover:bg-red-500/20 border-red-200';
     default:
-      return 'bg-gray-300 text-black'; // Valeur par défaut pour un statut inconnu
+      return 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200';
   }
 };
 
 const getDelayLevelClass = (level: string | null) => {
   switch (level) {
     case 'bien':
-      return 'bg-green-500 text-white'; // Couleur verte pour 'bien'
+      return 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200';
     case 'en retard':
-      return 'bg-red-500 text-white'; // Couleur rouge pour 'en retard'
+      return 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200';
     case 'en avance':
-      return 'bg-blue-500 text-white'; // Couleur bleue pour 'en avance'
+      return 'bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200';
     case 'spécialité':
-      return 'bg-yellow-500 text-white'; // Couleur jaune pour 'spécialité'
+      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200';
+    case 'Validé':
+      return 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200';
+    case 'Non Validé':
+      return 'bg-rose-100 text-rose-800 hover:bg-rose-200 border-rose-200';
     default:
-      return 'bg-gray-300 text-black'; // Valeur par défaut pour un niveau inconnu
+      return 'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200';
   }
 };
 
-interface currentUser {
-  id: number;
-  login: string;
-  firstName: string;
-  lastName: string;
-  auditRatio: number;
-  auditsAssigned: number;
-  campus: string;
-  email: string;
-  githubId: string;
-  discordId: string;
-  discordDMChannelId: string;
-  last_login: string;
-  last_contribution: string;
-}
+const getStatusStyle = (status: string | null) => {
+    switch (status) {
+      case 'finished':
+        return { className: 'text-green-600 font-medium', emoji: '✅', text: 'Finished' };
+      case 'working':
+        return { className: 'text-blue-600 font-medium', emoji: '🔨', text: 'Working' };
+      case 'audit':
+        return { className: 'text-orange-600 font-medium', emoji: '🔍', text: 'Audit' };
+      case 'setup':
+        return { className: 'text-purple-600 font-medium', emoji: '⚙️', text: 'Setup' };
+      case 'without group':
+          return { className: 'text-red-600 font-medium', emoji: '🚫', text: 'No Group' };
+      case 'not_started':
+        return { className: 'text-gray-500', emoji: '⏳', text: 'Not Started' };
+      case 'not_chosen':
+        return { className: 'text-gray-400 italic', emoji: '🤷', text: 'Not Chosen' };
+      default:
+        return { className: 'text-gray-400', emoji: '❔', text: 'Unknown' };
+    }
+  };
 
 export function Student({ student, rowClassName, cellClassName }: { student: SelectStudent; rowClassName?: string, cellClassName?: string }) {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [userData, setUserData] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const router = useRouter();
 
-  const fetchGiteaAndUserFind = async () => {
-    toast.promise(
-      (async () => {
-        try {
-          const giteaResponse = await fetch(
-            `https://api-zone01-rouen.deno.dev/api/v1/gitea-info/${student.login}`,
-            /*`http://localhost:8000/api/v1/gitea-info/${student.login}`,*/  /*For development*/ {
-              headers: {
-                Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
-              }
-            }
-          );
-          const userFindResponse = await fetch(
-            `https://api-zone01-rouen.deno.dev/api/v1/user-info/${student.login}`,
-            /*`http://localhost:8000/api/v1/user-info/${student.login}`,*/ /*For development*/ {
-              headers: {
-                Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`
-              }
-            }
-          );
-
-          if (!giteaResponse.ok) {
-            throw new Error(`Gitea fetch failed: ${giteaResponse.statusText}`);
-          }
-
-          if (!userFindResponse.ok) {
-            throw new Error(
-              `User find fetch failed: ${userFindResponse.statusText}`
-            );
-          }
-
-          const giteaFindData = await giteaResponse.json();
-
-          const latestDate = giteaFindData.heatmap.reduce(
-            (latest: { timestamp: number }, current: { timestamp: number }) => {
-              return current.timestamp > latest.timestamp ? current : latest;
-            }
-          );
-
-          const timeMessage = formatDistanceToNow(
-            new Date(latestDate.timestamp * 1000),
-            {
-              locale: fr
-            }
-          );
-
-          // console.log('GITEA', giteaFindData);
-          const giteaData = {
-            last_login: giteaFindData.user.last_login,
-            last_contribution: timeMessage
-          };
-
-          const userFindData = await userFindResponse.json();
-          // console.log(userFindData.user);
-          const userData = userFindData.user.map((user: any) => ({
-            id: user.id,
-            login: user.login,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            auditRatio: user.auditRatio,
-            auditsAssigned: user.auditsAssigned,
-            campus: user.campus,
-            email: user.email,
-            githubId: user.githubId,
-            discordId: user.discordId,
-            discordDMChannelId: user.discordDMChannelId,
-            last_login: giteaData.last_login,
-            last_contribution: giteaData.last_contribution
-          }));
-          setUserData(userData);
-          setIsDrawerOpen(true);
-          return { giteaFindData, userFindData };
-        } catch (error) {
-          console.error('Error fetching data:', error);
-          throw error;
-        }
-      })(),
-      {
-        loading: 'Fetching data...',
-        success: <b>{student.login} has been fetched successfully</b>,
-        error: <b>Could not fetch data.</b>
-      }
-    );
+  const handleClick = () => {
+    router.push(`/student?id=${student.id}`);
   };
 
-  const handleClick = async () => {
-    await fetchGiteaAndUserFind();
-  };
+  const golangStatus = getStatusStyle(student.golang_project_status);
+  const javascriptStatus = getStatusStyle(student.javascript_project_status);
+  
+  // Determine the correct status for the Rust/Java column
+  let rustJavaStatusRaw = student.java_project_status || student.rust_project_status;
+  
+  // If one is "not_chosen" but the other has a real status, prioritize the real status
+  if (student.java_project_status === 'not_chosen' && student.rust_project_status && student.rust_project_status !== 'not_chosen') {
+    rustJavaStatusRaw = student.rust_project_status;
+  } else if (student.rust_project_status === 'not_chosen' && student.java_project_status && student.java_project_status !== 'not_chosen') {
+    rustJavaStatusRaw = student.java_project_status;
+  }
 
-  const handleClose = () => {
-    setUserData([]);
-    setIsDrawerOpen(false);
-  };
-
-  const handleNext = () => {
-    if (currentIndex < 10) {
-      // Limiter à 4 informations (nom, email, ratio, etc.)
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
-
-  const currentUser: currentUser = userData[0] || ({} as currentUser);
-  const ratio = currentUser?.auditRatio ?? 0;
-  const infoList = [
-    {
-      label: 'Name',
-      value: `${currentUser.firstName} ${currentUser.lastName}`
-    },
-    { label: 'Email', value: currentUser.email || 'N/A' },
-    { label: 'Campus', value: currentUser.campus || 'N/A' },
-    {
-      label: 'Dernière contribution',
-      value: currentUser.last_contribution || 'N/A'
-    },
-    { label: 'Audit Ratio', value: ratio.toFixed(1) ?? 'N/A' },
-    { label: 'Audits Assigned', value: currentUser.auditsAssigned || '0' },
-    {
-      label: 'Last Login',
-      value: currentUser.last_login
-        ? new Date(currentUser.last_login).toLocaleDateString('fr-FR')
-        : 'N/A'
-    },
-    { label: 'Github ID', value: currentUser.githubId || 'N/A' }
-    /*{ label: 'Discord ID', value: currentUser.discordId || 'N/A' },
-                        { label: 'Discord DM Channel ID', value: currentUser.discordDMChannelId || 'N/A' },*/
-  ];
-
-  const currentInfo = infoList[currentIndex] || {};
+  const rustJavaStatus = getStatusStyle(rustJavaStatusRaw);
 
   return (
     <>
       <TableRow
         onClick={handleClick}
         data-state={undefined}
-        className={cn("transition-colors hover:bg-muted/50", rowClassName)}
+        className={cn("transition-colors hover:bg-muted/50 cursor-pointer group", rowClassName)}
       >
-        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{student.first_name}</TableCell>
-        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{student.last_name}</TableCell>
-        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">{student.login}</TableCell>
+        <TableCell className="py-3">
+            <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9 border border-border">
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium text-xs">
+                        {student.first_name[0]}{student.last_name[0]}
+                    </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                    <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
+                        {student.first_name} {student.last_name}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                        {student.login}
+                    </span>
+                </div>
+            </div>
+        </TableCell>
         <TableCell>
-          <Badge className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+          <Badge variant="outline" className="font-normal bg-background">
             {student.promos}
           </Badge>
         </TableCell>
-        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-          {student.golang_project} {student.golang_completed ? '✅' : '❌'}
-        </TableCell>
-        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-          {student.javascript_project} {student.javascript_completed ? '✅' : '❌'}
-        </TableCell>
-        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-          {student.rust_project} {student.rust_completed ? '✅' : '❌'}
-        </TableCell>
-        {/* Ajout des nouvelles colonnes */}
         <TableCell>
-          <Badge className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-            {student.actual_project_name || 'N/A'}
-          </Badge>
+          <TooltipProvider>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors",
+                    student.golang_completed 
+                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" 
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                )}>
+                  {student.golang_project || 'N/A'}
+                  {student.golang_completed ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                  ) : (
+                    <div className="h-3.5 w-3.5" /> 
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="flex items-center gap-2 px-3 py-2">
+                <span className="text-lg">{golangStatus.emoji}</span>
+                <span className={cn("font-medium", golangStatus.className)}>{golangStatus.text}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </TableCell>
         <TableCell>
-          <Badge className={cn("rounded-md px-2 py-1 text-xs font-medium capitalize", getProgressStatusClass(student.progress_status))}>
-            {student.progress_status || 'N/A'}
-          </Badge>
+          <TooltipProvider>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors",
+                    student.javascript_completed 
+                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" 
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                )}>
+                  {student.javascript_project || 'N/A'}
+                  {student.javascript_completed ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                  ) : (
+                    <div className="h-3.5 w-3.5" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="flex items-center gap-2 px-3 py-2">
+                <span className="text-lg">{javascriptStatus.emoji}</span>
+                <span className={cn("font-medium", javascriptStatus.className)}>{javascriptStatus.text}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </TableCell>
         <TableCell>
-          <Badge className={cn("rounded-md px-2 py-1 text-xs font-medium capitalize", getDelayLevelClass(student.delay_level))}>
+          <TooltipProvider>
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors",
+                    (student.java_completed || student.rust_completed)
+                        ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100" 
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                )}>
+                  {student.java_project || student.rust_project || 'N/A'}
+                  {(student.java_completed || student.rust_completed) ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                  ) : (
+                    <div className="h-3.5 w-3.5" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="flex items-center gap-2 px-3 py-2">
+                <span className="text-lg">{rustJavaStatus.emoji}</span>
+                <span className={cn("font-medium", rustJavaStatus.className)}>{rustJavaStatus.text}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </TableCell>
+        <TableCell>
+          <Badge variant="outline" className={cn("font-medium border", getDelayLevelClass(student.delay_level))}>
             {student.delay_level || 'N/A'}
           </Badge>
         </TableCell>
-        <TableCell className="hidden md:table-cell whitespace-nowrap text-sm text-muted-foreground">
-          {new Date(student.availableAt).toLocaleDateString('en-US')}
+        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+          {new Date(student.availableAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
         </TableCell>
         <TableCell>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button aria-haspopup="true" size="icon" variant="ghost">
+              <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8">
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="sr-only">Toggle menu</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem>Edit</DropdownMenuItem>
-              <DropdownMenuItem>
-                <form action={deleteStudent}>
-                  <button type="submit">Delete</button>
+              <DropdownMenuItem onClick={handleClick} className="cursor-pointer">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Voir les détails
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                <form action={deleteStudent} className="w-full">
+                  <button type="submit" className="w-full text-left">Delete</button>
                 </form>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </TableCell>
       </TableRow>
-
-      <Drawer open={isDrawerOpen} onClose={handleClose}>
-        <DrawerContent>
-          <div className="mx-auto w-full max-w-sm">
-            <DrawerHeader>
-              <DrawerTitle>User Data ({currentUser.login})</DrawerTitle>
-              <DrawerDescription>
-                Navigate through the user's data.
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className="p-4">
-              <div className="flex items-center justify-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 rounded-full"
-                  onClick={handlePrev}
-                  disabled={currentIndex === 0}
-                >
-                  <ChevronLeft />
-                  <span className="sr-only">Previous</span>
-                </Button>
-                <div className="flex-1 text-center">
-                  <div className="text-lg font-bold tracking-tighter">
-                    {currentInfo.label}
-                  </div>
-                  <div className="mt-4 text-3xl font-extrabold">
-                    {currentInfo.value}
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 rounded-full"
-                  onClick={handleNext}
-                  disabled={currentIndex === infoList.length - 1}
-                >
-                  <ChevronRight />
-                  <span className="sr-only">Next</span>
-                </Button>
-              </div>
-            </div>
-            <DrawerFooter>
-              <DrawerClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DrawerClose>
-            </DrawerFooter>
-          </div>
-        </DrawerContent>
-      </Drawer>
     </>
   );
 }

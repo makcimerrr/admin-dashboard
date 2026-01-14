@@ -39,8 +39,8 @@ interface Promo {
     start: string;
     'piscine-js-start': string;
     'piscine-js-end': string;
-    'piscine-rust-start': string;
-    'piscine-rust-end': string;
+    'piscine-rust-java-start': string;
+    'piscine-rust-java-end': string;
     end: string;
   };
 }
@@ -57,8 +57,8 @@ export default function PromoManagement() {
       start: '',
       'piscine-js-start': '',
       'piscine-js-end': '',
-      'piscine-rust-start': '',
-      'piscine-rust-end': '',
+      'piscine-rust-java-start': '',
+      'piscine-rust-java-end': '',
       end: ''
     }
   });
@@ -108,8 +108,8 @@ export default function PromoManagement() {
           start: '',
           'piscine-js-start': '',
           'piscine-js-end': '',
-          'piscine-rust-start': '',
-          'piscine-rust-end': '',
+          'piscine-rust-java-start': '',
+          'piscine-rust-java-end': '',
           end: ''
         }
       });
@@ -261,25 +261,25 @@ export default function PromoManagement() {
               </div>
 
               <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold mb-4">Piscine Rust (optionnel)</h4>
+                <h4 className="text-sm font-semibold mb-4">Piscine Rust/Java (optionnel)</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Début Piscine Rust</Label>
+                    <Label>Début Piscine Rust/Java</Label>
                     <DatePickerDemo
-                      value={newPromo.dates['piscine-rust-start']}
+                      value={newPromo.dates['piscine-rust-java-start']}
                       onChange={(date) => setNewPromo((prev) => ({
                         ...prev,
-                        dates: { ...prev.dates, 'piscine-rust-start': date }
+                        dates: { ...prev.dates, 'piscine-rust-java-start': date }
                       }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Fin Piscine Rust</Label>
+                    <Label>Fin Piscine Rust/Java</Label>
                     <DatePickerDemo
-                      value={newPromo.dates['piscine-rust-end']}
+                      value={newPromo.dates['piscine-rust-java-end']}
                       onChange={(date) => setNewPromo((prev) => ({
                         ...prev,
-                        dates: { ...prev.dates, 'piscine-rust-end': date }
+                        dates: { ...prev.dates, 'piscine-rust-java-end': date }
                       }))}
                     />
                   </div>
@@ -355,11 +355,11 @@ export default function PromoManagement() {
                     </div>
                   )}
 
-                  {(promo.dates['piscine-rust-start'] || promo.dates['piscine-rust-end']) && (
+                  {(promo.dates['piscine-rust-java-start'] || promo.dates['piscine-rust-java-end']) && (
                     <div className="flex items-center gap-2 text-sm">
-                      <Badge variant="secondary" className="text-xs">Rust</Badge>
+                      <Badge variant="secondary" className="text-xs">Rust/Java</Badge>
                       <span className="text-muted-foreground">
-                        {formatDate(promo.dates['piscine-rust-start'])} → {formatDate(promo.dates['piscine-rust-end'])}
+                        {formatDate(promo.dates['piscine-rust-java-start'])} → {formatDate(promo.dates['piscine-rust-java-end'])}
                       </span>
                     </div>
                   )}

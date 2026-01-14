@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  Trash
+  Trash,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Update from '@/components/update';
@@ -30,6 +31,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'react-hot-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import PromoStatusDisplay from '@/components/promo-status-display';
+import { Input } from '@/components/ui/input';
+import debounce from 'lodash.debounce';
 
 export function StudentsTable({
   students,
@@ -58,6 +62,7 @@ export function StudentsTable({
   const [newOffsetState, setNewOffsetState] = useState(newOffset);
   const [previousOffsetState, setPreviousOffsetState] =
     useState(previousOffset);
+  const [searchValue, setSearchValue] = useState(search);
 
   const [isLoading, setIsLoading] = useState(false);
   const [sortConfig, setSortConfig] = useState<{
@@ -66,6 +71,21 @@ export function StudentsTable({
   }>({ key: null, direction: 'asc' });
   const searchParams = useSearchParams();
   const pathname = usePathname();
+
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        const query = new URLSearchParams(searchParams.toString());
+        if (value) {
+          query.set('q', value);
+        } else {
+          query.delete('q');
+        }
+        query.set('offset', '0');
+        router.push(`${pathname}?${query.toString()}`, { scroll: false });
+      }, 300),
+    [searchParams, pathname, router]
+  );
 
   useEffect(() => {
     setStudentsList(students);
@@ -201,12 +221,30 @@ export function StudentsTable({
     query.set('delay_level', delay_level);
     router.push(`${pathname}?${query.toString()}`, { scroll: false });
   };
+
+  const requestTrackFilter = (track: string, completed: string) => {
+    const query = new URLSearchParams(searchParams.toString());
+    if (track === '') {
+      query.delete('track');
+      query.delete('track_completed');
+      query.set('offset', '0');
+      router.push(`${pathname}?${query.toString()}`, { scroll: false });
+      return;
+    }
+    query.set('track', track);
+    query.set('track_completed', completed);
+    query.set('offset', '0');
+    router.push(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+
   const clearFilters = () => {
     const query = new URLSearchParams(searchParams.toString());
     query.delete('filter');
     query.delete('direction');
     query.delete('status');
     query.delete('delay_level');
+    query.delete('track');
+    query.delete('track_completed');
     router.push(`${pathname}?${query.toString()}`, { scroll: false });
     setSortConfig({ key: null, direction: null });
   };
@@ -222,6 +260,19 @@ export function StudentsTable({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search by name or login..."
+              className="pl-8 sm:w-[300px]"
+              value={searchValue}
+              onChange={(e) => {
+                setSearchValue(e.target.value);
+                debouncedSearch(e.target.value);
+              }}
+            />
+          </div>
           {/* Filtres modernisés */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -272,6 +323,66 @@ export function StudentsTable({
               >
                 Spécialité
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestDelayLevel('Validé')}>
+                Validé
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestDelayLevel('Non Validé')}>
+                Non Validé
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Troncs
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56">
+              <DropdownMenuLabel>Filtrer par tronc</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => requestTrackFilter('', '')}>
+                Tous
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Golang
+              </DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => requestTrackFilter('golang', 'true')}>
+                ✅ Golang terminé
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestTrackFilter('golang', 'false')}>
+                ⏳ Golang en cours
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Javascript
+              </DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => requestTrackFilter('javascript', 'true')}>
+                ✅ Javascript terminé
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestTrackFilter('javascript', 'false')}>
+                ⏳ Javascript en cours
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Rust
+              </DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => requestTrackFilter('rust', 'true')}>
+                ✅ Rust terminé
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestTrackFilter('rust', 'false')}>
+                ⏳ Rust en cours
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                Java
+              </DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => requestTrackFilter('java', 'true')}>
+                ✅ Java terminé
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestTrackFilter('java', 'false')}>
+                ⏳ Java en cours
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
@@ -284,6 +395,9 @@ export function StudentsTable({
           </Button>
         </div>
       </div>
+      
+      <PromoStatusDisplay selectedPromo={promo || 'all'} />
+
       {/* Update button */}
       <div className="flex justify-start mb-2">
         {promo === '' ? (
@@ -301,38 +415,8 @@ export function StudentsTable({
                 className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
                 onClick={() => requestSort('first_name')}
               >
-                Prénom{' '}
+                Étudiant{' '}
                 {sortConfig.key === 'first_name' && (
-                  <span>
-                    {sortConfig.direction === 'asc' ? (
-                      <ChevronUp className="inline h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="inline h-4 w-4" />
-                    )}
-                  </span>
-                )}
-              </TableHead>
-              <TableHead
-                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
-                onClick={() => requestSort('last_name')}
-              >
-                Nom{' '}
-                {sortConfig.key === 'last_name' && (
-                  <span>
-                    {sortConfig.direction === 'asc' ? (
-                      <ChevronUp className="inline h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="inline h-4 w-4" />
-                    )}
-                  </span>
-                )}
-              </TableHead>
-              <TableHead
-                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
-                onClick={() => requestSort('login')}
-              >
-                Login{' '}
-                {sortConfig.key === 'login' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
                       <ChevronUp className="inline h-4 w-4" />
@@ -391,38 +475,8 @@ export function StudentsTable({
                 onClick={() => requestSort('rust_project')}
                 className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
               >
-                Rust Project{' '}
+                Rust/Java Project{' '}
                 {sortConfig.key === 'rust_project' && (
-                  <span>
-                    {sortConfig.direction === 'asc' ? (
-                      <ChevronUp className="inline h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="inline h-4 w-4" />
-                    )}
-                  </span>
-                )}
-              </TableHead>
-              <TableHead
-                onClick={() => requestSort('actual_project_name')}
-                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
-              >
-                Actual Project{' '}
-                {sortConfig.key === 'actual_project_name' && (
-                  <span>
-                    {sortConfig.direction === 'asc' ? (
-                      <ChevronUp className="inline h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="inline h-4 w-4" />
-                    )}
-                  </span>
-                )}
-              </TableHead>
-              <TableHead
-                className="uppercase text-xs font-semibold tracking-wider text-muted-foreground bg-background px-4 py-2"
-                onClick={() => requestSort('progress_status')}
-              >
-                Statut{' '}
-                {sortConfig.key === 'progress_status' && (
                   <span>
                     {sortConfig.direction === 'asc' ? (
                       <ChevronUp className="inline h-4 w-4" />

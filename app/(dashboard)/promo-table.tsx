@@ -18,8 +18,8 @@ interface Promo {
     start: string;
     'piscine-js-start': string;
     'piscine-js-end': string;
-    'piscine-rust-start': string;
-    'piscine-rust-end': string;
+    'piscine-rust-java-start': string;
+    'piscine-rust-java-end': string;
     end: string;
   };
 }
@@ -44,7 +44,7 @@ export default function PromoTable({ promos, onDelete, isConfirmingDelete, cance
           <TableHead className="p-2 text-left">Date de début</TableHead>
           <TableHead className="p-2 text-left">Date de fin</TableHead>
           <TableHead className="p-2 text-left">Piscine JS</TableHead>
-          <TableHead className="p-2 text-left">Piscine RUST</TableHead>
+          <TableHead className="p-2 text-left">Piscine RUST/JAVA</TableHead>
           <TableHead className="p-2 text-left">Actions</TableHead>
         </TableRow>
       </TableHeader>
@@ -60,7 +60,7 @@ export default function PromoTable({ promos, onDelete, isConfirmingDelete, cance
               {promo.dates['piscine-js-start']} - {promo.dates['piscine-js-end']}
             </TableCell>
             <TableCell className="p-2">
-              {promo.dates['piscine-rust-start']} - {promo.dates['piscine-rust-end']}
+              {promo.dates['piscine-rust-java-start']} - {promo.dates['piscine-rust-java-end']}
             </TableCell>
             <TableCell className="p-2">
               {isConfirmingDelete === promo.key ? (

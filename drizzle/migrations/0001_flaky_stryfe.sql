@@ -1,0 +1,3 @@
+-- Columns already exist, skipping migration
+-- ALTER TABLE "student_current_projects" ADD COLUMN "java_project" text;--> statement-breakpoint
+-- ALTER TABLE "student_specialty_progress" ADD COLUMN "java_completed" boolean NOT NULL;

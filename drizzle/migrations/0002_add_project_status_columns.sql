@@ -1,0 +1,5 @@
+-- Columns already exist, skipping migration
+-- ALTER TABLE "student_current_projects" ADD COLUMN "golang_project_status" text;
+-- ALTER TABLE "student_current_projects" ADD COLUMN "javascript_project_status" text;
+-- ALTER TABLE "student_current_projects" ADD COLUMN "rust_project_status" text;
+-- ALTER TABLE "student_current_projects" ADD COLUMN "java_project_status" text;

@@ -27,15 +27,21 @@ export const studentSpecialtyProgress = pgTable('student_specialty_progress', {
     student_id: integer('student_id').references(() => students.id), // Lien vers la table students
     golang_completed: boolean('golang_completed').notNull(),
     javascript_completed: boolean('javascript_completed').notNull(),
-    rust_completed: boolean('rust_completed').notNull()
+    rust_completed: boolean('rust_completed').notNull(),
+    java_completed: boolean('java_completed').notNull()
 });
 
 export const studentCurrentProjects = pgTable('student_current_projects', {
     id: serial('id').primaryKey(),
     student_id: integer('student_id').references(() => students.id), // Lien vers la table students
     golang_project: text('golang_project'),
+    golang_project_status: text('golang_project_status'),
     javascript_project: text('javascript_project'),
-    rust_project: text('rust_project')
+    javascript_project_status: text('javascript_project_status'),
+    rust_project: text('rust_project'),
+    rust_project_status: text('rust_project_status'),
+    java_project: text('java_project'),
+    java_project_status: text('java_project_status')
 });
 
 export const insertStudentSchema = createInsertSchema(students);
@@ -51,9 +57,15 @@ export type SelectStudent = {
     progress_status: string | null;
     delay_level: string | null;
     golang_project: string | null;
+    golang_project_status: string | null;
     javascript_project: string | null;
+    javascript_project_status: string | null;
     rust_project: string | null;
+    rust_project_status: string | null;
+    java_project: string | null;
+    java_project_status: string | null;
     golang_completed: boolean | null;
     javascript_completed: boolean | null;
     rust_completed: boolean | null;
+    java_completed: boolean | null;
 };

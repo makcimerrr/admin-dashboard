@@ -30,6 +30,7 @@ interface AllProjects {
   Golang: Project[];
   Javascript: Project[];
   Rust: Project[];
+  Java: Project[];
 }
 
 const allProjectsTyped = allProjects as AllProjects;
@@ -99,6 +100,79 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     }
   }, [loading]);
 
+  const findLastTouchedProject = (userProjects: any[]) => {
+    if (!userProjects || userProjects.length === 0) {
+      return { name: null, status: 'without group' };
+    }
+    const lastProject = userProjects[userProjects.length - 1];
+    return {
+      name: lastProject.projectName,
+      status: lastProject.projectStatus
+    };
+  };
+
+  // Fonction pour trouver l'index global d'un projet
+  const findProjectIndex = (allProjects: any, projectName: string): number => {
+    let globalIndex = 0;
+    for (const track in allProjects) {
+      const trackProjects = allProjects[track];
+      for (const project of trackProjects) {
+        if (project.name === projectName) {
+          return globalIndex;
+        }
+        globalIndex++;
+      }
+    }
+    return -1;
+  };
+
+  // Fonction pour trouver dans quelle track se trouve un projet
+  const findProjectTrack = (allProjects: any, projectName: string): string | null => {
+    for (const track in allProjects) {
+      const trackProjects = allProjects[track];
+      for (const project of trackProjects) {
+        if (project.name.toLowerCase() === projectName.toLowerCase()) {
+          return track;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Fonction pour trouver le dernier projet actif parmi tous les troncs
+  const findLastActiveProject = (
+    commonProjects: { [key: string]: { name: string | null, status: string | null } },
+    allProjects: AllProjects
+  ): { name: string | null, status: string | null } => {
+    let lastProject: { name: string | null, status: string | null, index: number } = {
+      name: null,
+      status: 'without group',
+      index: -1
+    };
+
+    // Parcourir tous les troncs pour trouver le projet le plus avancé
+    for (const track of ['Golang', 'Javascript', 'Rust', 'Java'] as const) {
+      const project = commonProjects[track];
+      if (!project || !project.name || project.status === 'not_chosen') {
+        continue;
+      }
+
+      // Trouver l'index global du projet
+      const projectIndex = findProjectIndex(allProjects, project.name);
+
+      // Si ce projet est plus avancé que le dernier trouvé, le garder
+      if (projectIndex > lastProject.index) {
+        lastProject = {
+          name: project.name,
+          status: project.status,
+          index: projectIndex
+        };
+      }
+    }
+
+    return { name: lastProject.name, status: lastProject.status };
+  };
+
   // Fonction utilitaire pour trouver le prochain projet actif
   const findNextActiveProject = (
     projectsList: string[],
@@ -157,35 +231,45 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     allProjects: AllProjects,
     userProjects: any[]
   ) => {
-    const commonProjects: { [key: string]: string | null } = {};
+    const commonProjects: { [key: string]: { name: string | null, status: string | null } } = {};
     const lastProjectsFinished: { [key: string]: boolean } = {};
 
-    for (const track in allProjects as Record<keyof AllProjects, Project[]>) {
-      const trackProjects = allProjects[track as keyof AllProjects];
-      let lastFinishedProject: string | null = null;
-      let activeProject: string | null = null;
+    for (const track of Object.keys(allProjects) as Array<keyof AllProjects>) {
+      const trackProjects = allProjects[track];
+      let studentActiveProject: { name: string | null, status: string | null } = { name: null, status: null };
+      let firstUnfinishedProject: { name: string | null, status: string | null } = { name: null, status: 'without group' };
+      let lastFinishedProject: { name: string | null, status: string | null } = { name: null, status: 'finished' };
+      let allDone = true;
 
       for (const project of trackProjects) {
         const userProject = userProjects.find(
           (p) => p.projectName.toLowerCase() === project.name.toLowerCase()
         );
 
-        if (userProject?.projectStatus === 'finished') {
-          lastFinishedProject = project.name;
-        } else if (!activeProject) {
-          activeProject = project.name;
+        if (userProject) {
+          if (userProject.projectStatus === 'finished') {
+            lastFinishedProject = { name: project.name, status: 'finished' };
+          } else {
+            if (!studentActiveProject.name) {
+              studentActiveProject = { name: project.name, status: userProject.projectStatus };
+            }
+            allDone = false;
+          }
+        } else {
+          if (!firstUnfinishedProject.name) {
+            firstUnfinishedProject = { name: project.name, status: 'without group' };
+          }
+          allDone = false;
         }
       }
 
-      if (
-        lastFinishedProject === trackProjects[trackProjects.length - 1].name
-      ) {
+      if (allDone) {
+        commonProjects[track] = lastFinishedProject;
         lastProjectsFinished[track] = true;
       } else {
+        commonProjects[track] = studentActiveProject.name ? studentActiveProject : firstUnfinishedProject;
         lastProjectsFinished[track] = false;
       }
-
-      commonProjects[track] = activeProject || lastFinishedProject;
     }
 
     return { commonProjects, lastProjectsFinished };
@@ -207,7 +291,11 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     if (!promotionTitle || !(promotionTitle in promoStatus)) return;
 
     // Projet lié à la promotion
-    const promoProject = promoStatus[promotionTitle as keyof typeof promoStatus];
+    let promoProject = promoStatus[promotionTitle as keyof typeof promoStatus];
+    if (typeof promoProject === 'object' && promoProject !== null) {
+      promoProject = (promoProject as { rust?: string }).rust || '';
+    }
+    
     console.log('Projet de la promo:', promoProject);
 
     try {
@@ -242,71 +330,173 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       setTotalStudents((prev) => (prev || 0) + currentStudentCount);
 
       for (const login in userProjects) {
+        console.log(`Processing student: ${login}`);
+        console.log('User projects data from API:', userProjects[login]);
+
         const { commonProjects, lastProjectsFinished } =
           findActiveProjectsByTrack(allProjectsTyped, userProjects[login]);
 
-        const { activeProject, status } = findNextActiveProject(
+        // Determine if Rust or Java tracks are active
+        const firstRustProject = allProjectsTyped.Rust[0]?.name;
+        const firstJavaProject = allProjectsTyped.Java[0]?.name;
+
+        const isRustActive = commonProjects['Rust']?.name !== firstRustProject || commonProjects['Rust']?.status !== 'without group';
+        const isJavaActive = commonProjects['Java']?.name !== firstJavaProject || commonProjects['Java']?.status !== 'without group';
+
+        if (isRustActive && !isJavaActive) {
+            commonProjects['Java'] = { name: null, status: 'not_chosen' };
+        } else if (isJavaActive && !isRustActive) {
+            commonProjects['Rust'] = { name: null, status: 'not_chosen' };
+        } else if (!isRustActive && !isJavaActive) {
+            // Aucun des deux tracks n'est actif, l'étudiant n'a pas encore choisi
+            commonProjects['Rust'] = { name: null, status: 'not_chosen' };
+            commonProjects['Java'] = { name: null, status: 'not_chosen' };
+        }
+
+        console.log('Common projects:', commonProjects);
+        console.log('Last projects finished:', lastProjectsFinished);
+
+        const { activeProject: curriculumProject } = findNextActiveProject(
           projectsList,
           userProjects[login]
         );
 
-        let delayLevel = '';
+        // Utiliser le dernier projet actif de tous les troncs (ce qui prime)
+        const { name: actualProjectName, status: actualProjectStatus } = findLastActiveProject(commonProjects, allProjectsTyped);
+
+        let delayLevel = 'bien';
 
         try {
-          if (promoProject.toLowerCase() === 'fin') {
-            if (
-              activeProject.toLowerCase() ===
-              projectsList[projectsList.length - 1].toLowerCase() &&
-              status === 'finished'
-            ) {
-              delayLevel = 'spécialité';
-            } else {
-              delayLevel = 'en retard';
-            }
-          } else if (promoProject.toLowerCase() === 'spécialité') {
-            delayLevel = 'spécialité';
-          } else {
-            const promoIndex = findProjectIndex(allProjects, promoProject);
-            const studentIndex = findProjectIndex(allProjects, activeProject);
+          // Récupérer le projet de la promo (peut être un string ou un objet avec rust/java)
+          let currentPromoProject = promoStatus[promotionTitle as keyof typeof promoStatus];
+          let isMultiTrack = false;
+          let promoRustProject = null;
+          let promoJavaProject = null;
 
-            if (studentIndex > promoIndex) {
-              delayLevel = 'en avance';
-            } else if (studentIndex < promoIndex) {
-              delayLevel = 'en retard';
-            } else {
-              delayLevel = 'bien';
-            }
+          // Vérifier si c'est un multi-track (rust/java)
+          if (typeof currentPromoProject === 'object' && currentPromoProject !== null) {
+            isMultiTrack = true;
+            promoRustProject = (currentPromoProject as { rust?: string }).rust;
+            promoJavaProject = (currentPromoProject as { java?: string }).java;
           }
-          if (
-            activeProject.toLowerCase() ===
-            projectsList[projectsList.length - 1].toLowerCase() &&
-            status === 'finished'
-          ) {
+
+          // Vérifier si l'étudiant a terminé tous les troncs
+          const allTracksCompleted =
+            lastProjectsFinished['Golang'] &&
+            lastProjectsFinished['Javascript'] &&
+            (lastProjectsFinished['Rust'] || lastProjectsFinished['Java']);
+
+          if (typeof currentPromoProject === 'string' && currentPromoProject.toLowerCase() === 'fin') {
+            // Timeline dit "Fin"
+            if (allTracksCompleted) {
+              delayLevel = 'Validé';
+            } else {
+              delayLevel = 'Non Validé';
+            }
+          } else if (allTracksCompleted) {
+            // Tous les troncs terminés mais timeline != "Fin"
             delayLevel = 'spécialité';
+          } else if (typeof currentPromoProject === 'string' && currentPromoProject.toLowerCase() === 'spécialité') {
+            delayLevel = 'spécialité';
+          } else if (isMultiTrack) {
+            // Multi-track : vérifier dans quelle track l'étudiant est actif
+            const studentRustProject = commonProjects['Rust']?.name;
+            const studentJavaProject = commonProjects['Java']?.name;
+            const studentRustStatus = commonProjects['Rust']?.status;
+            const studentJavaStatus = commonProjects['Java']?.status;
+
+            // Déterminer quelle track l'étudiant a choisie
+            let studentTrack: 'Rust' | 'Java' | null = null;
+            let studentProject: string | null = null;
+            let promoProject: string | null = null;
+
+            if (studentRustStatus !== 'not_chosen' && studentRustStatus !== 'without group' && studentRustProject) {
+              studentTrack = 'Rust';
+              studentProject = studentRustProject;
+              promoProject = promoRustProject;
+            } else if (studentJavaStatus !== 'not_chosen' && studentJavaStatus !== 'without group' && studentJavaProject) {
+              studentTrack = 'Java';
+              studentProject = studentJavaProject;
+              promoProject = promoJavaProject;
+            }
+
+            if (studentTrack && studentProject && promoProject) {
+              // L'étudiant a choisi une track, comparer dans cette track
+              if (studentProject.toLowerCase() === promoProject.toLowerCase()) {
+                delayLevel = 'bien';
+              } else {
+                // Comparer les indices dans cette track spécifique
+                const promoIndex = findProjectIndex(allProjects, promoProject);
+                const studentIndex = findProjectIndex(allProjects, studentProject);
+
+                if (studentIndex === -1) {
+                  delayLevel = 'en retard';
+                } else if (studentIndex > promoIndex) {
+                  delayLevel = 'en avance';
+                } else if (studentIndex < promoIndex) {
+                  delayLevel = 'en retard';
+                } else {
+                  delayLevel = 'bien';
+                }
+              }
+            } else {
+              // L'étudiant n'a pas encore commencé Rust/Java
+              delayLevel = 'en retard';
+            }
+          } else if (typeof currentPromoProject === 'string') {
+            // Single track : identifier à quelle track appartient le projet de la promo
+            const promoProjectTrack = findProjectTrack(allProjects, currentPromoProject);
+
+            if (promoProjectTrack) {
+              // Récupérer le projet de l'étudiant dans cette track
+              const studentProjectInTrack = commonProjects[promoProjectTrack]?.name;
+
+              // Vérifier si l'étudiant est sur le bon projet dans cette track (ce qui prime)
+              if (studentProjectInTrack?.toLowerCase() === currentPromoProject.toLowerCase()) {
+                delayLevel = 'bien';
+              } else {
+                // Sinon, comparer les indices dans cette track
+                const promoIndex = findProjectIndex(allProjects, currentPromoProject);
+                const studentIndex = studentProjectInTrack ? findProjectIndex(allProjects, studentProjectInTrack) : -1;
+
+                if (studentIndex === -1) {
+                  delayLevel = 'en retard';
+                } else if (studentIndex > promoIndex) {
+                  delayLevel = 'en avance';
+                } else if (studentIndex < promoIndex) {
+                  delayLevel = 'en retard';
+                } else {
+                  delayLevel = 'bien';
+                }
+              }
+            }
           }
         } catch (err) {
           console.error(
             `Erreur lors du calcul du delayLevel pour ${login}:`,
             err
           );
-          delayLevel = 'inconnu';
+          delayLevel = 'bien';
         }
 
-        if (shouldUpdate(login, activeProject, status, delayLevel)) {
+        if (shouldUpdate(login, actualProjectName, actualProjectStatus, delayLevel)) {
+          const payload = {
+            login,
+            project_name: actualProjectName,
+            project_status: actualProjectStatus,
+            delay_level: delayLevel,
+            last_projects_finished: lastProjectsFinished,
+            common_projects: commonProjects,
+            promo_name: promotionTitle
+          };
+          console.log('Update payload:', payload);
+
           try {
             console.log(`Mise à jour requise pour ${login}, envoi à l'API...`);
             await fetch('/api/update_project', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                login,
-                project_name: activeProject,
-                project_status: status,
-                delay_level: delayLevel,
-                last_projects_finished: lastProjectsFinished,
-                common_projects: commonProjects,
-                promo_name: promotionTitle
-              })
+              body: JSON.stringify(payload)
             });
             console.log(`Mise à jour réussie pour ${login}`);
           } catch (error) {
@@ -323,22 +513,6 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       console.error('Erreur dans fetchPromotionProgress:', error);
       throw error;
     }
-  };
-
-  const findProjectIndex = (allProjects: any, projectName: string): number => {
-    let globalIndex = 0; // Compteur global pour l'indice
-    for (const track in allProjects) {
-      const trackProjects = allProjects[track]; // Liste des projets dans une track
-      for (const project of trackProjects) {
-        if (project.name === projectName) {
-          return globalIndex; // Retourne l'indice global
-        }
-        globalIndex++; // Augmente l'indice pour chaque projet
-      }
-    }
-    throw new Error(
-      `Projet "${projectName}" introuvable dans la liste des projets.`
-    );
   };
 
   const handleUpdate = async () => {

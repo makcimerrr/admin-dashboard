@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import PieChart from '@/components/pie-chart-student';
 import BarChartStacked from '@/components/bar-chart-student-stacked';
+import TrackComparisonChart from '@/components/charts/track-comparison-chart';
+import DelayDistributionChart from '@/components/charts/delay-distribution-chart';
 import promos from 'config/promoConfig.json' assert { type: 'json' };
-import { BarChart3, TrendingUp, Users, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Calendar, Activity, Target } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -91,16 +93,55 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Charts Tabs */}
-      <Tabs defaultValue="distribution" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
           <TabsTrigger value="distribution">Répartition</TabsTrigger>
           <TabsTrigger value="progression">Progression</TabsTrigger>
+          <TabsTrigger value="comparison">Comparaisons</TabsTrigger>
         </TabsList>
+
+        {/* Overview Tab - New comprehensive view */}
+        <TabsContent value="overview" className="space-y-4 mt-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Track Comparison */}
+            <Card className="border-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-cyan-600" />
+                  Comparaison des Troncs
+                </CardTitle>
+                <CardDescription>
+                  Taux de complétion par tronc de formation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TrackComparisonChart promoKey={selectedPromo} />
+              </CardContent>
+            </Card>
+
+            {/* Delay Distribution */}
+            <Card className="border-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-green-600" />
+                  Distribution des Statuts
+                </CardTitle>
+                <CardDescription>
+                  Répartition des étudiants par niveau de progression
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DelayDistributionChart promoKey={selectedPromo} />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
         <TabsContent value="distribution" className="space-y-4 mt-6">
           <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
             {filteredPromos.map((promo) => (
-              <Card key={promo.key}>
+              <Card key={promo.key} className="border-2">
                 <CardHeader>
                   <CardTitle className="text-lg">{promo.title}</CardTitle>
                   <CardDescription>Répartition des étudiants</CardDescription>
@@ -120,7 +161,7 @@ export default function AnalyticsPage() {
         <TabsContent value="progression" className="space-y-4 mt-6">
           <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
             {filteredPromos.map((promo) => (
-              <Card key={promo.key}>
+              <Card key={promo.key} className="border-2">
                 <CardHeader>
                   <CardTitle className="text-lg">{promo.title}</CardTitle>
                   <CardDescription>Progression détaillée des étudiants</CardDescription>
@@ -135,6 +176,62 @@ export default function AnalyticsPage() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        {/* Comparison Tab - Detailed comparisons */}
+        <TabsContent value="comparison" className="space-y-6 mt-6">
+          {/* Global Comparison */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card className="border-2 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 dark:from-cyan-950/20 dark:to-blue-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-cyan-600" />
+                  Performance des Troncs
+                </CardTitle>
+                <CardDescription>
+                  Comparaison globale des taux de complétion
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <TrackComparisonChart promoKey={selectedPromo} />
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-green-600" />
+                  État de Progression
+                </CardTitle>
+                <CardDescription>
+                  Vue d'ensemble des statuts de progression
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DelayDistributionChart promoKey={selectedPromo} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Per-Promo Comparison */}
+          {selectedPromo === 'all' && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Comparaison par Promotion</h3>
+              <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
+                {filteredPromos.map((promo) => (
+                  <Card key={promo.key} className="border-2">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{promo.title}</CardTitle>
+                      <CardDescription>Performance par tronc</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <TrackComparisonChart promoKey={promo.key} />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

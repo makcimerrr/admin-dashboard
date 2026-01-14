@@ -5,6 +5,7 @@ import Link from "next/link"
 import {
   ArrowUpCircleIcon,
   BarChartIcon,
+  BotIcon,
   CameraIcon,
   ClipboardListIcon,
   DatabaseIcon,
@@ -25,6 +26,7 @@ import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
+import { NavAssistant } from "@/components/nav-assistant"
 import {
   Sidebar,
   SidebarContent,
@@ -159,7 +161,7 @@ const data = {
     },
     {
       name: "Reports",
-      url: "#",
+      url: "/reports",
       icon: ClipboardListIcon,
     },
     {
@@ -247,6 +249,7 @@ export function AppSidebar({ user, ...props }: React.ComponentProps<typeof Sideb
         </SidebarHeader>
         <SidebarContent>
           <NavMenu items={data.navMain} />
+          <NavAssistant />
           <NavDocuments items={data.documents} />
           <NavSecondary items={data.navSecondary} className="mt-auto" />
         </SidebarContent>

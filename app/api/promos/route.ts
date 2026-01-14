@@ -47,8 +47,8 @@ export async function POST(req: Request) {
         end = '',
         'piscine-js-start': piscineJsStart = 'NaN',
         'piscine-js-end': piscineJsEnd = 'NaN',
-        'piscine-rust-start': piscineRustStart = 'NaN',
-        'piscine-rust-end': piscineRustEnd = 'NaN',
+        'piscine-rust-java-start': piscineRustJavaStart = 'NaN',
+        'piscine-rust-java-end': piscineRustJavaEnd = 'NaN',
       } = {},
     } = newPromo;
 
@@ -85,31 +85,31 @@ export async function POST(req: Request) {
       errorMessages.push('La date de fin de la piscine JS doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineRustStart !== '' && !isDateInRange(piscineRustStart, start, end)) {
-      errorMessages.push('La date de début de la piscine Rust doit être comprise entre le début et la fin de la promotion.');
+    if (piscineRustJavaStart !== '' && !isDateInRange(piscineRustJavaStart, start, end)) {
+      errorMessages.push('La date de début de la piscine Rust/Java doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineRustEnd !== '' && !isDateInRange(piscineRustEnd, start, end)) {
-      errorMessages.push('La date de fin de la piscine Rust doit être comprise entre le début et la fin de la promotion.');
+    if (piscineRustJavaEnd !== '' && !isDateInRange(piscineRustJavaEnd, start, end)) {
+      errorMessages.push('La date de fin de la piscine Rust/Java doit être comprise entre le début et la fin de la promotion.');
     }
 
     if (piscineJsStart !== '' && piscineJsEnd !== 'NaN' && new Date(piscineJsStart) >= new Date(piscineJsEnd)) {
       errorMessages.push('La date de début de la piscine JS doit être avant la date de fin.');
     }
 
-    if (piscineRustStart !== '' && piscineRustEnd !== 'NaN' && new Date(piscineRustStart) >= new Date(piscineRustEnd)) {
-      errorMessages.push('La date de début de la piscine Rust doit être avant la date de fin.');
+    if (piscineRustJavaStart !== '' && piscineRustJavaEnd !== 'NaN' && new Date(piscineRustJavaStart) >= new Date(piscineRustJavaEnd)) {
+      errorMessages.push('La date de début de la piscine Rust/Java doit être avant la date de fin.');
     }
 
     // Vérification de l'ordre des piscines
     if (
       piscineJsStart !== '' &&
       piscineJsEnd !== '' &&
-      piscineRustStart !== '' &&
-      piscineRustEnd !== ''
+      piscineRustJavaStart !== '' &&
+      piscineRustJavaEnd !== ''
     ) {
-      if (new Date(piscineJsEnd) >= new Date(piscineRustStart)) {
-        errorMessages.push('La piscine JS doit se terminer avant le début de la piscine Rust.');
+      if (new Date(piscineJsEnd) >= new Date(piscineRustJavaStart)) {
+        errorMessages.push('La piscine JS doit se terminer avant le début de la piscine Rust/Java.');
       }
     }
 
@@ -139,8 +139,8 @@ export async function POST(req: Request) {
         start,
         'piscine-js-start': piscineJsStart || 'NaN',
         'piscine-js-end': piscineJsEnd || 'NaN',
-        'piscine-rust-start': piscineRustStart || 'NaN',
-        'piscine-rust-end': piscineRustEnd || 'NaN',
+        'piscine-rust-java-start': piscineRustJavaStart || 'NaN',
+        'piscine-rust-java-end': piscineRustJavaEnd || 'NaN',
         end,
       },
     };

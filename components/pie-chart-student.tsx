@@ -57,30 +57,42 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
       if (!response.ok) {
         throw new Error('Erreur lors de la récupération des données');
       }
-      const { lateCount, goodLateCount, advanceLateCount, specialityCount } =
+      const { lateCount, goodLateCount, advanceLateCount, specialityCount, validatedCount, notValidatedCount } =
         await response.json();
 
       if (
         lateCount === undefined ||
         goodLateCount === undefined ||
         advanceLateCount === undefined ||
-        specialityCount === undefined
+        specialityCount === undefined ||
+        validatedCount === undefined ||
+        notValidatedCount === undefined
       ) {
         throw new Error('Les données sont incomplètes ou absentes.');
       }
 
       const data: DelayData[] = [
-        { level: 'bien', count: goodLateCount, fill: 'var(--color-avance)' },
+        { level: 'bien', count: goodLateCount, fill: 'var(--color-bien)' },
         { level: 'retard', count: lateCount, fill: 'var(--color-retard)' },
         {
           level: 'avance',
           count: advanceLateCount,
-          fill: 'var(--color-bien)'
+          fill: 'var(--color-avance)'
         },
         {
           level: 'spécialité',
           count: specialityCount,
           fill: 'var(--color-spécialité)'
+        },
+        {
+          level: 'validé',
+          count: validatedCount,
+          fill: 'var(--color-validé)'
+        },
+        {
+          level: 'nonValidé',
+          count: notValidatedCount,
+          fill: 'var(--color-nonValidé)'
         }
       ];
 
@@ -108,6 +120,14 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
         spécialité: {
           label: 'Spécialité',
           color: 'hsl(var(--chart-4))'
+        },
+        validé: {
+          label: 'Validé',
+          color: 'hsl(var(--chart-5))'
+        },
+        nonValidé: {
+          label: 'Non Validé',
+          color: 'hsl(var(--chart-6))'
         }
       } satisfies ChartConfig;
 

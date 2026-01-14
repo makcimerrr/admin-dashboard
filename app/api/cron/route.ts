@@ -8,7 +8,7 @@ export async function GET(req: Request) {
 
   try {
     // Récupère les données de l’API timeline
-    const res = await fetch('/api/timeline_project');
+    const res = await fetch('http://localhost:3000/api/timeline_project');
     if (!res.ok) {
       console.error('Erreur fetch timeline_project :', res.status, await res.text());
     }
@@ -17,11 +17,17 @@ export async function GET(req: Request) {
 
     // Mets à jour chaque promo dans la DB
     for (const promo of promos) {
+        let currentProject = promo.currentProject;
+
+        if (typeof currentProject === 'object' && currentProject !== null) {
+            currentProject = JSON.stringify(currentProject);
+        }
+
       await upsertPromoStatus({
         promoKey: promo.promotionName,
         status: promo.success ? 'OK' : 'ERROR',
         promotionName: `Promo ${promo.promotionName}`,
-        currentProject: promo.currentProject,
+        currentProject: currentProject,
         progress: promo.progress,
         agenda: promo.agenda,
         // startDate / endDate : à mapper si dispo

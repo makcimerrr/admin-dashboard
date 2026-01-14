@@ -10,4 +10,4 @@ export const promoStatus = pgTable('promo_status', {
   startDate: date('start_date'),
   endDate: date('end_date'),
   lastUpdated: timestamp('last_updated', { withTimezone: true }).defaultNow(),
-}); 
+});
