@@ -87,7 +87,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   //const promoEventIds = ['32', '148', '216', '303'];
   const cache = new Map<
     string,
-    { lastActiveProject: string; status: string; delayLevel: string }
+    { lastActiveProject: string | null; status: string | null; delayLevel: string }
   >();
 
   // Animation des trois petits points
@@ -206,8 +206,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   // Vérifie si la mise à jour est nécessaire
   const shouldUpdate = (
     login: string,
-    currentActiveProject: string,
-    status: string,
+    currentActiveProject: string | null,
+    status: string | null,
     delayLevel: string
   ) => {
     const cached = cache.get(login);
@@ -376,8 +376,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           // Vérifier si c'est un multi-track (rust/java)
           if (typeof currentPromoProject === 'object' && currentPromoProject !== null) {
             isMultiTrack = true;
-            promoRustProject = (currentPromoProject as { rust?: string }).rust;
-            promoJavaProject = (currentPromoProject as { java?: string }).java;
+            promoRustProject = (currentPromoProject as { rust?: string }).rust ?? null;
+            promoJavaProject = (currentPromoProject as { java?: string }).java ?? null;
           }
 
           // Vérifier si l'étudiant a terminé tous les troncs

@@ -16,7 +16,7 @@ import {
   Users,
   Loader2,
 } from 'lucide-react';
-import { Alert } from '@/app/api/alerts/route';
+import type { Alert } from '@/lib/types/alerts';
 
 interface AlertsPanelProps {
   promoFilter?: string;
@@ -276,7 +276,7 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
                           className="h-7 text-xs"
                           onClick={() => {
                             // Fallback pour les alertes sans studentId
-                            window.location.href = alert.action.includes('Voir')
+                            window.location.href = alert.action?.includes('Voir')
                               ? '/students'
                               : '/promos/status';
                           }}

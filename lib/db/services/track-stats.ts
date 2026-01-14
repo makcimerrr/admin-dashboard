@@ -35,36 +35,30 @@ export async function getTrackStatsByPromo(promoName: string | null): Promise<Tr
       }
 
       // Construire la requête pour compter les étudiants avec le tronc terminé
-      let completedQuery = db
+      const completedConditions = [eq(completedColumn, true)];
+      if (promoName) {
+        completedConditions.push(eq(students.promoName, promoName));
+      }
+
+      const completedQuery = db
         .select({ count: count() })
         .from(students)
-        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id));
-
-      // Appliquer le filtre
-      if (promoName) {
-        completedQuery = completedQuery.where(
-          and(eq(students.promoName, promoName), eq(completedColumn, true))
-        );
-      } else {
-        completedQuery = completedQuery.where(eq(completedColumn, true));
-      }
+        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
+        .where(and(...completedConditions));
 
       const completedResult = await completedQuery.execute();
 
       // Construire la requête pour compter les étudiants avec le tronc en cours
-      let inProgressQuery = db
+      const inProgressConditions = [eq(completedColumn, false)];
+      if (promoName) {
+        inProgressConditions.push(eq(students.promoName, promoName));
+      }
+
+      const inProgressQuery = db
         .select({ count: count() })
         .from(students)
-        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id));
-
-      // Appliquer le filtre
-      if (promoName) {
-        inProgressQuery = inProgressQuery.where(
-          and(eq(students.promoName, promoName), eq(completedColumn, false))
-        );
-      } else {
-        inProgressQuery = inProgressQuery.where(eq(completedColumn, false));
-      }
+        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
+        .where(and(...inProgressConditions));
 
       const inProgressResult = await inProgressQuery.execute();
 

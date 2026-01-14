@@ -120,7 +120,6 @@ export default function TrackProgressWidget() {
               <Progress
                 value={track.percentage}
                 className="h-2"
-                indicatorClassName={getProgressColor(track.track)}
               />
             </div>
           ))}

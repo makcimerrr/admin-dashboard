@@ -12,20 +12,17 @@ export async function GET(request: Request) {
     const delayData = [];
 
     for (const level of delayLevels) {
-      let query = db
+      const conditions = [sql`${studentProjects.delay_level} = ${level}`];
+
+      if (promoKey && promoKey !== 'all') {
+        conditions.push(eq(students.promoName, promoKey));
+      }
+
+      const query = db
         .select({ count: count() })
         .from(studentProjects)
         .leftJoin(students, eq(studentProjects.student_id, students.id))
-        .where(sql`${studentProjects.delay_level} = ${level}`);
-
-      if (promoKey && promoKey !== 'all') {
-        query = query.where(
-          and(
-            sql`${studentProjects.delay_level} = ${level}`,
-            eq(students.promoName, promoKey)
-          )
-        ) as any;
-      }
+        .where(and(...conditions));
 
       const result = await query.execute();
       const count_value = result[0]?.count || 0;

@@ -5,8 +5,9 @@ import { eq } from 'drizzle-orm';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: any
 ) {
+  const params = await context.params;
   try {
     const studentId = parseInt(params.id);
 

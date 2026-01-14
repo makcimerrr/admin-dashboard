@@ -2,19 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { students, studentProjects, studentSpecialtyProgress } from '@/lib/db/schema';
 import { eq, and, or, sql } from 'drizzle-orm';
-
-export type Alert = {
-  id: string;
-  type: 'danger' | 'warning' | 'info';
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  title: string;
-  description: string;
-  studentId?: number;
-  studentName?: string;
-  promoKey?: string;
-  count?: number;
-  action?: string;
-};
+import type { Alert } from '@/lib/types/alerts';
 
 export async function GET(request: Request) {
   try {

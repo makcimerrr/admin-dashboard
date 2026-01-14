@@ -8,8 +8,9 @@ import {
 // GET /api/conversations/[id] - Get a specific conversation with messages
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  context: any
 ) {
+  const params = await context.params;
   try {
     const conversationId = parseInt(params.id);
 
@@ -46,8 +47,9 @@ export async function GET(
 // PATCH /api/conversations/[id] - Update conversation title
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  context: any
 ) {
+  const params = await context.params;
   try {
     const conversationId = parseInt(params.id);
     const { title } = await req.json();
@@ -84,8 +86,9 @@ export async function PATCH(
 // DELETE /api/conversations/[id] - Delete a conversation
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  context: any
 ) {
+  const params = await context.params;
   try {
     const conversationId = parseInt(params.id);
 
