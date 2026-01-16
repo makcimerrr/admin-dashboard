@@ -6,7 +6,7 @@ import { getUpcomingHubEvents, getUpcomingHubTasks } from "@/lib/db/services/hub
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-export default async function HubPage() {
+export default async function HubDashboardPage() {
   let upcomingEvents: Awaited<ReturnType<typeof getUpcomingHubEvents>> = [];
   let upcomingTasks: Awaited<ReturnType<typeof getUpcomingHubTasks>> = [];
 
@@ -18,11 +18,11 @@ export default async function HubPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Hub Zone01</h1>
-          <p className="text-muted-foreground">Gestion des événements et tâches</p>
+          <h1 className="text-2xl font-bold">Hub - Gestion des événements</h1>
+          <p className="text-muted-foreground">Planifiez et suivez vos événements</p>
         </div>
         <div className="flex gap-2">
           <Link href="/hub/events/new">
@@ -40,12 +40,12 @@ export default async function HubPage() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
+      <div className="grid md:grid-cols-2 gap-4 mb-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
                 Événements à venir
               </CardTitle>
               <CardDescription>Prochains événements planifiés</CardDescription>
@@ -61,12 +61,12 @@ export default async function HubPage() {
             {upcomingEvents.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucun événement à venir</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {upcomingEvents.map((event) => (
                   <Link key={event.id} href={`/hub/events/${event.id}`}>
-                    <div className="p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                      <p className="font-medium">{event.name}</p>
-                      <p className="text-sm text-muted-foreground">
+                    <div className="p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                      <p className="font-medium text-sm">{event.name}</p>
+                      <p className="text-xs text-muted-foreground">
                         {format(new Date(event.startDate), "d MMMM yyyy", { locale: fr })}
                       </p>
                     </div>
@@ -78,25 +78,23 @@ export default async function HubPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Tâches à venir
-              </CardTitle>
-              <CardDescription>Prochaines tâches à réaliser</CardDescription>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Tâches à venir
+            </CardTitle>
+            <CardDescription>Prochaines tâches à réaliser</CardDescription>
           </CardHeader>
           <CardContent>
             {upcomingTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground">Aucune tâche à venir</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {upcomingTasks.map((task) => (
-                  <div key={task.id} className="p-3 rounded-lg border">
-                    <p className="font-medium">{task.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {task.eventName} • {format(task.date, "d MMMM yyyy", { locale: fr })}
+                  <div key={task.id} className="p-2 rounded-lg border">
+                    <p className="font-medium text-sm">{task.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {task.eventName} • {format(task.date, "d MMM yyyy", { locale: fr })}
                     </p>
                   </div>
                 ))}
@@ -106,9 +104,9 @@ export default async function HubPage() {
         </Card>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4">
         <Link href="/hub/events">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
@@ -122,7 +120,7 @@ export default async function HubPage() {
         </Link>
 
         <Link href="/hub/templates">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />

@@ -132,7 +132,7 @@ export default function EventEditor({ mode, id }: EventEditorProps) {
   return (
     <div className="p-8">
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="outline" onClick={() => router.push("/hub/events")}>
+        <Button variant="outline" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
 
