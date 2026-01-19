@@ -101,6 +101,10 @@ const data = {
           title: "Modèles",
           url: "/hub/templates",
         },
+        {
+          title: "Calendrier",
+          url: "/hub/calendar",
+        },
       ],
     },
   ],

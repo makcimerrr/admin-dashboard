@@ -188,6 +188,15 @@ export async function getHubEvents() {
     orderBy: [desc(hubEvents.startDate)],
     with: {
       template: true,
+      eventTasks: {
+        with: {
+          task: {
+            with: {
+              assignments: true,
+            },
+          },
+        },
+      },
     },
   });
 }
