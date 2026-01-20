@@ -22,7 +22,9 @@ import {
   startOfDay,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { AssigneeAvatars, TaskStatus, AssigneeUser } from "./TaskDecorations";
+import { AssigneeAvatars, TaskStatus, AssigneeUser, getUserInitials, getAvatarColor } from "./TaskDecorations";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusPicker } from "./StatusPicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -101,6 +103,50 @@ export const CalendarView = ({ tasks }: CalendarViewProps) => {
     }
   };
 
+  // Compact avatars for calendar grid
+  const CompactAvatars = ({ assignees }: { assignees?: AssigneeUser[] }) => {
+    if (!assignees || assignees.length === 0) return null;
+
+    const maxVisible = 2;
+    const visible = assignees.slice(0, maxVisible);
+    const remaining = assignees.length - maxVisible;
+
+    return (
+      <TooltipProvider>
+        <div className="flex items-center -space-x-1.5 ml-auto">
+          {visible.map((user, idx) => (
+            <Tooltip key={user.id || user.userId || idx}>
+              <TooltipTrigger asChild>
+                <Avatar className={`h-4 w-4 ${getAvatarColor(idx)} border border-background`}>
+                  <AvatarFallback className="text-white text-[8px] font-semibold">
+                    {getUserInitials(user.full_name || user.userId || user.email || "??").charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                {user.full_name || user.email || user.userId}
+              </TooltipContent>
+            </Tooltip>
+          ))}
+          {remaining > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Avatar className="h-4 w-4 bg-muted border border-background">
+                  <AvatarFallback className="text-muted-foreground text-[8px] font-semibold">
+                    +{remaining}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                {assignees.slice(maxVisible).map(u => u.full_name || u.email || u.userId).join(", ")}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </TooltipProvider>
+    );
+  };
+
   return (
     <>
       <Card className="border-2">
@@ -155,12 +201,13 @@ export const CalendarView = ({ tasks }: CalendarViewProps) => {
                       <button
                         key={task.id}
                         onClick={() => setSelectedTask(task)}
-                        className={`w-full text-left text-xs p-1 rounded truncate flex items-center gap-1 ${getTaskStyle(
+                        className={`w-full text-left text-xs p-1 rounded flex items-center gap-1 ${getTaskStyle(
                           task.status
                         )}`}
                       >
                         {getTaskIcon(task.status)}
-                        <span className="truncate">{task.title}</span>
+                        <span className="truncate flex-1 min-w-0">{task.title}</span>
+                        <CompactAvatars assignees={task.assignedUsers} />
                       </button>
                     ))}
                     {dayTasks.length > 2 && (

@@ -89,23 +89,14 @@ const data = {
       icon: UsersIcon,
     },
     {
-      title: "Hub",
-      url: "/hub",
+      title: "Événements",
+      url: "/hub/events",
       icon: CalendarIcon,
-      items: [
-        {
-          title: "Événements",
-          url: "/hub/events",
-        },
-        {
-          title: "Modèles",
-          url: "/hub/templates",
-        },
-        {
-          title: "Calendrier",
-          url: "/hub/calendar",
-        },
-      ],
+    },
+    {
+      title: "Calendrier",
+      url: "/hub/calendar",
+      icon: ClipboardListIcon,
     },
   ],
   navClouds: [

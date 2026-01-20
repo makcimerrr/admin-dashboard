@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Trash2, GripVertical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Trash2, GripVertical, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -18,6 +21,13 @@ interface SubEvent {
   assignedUsers?: string[];
 }
 
+interface HubUser {
+  id: string;
+  name: string;
+  email: string;
+  initial: string;
+}
+
 interface TaskEditorProps {
   subEvent: SubEvent;
   onChange: (subEvent: SubEvent) => void;
@@ -29,6 +39,8 @@ export const TaskEditor = ({
   onChange,
   onDelete,
 }: TaskEditorProps) => {
+  const [users, setUsers] = useState<HubUser[]>([]);
+
   const {
     attributes,
     listeners,
@@ -46,11 +58,36 @@ export const TaskEditor = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const res = await fetch("/api/hub/users");
+        if (res.ok) {
+          const data = await res.json();
+          setUsers(data);
+        }
+      } catch (err) {
+        console.error("Failed to load users:", err);
+      }
+    };
+    loadUsers();
+  }, []);
+
   const getOffsetLabel = (days: number) => {
     if (days === 0) return "J0 (Jour de l'événement)";
     if (days < 0) return `J${days} (${Math.abs(days)} jours avant)`;
     return `J+${days} (${days} jours après)`;
   };
+
+  const handleUserToggle = (userId: string) => {
+    const current = subEvent.assignedUsers || [];
+    const updated = current.includes(userId)
+      ? current.filter((id) => id !== userId)
+      : [...current, userId];
+    onChange({ ...subEvent, assignedUsers: updated });
+  };
+
+  const assignedCount = (subEvent.assignedUsers || []).length;
 
   return (
     <Card ref={setNodeRef} style={style} className="border-2">
@@ -112,6 +149,46 @@ export const TaskEditor = ({
                   placeholder="Détails supplémentaires..."
                   rows={2}
                 />
+              </div>
+
+              <div>
+                <Label className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Attribuer à
+                </Label>
+                <div className="mt-2 space-y-2">
+                  {users.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Aucun utilisateur disponible
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {users.map((user) => {
+                        const isSelected = (subEvent.assignedUsers || []).includes(user.id);
+                        return (
+                          <Badge
+                            key={user.id}
+                            variant={isSelected ? "default" : "outline"}
+                            className="cursor-pointer flex items-center gap-2 py-1 pr-3"
+                            onClick={() => handleUserToggle(user.id)}
+                          >
+                            <Avatar className="h-5 w-5">
+                              <AvatarFallback className="text-xs">
+                                {user.initial}
+                              </AvatarFallback>
+                            </Avatar>
+                            {user.name}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {assignedCount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {assignedCount} personne(s) assignée(s)
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
