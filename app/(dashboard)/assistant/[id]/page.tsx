@@ -3,18 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
+import { useChat, type Message as AIMessage } from 'ai/react';
 import { ChatSidebar } from '@/components/assistant/chat-sidebar';
 import { ChatInterface } from '@/components/assistant/chat-interface';
 import { NovaLogo } from '@/components/assistant/nova-logo';
 import { Loader2 } from 'lucide-react';
-
-type Message = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  studentIds?: number[];
-  suggestions?: string[];
-};
 
 type Conversation = {
   id: number;
@@ -30,13 +23,33 @@ export default function ConversationPage() {
   const user = useUser();
   const conversationId = parseInt(params.id as string);
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [initialMessages, setInitialMessages] = useState<AIMessage[]>([]);
 
   const userId = user?.primaryEmail || 'anonymous';
+
+  // Hook useChat du Vercel AI SDK pour le streaming
+  const {
+    messages,
+    isLoading,
+    setMessages,
+    append,
+  } = useChat({
+    api: '/api/chat',
+    body: {
+      conversationId,
+      userId,
+    },
+    initialMessages,
+    onFinish: () => {
+      loadConversations();
+    },
+    onError: (error) => {
+      console.error('Chat error:', error);
+    },
+  });
 
   // Load conversations
   useEffect(() => {
@@ -76,17 +89,14 @@ export default function ConversationPage() {
       const data = await response.json();
 
       if (data.success) {
-        setMessages(
-          data.messages.map((msg: any) => ({
-            id: msg.id.toString(),
-            role: msg.role,
-            content: msg.content,
-            studentIds: msg.student_ids,
-            suggestions: msg.suggestions,
-          }))
-        );
+        const loadedMessages: AIMessage[] = data.messages.map((msg: any) => ({
+          id: msg.id.toString(),
+          role: msg.role as 'user' | 'assistant',
+          content: msg.content,
+        }));
+        setInitialMessages(loadedMessages);
+        setMessages(loadedMessages);
       } else {
-        // Conversation not found, redirect to main page
         router.push('/assistant');
       }
     } catch (error) {
@@ -122,56 +132,20 @@ export default function ConversationPage() {
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
+    await append({
       role: 'user',
       content: messageText,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageText,
-          conversationId,
-          userId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.response) {
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: data.response.text,
-          studentIds: data.response.studentIds,
-          suggestions: data.response.suggestions,
-        };
-
-        setMessages((prev) => [...prev, assistantMessage]);
-
-        // Reload conversations to update the "updated_at" timestamp
-        loadConversations();
-      } else {
-        throw new Error(data.error || 'Erreur inconnue');
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "Désolé, une erreur s'est produite. Veuillez réessayer.",
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
+
+  // Transformer les messages pour le format attendu par ChatInterface
+  const formattedMessages = messages.map((m) => ({
+    id: m.id,
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+    studentIds: undefined,
+    suggestions: undefined,
+  }));
 
   if (isLoadingMessages) {
     return (
@@ -205,7 +179,7 @@ export default function ConversationPage() {
       />
       <div className="flex-1 min-w-0">
         <ChatInterface
-          messages={messages}
+          messages={formattedMessages}
           isLoading={isLoading}
           onSendMessage={handleSendMessage}
         />

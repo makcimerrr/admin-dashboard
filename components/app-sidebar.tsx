@@ -6,6 +6,7 @@ import {
   ArrowUpCircleIcon,
   BarChartIcon,
   BotIcon,
+  CalendarIcon,
   CameraIcon,
   ClipboardListIcon,
   DatabaseIcon,
@@ -86,6 +87,16 @@ const data = {
       title: "01 Deck",
       url: "/01deck",
       icon: UsersIcon,
+    },
+    {
+      title: "Événements",
+      url: "/hub/events",
+      icon: CalendarIcon,
+    },
+    {
+      title: "Calendrier",
+      url: "/hub/calendar",
+      icon: ClipboardListIcon,
     },
   ],
   navClouds: [

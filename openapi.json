@@ -1,0 +1,2437 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Zone01 Admin Dashboard API",
+    "description": "API complète pour le dashboard d'administration Zone01 Rouen - Gestion des étudiants, promotions, planning, événements et analytics.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Zone01 Rouen",
+      "url": "https://zone01rouennormandie.org/"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Serveur de développement"
+    },
+    {
+      "url": "https://admin-dashboard.zone01.app",
+      "description": "Serveur de production"
+    }
+  ],
+  "tags": [
+    { "name": "Alerts", "description": "Alertes et monitoring des étudiants" },
+    { "name": "Analytics", "description": "Statistiques et analyses" },
+    { "name": "Chat", "description": "Assistant IA et conversations" },
+    { "name": "Employees", "description": "Gestion des employés" },
+    { "name": "History", "description": "Historique et audit" },
+    { "name": "Holidays", "description": "Gestion des jours fériés et vacances" },
+    { "name": "Hub Events", "description": "Gestion des événements Hub" },
+    { "name": "Hub Templates", "description": "Gestion des modèles d'événements" },
+    { "name": "Planning", "description": "Planning et hackathons" },
+    { "name": "Promotions", "description": "Gestion des promotions" },
+    { "name": "Projects", "description": "Gestion des projets" },
+    { "name": "Schedules", "description": "Planning des employés et absences" },
+    { "name": "Students", "description": "Gestion des étudiants" },
+    { "name": "Timeline", "description": "Timeline et mises à jour" },
+    { "name": "Users", "description": "Gestion des utilisateurs" },
+    { "name": "Widgets", "description": "Widgets du dashboard" },
+    { "name": "Utility", "description": "Routes utilitaires" }
+  ],
+  "paths": {
+    "/api/alerts": {
+      "get": {
+        "tags": ["Alerts"],
+        "summary": "Récupérer les alertes",
+        "description": "Récupère les alertes pour les étudiants en retard, sans groupe, non validés, etc.",
+        "parameters": [
+          {
+            "name": "promo",
+            "in": "query",
+            "description": "Filtrer par promotion",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des alertes",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AlertsResponse" }
+              }
+            }
+          },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/analytics/delay-distribution": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Distribution des retards",
+        "description": "Récupère la distribution des niveaux de retard des étudiants",
+        "parameters": [
+          {
+            "name": "promo",
+            "in": "query",
+            "description": "Filtrer par promotion (utiliser 'all' pour toutes)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Distribution des retards",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DelayDistributionResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/analytics/track-comparison": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Comparaison des tracks",
+        "description": "Récupère les statistiques de progression par track (Golang, Javascript, Rust, Java)",
+        "parameters": [
+          {
+            "name": "promo",
+            "in": "query",
+            "description": "Filtrer par promotion",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comparaison des tracks",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TrackComparisonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat": {
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Envoyer un message au chatbot",
+        "description": "Envoie un message à l'assistant IA et reçoit une réponse avec contexte RAG",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChatRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Réponse du chatbot",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "500": { "$ref": "#/components/responses/InternalError" }
+        }
+      }
+    },
+    "/api/conversations": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "Lister les conversations",
+        "description": "Récupère toutes les conversations d'un utilisateur",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "description": "ID de l'utilisateur",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des conversations",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConversationsListResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "post": {
+        "tags": ["Chat"],
+        "summary": "Créer une conversation",
+        "description": "Crée une nouvelle conversation pour un utilisateur",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateConversationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversation créée",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConversationResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/conversations/{id}": {
+      "get": {
+        "tags": ["Chat"],
+        "summary": "Récupérer une conversation",
+        "description": "Récupère une conversation avec ses messages",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID de la conversation",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détails de la conversation",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConversationDetailResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Chat"],
+        "summary": "Mettre à jour une conversation",
+        "description": "Met à jour le titre d'une conversation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "title": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Chat"],
+        "summary": "Supprimer une conversation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/delay-status": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Statut des retards",
+        "description": "Récupère le statut des retards pour une promotion",
+        "parameters": [
+          {
+            "name": "promoId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["status", "summary"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statut des retards",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/employees": {
+      "get": {
+        "tags": ["Employees"],
+        "summary": "Lister les employés",
+        "description": "Récupère la liste de tous les employés",
+        "responses": {
+          "200": {
+            "description": "Liste des employés",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Employee" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Employees"],
+        "summary": "Créer un employé",
+        "description": "Crée un nouvel employé",
+        "parameters": [
+          { "$ref": "#/components/parameters/XUserId" },
+          { "$ref": "#/components/parameters/XUserEmail" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateEmployeeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Employé créé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Employee" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/employees/{id}": {
+      "get": {
+        "tags": ["Employees"],
+        "summary": "Récupérer un employé",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détails de l'employé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Employee" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Employees"],
+        "summary": "Mettre à jour un employé",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/XUserId" },
+          { "$ref": "#/components/parameters/XUserEmail" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateEmployeeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Employé mis à jour",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Employee" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Employees"],
+        "summary": "Supprimer un employé",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/XUserId" },
+          { "$ref": "#/components/parameters/XUserEmail" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/history": {
+      "get": {
+        "tags": ["History"],
+        "summary": "Récupérer l'historique",
+        "description": "Récupère l'historique des actions (audit log)",
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Type d'entité",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "ID de l'utilisateur",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "description": "Type d'action",
+            "schema": {
+              "type": "string",
+              "enum": ["create", "update", "delete"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Nombre maximum de résultats",
+            "schema": { "type": "integer", "default": 100 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Historique",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/HistoryEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/holidays": {
+      "get": {
+        "tags": ["Holidays"],
+        "summary": "Lister les vacances",
+        "description": "Récupère toutes les périodes de vacances",
+        "responses": {
+          "200": {
+            "description": "Liste des vacances",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HolidaysResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Holidays"],
+        "summary": "Ajouter une période de vacances",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateHolidayRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vacances ajoutées",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HolidaysResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Holidays"],
+        "summary": "Supprimer une période de vacances",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Vacances supprimées",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HolidaysResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hub/events": {
+      "get": {
+        "tags": ["Hub Events"],
+        "summary": "Lister les événements Hub",
+        "description": "Récupère tous les événements Hub avec leur template",
+        "responses": {
+          "200": {
+            "description": "Liste des événements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/HubEvent" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Hub Events"],
+        "summary": "Créer un événement Hub",
+        "description": "Crée un nouvel événement basé sur un template",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateHubEventRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Événement créé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HubEvent" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/hub/events/{id}": {
+      "get": {
+        "tags": ["Hub Events"],
+        "summary": "Récupérer un événement Hub",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détails de l'événement",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HubEventDetail" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Hub Events"],
+        "summary": "Mettre à jour un événement Hub",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateHubEventRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Événement mis à jour",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HubEvent" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Hub Events"],
+        "summary": "Supprimer un événement Hub",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Événement supprimé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/hub/templates": {
+      "get": {
+        "tags": ["Hub Templates"],
+        "summary": "Lister les templates Hub",
+        "description": "Récupère tous les templates avec leurs tâches",
+        "responses": {
+          "200": {
+            "description": "Liste des templates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/HubTemplate" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Hub Templates"],
+        "summary": "Créer un template Hub",
+        "description": "Crée un nouveau template avec ses tâches",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateHubTemplateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Template créé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HubTemplate" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/hub/templates/{id}": {
+      "get": {
+        "tags": ["Hub Templates"],
+        "summary": "Récupérer un template Hub",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détails du template",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HubTemplateDetail" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Hub Templates"],
+        "summary": "Mettre à jour un template Hub",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateHubTemplateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Template mis à jour",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HubTemplate" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Hub Templates"],
+        "summary": "Supprimer un template Hub",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Template supprimé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": {
+            "description": "Template utilisé par des événements",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hackaton-week": {
+      "get": {
+        "tags": ["Planning"],
+        "summary": "Vérifier si une semaine est hackaton",
+        "parameters": [
+          {
+            "name": "weekKey",
+            "in": "query",
+            "required": true,
+            "description": "Identifiant de la semaine (ex: 2025-W29)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statut hackaton",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HackatonWeekResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Planning"],
+        "summary": "Définir une semaine hackaton",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SetHackatonWeekRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" }
+        }
+      }
+    },
+    "/api/promos": {
+      "get": {
+        "tags": ["Promotions"],
+        "summary": "Lister les promotions",
+        "description": "Récupère toutes les promotions avec leurs dates",
+        "responses": {
+          "200": {
+            "description": "Liste des promotions",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PromosResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Promotions"],
+        "summary": "Créer une promotion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreatePromoRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "delete": {
+        "tags": ["Promotions"],
+        "summary": "Supprimer une promotion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["key"],
+                "properties": {
+                  "key": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" }
+        }
+      }
+    },
+    "/api/promos/status": {
+      "get": {
+        "tags": ["Promotions"],
+        "summary": "Statut des promotions",
+        "responses": {
+          "200": {
+            "description": "Statut des promotions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "promos": { "type": "array" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/promotions": {
+      "get": {
+        "tags": ["Promotions"],
+        "summary": "Récupérer les promotions (config)",
+        "responses": {
+          "200": {
+            "description": "Configuration des promotions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "promotions": { "type": "array" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/promotions/{promoId}": {
+      "get": {
+        "tags": ["Promotions"],
+        "summary": "Récupérer une promotion",
+        "parameters": [
+          {
+            "name": "promoId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détails de la promotion",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PromotionDetailResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/promotions/{promoId}/projects/last-three": {
+      "get": {
+        "tags": ["Promotions"],
+        "summary": "Trois derniers projets d'une promotion",
+        "parameters": [
+          {
+            "name": "promoId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projets récents",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LastThreeProjectsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/promotions/all/projects/last-three": {
+      "get": {
+        "tags": ["Promotions"],
+        "summary": "Trois derniers projets de toutes les promotions",
+        "responses": {
+          "200": {
+            "description": "Projets récents par promotion",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AllPromosLastThreeResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "tags": ["Projects"],
+        "summary": "Lister les projets par technologie",
+        "responses": {
+          "200": {
+            "description": "Projets groupés par technologie",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProjectsByTechResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Projects"],
+        "summary": "Créer un projet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateProjectRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Projet créé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProjectsByTechResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Projects"],
+        "summary": "Supprimer un projet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tech", "id"],
+                "properties": {
+                  "tech": { "type": "string" },
+                  "id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Projet supprimé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProjectsByTechResponse" }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Projects"],
+        "summary": "Réordonner les projets",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReorderProjectsRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Projets réordonnés",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ProjectsByTechResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/schedules": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "Récupérer le planning d'une semaine",
+        "parameters": [
+          {
+            "name": "weekKey",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Planning de la semaine",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Schedule" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Créer/Mettre à jour un planning",
+        "parameters": [
+          { "$ref": "#/components/parameters/XUserId" },
+          { "$ref": "#/components/parameters/XUserEmail" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateScheduleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Planning créé/mis à jour",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Schedule" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Schedules"],
+        "summary": "Supprimer un planning",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "weekKey",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          { "$ref": "#/components/parameters/XUserId" },
+          { "$ref": "#/components/parameters/XUserEmail" }
+        ],
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" }
+        }
+      }
+    },
+    "/api/schedules/absences": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "Récupérer les absences",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "schema": { "type": "string", "format": "date" }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": { "type": "string", "format": "date" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des absences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/schedules/copy": {
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Copier un planning d'une semaine à une autre",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CopyScheduleRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Planning copié",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CopyScheduleResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/schedules/range": {
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Créer des absences sur une plage de dates",
+        "parameters": [
+          { "$ref": "#/components/parameters/XUserId" },
+          { "$ref": "#/components/parameters/XUserEmail" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateRangeAbsenceRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" }
+        }
+      }
+    },
+    "/api/get_students": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Rechercher des étudiants",
+        "description": "Recherche et filtre les étudiants avec pagination",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Recherche textuelle",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": { "type": "integer", "default": 0 }
+          },
+          {
+            "name": "promo",
+            "in": "query",
+            "description": "Filtrer par promotion",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "description": "Colonne de tri",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["asc", "desc"], "default": "asc" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filtrer par statut",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "delay_level",
+            "in": "query",
+            "description": "Filtrer par niveau de retard",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "track",
+            "in": "query",
+            "description": "Filtrer par track",
+            "schema": { "type": "string", "enum": ["Golang", "Javascript", "Rust", "Java"] }
+          },
+          {
+            "name": "track_completed",
+            "in": "query",
+            "description": "Filtrer par complétion de track",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des étudiants",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StudentsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/student/{id}": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Récupérer un étudiant",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détails de l'étudiant",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StudentDetailResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/update_project": {
+      "post": {
+        "tags": ["Students"],
+        "summary": "Mettre à jour le projet d'un étudiant",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateStudentProjectRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" }
+        }
+      }
+    },
+    "/api/project-progress-stats": {
+      "get": {
+        "tags": ["Students"],
+        "summary": "Statistiques de progression des projets",
+        "parameters": [
+          {
+            "name": "promo",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Statistiques de progression",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/timeline_project": {
+      "get": {
+        "tags": ["Timeline"],
+        "summary": "Récupérer la timeline des projets",
+        "responses": {
+          "200": {
+            "description": "Timeline des projets",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TimelineProjectResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Timeline"],
+        "summary": "Mettre à jour un projet dans la timeline",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["projectName", "promotion"],
+                "properties": {
+                  "projectName": { "type": "string" },
+                  "promotion": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Mise à jour effectuée" }
+        }
+      }
+    },
+    "/api/last_update": {
+      "get": {
+        "tags": ["Timeline"],
+        "summary": "Récupérer les dernières mises à jour",
+        "responses": {
+          "200": {
+            "description": "Dernières mises à jour",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Timeline"],
+        "summary": "Enregistrer une mise à jour",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["eventId"],
+                "properties": {
+                  "eventId": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mise à jour enregistrée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "last_update": { "type": "string", "format": "date-time" },
+                    "event_id": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/update": {
+      "post": {
+        "tags": ["Timeline"],
+        "summary": "Déclencher une mise à jour globale",
+        "responses": {
+          "200": {
+            "description": "Mise à jour déclenchée",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Récupérer un utilisateur",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Détails de l'utilisateur",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/widgets/overview": {
+      "get": {
+        "tags": ["Widgets"],
+        "summary": "Vue d'ensemble du dashboard",
+        "responses": {
+          "200": {
+            "description": "Données de vue d'ensemble",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OverviewWidgetResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/widgets/recent-activity": {
+      "get": {
+        "tags": ["Widgets"],
+        "summary": "Activité récente",
+        "responses": {
+          "200": {
+            "description": "Activités récentes",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RecentActivityResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/widgets/track-progress": {
+      "get": {
+        "tags": ["Widgets"],
+        "summary": "Progression par track",
+        "responses": {
+          "200": {
+            "description": "Progression des tracks",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TrackProgressResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/seed": {
+      "get": {
+        "tags": ["Utility"],
+        "summary": "Peupler la base de données",
+        "description": "Charge les données étudiants depuis un fichier CSV",
+        "responses": {
+          "200": { "$ref": "#/components/responses/Success" }
+        }
+      }
+    },
+    "/api/cron": {
+      "get": {
+        "tags": ["Utility"],
+        "summary": "Tâche CRON de mise à jour",
+        "description": "Met à jour le statut des promotions (nécessite authentification)",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Bearer {CRON_SECRET}"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mise à jour effectuée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "updated": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Non autorisé",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "XUserId": {
+        "name": "x-user-id",
+        "in": "header",
+        "description": "ID de l'utilisateur pour audit",
+        "schema": { "type": "string" }
+      },
+      "XUserEmail": {
+        "name": "x-user-email",
+        "in": "header",
+        "description": "Email de l'utilisateur pour audit",
+        "schema": { "type": "string" }
+      }
+    },
+    "responses": {
+      "Success": {
+        "description": "Opération réussie",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/SuccessResponse" }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Requête invalide",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Ressource non trouvée",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Erreur serveur interne",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "message": { "type": "string" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      },
+      "Alert": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string", "enum": ["danger", "warning", "info"] },
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "studentId": { "type": "string" },
+          "studentName": { "type": "string" },
+          "promoKey": { "type": "string" },
+          "action": { "type": "string" },
+          "count": { "type": "integer" }
+        }
+      },
+      "AlertsResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "alerts": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Alert" }
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "integer" },
+              "critical": { "type": "integer" },
+              "high": { "type": "integer" },
+              "medium": { "type": "integer" },
+              "low": { "type": "integer" }
+            }
+          }
+        }
+      },
+      "DelayDistributionResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "delayLevels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "level": { "type": "string" },
+                "count": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "TrackComparisonResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "tracks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrackProgress" }
+          }
+        }
+      },
+      "TrackProgress": {
+        "type": "object",
+        "properties": {
+          "track": { "type": "string", "enum": ["Golang", "Javascript", "Rust", "Java"] },
+          "completed": { "type": "integer" },
+          "total": { "type": "integer" },
+          "percentage": { "type": "number" }
+        }
+      },
+      "ChatRequest": {
+        "type": "object",
+        "required": ["message", "userId"],
+        "properties": {
+          "message": { "type": "string" },
+          "conversationId": { "type": "integer" },
+          "userId": { "type": "string" }
+        }
+      },
+      "ChatResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "response": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "studentIds": { "type": "array", "items": { "type": "string" } },
+              "suggestions": { "type": "array" }
+            }
+          },
+          "conversationId": { "type": "integer" },
+          "messageId": { "type": "integer" },
+          "debug": {
+            "type": "object",
+            "properties": {
+              "intent": { "type": "string" },
+              "confidence": { "type": "number" },
+              "entities": { "type": "object" },
+              "ragContext": { "type": "string" }
+            }
+          }
+        }
+      },
+      "ConversationsListResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "conversations": { "type": "array" },
+          "stats": { "type": "object" }
+        }
+      },
+      "CreateConversationRequest": {
+        "type": "object",
+        "required": ["userId"],
+        "properties": {
+          "userId": { "type": "string" },
+          "title": { "type": "string", "default": "Nouvelle conversation" }
+        }
+      },
+      "ConversationResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "conversation": { "type": "object" }
+        }
+      },
+      "ConversationDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "conversation": { "type": "object" },
+          "messages": { "type": "array" }
+        }
+      },
+      "Employee": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "initial": { "type": "string" },
+          "role": { "type": "string" },
+          "avatar": { "type": "string" },
+          "color": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "phone": { "type": "string" },
+          "isActive": { "type": "boolean" },
+          "hoursPerWeek": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateEmployeeRequest": {
+        "type": "object",
+        "required": ["name", "initial", "role", "email"],
+        "properties": {
+          "name": { "type": "string" },
+          "initial": { "type": "string" },
+          "role": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "avatar": { "type": "string" },
+          "color": { "type": "string" },
+          "phone": { "type": "string" }
+        }
+      },
+      "UpdateEmployeeRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "initial": { "type": "string" },
+          "role": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "color": { "type": "string" },
+          "phone": { "type": "string" },
+          "avatar": { "type": "string" }
+        }
+      },
+      "HistoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "entityType": { "type": "string" },
+          "entityId": { "type": "string" },
+          "action": { "type": "string", "enum": ["create", "update", "delete"] },
+          "userId": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "changes": { "type": "object" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "HolidaysResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "start": { "type": "string", "format": "date" },
+                  "end": { "type": "string", "format": "date" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateHolidayRequest": {
+        "type": "object",
+        "required": ["name", "start", "end"],
+        "properties": {
+          "name": { "type": "string" },
+          "start": { "type": "string", "format": "date" },
+          "end": { "type": "string", "format": "date" }
+        }
+      },
+      "HubTemplate": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "tasks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/HubTask" }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "HubTemplateDetail": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                { "$ref": "#/components/schemas/HubTask" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "assignments": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/HubAssignment" }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "HubTask": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "templateId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "offsetDays": { "type": "integer" },
+          "displayOrder": { "type": "integer" }
+        }
+      },
+      "HubAssignment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "taskId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string" }
+        }
+      },
+      "CreateHubTemplateRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": { "type": "string" },
+                "description": { "type": "string" },
+                "offsetDays": { "type": "integer", "default": 0 },
+                "assignedUsers": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "HubEvent": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "templateId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "startDate": { "type": "string", "format": "date" },
+          "template": { "$ref": "#/components/schemas/HubTemplate" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "HubEventDetail": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "templateId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "startDate": { "type": "string", "format": "date" },
+          "template": { "$ref": "#/components/schemas/HubTemplate" },
+          "eventTasks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/HubEventTask" }
+          }
+        }
+      },
+      "HubEventTask": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "eventId": { "type": "string", "format": "uuid" },
+          "taskId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] },
+          "task": { "$ref": "#/components/schemas/HubTask" }
+        }
+      },
+      "CreateHubEventRequest": {
+        "type": "object",
+        "required": ["templateId", "name", "startDate"],
+        "properties": {
+          "templateId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "startDate": { "type": "string", "format": "date" }
+        }
+      },
+      "UpdateHubEventRequest": {
+        "type": "object",
+        "required": ["templateId", "name", "startDate"],
+        "properties": {
+          "templateId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "startDate": { "type": "string", "format": "date" }
+        }
+      },
+      "HackatonWeekResponse": {
+        "type": "object",
+        "properties": {
+          "weekKey": { "type": "string" },
+          "isHackaton": { "type": "boolean" }
+        }
+      },
+      "SetHackatonWeekRequest": {
+        "type": "object",
+        "required": ["weekKey", "isHackaton"],
+        "properties": {
+          "weekKey": { "type": "string", "example": "2025-W29" },
+          "isHackaton": { "type": "boolean" }
+        }
+      },
+      "Promo": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "eventId": { "type": "integer" },
+          "title": { "type": "string" },
+          "dates": {
+            "type": "object",
+            "properties": {
+              "start": { "type": "string", "format": "date" },
+              "end": { "type": "string", "format": "date" },
+              "piscine-js-start": { "type": "string" },
+              "piscine-js-end": { "type": "string" },
+              "piscine-rust-java-start": { "type": "string" },
+              "piscine-rust-java-end": { "type": "string" }
+            }
+          }
+        }
+      },
+      "PromosResponse": {
+        "type": "object",
+        "properties": {
+          "promos": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Promo" }
+          }
+        }
+      },
+      "CreatePromoRequest": {
+        "type": "object",
+        "required": ["key", "eventId", "title", "dates"],
+        "properties": {
+          "key": { "type": "string" },
+          "eventId": { "type": "integer" },
+          "title": { "type": "string" },
+          "dates": {
+            "type": "object",
+            "required": ["start", "end"],
+            "properties": {
+              "start": { "type": "string", "format": "date" },
+              "end": { "type": "string", "format": "date" },
+              "piscine-js-start": { "type": "string", "format": "date" },
+              "piscine-js-end": { "type": "string", "format": "date" },
+              "piscine-rust-java-start": { "type": "string", "format": "date" },
+              "piscine-rust-java-end": { "type": "string", "format": "date" }
+            }
+          }
+        }
+      },
+      "PromotionDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "promotion": {
+            "type": "object",
+            "properties": {
+              "eventId": { "type": "integer" },
+              "key": { "type": "string" },
+              "title": { "type": "string" },
+              "dates": { "type": "object" },
+              "currentProject": { "type": "string" }
+            }
+          }
+        }
+      },
+      "LastThreeProjectsResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "promotionName": { "type": "string" },
+          "language": { "type": "string" },
+          "currentProject": { "type": "string" },
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "name": { "type": "string" },
+                "project_time_week": { "type": "integer" },
+                "count": { "type": "integer" },
+                "percentage": { "type": "number" }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "totalStudents": { "type": "integer" },
+              "aheadCount": { "type": "integer" },
+              "aheadPercentage": { "type": "number" }
+            }
+          }
+        }
+      },
+      "AllPromosLastThreeResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "promotions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "promoId": { "type": "integer" },
+                "promoKey": { "type": "string" },
+                "promotionName": { "type": "string" },
+                "language": { "type": "string" },
+                "currentProject": { "type": "string" },
+                "projects": { "type": "array" },
+                "meta": { "type": "object" },
+                "error": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "project_time_week": { "type": "integer" }
+        }
+      },
+      "ProjectsByTechResponse": {
+        "type": "object",
+        "properties": {
+          "Golang": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Project" }
+          },
+          "Javascript": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Project" }
+          },
+          "Rust": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Project" }
+          }
+        }
+      },
+      "CreateProjectRequest": {
+        "type": "object",
+        "required": ["name", "project_time_week", "tech"],
+        "properties": {
+          "name": { "type": "string" },
+          "project_time_week": { "type": "integer" },
+          "tech": { "type": "string" }
+        }
+      },
+      "ReorderProjectsRequest": {
+        "type": "object",
+        "required": ["tech", "reorderedProjects"],
+        "properties": {
+          "tech": { "type": "string" },
+          "reorderedProjects": {
+            "type": "array",
+            "items": { "type": "integer" }
+          }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "employeeId": { "type": "string", "format": "uuid" },
+          "weekKey": { "type": "string" },
+          "day": { "type": "string" },
+          "timeSlots": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TimeSlot" }
+          }
+        }
+      },
+      "TimeSlot": {
+        "type": "object",
+        "properties": {
+          "start": { "type": "string", "example": "09:00" },
+          "end": { "type": "string", "example": "17:00" },
+          "isWorking": { "type": "boolean" }
+        }
+      },
+      "CreateScheduleRequest": {
+        "type": "object",
+        "required": ["employeeId", "weekKey", "day", "timeSlots"],
+        "properties": {
+          "employeeId": { "type": "string", "format": "uuid" },
+          "weekKey": { "type": "string", "example": "2025-W29" },
+          "day": { "type": "string", "enum": ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"] },
+          "timeSlots": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TimeSlot" }
+          }
+        }
+      },
+      "CopyScheduleRequest": {
+        "type": "object",
+        "required": ["fromWeekKey", "toWeekKey"],
+        "properties": {
+          "employeeIds": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "fromWeekKey": { "type": "string" },
+          "toWeekKey": { "type": "string" }
+        }
+      },
+      "CopyScheduleResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "copiedEmployees": { "type": "integer" },
+          "errors": { "type": "array" }
+        }
+      },
+      "CreateRangeAbsenceRequest": {
+        "type": "object",
+        "required": ["employeeId", "startDate", "endDate", "slotType"],
+        "properties": {
+          "employeeId": { "type": "string", "format": "uuid" },
+          "startDate": { "type": "string", "format": "date" },
+          "endDate": { "type": "string", "format": "date" },
+          "slotType": { "type": "string" }
+        }
+      },
+      "Student": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "last_name": { "type": "string" },
+          "first_name": { "type": "string" },
+          "login": { "type": "string" },
+          "promoName": { "type": "string" },
+          "actual_project_name": { "type": "string" },
+          "progress_status": { "type": "string" },
+          "delay_level": { "type": "string" }
+        }
+      },
+      "StudentsResponse": {
+        "type": "object",
+        "properties": {
+          "students": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Student" }
+          },
+          "newOffset": { "type": "integer" },
+          "totalStudents": { "type": "integer" },
+          "previousOffset": { "type": "integer" },
+          "currentOffset": { "type": "integer" }
+        }
+      },
+      "StudentDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "student": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "integer" },
+              "last_name": { "type": "string" },
+              "first_name": { "type": "string" },
+              "login": { "type": "string" },
+              "promoName": { "type": "string" },
+              "availableAt": { "type": "string", "format": "date" },
+              "actual_project_name": { "type": "string" },
+              "progress_status": { "type": "string" },
+              "delay_level": { "type": "string" },
+              "golang_project": { "type": "string" },
+              "golang_project_status": { "type": "string" },
+              "javascript_project": { "type": "string" },
+              "javascript_project_status": { "type": "string" },
+              "rust_project": { "type": "string" },
+              "rust_project_status": { "type": "string" },
+              "java_project": { "type": "string" },
+              "java_project_status": { "type": "string" },
+              "golang_completed": { "type": "boolean" },
+              "javascript_completed": { "type": "boolean" },
+              "rust_completed": { "type": "boolean" },
+              "java_completed": { "type": "boolean" }
+            }
+          },
+          "projects": { "type": "array" }
+        }
+      },
+      "UpdateStudentProjectRequest": {
+        "type": "object",
+        "required": ["login", "project_name", "project_status", "delay_level", "last_projects_finished", "common_projects", "promo_name"],
+        "properties": {
+          "login": { "type": "string" },
+          "project_name": { "type": "string" },
+          "project_status": { "type": "string" },
+          "delay_level": { "type": "string" },
+          "last_projects_finished": { "type": "array" },
+          "common_projects": { "type": "array" },
+          "promo_name": { "type": "string" }
+        }
+      },
+      "TimelineProjectResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "promotion": { "$ref": "#/components/schemas/Promo" },
+                "timeline": {
+                  "type": "object",
+                  "properties": {
+                    "agenda": { "type": "object" },
+                    "progress": { "type": "object" }
+                  }
+                },
+                "currentProjects": { "type": "object" },
+                "status": { "type": "string", "enum": ["success", "error"] }
+              }
+            }
+          },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OverviewWidgetResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "totalStudents": { "type": "integer" },
+              "totalPromos": { "type": "integer" },
+              "goodProgress": { "type": "integer" },
+              "lateStudents": { "type": "integer" },
+              "validated": { "type": "integer" },
+              "successRate": { "type": "number" }
+            }
+          }
+        }
+      },
+      "RecentActivityResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "activities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer" },
+                "studentName": { "type": "string" },
+                "promo": { "type": "string" },
+                "project": { "type": "string" },
+                "status": { "type": "string" },
+                "delayLevel": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "TrackProgressResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "tracks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrackProgress" }
+          }
+        }
+      }
+    }
+  }
+}
