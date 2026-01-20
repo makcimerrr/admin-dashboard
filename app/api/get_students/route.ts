@@ -16,6 +16,9 @@ export async function GET(request: Request) {
     const delayLevel = url.searchParams.get('delay_level') || ''; // Niveau de retard (par défaut '')
     const track = url.searchParams.get('track') || null; // Tronc (par défaut null)
     const trackCompleted = url.searchParams.get('track_completed') || null; // Tronc terminé (par défaut null)
+    const limitParam = url.searchParams.get('limit'); // Limite par page (par défaut 20, -1 pour tous)
+    const limit = limitParam ? parseInt(limitParam, 10) : 20;
+    const dropoutFilter = (url.searchParams.get('dropout_filter') || 'active') as 'active' | 'dropout' | 'all';
 
     // Appel à la fonction getStudents dans la base de données
     const {
@@ -24,7 +27,7 @@ export async function GET(request: Request) {
       totalStudents,
       previousOffset,
       currentOffset
-    } = await getStudents(search, offsetNumber, promo, filter, direction, status, delayLevel, track, trackCompleted);
+    } = await getStudents(search, offsetNumber, promo, filter, direction, status, delayLevel, track, trackCompleted, limit, dropoutFilter);
 
     // Envoi des résultats sous forme JSON
     return NextResponse.json({
