@@ -55,7 +55,8 @@ export async function middleware(req: NextRequest) {
 
   if (stackAccessCookie || refreshCookie) {
     // Récupération du rôle Stack (si présent, sinon 'user')
-    const role = cookies.get('stack-role') || 'user';
+    const stackRoleCookie = cookies.get('stack-role');
+    const role = stackRoleCookie?.value || 'user';
     const response = NextResponse.next();
     response.cookies.set('role', role, { path: '/' }); // Permet d'exposer le rôle côté Server Component
     console.log('✅ Middleware - Auth Stack trouvée pour:', url, 'Rôle:', role);
