@@ -30,12 +30,39 @@ interface ProgressStats {
 const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
   const statusData = promoStatus as Record<string, any>;
   const [progressStats, setProgressStats] = useState<ProgressStats | null>(null);
+  const [allProgressStats, setAllProgressStats] = useState<Record<string, ProgressStats>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchProgressStats = async () => {
       if (selectedPromo === 'all') {
+        // Fetch stats for all promos
+        setIsLoading(true);
+        const statsMap: Record<string, ProgressStats> = {};
+
+        await Promise.all(
+          Object.entries(statusData).map(async ([promoKey, project]) => {
+            if (!project || project === 'Fin') return;
+
+            try {
+              const projectParam = typeof project === 'string' ? project : JSON.stringify(project);
+              const response = await fetch(
+                `/api/project-progress-stats?promo=${encodeURIComponent(promoKey)}&project=${encodeURIComponent(projectParam)}`
+              );
+
+              if (response.ok) {
+                const data = await response.json();
+                statsMap[promoKey] = data;
+              }
+            } catch (error) {
+              console.error(`Erreur lors de la récupération des stats pour ${promoKey}:`, error);
+            }
+          })
+        );
+
+        setAllProgressStats(statsMap);
         setProgressStats(null);
+        setIsLoading(false);
         return;
       }
 
@@ -381,19 +408,94 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
 
   const renderAllPromos = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {Object.entries(statusData).map(([promo, project]) => (
-        <Card key={promo} className="overflow-hidden hover:shadow-lg transition-shadow">
-          <CardHeader className="pb-3 bg-gradient-to-br from-muted/50 to-muted/20">
-            <div className="flex items-center gap-2">
-              {getProjectIcon(project)}
-              <CardTitle className="text-base">{promo}</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {renderProject(project, promo)}
-          </CardContent>
-        </Card>
-      ))}
+      {Object.entries(statusData).map(([promo, project]) => {
+        const stats = allProgressStats[promo];
+        const isFin = typeof project === 'string' && project.toLowerCase() === 'fin';
+
+        return (
+          <Card key={promo} className="overflow-hidden hover:shadow-lg transition-shadow">
+            <CardHeader className="pb-3 bg-gradient-to-br from-muted/50 to-muted/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {getProjectIcon(project)}
+                  <CardTitle className="text-base">{promo}</CardTitle>
+                </div>
+                {stats && !isFin && (
+                  <Badge
+                    variant="outline"
+                    className={`text-xs font-bold ${
+                      stats.percentage >= 80
+                        ? 'bg-green-500/10 text-green-700 border-green-300'
+                        : stats.percentage >= 50
+                        ? 'bg-yellow-500/10 text-yellow-700 border-yellow-300'
+                        : 'bg-red-500/10 text-red-700 border-red-300'
+                    }`}
+                  >
+                    {stats.percentage}%
+                  </Badge>
+                )}
+                {isFin && (
+                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-300 text-xs font-bold">
+                    100%
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {typeof project === 'string' ? (
+                project.toLowerCase() === 'fin' ? (
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-emerald-500" />
+                    <span className="font-semibold text-emerald-600">Formation Terminée</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Code2 className="h-5 w-5 text-blue-500" />
+                      <span className="font-medium">{project}</span>
+                    </div>
+                    {stats && (
+                      <div className="space-y-1">
+                        <Progress value={stats.percentage} className="h-1.5" />
+                        <p className="text-xs text-muted-foreground">
+                          {stats.onExpectedProject}/{stats.totalStudents} étudiants
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : typeof project === 'object' && project !== null ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Workflow className="h-5 w-5 text-orange-500" />
+                    <span className="text-sm font-medium text-muted-foreground">Multi-choix</span>
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-cyan-600 font-medium">Rust:</span>
+                      <span>{project.rust || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-600 font-medium">Java:</span>
+                      <span>{project.java || 'N/A'}</span>
+                    </div>
+                  </div>
+                  {stats && (
+                    <div className="space-y-1 pt-1">
+                      <Progress value={stats.percentage} className="h-1.5" />
+                      <p className="text-xs text-muted-foreground">
+                        {stats.onExpectedProject}/{stats.totalStudents} étudiants
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="text-muted-foreground">Aucune info</span>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 
