@@ -160,7 +160,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Error in chat API:', error);
     return new Response(
-      JSON.stringify({ error: 'Erreur lors du traitement du message', details: String(error) }),
+      JSON.stringify({ error: 'Erreur lors du traitement du message' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
