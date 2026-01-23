@@ -13,9 +13,9 @@ importers:
 
   .:
     dependencies:
-      '@ai-sdk/openai':
-        specifier: 0.0.70
-        version: 0.0.70(zod@3.25.76)
+      '@ai-sdk/groq':
+        specifier: ^0.0
+        version: 0.0.3(zod@3.25.76)
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -119,7 +119,7 @@ importers:
         specifier: ^1.4.1
         version: 1.4.1(next@15.2.8(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(svelte@5.46.1)(vue@3.5.26(typescript@5.7.2))
       ai:
-        specifier: '3.4'
+        specifier: ^3.4
         version: 3.4.33(react@19.0.0)(sswr@2.2.0(svelte@5.46.1))(svelte@5.46.1)(vue@3.5.26(typescript@5.7.2))(zod@3.25.76)
       autoprefixer:
         specifier: ^10.4.20
@@ -245,8 +245,8 @@ importers:
 
 packages:
 
-  '@ai-sdk/openai@0.0.70':
-    resolution: {integrity: sha512-RYLfiIG093bq6a3BJe2uUTL51zjxnDQLo4qHlNk3PLKSOxbb9Ap/vmhCLnPKo+flqFhqiD6YE9wuNZv++reHaA==}
+  '@ai-sdk/groq@0.0.3':
+    resolution: {integrity: sha512-Iyj2p7/M0TVhoPrQfSiwfvjTpZFfc17a6qY/2s22+VgpT0yyfai9dVyLbfUAdnNlpGGrjDpxPHqK1L03r4KlyA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
@@ -4608,7 +4608,7 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/openai@0.0.70(zod@3.25.76)':
+  '@ai-sdk/groq@0.0.3(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 0.0.26
       '@ai-sdk/provider-utils': 1.0.22(zod@3.25.76)

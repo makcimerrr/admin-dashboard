@@ -1,11 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
-import { useChat } from 'ai/react';
 import { ChatSidebar } from '@/components/assistant/chat-sidebar';
 import { ChatInterface } from '@/components/assistant/chat-interface';
+
+type Message = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  studentIds?: number[];
+  suggestions?: string[];
+};
 
 type Conversation = {
   id: number;
@@ -18,31 +25,14 @@ type Conversation = {
 export default function AssistantPage() {
   const user = useUser();
   const router = useRouter();
+  const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [currentConversationId, setCurrentConversationId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const userId = user?.primaryEmail || 'anonymous';
-
-  // Hook useChat du Vercel AI SDK pour le streaming
-  const {
-    messages,
-    isLoading,
-    setMessages,
-    append,
-  } = useChat({
-    api: '/api/chat',
-    body: {
-      conversationId: currentConversationId,
-      userId,
-    },
-    onFinish: () => {
-      loadConversations();
-    },
-    onError: (error) => {
-      console.error('Chat error:', error);
-    },
-  });
 
   // Load conversations on mount
   useEffect(() => {
@@ -53,7 +43,7 @@ export default function AssistantPage() {
     }
   }, [userId]);
 
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     setIsLoadingConversations(true);
     try {
       const response = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}`);
@@ -66,7 +56,7 @@ export default function AssistantPage() {
     } finally {
       setIsLoadingConversations(false);
     }
-  };
+  }, [userId]);
 
   const handleNewChat = () => {
     setCurrentConversationId(null);
@@ -92,24 +82,123 @@ export default function AssistantPage() {
     }
   };
 
-  // Fonction pour envoyer un message
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim() || isLoading) return;
 
-    await append({
+    // Add user message immediately
+    const userMessage: Message = {
+      id: Date.now().toString(),
       role: 'user',
       content: messageText,
-    });
-  };
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
 
-  // Transformer les messages pour le format attendu par ChatInterface
-  const formattedMessages = messages.map((m) => ({
-    id: m.id,
-    role: m.role as 'user' | 'assistant',
-    content: m.content,
-    studentIds: undefined,
-    suggestions: undefined,
-  }));
+    // Assistant message will be created when we receive the first chunk
+    const assistantMessageId = (Date.now() + 1).toString();
+    let assistantMessageCreated = false;
+
+    // Abort any previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          conversationId: currentConversationId,
+          userId,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      // Check for new conversation ID in header
+      const newConversationId = response.headers.get('X-Conversation-Id');
+      if (newConversationId && !currentConversationId) {
+        const id = parseInt(newConversationId);
+        setCurrentConversationId(id);
+        router.push(`/assistant/${id}`);
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
+
+      const decoder = new TextDecoder();
+      let fullContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        // Parse SSE format from AI SDK
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('0:')) {
+            // Text content
+            try {
+              const content = JSON.parse(line.slice(2));
+              fullContent += content;
+
+              // Create assistant message on first chunk
+              if (!assistantMessageCreated) {
+                assistantMessageCreated = true;
+                setMessages((prev) => [
+                  ...prev,
+                  { id: assistantMessageId, role: 'assistant', content: fullContent },
+                ]);
+              } else {
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMessageId ? { ...m, content: fullContent } : m
+                  )
+                );
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+
+      // Reload conversations after message is complete
+      loadConversations();
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        return;
+      }
+      console.error('Error sending message:', error);
+      // Show error message
+      if (assistantMessageCreated) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMessageId
+              ? { ...m, content: "Désolé, une erreur s'est produite. Veuillez réessayer." }
+              : m
+          )
+        );
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { id: assistantMessageId, role: 'assistant', content: "Désolé, une erreur s'est produite. Veuillez réessayer." },
+        ]);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex h-full w-full bg-background">
@@ -121,7 +210,7 @@ export default function AssistantPage() {
       />
       <div className="flex-1 min-w-0">
         <ChatInterface
-          messages={formattedMessages}
+          messages={messages}
           isLoading={isLoading}
           onSendMessage={handleSendMessage}
         />
