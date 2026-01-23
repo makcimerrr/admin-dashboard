@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +20,7 @@ import {
   X,
   ChevronRight,
   Users,
-  Loader2,
+  Loader2
 } from 'lucide-react';
 import type { Alert } from '@/lib/types/alerts';
 
@@ -24,11 +30,22 @@ interface AlertsPanelProps {
   maxAlerts?: number;
 }
 
-export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }: AlertsPanelProps) {
+export default function AlertsPanel({
+  promoFilter,
+  compact = false,
+  maxAlerts
+}: AlertsPanelProps) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [summary, setSummary] = useState({ total: 0, critical: 0, high: 0, medium: 0, low: 0 });
+  const [summary, setSummary] = useState({
+    total: 0,
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0
+  });
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
     fetchAlerts();
@@ -49,7 +66,10 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
         setSummary(data.summary);
 
         // Jouer un son si des alertes critiques existent
-        if (data.summary.critical > 0 && !sessionStorage.getItem('alerts-notified')) {
+        if (
+          data.summary.critical > 0 &&
+          !sessionStorage.getItem('alerts-notified')
+        ) {
           playNotificationSound();
           sessionStorage.setItem('alerts-notified', 'true');
         }
@@ -63,7 +83,8 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
 
   const playNotificationSound = () => {
     // Créer un son de notification simple
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = new (window.AudioContext ||
+      (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -74,7 +95,10 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
     oscillator.type = 'sine';
 
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+    gainNode.gain.exponentialRampToValueAtTime(
+      0.01,
+      audioContext.currentTime + 0.5
+    );
 
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.5);
@@ -124,9 +148,63 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
     );
   }
 
+  // Collapsed view component reused for compact and full modes
+  const CollapsedView = () => (
+    <Card
+      className={`border-2 flex items-center justify-between px-4 py-3 ${
+        hasCriticalAlerts ? 'border-red-500/50 shadow-md shadow-red-500/10' : ''
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="p-1">
+          {hasCriticalAlerts ? (
+            <BellRing className="h-5 w-5 text-red-600 animate-pulse" />
+          ) : (
+            <Bell className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+        <div>
+          <div className="text-sm font-medium">Alertes</div>
+          <div className="text-xs text-muted-foreground">
+            {summary.total > 0 ? `${summary.total} alerte(s)` : 'Aucune alerte'}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {summary.total > 0 && (
+          <Badge
+            variant={hasCriticalAlerts ? 'destructive' : 'secondary'}
+            className="animate-pulse"
+          >
+            {summary.total}
+          </Badge>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={collapsed ? 'Expand alerts' : 'Collapse alerts'}
+          onClick={() => setCollapsed((c) => !c)}
+        >
+          <ChevronRight
+            className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-90'}`}
+          />
+        </Button>
+      </div>
+    </Card>
+  );
+
+  // If panel is collapsed show only compact header
+  if (collapsed) {
+    return <CollapsedView />;
+  }
+
+  // Compact full content (when compact prop true but not collapsed)
   if (compact) {
     return (
-      <Card className={`border-2 ${hasCriticalAlerts ? 'border-red-500/50 shadow-lg shadow-red-500/20' : ''}`}>
+      <Card
+        className={`border-2 ${hasCriticalAlerts ? 'border-red-500/50 shadow-lg shadow-red-500/20' : ''}`}
+      >
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -137,11 +215,24 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
               )}
               <CardTitle className="text-lg">Alertes</CardTitle>
             </div>
-            {summary.total > 0 && (
-              <Badge variant={hasCriticalAlerts ? 'destructive' : 'secondary'} className="animate-pulse">
-                {summary.total}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {summary.total > 0 && (
+                <Badge
+                  variant={hasCriticalAlerts ? 'destructive' : 'secondary'}
+                  className="animate-pulse"
+                >
+                  {summary.total}
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Collapse alerts"
+                onClick={() => setCollapsed(true)}
+              >
+                <ChevronRight className="h-4 w-4 rotate-90" />
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -154,14 +245,25 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
                 >
                   <div className="pt-0.5">{getAlertIcon(alert.type)}</div>
                   {alert.studentId ? (
-                    <Link href={`/student?id=${alert.studentId}`} className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate hover:text-primary">{alert.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{alert.description}</p>
+                    <Link
+                      href={`/student?id=${alert.studentId}`}
+                      className="flex-1 min-w-0"
+                    >
+                      <p className="text-sm font-medium truncate hover:text-primary">
+                        {alert.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {alert.description}
+                      </p>
                     </Link>
                   ) : (
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{alert.title}</p>
-                      <p className="text-xs text-muted-foreground truncate">{alert.description}</p>
+                      <p className="text-sm font-medium truncate">
+                        {alert.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {alert.description}
+                      </p>
                     </div>
                   )}
                   <Button
@@ -177,7 +279,8 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
               {alerts.length > (maxAlerts || 0) && (
                 <Button asChild variant="link" className="w-full text-xs">
                   <Link href="/reports">
-                    Voir toutes les alertes ({alerts.length - (maxAlerts || 0)} de plus)
+                    Voir toutes les alertes ({alerts.length - (maxAlerts || 0)}{' '}
+                    de plus)
                     <ChevronRight className="h-3 w-3 ml-1" />
                   </Link>
                 </Button>
@@ -193,8 +296,11 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
     );
   }
 
+  // Full expanded view
   return (
-    <Card className={`border-2 ${hasCriticalAlerts ? 'border-red-500/50 shadow-xl shadow-red-500/20' : ''}`}>
+    <Card
+      className={`border-2 ${hasCriticalAlerts ? 'border-red-500/50 shadow-xl shadow-red-500/20' : ''}`}
+    >
       <CardHeader className="bg-gradient-to-r from-red-50/50 to-orange-50/50 dark:from-red-950/20 dark:to-orange-950/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -214,15 +320,27 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
               </CardDescription>
             </div>
           </div>
-          <div className="flex gap-2">
-            {summary.critical > 0 && (
-              <Badge variant="destructive" className="animate-pulse">
-                {summary.critical} Critique{summary.critical > 1 ? 's' : ''}
-              </Badge>
-            )}
-            {summary.high > 0 && (
-              <Badge variant="default">{summary.high} Haute{summary.high > 1 ? 's' : ''}</Badge>
-            )}
+          <div className="flex gap-2 items-center">
+            <div className="flex gap-2">
+              {summary.critical > 0 && (
+                <Badge variant="destructive" className="animate-pulse">
+                  {summary.critical} Critique{summary.critical > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {summary.high > 0 && (
+                <Badge variant="default">
+                  {summary.high} Haute{summary.high > 1 ? 's' : ''}
+                </Badge>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Collapse alerts"
+              onClick={() => setCollapsed(true)}
+            >
+              <ChevronRight className="h-4 w-4 rotate-90" />
+            </Button>
           </div>
         </div>
       </CardHeader>
@@ -236,8 +354,8 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
                   alert.severity === 'critical'
                     ? 'bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-900'
                     : alert.severity === 'high'
-                    ? 'bg-orange-50/50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900'
-                    : 'bg-muted/30 border-border'
+                      ? 'bg-orange-50/50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900'
+                      : 'bg-muted/30 border-border'
                 } group hover:shadow-md transition-all`}
               >
                 <div className="pt-0.5">{getAlertIcon(alert.type)}</div>
@@ -245,9 +363,14 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <h4 className="font-semibold text-sm">{alert.title}</h4>
-                      <p className="text-sm text-muted-foreground mt-0.5">{alert.description}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {alert.description}
+                      </p>
                     </div>
-                    <Badge variant={getAlertBadgeVariant(alert.severity)} className="shrink-0">
+                    <Badge
+                      variant={getAlertBadgeVariant(alert.severity)}
+                      className="shrink-0"
+                    >
                       {alert.severity}
                     </Badge>
                   </div>
@@ -263,7 +386,12 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
                   {alert.action && (
                     <div className="flex items-center gap-2 mt-2">
                       {alert.studentId ? (
-                        <Button asChild variant="outline" size="sm" className="h-7 text-xs">
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                        >
                           <Link href={`/student?id=${alert.studentId}`}>
                             {alert.action}
                             <ChevronRight className="h-3 w-3 ml-1" />
@@ -276,7 +404,9 @@ export default function AlertsPanel({ promoFilter, compact = false, maxAlerts }:
                           className="h-7 text-xs"
                           onClick={() => {
                             // Fallback pour les alertes sans studentId
-                            window.location.href = alert.action?.includes('Voir')
+                            window.location.href = alert.action?.includes(
+                              'Voir'
+                            )
                               ? '/students'
                               : '/promos/status';
                           }}
