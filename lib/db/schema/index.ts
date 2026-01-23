@@ -5,3 +5,4 @@ export * from './students';
 export * from './updates';
 export * from './hackatonWeeks';
 export * from './conversations';
+export * from './hub';

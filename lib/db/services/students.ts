@@ -7,6 +7,7 @@ import {
   students,
   studentSpecialtyProgress
 } from '../schema';
+import { projects } from '../schema/projects';
 import { and, asc, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
 import { SelectStudent } from '@/lib/db/schema/students';
 
@@ -19,7 +20,9 @@ export async function getStudents(
   status: string | null,
   delayLevel: string | null,
   track: string | null = null,
-  trackCompleted: string | null = null
+  trackCompleted: string | null = null,
+  limit: number = 20,
+  dropoutFilter: 'active' | 'dropout' | 'all' = 'active'  // Par défaut, exclure les dropouts
 ): Promise<{
   students: SelectStudent[];
   newOffset: number | null;
@@ -27,10 +30,22 @@ export async function getStudents(
   previousOffset: number | null;
   totalStudents: number;
 }> {
-  const studentsPerPage = 20;
+  // Si limit est -1, on récupère tous les étudiants
+  const studentsPerPage = limit === -1 ? 10000 : limit;
 
   // Filtrage par promo
   let promoFilter = promo ? eq(students.promoName, promo) : null;
+
+  // Filtre dropout
+  let dropoutSqlFilter: SQL<unknown> | null = null;
+  if (dropoutFilter === 'active') {
+    // Exclure les étudiants en perdition (isDropout est null ou false)
+    dropoutSqlFilter = sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`;
+  } else if (dropoutFilter === 'dropout') {
+    // Uniquement les étudiants en perdition
+    dropoutSqlFilter = eq(students.isDropout, true);
+  }
+  // Si 'all', pas de filtre dropout
 
   // Filtre par statut
   const statusFilter = status
@@ -72,13 +87,14 @@ export async function getStudents(
       )
     : null;
 
-  // Combinaison des filtres (promo, recherche, status, delay_level, track)
+  // Combinaison des filtres (promo, recherche, status, delay_level, track, dropout)
   const filters = [
     promoFilter,
     searchFilter,
     statusFilter,
     delayLevelFilter,
-    trackFilter
+    trackFilter,
+    dropoutSqlFilter
   ].filter((filter) => filter != null);
   let finalFilter: SQL<unknown> | undefined =
     filters.length > 0 ? and(...filters) : undefined;
@@ -112,6 +128,51 @@ export async function getStudents(
     'java_project'
   ];
 
+  // Subqueries pour obtenir la position et le total des projets par catégorie
+  const golangPositionSubquery = sql<number>`(
+    SELECT p.sort_index FROM projects p
+    WHERE LOWER(p.name) = LOWER(${studentCurrentProjects.golang_project})
+    AND p.category = 'Golang'
+    LIMIT 1
+  )`.as('golang_project_position');
+
+  const golangTotalSubquery = sql<number>`(
+    SELECT COUNT(*) FROM projects p WHERE p.category = 'Golang'
+  )`.as('golang_project_total');
+
+  const javascriptPositionSubquery = sql<number>`(
+    SELECT p.sort_index FROM projects p
+    WHERE LOWER(p.name) = LOWER(${studentCurrentProjects.javascript_project})
+    AND p.category = 'Javascript'
+    LIMIT 1
+  )`.as('javascript_project_position');
+
+  const javascriptTotalSubquery = sql<number>`(
+    SELECT COUNT(*) FROM projects p WHERE p.category = 'Javascript'
+  )`.as('javascript_project_total');
+
+  const rustPositionSubquery = sql<number>`(
+    SELECT p.sort_index FROM projects p
+    WHERE LOWER(p.name) = LOWER(${studentCurrentProjects.rust_project})
+    AND p.category = 'Rust'
+    LIMIT 1
+  )`.as('rust_project_position');
+
+  const rustTotalSubquery = sql<number>`(
+    SELECT COUNT(*) FROM projects p WHERE p.category = 'Rust'
+  )`.as('rust_project_total');
+
+  const javaPositionSubquery = sql<number>`(
+    SELECT p.sort_index FROM projects p
+    WHERE LOWER(p.name) = LOWER(${studentCurrentProjects.java_project})
+    AND p.category = 'Java'
+    LIMIT 1
+  )`.as('java_project_position');
+
+  const javaTotalSubquery = sql<number>`(
+    SELECT COUNT(*) FROM projects p WHERE p.category = 'Java'
+  )`.as('java_project_total');
+
   // Requête pour récupérer les étudiants avec les filtres et la jointure
   const studentsQuery = db
     .select({
@@ -126,16 +187,30 @@ export async function getStudents(
       delay_level: studentProjects.delay_level,
       golang_project: studentCurrentProjects.golang_project,
       golang_project_status: studentCurrentProjects.golang_project_status,
+      golang_project_position: golangPositionSubquery,
+      golang_project_total: golangTotalSubquery,
       javascript_project: studentCurrentProjects.javascript_project,
       javascript_project_status: studentCurrentProjects.javascript_project_status,
+      javascript_project_position: javascriptPositionSubquery,
+      javascript_project_total: javascriptTotalSubquery,
       rust_project: studentCurrentProjects.rust_project,
       rust_project_status: studentCurrentProjects.rust_project_status,
+      rust_project_position: rustPositionSubquery,
+      rust_project_total: rustTotalSubquery,
       java_project: studentCurrentProjects.java_project,
       java_project_status: studentCurrentProjects.java_project_status,
+      java_project_position: javaPositionSubquery,
+      java_project_total: javaTotalSubquery,
       golang_completed: studentSpecialtyProgress.golang_completed,
       javascript_completed: studentSpecialtyProgress.javascript_completed,
       rust_completed: studentSpecialtyProgress.rust_completed,
-      java_completed: studentSpecialtyProgress.java_completed
+      java_completed: studentSpecialtyProgress.java_completed,
+      // Champs dropout/perdition
+      isDropout: students.isDropout,
+      dropoutAt: students.dropoutAt,
+      dropoutReason: students.dropoutReason,
+      dropoutNotes: students.dropoutNotes,
+      previousPromo: students.previousPromo
     })
     .from(students)
     .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
@@ -267,9 +342,13 @@ export async function getStudents(
     // Use Promise.all to run updates in parallel
     await Promise.all(allPromos.map(async (promo) => {
       const promoId = promo.promoId;
-      const promoFilter = eq(students.promoName, promo.name);
+      // Filtre promo ET exclure les dropouts (isDropout = false ou NULL)
+      const promoAndActiveFilter = and(
+        eq(students.promoName, promo.name),
+        or(eq(students.isDropout, false), sql`${students.isDropout} IS NULL`)
+      );
 
-      // Obtenir les comptages groupés par `delay_level`
+      // Obtenir les comptages groupés par `delay_level` (excluant les dropouts)
       const delayCounts = await db
         .select({
           delay_level: studentProjects.delay_level,
@@ -277,7 +356,7 @@ export async function getStudents(
         })
         .from(students)
         .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
-        .where(promoFilter)
+        .where(promoAndActiveFilter)
         .groupBy(studentProjects.delay_level)
         .execute();
 
@@ -328,7 +407,11 @@ export async function getStudents(
     }));
   } else {
     // Nouvelle logique pour une promotion spécifique
-    const promoFilter = eq(students.promoName, promo);
+    // Filtre promo ET exclure les dropouts
+    const promoAndActiveFilter = and(
+      eq(students.promoName, promo),
+      or(eq(students.isDropout, false), sql`${students.isDropout} IS NULL`)
+    );
 
     // Récupérer l'ID de la promo
     const promoRecord = await db
@@ -353,7 +436,7 @@ export async function getStudents(
           studentProjects,
           eq(students.id, studentProjects.student_id)
         )
-        .where(promoFilter)
+        .where(promoAndActiveFilter)
         .groupBy(studentProjects.delay_level)
         .execute();
 
@@ -433,12 +516,18 @@ export async function updateStudentProject(
   common_projects: { [key: string]: { name: string | null, status: string | null } },
   promo_name: string
 ) {
-  // Récupérer l'ID de l'étudiant depuis son login
+  // Récupérer l'ID de l'étudiant depuis son login (avec info dropout)
   const student = await db
-    .select({ id: students.id, promoName: students.promoName })
+    .select({ id: students.id, promoName: students.promoName, isDropout: students.isDropout })
     .from(students)
     .where(eq(students.login, login))
     .limit(1);
+
+  // Si l'étudiant existe et est en perdition, ne pas le mettre à jour
+  if (student && student.length > 0 && student[0].isDropout === true) {
+    console.log(`Étudiant ${login} est en perdition, mise à jour ignorée.`);
+    return;
+  }
 
   let studentId: number;
 

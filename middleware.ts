@@ -1,24 +1,31 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse, NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
 /**
- * Middleware hybride pour Stack Auth
+ * Middleware hybride pour Stack Auth + Authentik via NextAuth
  *
  * STRATÉGIE D'AUTHENTIFICATION :
  *
- * 1. Le middleware (Edge Runtime) vérifie la présence des cookies Stack Auth
- *    - Rapide mais limité (pas d'accès complet aux métadonnées)
+ * 1. Vérification des cookies Stack Auth (Edge Runtime)
+ *    - Rapide mais limité : ne contient que l'accès rapide
  *    - Redirige vers /login si aucun cookie trouvé
  *
- * 2. Les Server Components (Node Runtime) vérifient l'authentification complète
- *    - Accès complet au SDK Stack Auth
- *    - Vérification du rôle et des permissions
- *    - Protection finale dans les layouts (app/(dashboard)/layout.tsx)
+ * 2. Vérification NextAuth / Authentik (Edge Runtime)
+ *    - Vérifie le JWT généré par NextAuth
+ *    - Attribue un rôle admin si l'utilisateur fait partie du groupe "authentik Admins"
+ *    - Permet d'utiliser Authentik SSO côté Edge
+ *
+ * 3. Server Components (Node Runtime)
+ *    - Vérification complète côté serveur via Stack Auth ou NextAuth
+ *    - Protection finale des layouts (ex: app/(dashboard)/layout.tsx)
  *
  * Cette approche à deux niveaux garantit :
  * - Performance (Edge Runtime pour vérifications rapides)
  * - Sécurité (Server Components pour vérifications complètes)
- * - Compatibilité (Stack Auth fonctionne mieux dans Node Runtime)
+ * - Compatibilité avec Stack Auth et Authentik
  */
+
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.pathname;
@@ -27,66 +34,75 @@ export async function middleware(req: NextRequest) {
   // 1. ROUTES PUBLIQUES (pas d'auth requise)
   // ========================================
   const publicRoutes = [
-    '/login',           // Page de connexion
-    '/register',        // Page d'inscription
-    '/non-admin',       // Page d'accès refusé
-    '/handler',         // Stack Auth handlers
-    '/hub',             // Hub public
+    '/login', // Page de connexion
+    '/register', // Page d'inscription
+    '/non-admin', // Page d'accès refusé
+    '/handler', // Stack Auth handlers
+    '/hub' // Hub public
   ];
 
-  const isPublicRoute = publicRoutes.some(route => url.startsWith(route));
-
-  if (isPublicRoute) {
+  if (publicRoutes.some((route) => url.startsWith(route))) {
     return NextResponse.next();
   }
 
   // ========================================
-  // 2. ROUTES PROTÉGÉES (auth requise)
+  // 2. VERIFICATION STACK AUTH
   // ========================================
-  // Toutes les routes du dashboard nécessitent une authentification
-  const protectedRoutes = [
-    '/',                // Dashboard home
-    '/planning',        // Planning et sous-routes (/planning/absences, /planning/extraction)
-    '/employees',       // Gestion des employés
-    '/history',         // Historique des modifications
-    '/students',        // Gestion des étudiants
-    '/01deck',          // 01deck
-    '/analytics',       // Analytics
-    '/config',          // Configuration
-    '/customers',       // Clients
-    '/account',         // Compte utilisateur
-    '/promos',          // Promotions
-  ];
+  const cookies = req.cookies;
+  const stackAccessCookie = cookies.get('stack-access');
+  const refreshCookieName = `stack-refresh-${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}--default`;
+  const refreshCookie = cookies.get(refreshCookieName);
 
-  const isProtectedRoute = protectedRoutes.some(route => {
-    // Route exacte ou sous-route
-    return url === route || url.startsWith(route + '/');
-  });
-
-  if (isProtectedRoute) {
-    // Vérification rapide : présence du cookie Stack Auth
-    const cookies = req.cookies;
-    const stackAccessCookie = cookies.get('stack-access');
-    const refreshCookieName = `stack-refresh-${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}--default`;
-    const refreshCookie = cookies.get(refreshCookieName);
-
-    // Si aucun cookie d'authentification trouvé, rediriger vers login
-    if (!stackAccessCookie && !refreshCookie) {
-      console.log('⛔ Middleware - Aucun cookie Stack Auth pour:', url);
-      return NextResponse.redirect(new URL('/login', req.url));
-    }
-
-    // Cookie présent, laisser passer
-    // La vérification complète (rôle, permissions) sera faite par le Server Component
-    console.log('✅ Middleware - Cookie trouvé pour:', url);
+  if (stackAccessCookie || refreshCookie) {
+    // Récupération du rôle Stack (si présent, sinon 'user')
+    const stackRoleCookie = cookies.get('stack-role');
+    const role = stackRoleCookie?.value || 'user';
+    const response = NextResponse.next();
+    response.cookies.set('role', role, { path: '/' }); // Permet d'exposer le rôle côté Server Component
+    console.log('✅ Middleware - Auth Stack trouvée pour:', url, 'Rôle:', role);
+    return response;
   }
 
-  return NextResponse.next();
+  // ========================================
+  // 3. VERIFICATION NEXTAUTH / AUTHENTIK
+  // ========================================
+  const token = await getToken({
+    req,
+    secret: NEXTAUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === 'production'
+  });
+
+  if (token) {
+    // Si l'utilisateur est dans le groupe "authentik Admins", rôle = admin
+    let role = 'user';
+    if (
+      Array.isArray(token.groups) &&
+      token.groups.includes('authentik Admins')
+    ) {
+      role = 'admin';
+    }
+
+    const response = NextResponse.next();
+    response.cookies.set('role', role, { path: '/' }); // Expose le rôle pour Server Components
+    console.log(
+      '✅ Middleware - Auth NextAuth/Authentik trouvée pour:',
+      url,
+      'Rôle:',
+      role
+    );
+    return response;
+  }
+
+  // ========================================
+  // 4. PAS D'AUTHENTIFICATION => REDIRECTION LOGIN
+  // ========================================
+  console.log('⛔ Middleware - Aucun cookie Stack/Auth NextAuth pour:', url);
+  return NextResponse.redirect(new URL('/login', req.url));
 }
 
 export const config = {
   matcher: [
     // Protéger toutes les routes sauf les fichiers statiques et API
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
-  ],
+    '/((?!api|_next/static|_next/image|favicon.ico).*)'
+  ]
 };

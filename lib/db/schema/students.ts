@@ -2,6 +2,19 @@ import { pgTable, text, timestamp, serial, integer, boolean } from 'drizzle-orm/
 import { promotions } from './promotions';
 import { createInsertSchema } from 'drizzle-zod';
 
+// Raisons de perdition possibles
+export const DROPOUT_REASONS = [
+  'abandon',           // Abandon volontaire
+  'exclusion',         // Exclusion
+  'reorientation',     // Réorientation
+  'medical',           // Raisons médicales
+  'personal',          // Raisons personnelles
+  'financial',         // Raisons financières
+  'other'              // Autre
+] as const;
+
+export type DropoutReason = typeof DROPOUT_REASONS[number];
+
 // Student related schemas
 export const students = pgTable('students', {
     id: serial('id').primaryKey(),
@@ -11,7 +24,13 @@ export const students = pgTable('students', {
     availableAt: timestamp('available_at').notNull(),
     promoName: text('promo_name')
         .notNull()
-        .references(() => promotions.name)
+        .references(() => promotions.name),
+    // Champs pour la gestion des étudiants en perdition
+    isDropout: boolean('is_dropout').default(false),
+    dropoutAt: timestamp('dropout_at'),
+    dropoutReason: text('dropout_reason'),  // Une des valeurs de DROPOUT_REASONS
+    dropoutNotes: text('dropout_notes'),    // Notes supplémentaires
+    previousPromo: text('previous_promo')   // Promo avant la mise en perdition
 });
 
 export const studentProjects = pgTable('student_projects', {
@@ -58,14 +77,28 @@ export type SelectStudent = {
     delay_level: string | null;
     golang_project: string | null;
     golang_project_status: string | null;
+    golang_project_position: number | null;
+    golang_project_total: number | null;
     javascript_project: string | null;
     javascript_project_status: string | null;
+    javascript_project_position: number | null;
+    javascript_project_total: number | null;
     rust_project: string | null;
     rust_project_status: string | null;
+    rust_project_position: number | null;
+    rust_project_total: number | null;
     java_project: string | null;
     java_project_status: string | null;
+    java_project_position: number | null;
+    java_project_total: number | null;
     golang_completed: boolean | null;
     javascript_completed: boolean | null;
     rust_completed: boolean | null;
     java_completed: boolean | null;
+    // Champs perdition
+    isDropout: boolean | null;
+    dropoutAt: Date | null;
+    dropoutReason: string | null;
+    dropoutNotes: string | null;
+    previousPromo: string | null;
 };
