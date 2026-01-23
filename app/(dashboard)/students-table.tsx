@@ -17,7 +17,12 @@ import {
   ChevronRight,
   ChevronUp,
   Trash,
-  Search
+  Search,
+  ChevronsLeft,
+  ChevronsRight,
+  UserX,
+  Users,
+  UserCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Update from '@/components/update';
@@ -33,7 +38,30 @@ import { toast } from 'react-hot-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import PromoStatusDisplay from '@/components/promo-status-display';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import debounce from 'lodash.debounce';
+
+interface PromoDates {
+  start: string;
+  'piscine-js-start': string;
+  'piscine-js-end': string;
+  'piscine-rust-java-start': string;
+  'piscine-rust-java-end': string;
+  end: string;
+}
+
+interface PromoConfig {
+  key: string;
+  eventId: number;
+  title: string;
+  dates: PromoDates;
+}
 
 export function StudentsTable({
   students,
@@ -43,7 +71,8 @@ export function StudentsTable({
   totalStudents,
   search,
   promo,
-  eventId
+  eventId,
+  promoConfig
 }: {
   students: SelectStudent[];
   currentOffset: number | null;
@@ -53,9 +82,10 @@ export function StudentsTable({
   search: string;
   promo: string;
   eventId: string;
+  promoConfig?: PromoConfig[];
 }) {
   const router = useRouter();
-  const studentsPerPage = 20;
+  const [studentsPerPage, setStudentsPerPage] = useState(20);
   const [studentsList, setStudentsList] = useState<SelectStudent[]>(students);
   const [totalStudentsState, setTotalStudentsState] = useState(totalStudents);
   const [currentOffsetState, setCurrentOffsetState] = useState(currentOffset);
@@ -65,6 +95,10 @@ export function StudentsTable({
   const [searchValue, setSearchValue] = useState(search);
 
   const [isLoading, setIsLoading] = useState(false);
+
+  // Calculer le nombre total de pages et la page actuelle
+  const totalPages = studentsPerPage === -1 ? 1 : Math.ceil(totalStudentsState / studentsPerPage);
+  const currentPage = studentsPerPage === -1 ? 1 : Math.floor((currentOffsetState || 0) / studentsPerPage) + 1;
   const [sortConfig, setSortConfig] = useState<{
     key: keyof SelectStudent | null;
     direction: 'asc' | 'desc' | null;
@@ -97,6 +131,12 @@ export function StudentsTable({
 
     if (filter && direction) {
       setSortConfig({ key: filter, direction });
+    }
+
+    // Récupérer la limite depuis l'URL
+    const limitParam = searchParams.get('limit');
+    if (limitParam) {
+      setStudentsPerPage(parseInt(limitParam, 10));
     }
   }, [searchParams]);
 
@@ -249,6 +289,39 @@ export function StudentsTable({
     setSortConfig({ key: null, direction: null });
   };
 
+  const changePageSize = (size: string) => {
+    const newSize = parseInt(size, 10);
+    setStudentsPerPage(newSize);
+    const query = new URLSearchParams(searchParams.toString());
+    query.set('limit', size);
+    query.set('offset', '0'); // Reset to first page
+    router.push(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+
+  const goToPage = (page: number) => {
+    if (page < 1 || page > totalPages || studentsPerPage === -1) return;
+    const newOffset = (page - 1) * studentsPerPage;
+    const query = new URLSearchParams(searchParams.toString());
+    query.set('offset', String(newOffset));
+    router.push(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+
+  const goToFirstPage = () => goToPage(1);
+  const goToLastPage = () => goToPage(totalPages);
+
+  const requestDropoutFilter = (filter: 'active' | 'dropout' | 'all') => {
+    const query = new URLSearchParams(searchParams.toString());
+    if (filter === 'active') {
+      query.delete('dropout_filter');
+    } else {
+      query.set('dropout_filter', filter);
+    }
+    query.set('offset', '0');
+    router.push(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+
+  const currentDropoutFilter = searchParams.get('dropout_filter') || 'active';
+
   return (
     <div className="rounded-lg border bg-background p-6 shadow-sm scroll-smooth">
       {/* Header Section */}
@@ -276,12 +349,42 @@ export function StudentsTable({
           {/* Filtres modernisés */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
+              <Button
+                variant={currentDropoutFilter !== 'active' ? 'default' : 'outline'}
+                size="sm"
+                className={currentDropoutFilter === 'dropout' ? 'bg-red-500 hover:bg-red-600' : ''}
+              >
+                {currentDropoutFilter === 'active' && <UserCheck className="h-4 w-4 mr-1" />}
+                {currentDropoutFilter === 'dropout' && <UserX className="h-4 w-4 mr-1" />}
+                {currentDropoutFilter === 'all' && <Users className="h-4 w-4 mr-1" />}
+                {currentDropoutFilter === 'active' ? 'Actifs' : currentDropoutFilter === 'dropout' ? 'Perdition' : 'Tous'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48">
+              <DropdownMenuLabel>Filtrer par statut</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => requestDropoutFilter('active')}>
+                <UserCheck className="h-4 w-4 mr-2 text-green-600" />
+                Étudiants actifs
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestDropoutFilter('dropout')}>
+                <UserX className="h-4 w-4 mr-2 text-red-600" />
+                En perdition
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => requestDropoutFilter('all')}>
+                <Users className="h-4 w-4 mr-2" />
+                Tous les étudiants
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 Statut
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-44">
-              <DropdownMenuLabel>Filtrer par statut</DropdownMenuLabel>
+              <DropdownMenuLabel>Filtrer par projet</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => requestStatus('')}>
                 Tous
@@ -527,6 +630,7 @@ export function StudentsTable({
                   student={student}
                   rowClassName="hover:bg-muted transition-colors rounded-md border-b"
                   cellClassName="px-4 py-3 text-sm text-foreground/90"
+                  promoConfig={promoConfig}
                 />
               ))
             ) : (
@@ -540,39 +644,151 @@ export function StudentsTable({
         </Table>
       </div>
       {/* Footer */}
-      <div className="flex w-full justify-between items-center mt-4">
-        <div className="text-xs text-muted-foreground">
-          Affichage{' '}
-          <strong>
-            {currentOffsetState !== null ? currentOffsetState + 1 : 0}-
-            {currentOffsetState !== null
-              ? Math.min(
-                  currentOffsetState + studentsPerPage,
-                  totalStudentsState
-                )
-              : 0}
-          </strong>{' '}
-          sur <strong>{totalStudentsState}</strong> étudiants
+      <div className="flex flex-col sm:flex-row w-full justify-between items-center gap-4 mt-4">
+        <div className="flex items-center gap-4">
+          <div className="text-xs text-muted-foreground">
+            Affichage{' '}
+            <strong>
+              {currentOffsetState !== null ? currentOffsetState + 1 : 0}-
+              {studentsPerPage === -1
+                ? totalStudentsState
+                : currentOffsetState !== null
+                ? Math.min(
+                    currentOffsetState + studentsPerPage,
+                    totalStudentsState
+                  )
+                : 0}
+            </strong>{' '}
+            sur <strong>{totalStudentsState}</strong> étudiants
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Par page:</span>
+            <Select
+              value={String(studentsPerPage)}
+              onValueChange={changePageSize}
+            >
+              <SelectTrigger className="h-8 w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="-1">Tous</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="flex">
-          <Button
-            onClick={prevPage}
-            variant="ghost"
-            size="sm"
-            disabled={previousOffsetState === null}
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Précédent
-          </Button>
-          <Button
-            onClick={nextPage}
-            variant="ghost"
-            size="sm"
-            disabled={newOffsetState === null}
-          >
-            Suivant
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-1">
+          {studentsPerPage !== -1 && (
+            <>
+              <Button
+                onClick={goToFirstPage}
+                variant="ghost"
+                size="sm"
+                disabled={currentPage === 1}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={prevPage}
+                variant="ghost"
+                size="sm"
+                disabled={previousOffsetState === null}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-1 mx-2">
+                {/* Générer les numéros de pages */}
+                {(() => {
+                  const pages = [];
+                  const maxVisible = 5;
+                  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+                  if (endPage - startPage + 1 < maxVisible) {
+                    startPage = Math.max(1, endPage - maxVisible + 1);
+                  }
+
+                  if (startPage > 1) {
+                    pages.push(
+                      <Button
+                        key={1}
+                        onClick={() => goToPage(1)}
+                        variant={currentPage === 1 ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                      >
+                        1
+                      </Button>
+                    );
+                    if (startPage > 2) {
+                      pages.push(<span key="dots1" className="px-1 text-muted-foreground">...</span>);
+                    }
+                  }
+
+                  for (let i = startPage; i <= endPage; i++) {
+                    if (i === 1 && startPage > 1) continue;
+                    if (i === totalPages && endPage < totalPages) continue;
+                    pages.push(
+                      <Button
+                        key={i}
+                        onClick={() => goToPage(i)}
+                        variant={currentPage === i ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                      >
+                        {i}
+                      </Button>
+                    );
+                  }
+
+                  if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                      pages.push(<span key="dots2" className="px-1 text-muted-foreground">...</span>);
+                    }
+                    pages.push(
+                      <Button
+                        key={totalPages}
+                        onClick={() => goToPage(totalPages)}
+                        variant={currentPage === totalPages ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                      >
+                        {totalPages}
+                      </Button>
+                    );
+                  }
+
+                  return pages;
+                })()}
+              </div>
+              <Button
+                onClick={nextPage}
+                variant="ghost"
+                size="sm"
+                disabled={newOffsetState === null}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                onClick={goToLastPage}
+                variant="ghost"
+                size="sm"
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+              <span className="text-xs text-muted-foreground ml-2">
+                Page {currentPage} / {totalPages}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>
