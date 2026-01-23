@@ -8,6 +8,7 @@ import AlertsPanel from '@/components/alerts-panel';
 import OverviewWidget from '@/components/widgets/overview-widget';
 import RecentActivityWidget from '@/components/widgets/recent-activity-widget';
 import TrackProgressWidget from '@/components/widgets/track-progress-widget';
+import { MyTasksWidgetServer } from '@/components/hub/MyTasksWidgetServer';
 import {
   BarChart3,
   Users,
@@ -120,39 +121,10 @@ export default function DashboardPage() {
           </Suspense>
         </div>
 
-        {/* Quick Actions */}
-        <Card className="border-2">
-          <CardHeader>
-            <CardTitle className="text-lg">Actions Rapides</CardTitle>
-            <CardDescription>Raccourcis utiles pour les tâches courantes</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Button asChild variant="outline" size="sm" className="w-full justify-start">
-              <Link href="/students?status=without+group">
-                <Users className="h-4 w-4 mr-2" />
-                Étudiants sans groupe
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="w-full justify-start">
-              <Link href="/students?delay_level=en+retard">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Étudiants en retard
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="w-full justify-start">
-              <Link href="/students?delay_level=Non+Validé">
-                <GraduationCap className="h-4 w-4 mr-2" />
-                Formations non validées
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="w-full justify-start">
-              <Link href="/config/project-management-new">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Gestion des projets
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        {/* My Tasks Widget */}
+        <Suspense fallback={<Skeleton className="h-[300px] w-full" />}>
+          <MyTasksWidgetServer />
+        </Suspense>
       </div>
 
       {/* Activity & Track Progress Widgets */}
