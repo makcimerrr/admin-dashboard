@@ -151,13 +151,13 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <GalleryVerticalEnd className="size-4" />
+              <a href="/" className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <GalleryVerticalEnd className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-semibold">Zone01 Dashboard</span>
-                  <span className="">v1.0</span>
+                  <span className="text-sm">v1.0</span>
                 </div>
               </a>
             </SidebarMenuButton>
