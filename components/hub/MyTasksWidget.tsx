@@ -126,7 +126,7 @@ export function MyTasksWidget({ userId }: MyTasksWidgetProps) {
             {pendingTasks.slice(0, 5).map((task) => (
               <Link
                 key={task.id}
-                href={`/hub/events/${task.eventId}`}
+                href={`/app/(dashboard)/word_assistant/events/${task.eventId}`}
                 className="block"
               >
                 <div className="flex items-start gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors">
