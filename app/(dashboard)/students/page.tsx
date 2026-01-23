@@ -7,10 +7,20 @@ import AddStudent from '@/components/add-student';
 import TrackStatsDisplay from '@/components/track-stats-display';
 import { Users, GraduationCap } from 'lucide-react';
 
+interface PromoDates {
+  start: string;
+  'piscine-js-start': string;
+  'piscine-js-end': string;
+  'piscine-rust-java-start': string;
+  'piscine-rust-java-end': string;
+  end: string;
+}
+
 interface Promo {
   key: string;
   eventId: number;
   title: string;
+  dates: PromoDates;
 }
 
 interface StudentsPageProps {
@@ -88,6 +98,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             search={search}
             promo={promo}
             eventId={"all"}
+            promoConfig={promos as Promo[]}
           />
         </TabsContent>
         {promos.map(({ key, title }) => (
@@ -101,6 +112,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               search={search}
               promo={key}
               eventId={String(promos.find((p) => p.key === key)?.eventId)}
+              promoConfig={promos as Promo[]}
             />
           </TabsContent>
         ))}
