@@ -41,147 +41,151 @@ import {
 const data = {
   navMain: [
     {
-      title: "Dashboard",
-      url: "/",
-      icon: LayoutDashboardIcon,
+      title: 'Dashboard',
+      url: '/',
+      icon: LayoutDashboardIcon
     },
     {
-      title: "Students",
-      url: "/students",
-      icon: ListIcon,
+      title: 'Students',
+      url: '/students',
+      icon: ListIcon
     },
     {
-      title: "Analytics",
-      url: "/analytics",
-      icon: BarChartIcon,
+      title: 'Analytics',
+      url: '/analytics',
+      icon: BarChartIcon
     },
     {
-      title: "Planning",
-      url: "/planning",
+      title: 'Planning',
+      url: '/planning',
       icon: ClipboardListIcon,
       items: [
         {
-          title: "Absences",
-          url: "/planning/absences",
+          title: 'Absences',
+          url: '/planning/absences'
         },
         {
-          title: "Extraction",
-          url: "/planning/extraction",
+          title: 'Extraction',
+          url: '/planning/extraction'
         },
         {
-          title: "Employés",
-          url: "/employees",
+          title: 'Employés',
+          url: '/employees'
         },
         {
-          title: "Historique",
-          url: "/history",
+          title: 'Historique',
+          url: '/history'
         }
-      ],
+      ]
     },
     {
-      title: "Config",
-      url: "/config",
-      icon: FolderIcon,
+      title: 'Config',
+      url: '/config',
+      icon: FolderIcon
     },
     {
-      title: "01 Deck",
-      url: "/01deck",
-      icon: UsersIcon,
+      title: '01 Deck',
+      url: '/01deck',
+      icon: UsersIcon
     },
     {
-      title: "Événements",
-      url: "/hub/events",
-      icon: CalendarIcon,
-    },
-    {
-      title: "Calendrier",
-      url: "/hub/calendar",
-      icon: ClipboardListIcon,
-    },
+      title: 'Word Assistant',
+      url: '/word_assistant',
+      icon: FileIcon,
+      items: [
+        {
+          title: 'Calendrier',
+          url: '/word_assistant/calendar'
+        },
+        {
+          title: 'Evenements',
+          url: '/word_assistant/events'
+        },
+        {
+          title: 'Templates',
+          url: '/word_assistant/templates'
+        }
+      ]
+    }
   ],
   navClouds: [
     {
-      title: "Capture",
+      title: 'Capture',
       icon: CameraIcon,
       isActive: true,
-      url: "#",
+      url: '#',
       items: [
         {
-          title: "Active Proposals",
-          url: "#",
+          title: 'Active Proposals',
+          url: '#'
         },
         {
-          title: "Archived",
-          url: "#",
-        },
-      ],
+          title: 'Archived',
+          url: '#'
+        }
+      ]
     },
     {
-      title: "Proposal",
+      title: 'Proposal',
       icon: FileTextIcon,
-      url: "#",
+      url: '#',
       items: [
         {
-          title: "Active Proposals",
-          url: "#",
+          title: 'Active Proposals',
+          url: '#'
         },
         {
-          title: "Archived",
-          url: "#",
-        },
-      ],
+          title: 'Archived',
+          url: '#'
+        }
+      ]
     },
     {
-      title: "Prompts",
+      title: 'Prompts',
       icon: FileCodeIcon,
-      url: "#",
+      url: '#',
       items: [
         {
-          title: "Active Proposals",
-          url: "#",
+          title: 'Active Proposals',
+          url: '#'
         },
         {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
+          title: 'Archived',
+          url: '#'
+        }
+      ]
+    }
   ],
   navSecondary: [
     {
-      title: "Settings",
-      url: "#",
-      icon: SettingsIcon,
+      title: 'Settings',
+      url: '#',
+      icon: SettingsIcon
     },
     {
-      title: "Get Help",
-      url: "#",
-      icon: HelpCircleIcon,
+      title: 'Get Help',
+      url: '#',
+      icon: HelpCircleIcon
     },
     {
-      title: "Search",
-      url: "#",
-      icon: SearchIcon,
-    },
+      title: 'Search',
+      url: '#',
+      icon: SearchIcon
+    }
   ],
   documents: [
     {
-      name: "Data Library",
-      url: "/promos/status",
-      icon: DatabaseIcon,
+      name: 'Data Library',
+      url: '/promos/status',
+      icon: DatabaseIcon
     },
     {
-      name: "Reports",
-      url: "/reports",
-      icon: ClipboardListIcon,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: FileIcon,
-    },
-  ],
-}
+      name: 'Reports',
+      url: '/reports',
+      icon: ClipboardListIcon
+    }
+  ]
+};
 
 let User: {
   id?: string
