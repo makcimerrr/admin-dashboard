@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { students, studentSpecialtyProgress } from '@/lib/db/schema';
-import { eq, count } from 'drizzle-orm';
+import { eq, count, and } from 'drizzle-orm';
 
 export async function GET() {
   try {
     const tracks = ['golang', 'javascript', 'rust', 'java'] as const;
-    
-    // Récupérer le total d'étudiants une seule fois
-    const totalQuery = await db.select({ count: count() }).from(students).execute();
+
+    // Récupérer le total d'étudiants une seule fois (exclure les perditions)
+    const totalQuery = await db
+      .select({ count: count() })
+      .from(students)
+      .where(eq(students.isDropout, false))
+      .execute();
     const total = totalQuery[0]?.count || 0;
 
     // Exécuter toutes les requêtes de comptage en parallèle
@@ -30,11 +34,15 @@ export async function GET() {
             break;
         }
 
+        // Exclure les perditions
         const completedQuery = await db
           .select({ count: count() })
           .from(students)
           .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
-          .where(eq(completedColumn, true))
+          .where(and(
+            eq(completedColumn, true),
+            eq(students.isDropout, false)
+          ))
           .execute();
 
         const completed = completedQuery[0]?.count || 0;

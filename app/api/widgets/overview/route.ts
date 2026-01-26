@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { students, studentProjects, promotions } from '@/lib/db/schema';
-import { count, sql } from 'drizzle-orm';
+import { count, sql, eq, and } from 'drizzle-orm';
 
 export async function GET() {
   try {
@@ -12,16 +12,40 @@ export async function GET() {
       lateStudentsResult,
       validatedResult
     ] = await Promise.all([
-      // Total étudiants
-      db.select({ count: count() }).from(students).execute(),
+      // Total étudiants (exclure les perditions)
+      db.select({ count: count() })
+        .from(students)
+        .where(eq(students.isDropout, false))
+        .execute(),
       // Total promotions
       db.select({ count: count() }).from(promotions).execute(),
-      // Étudiants en bonne progression (bien)
-      db.select({ count: count() }).from(studentProjects).where(sql`${studentProjects.delay_level} = 'bien'`).execute(),
-      // Étudiants en retard
-      db.select({ count: count() }).from(studentProjects).where(sql`${studentProjects.delay_level} = 'en retard'`).execute(),
-      // Étudiants validés
-      db.select({ count: count() }).from(studentProjects).where(sql`${studentProjects.delay_level} = 'Validé'`).execute()
+      // Étudiants en bonne progression (bien) - exclure les perditions
+      db.select({ count: count() })
+        .from(studentProjects)
+        .innerJoin(students, eq(studentProjects.student_id, students.id))
+        .where(and(
+          sql`${studentProjects.delay_level} = 'bien'`,
+          eq(students.isDropout, false)
+        ))
+        .execute(),
+      // Étudiants en retard - exclure les perditions
+      db.select({ count: count() })
+        .from(studentProjects)
+        .innerJoin(students, eq(studentProjects.student_id, students.id))
+        .where(and(
+          sql`${studentProjects.delay_level} = 'en retard'`,
+          eq(students.isDropout, false)
+        ))
+        .execute(),
+      // Étudiants validés - exclure les perditions
+      db.select({ count: count() })
+        .from(studentProjects)
+        .innerJoin(students, eq(studentProjects.student_id, students.id))
+        .where(and(
+          sql`${studentProjects.delay_level} = 'Validé'`,
+          eq(students.isDropout, false)
+        ))
+        .execute()
     ]);
 
     const totalStudents = totalStudentsResult[0]?.count || 0;
