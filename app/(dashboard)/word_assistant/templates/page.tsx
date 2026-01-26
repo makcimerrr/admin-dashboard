@@ -71,7 +71,7 @@ export default function TemplatesPage() {
           </p>
         </div>
 
-        <Link href="/app/(dashboard)/word_assistant/templates/new">
+        <Link href="/word_assistant/templates/new">
           <Button size="lg">
             <Plus className="mr-2 h-5 w-5" />
             Nouveau Modèle
@@ -118,7 +118,7 @@ export default function TemplatesPage() {
                   </span>
 
                   <div className="flex gap-2">
-                    <Link href={`/app/(dashboard)/word_assistant/templates/${template.id}`}>
+                    <Link href={`/word_assistant/templates/${template.id}`}>
                       <Button variant="outline" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -147,7 +147,7 @@ export default function TemplatesPage() {
             <p className="text-muted-foreground mb-4">
               Créez votre premier modèle d'événement pour commencer
             </p>
-            <Link href="/app/(dashboard)/word_assistant/templates/new">
+            <Link href="/word_assistant/templates/new">
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 Créer un Modèle

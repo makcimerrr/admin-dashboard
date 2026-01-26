@@ -62,7 +62,7 @@ export default function EventsPage() {
           <p className="text-muted-foreground">Liste des événements instanciés</p>
         </div>
 
-        <Button size="lg" onClick={() => router.push("/hub/events/new")}>
+        <Button size="lg" onClick={() => router.push("/word_assistant/events/new")}>
           <Plus className="mr-2" />
           Nouvel événement
         </Button>
@@ -91,7 +91,7 @@ export default function EventsPage() {
             <p className="text-muted-foreground mb-4">
               Créez votre premier événement pour commencer
             </p>
-            <Button onClick={() => router.push("/hub/events/new")}>
+            <Button onClick={() => router.push("/word_assistant/events/new")}>
               <Plus className="mr-2 h-4 w-4" />
               Créer un événement
             </Button>
@@ -122,7 +122,7 @@ export default function EventsPage() {
                 <div className="flex gap-2">
                   <Button
                     className="flex-1"
-                    onClick={() => router.push(`/hub/events/${event.id}`)}
+                    onClick={() => router.push(`/word_assistant/events/${event.id}`)}
                   >
                     <Eye className="mr-2 h-4 w-4" />
                     Voir timeline
@@ -130,7 +130,7 @@ export default function EventsPage() {
 
                   <Button
                     variant="outline"
-                    onClick={() => router.push(`/hub/events/${event.id}/edit`)}
+                    onClick={() => router.push(`/word_assistant/events/${event.id}/edit`)}
                   >
                     <PenIcon className="h-4 w-4" />
                   </Button>
