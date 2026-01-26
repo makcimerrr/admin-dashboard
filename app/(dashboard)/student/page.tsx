@@ -180,16 +180,19 @@ export default function StudentPage() {
       const giteaData = await giteaResponse.json();
       const userFindData = await userFindResponse.json();
 
-      const latestDate = giteaData.heatmap.reduce(
-        (latest: { timestamp: number }, current: { timestamp: number }) => {
-          return current.timestamp > latest.timestamp ? current : latest;
-        }
-      );
+      let timeMessage = 'Aucune contribution';
 
-      const timeMessage = formatDistanceToNow(
-        new Date(latestDate.timestamp * 1000),
-        { locale: fr }
-      );
+      if (Array.isArray(giteaData.heatmap) && giteaData.heatmap.length > 0) {
+        const latestDate = giteaData.heatmap.reduce(
+          (latest: { timestamp: number }, current: { timestamp: number }) =>
+            current.timestamp > latest.timestamp ? current : latest
+        );
+
+        timeMessage = formatDistanceToNow(
+          new Date(latestDate.timestamp * 1000),
+          { locale: fr }
+        );
+      }
 
       const userData = {
         id: userFindData.user[0].id,
