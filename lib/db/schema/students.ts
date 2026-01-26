@@ -30,7 +30,16 @@ export const students = pgTable('students', {
     dropoutAt: timestamp('dropout_at'),
     dropoutReason: text('dropout_reason'),  // Une des valeurs de DROPOUT_REASONS
     dropoutNotes: text('dropout_notes'),    // Notes supplémentaires
-    previousPromo: text('previous_promo')   // Promo avant la mise en perdition
+    previousPromo: text('previous_promo'),  // Promo avant la mise en perdition/transfert
+    // Champs pour les alternants
+    isAlternant: boolean('is_alternant').default(false),
+    alternantStartDate: timestamp('alternant_start_date'),
+    alternantEndDate: timestamp('alternant_end_date'),
+    companyName: text('company_name'),
+    companyContact: text('company_contact'),        // Nom du tuteur entreprise
+    companyEmail: text('company_email'),
+    companyPhone: text('company_phone'),
+    alternantNotes: text('alternant_notes')
 });
 
 export const studentProjects = pgTable('student_projects', {
@@ -101,4 +110,13 @@ export type SelectStudent = {
     dropoutReason: string | null;
     dropoutNotes: string | null;
     previousPromo: string | null;
+    // Champs alternant
+    isAlternant: boolean | null;
+    alternantStartDate: Date | null;
+    alternantEndDate: Date | null;
+    companyName: string | null;
+    companyContact: string | null;
+    companyEmail: string | null;
+    companyPhone: string | null;
+    alternantNotes: string | null;
 };

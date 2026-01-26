@@ -1,6 +1,6 @@
 import { db } from '../config';
 import { students, studentSpecialtyProgress } from '../schema';
-import { eq, and, count, sql } from 'drizzle-orm';
+import { eq, and, count } from 'drizzle-orm';
 
 export interface TrackStats {
   track: string;
@@ -35,7 +35,11 @@ export async function getTrackStatsByPromo(promoName: string | null): Promise<Tr
       }
 
       // Construire la requête pour compter les étudiants avec le tronc terminé
-      const completedConditions = [eq(completedColumn, true)];
+      // Exclure les étudiants en perdition
+      const completedConditions = [
+        eq(completedColumn, true),
+        eq(students.isDropout, false)
+      ];
       if (promoName) {
         completedConditions.push(eq(students.promoName, promoName));
       }
@@ -49,7 +53,11 @@ export async function getTrackStatsByPromo(promoName: string | null): Promise<Tr
       const completedResult = await completedQuery.execute();
 
       // Construire la requête pour compter les étudiants avec le tronc en cours
-      const inProgressConditions = [eq(completedColumn, false)];
+      // Exclure les étudiants en perdition
+      const inProgressConditions = [
+        eq(completedColumn, false),
+        eq(students.isDropout, false)
+      ];
       if (promoName) {
         inProgressConditions.push(eq(students.promoName, promoName));
       }

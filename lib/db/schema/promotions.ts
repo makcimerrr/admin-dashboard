@@ -10,7 +10,11 @@ export const promosEnum = pgEnum('promos', [
 
 export const promotions = pgTable('promotions', {
     promoId: text('promo_id').primaryKey(),
-    name: text('name').unique().notNull()
+    name: text('name').unique().notNull(),
+    // Champs pour l'archivage
+    isArchived: boolean('is_archived').default(false),
+    archivedAt: timestamp('archived_at'),
+    archivedReason: text('archived_reason')
 });
 
 export const delayStatus = pgTable('delays_status', {
