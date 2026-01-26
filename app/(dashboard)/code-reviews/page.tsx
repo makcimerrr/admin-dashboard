@@ -1,3 +1,5 @@
+'use client';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Card,
@@ -11,54 +13,65 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ClipboardCheck, ArrowRight, Calendar, Users } from 'lucide-react';
 import { getActivePromotions } from '@/lib/config/promotions';
 
-export default async function CodeReviewsPage() {
-  const promotions = getActivePromotions();
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
-
-  async function safeFetch(path: string): Promise<any[]> {
-    try {
-      const url = new URL(path, baseUrl).toString();
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) {
-        const text = await res.text();
-        console.error(`safeFetch failed: ${url} -> ${res.status}`, text);
-        return [];
-      }
-      const data = await res.json();
-      // Server-side debug: logs will appear in the Next.js server terminal
-      /*try {
-        console.log(
-          `safeFetch success: ${url} ->`,
-          Array.isArray(data) ? `array(${data.length})` : data
-        );
-      } catch (e) {
-        /!* ignore logging errors *!/
-      }*/
-      return data;
-    } catch (err) {
-      console.error(`safeFetch error for ${path}:`, err);
+async function safeFetch(path: string): Promise<any[]> {
+  try {
+    const res = await fetch(path);
+    if (!res.ok) {
+      console.error(`safeFetch failed: ${path} -> ${res.status}`);
       return [];
     }
+    return await res.json();
+  } catch (err) {
+    console.error(`safeFetch error for ${path}:`, err);
+    return [];
   }
+}
 
-  const [recentReviews, urgentReviews] = await Promise.all([
-    safeFetch('/api/code-reviews/recent'),
-    safeFetch('/api/code-reviews/urgent')
-  ]);
+export default function CodeReviewsPage() {
+  const [recentReviews, setRecentReviews] = useState<any[] | null>(null);
+  const [urgentReviews, setUrgentReviews] = useState<any[] | null>(null);
+  const [promotions, setPromotions] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // Server-side debug: these appear in the server terminal (not the browser console)
-  /*console.log(
-    'fetched recentReviews count:',
-    Array.isArray(recentReviews) ? recentReviews.length : typeof recentReviews
-  );
-  console.log(
-    'fetched urgentReviews count:',
-    Array.isArray(urgentReviews) ? urgentReviews.length : typeof urgentReviews
-  );*/
+  useEffect(() => {
+    let mounted = true;
+
+    async function load() {
+      try {
+        const [recent, urgent] = await Promise.all([
+          safeFetch('/api/code-reviews/recent'),
+          safeFetch('/api/code-reviews/urgent')
+        ]);
+        if (!mounted) return;
+        setRecentReviews(recent);
+        setUrgentReviews(urgent);
+      } catch (e) {
+        if (!mounted) return;
+        setError('Erreur lors du chargement des données.');
+        setRecentReviews([]);
+        setUrgentReviews([]);
+      }
+    }
+
+    // load promotions (local config)
+    try {
+      const promos = getActivePromotions();
+      setPromotions(promos);
+    } catch (e) {
+      // if promotions fail, keep empty
+      console.error('Failed to load promotions', e);
+    }
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const isLoading = recentReviews === null || urgentReviews === null;
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
           <ClipboardCheck className="h-6 w-6 text-primary" />
@@ -71,9 +84,7 @@ export default async function CodeReviewsPage() {
         </div>
       </div>
 
-      {/* Aperçu des code reviews */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Derniers code reviews */}
         <Card>
           <CardHeader>
             <CardTitle>Derniers code reviews réalisés</CardTitle>
@@ -82,7 +93,7 @@ export default async function CodeReviewsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!recentReviews || recentReviews.length === 0 ? (
+            {isLoading ? (
               <div className="space-y-3">
                 {[...Array(3)].map((_, i) => (
                   <div key={i} className="flex items-center justify-between">
@@ -94,7 +105,9 @@ export default async function CodeReviewsPage() {
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : error ? (
+              <div className="p-4 text-sm text-destructive">{error}</div>
+            ) : recentReviews && recentReviews.length > 0 ? (
               <ul className="space-y-3">
                 {recentReviews.map((review: any) => (
                   <li key={review.id}>
@@ -123,11 +136,15 @@ export default async function CodeReviewsPage() {
                   </li>
                 ))}
               </ul>
+            ) : (
+              <div className="p-4 text-sm text-muted-foreground">
+                <p className="font-medium">Aucun code review trouvé</p>
+                <p className="text-xs">Aucune entrée récente disponible.</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Code reviews urgents */}
         <Card className="border-destructive/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -138,19 +155,21 @@ export default async function CodeReviewsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {!urgentReviews || urgentReviews.length === 0 ? (
+            {isLoading ? (
               <div className="space-y-3">
                 {[...Array(2)].map((_, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
                     </div>
-                    <Skeleton className="h-5 w-14 rounded-full" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : error ? (
+              <div className="p-4 text-sm text-destructive">{error}</div>
+            ) : urgentReviews && urgentReviews.length > 0 ? (
               <ul className="space-y-3">
                 {urgentReviews.map((review: any) => (
                   <li
@@ -167,12 +186,18 @@ export default async function CodeReviewsPage() {
                   </li>
                 ))}
               </ul>
+            ) : (
+              <div className="p-4 text-sm text-muted-foreground">
+                <p className="font-medium">Aucun code review urgent</p>
+                <p className="text-xs">
+                  Aucun groupe n'est actuellement marqué comme urgent.
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Liste des promotions */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -185,42 +210,54 @@ export default async function CodeReviewsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {promotions.map((promo) => (
-              <Link
-                key={promo.eventId}
-                href={`/code-reviews/${promo.eventId}`}
-                className="block"
-              >
-                <Card className="hover:shadow-md transition-all cursor-pointer border-2 hover:border-primary/50 h-full">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-lg">{promo.key}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {promo.title}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      <span>
-                        {new Date(promo.dates.start).toLocaleDateString(
-                          'fr-FR'
-                        )}{' '}
-                        -{' '}
-                        {new Date(promo.dates.end).toLocaleDateString('fr-FR')}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+            {promotions.length === 0
+              ? [...Array(3)].map((_, i) => (
+                  <div key={i} className="block">
+                    <Card className="h-full">
+                      <CardContent className="p-4">
+                        <Skeleton className="h-6 w-32 mb-2" />
+                        <Skeleton className="h-4 w-48" />
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))
+              : promotions.map((promo) => (
+                  <Link
+                    key={promo.eventId}
+                    href={`/code-reviews/${promo.eventId}`}
+                    className="block"
+                  >
+                    <Card className="hover:shadow-md transition-all cursor-pointer border-2 hover:border-primary/50 h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-lg">{promo.key}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {promo.title}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            {new Date(promo.dates.start).toLocaleDateString(
+                              'fr-FR'
+                            )}{' '}
+                            -{' '}
+                            {new Date(promo.dates.end).toLocaleDateString(
+                              'fr-FR'
+                            )}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Info */}
       <Card className="bg-muted/30">
         <CardContent className="p-4">
           <p className="text-sm text-muted-foreground">
