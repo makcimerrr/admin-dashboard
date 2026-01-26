@@ -11,9 +11,12 @@ export async function GET(request: Request) {
 
     const alerts: Alert[] = [];
 
+    // Exclure les étudiants en perdition de toutes les requêtes
+    const notDropoutCondition = eq(students.isDropout, false);
+
     // Exécuter toutes les requêtes en parallèle
     const [lateStudents, withoutGroupStudents, notValidatedStudents, incompleteTracksStudents] = await Promise.all([
-      // 1. Étudiants en retard critique
+      // 1. Étudiants en retard critique (hors perditions)
       db
         .select({
           id: students.id,
@@ -26,13 +29,14 @@ export async function GET(request: Request) {
         .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
         .where(
           and(
+            notDropoutCondition,
             eq(studentProjects.delay_level, 'en retard'),
             promoFilter ? eq(students.promoName, promoFilter) : sql`true`
           )
         )
         .execute(),
 
-      // 2. Étudiants sans groupe
+      // 2. Étudiants sans groupe (hors perditions)
       db
         .select({
           id: students.id,
@@ -44,13 +48,14 @@ export async function GET(request: Request) {
         .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
         .where(
           and(
+            notDropoutCondition,
             eq(studentProjects.progress_status, 'without group'),
             promoFilter ? eq(students.promoName, promoFilter) : sql`true`
           )
         )
         .execute(),
 
-      // 3. Étudiants non validés
+      // 3. Étudiants non validés (hors perditions)
       db
         .select({
           id: students.id,
@@ -62,13 +67,14 @@ export async function GET(request: Request) {
         .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
         .where(
           and(
+            notDropoutCondition,
             eq(studentProjects.delay_level, 'Non Validé'),
             promoFilter ? eq(students.promoName, promoFilter) : sql`true`
           )
         )
         .execute(),
 
-      // 4. Étudiants bloqués sur un tronc
+      // 4. Étudiants bloqués sur un tronc (hors perditions)
       db
         .select({
           id: students.id,
@@ -84,6 +90,7 @@ export async function GET(request: Request) {
         .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
         .where(
           and(
+            notDropoutCondition,
             or(
               eq(studentSpecialtyProgress.golang_completed, false),
               eq(studentSpecialtyProgress.javascript_completed, false)

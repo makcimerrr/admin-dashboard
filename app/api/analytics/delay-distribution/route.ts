@@ -12,7 +12,11 @@ export async function GET(request: Request) {
     const delayData = [];
 
     for (const level of delayLevels) {
-      const conditions = [sql`${studentProjects.delay_level} = ${level}`];
+      // Toujours exclure les étudiants en perdition
+      const conditions = [
+        sql`${studentProjects.delay_level} = ${level}`,
+        eq(students.isDropout, false)
+      ];
 
       if (promoKey && promoKey !== 'all') {
         conditions.push(eq(students.promoName, promoKey));
@@ -21,7 +25,7 @@ export async function GET(request: Request) {
       const query = db
         .select({ count: count() })
         .from(studentProjects)
-        .leftJoin(students, eq(studentProjects.student_id, students.id))
+        .innerJoin(students, eq(studentProjects.student_id, students.id))
         .where(and(...conditions));
 
       const result = await query.execute();
