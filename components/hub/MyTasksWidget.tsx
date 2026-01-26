@@ -19,21 +19,26 @@ interface MyTask {
 
 interface MyTasksWidgetProps {
   userId?: string;
+  displayName?: string;
 }
 
-export function MyTasksWidget({ userId }: MyTasksWidgetProps) {
+export function MyTasksWidget({ userId, displayName }: MyTasksWidgetProps) {
   const [tasks, setTasks] = useState<MyTask[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadTasks = async () => {
-      if (!userId) {
+      if (!userId && !displayName) {
         setLoading(false);
         return;
       }
 
       try {
-        const res = await fetch(`/api/hub/my-tasks?userId=${userId}`);
+        const params = new URLSearchParams();
+        if (userId) params.set("userId", userId);
+        if (displayName) params.set("displayName", displayName);
+
+        const res = await fetch(`/api/hub/my-tasks?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setTasks(data);
@@ -45,7 +50,7 @@ export function MyTasksWidget({ userId }: MyTasksWidgetProps) {
       }
     };
     loadTasks();
-  }, [userId]);
+  }, [userId, displayName]);
 
   const getStatusIcon = (status: MyTask["status"]) => {
     switch (status) {
@@ -87,7 +92,7 @@ export function MyTasksWidget({ userId }: MyTasksWidgetProps) {
     );
   }
 
-  if (!userId) {
+  if (!userId && !displayName) {
     return (
       <Card>
         <CardHeader>
@@ -118,15 +123,13 @@ export function MyTasksWidget({ userId }: MyTasksWidgetProps) {
       </CardHeader>
       <CardContent>
         {pendingTasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aucune tâche assignée
-          </p>
+          <p className="text-sm text-muted-foreground">Aucune tâche assignée</p>
         ) : (
           <div className="space-y-3">
             {pendingTasks.slice(0, 5).map((task) => (
               <Link
                 key={task.id}
-                href={`/app/(dashboard)/word_assistant/events/${task.eventId}`}
+                href={`/word_assistant/events/${task.eventId}`}
                 className="block"
               >
                 <div className="flex items-start gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors">
@@ -138,7 +141,7 @@ export function MyTasksWidget({ userId }: MyTasksWidgetProps) {
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-muted-foreground">
-                        {format(new Date(task.date), "d MMM", { locale: fr })}
+                        {format(new Date(task.date), 'd MMM', { locale: fr })}
                       </span>
                       <Badge variant="outline" className="text-xs py-0">
                         {getStatusLabel(task.status)}
@@ -150,7 +153,7 @@ export function MyTasksWidget({ userId }: MyTasksWidgetProps) {
             ))}
             {pendingTasks.length > 5 && (
               <Link
-                href="/hub/calendar"
+                href="/word_assistant/calendar"
                 className="text-sm text-primary hover:underline block text-center"
               >
                 Voir toutes les tâches ({pendingTasks.length})
