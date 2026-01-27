@@ -18,6 +18,7 @@ import { getAuditsByPromoAndTrack } from '@/lib/db/services/audits';
 import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { GroupsTable } from '@/components/code-reviews/groups-table';
+import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
 import type { Track } from '@/lib/db/schema/audits';
 
 interface PageProps {
@@ -63,6 +64,11 @@ async function PromoContent({ promoId }: { promoId: string }) {
         auditorName?: string;
         auditDate?: string;
         activeMembers: number;
+        // Nouveaux champs
+        hasWarnings?: boolean;
+        warningsCount?: number;
+        validatedCount?: number;
+        priority?: 'urgent' | 'warning' | 'normal';
     }[] = [];
 
     for (const track of TRACKS) {
@@ -86,6 +92,28 @@ async function PromoContent({ promoId }: { promoId: string }) {
                 // Ignorer les groupes où tous les membres sont en perdition
                 if (activeMembers === 0) continue;
 
+                // Calculer les stats de validation si audité
+                let hasWarnings = false;
+                let warningsCount = 0;
+                let validatedCount = 0;
+                let priority: 'urgent' | 'warning' | 'normal' = 'normal';
+
+                if (audit) {
+                    const globalWarnings = audit.warnings?.length || 0;
+                    const memberWarnings = audit.results.reduce((sum, r) => sum + (r.warnings?.length || 0), 0);
+                    warningsCount = globalWarnings + memberWarnings;
+                    hasWarnings = warningsCount > 0;
+                    validatedCount = audit.results.filter(r => r.validated).length;
+
+                    const validationRate = activeMembers > 0 ? (validatedCount / activeMembers) * 100 : 100;
+
+                    if (hasWarnings || validationRate < 30) {
+                        priority = 'urgent';
+                    } else if (validationRate < 50) {
+                        priority = 'warning';
+                    }
+                }
+
                 allGroups.push({
                     groupId: group.groupId,
                     projectName,
@@ -97,6 +125,10 @@ async function PromoContent({ promoId }: { promoId: string }) {
                     auditorName: audit?.auditorName,
                     auditDate: audit?.createdAt.toISOString(),
                     activeMembers,
+                    hasWarnings,
+                    warningsCount,
+                    validatedCount,
+                    priority,
                 });
             }
         }
@@ -118,9 +150,47 @@ async function PromoContent({ promoId }: { promoId: string }) {
         };
     }
 
-    // Trier: non audités en premier, puis par projet
+    // Évaluer les priorités des groupes en attente
+    const pendingGroups = allGroups.filter(g => !g.isAudited);
+    const pendingEvaluation = await evaluatePendingPriorities(
+        String(promo.eventId),
+        pendingGroups.map(g => ({
+            groupId: g.groupId,
+            projectName: g.projectName,
+            track: g.track,
+            members: g.members.map(m => ({ login: m.login, isDropout: m.isDropout })),
+            activeMembers: g.activeMembers,
+        }))
+    );
+
+    // Créer un map des priorités évaluées
+    const pendingPriorityMap = new Map(
+        pendingEvaluation.groups.map(g => [g.groupId, g])
+    );
+
+    // Mettre à jour les groupes en attente avec leurs priorités évaluées
+    for (const group of allGroups) {
+        if (!group.isAudited) {
+            const evalData = pendingPriorityMap.get(group.groupId);
+            if (evalData) {
+                group.priority = evalData.priority;
+                // Stocker les raisons dans un champ temporaire pour affichage
+                (group as any).priorityReasons = evalData.reasons;
+                (group as any).priorityScore = evalData.priorityScore;
+            }
+        }
+    }
+
+    // Trier: par priorité d'abord (urgent > warning > normal), puis non audités, puis par projet
+    const priorityOrder = { urgent: 0, warning: 1, normal: 2 };
     allGroups.sort((a, b) => {
+        // D'abord par statut audité
         if (a.isAudited !== b.isAudited) return a.isAudited ? 1 : -1;
+        // Ensuite par priorité
+        const priorityA = priorityOrder[a.priority || 'normal'];
+        const priorityB = priorityOrder[b.priority || 'normal'];
+        if (priorityA !== priorityB) return priorityA - priorityB;
+        // Enfin par nom de projet
         return a.projectName.localeCompare(b.projectName);
     });
 

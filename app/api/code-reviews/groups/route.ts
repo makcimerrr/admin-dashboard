@@ -23,6 +23,11 @@ export interface GroupWithAuditStatus {
     auditorName?: string;
     auditDate?: string;
     activeMembers: number;
+    // Champs de priorité (calculés automatiquement)
+    hasWarnings?: boolean;
+    warningsCount?: number;
+    validatedCount?: number;
+    priority?: 'urgent' | 'warning' | 'normal';
 }
 
 /**
@@ -99,6 +104,37 @@ export async function GET(request: NextRequest) {
                     // Compter les membres actifs (non-dropout)
                     const activeMembers = membersWithDropout.filter(m => !m.isDropout).length;
 
+                    // Calculer la priorité automatiquement basée sur les données de l'audit
+                    let priority: 'urgent' | 'warning' | 'normal' | undefined;
+                    let hasWarnings = false;
+                    let warningsCount = 0;
+                    let validatedCount: number | undefined;
+
+                    if (audit) {
+                        // Compter les warnings globaux + warnings par membre
+                        const globalWarnings = audit.warnings?.length || 0;
+                        const memberWarnings = audit.results?.reduce((sum, r) => sum + (r.warnings?.length || 0), 0) || 0;
+                        warningsCount = globalWarnings + memberWarnings;
+                        hasWarnings = warningsCount > 0;
+
+                        // Compter les validations
+                        validatedCount = audit.results?.filter(r => r.validated).length || 0;
+                        const totalMembers = audit.results?.length || 0;
+                        const validationRate = totalMembers > 0 ? (validatedCount / totalMembers) * 100 : 100;
+
+                        // Logique de priorité automatique:
+                        // - urgent: warnings > 0 OU taux de validation < 30%
+                        // - warning: taux de validation entre 30% et 50%
+                        // - normal: sinon
+                        if (hasWarnings || validationRate < 30) {
+                            priority = 'urgent';
+                        } else if (validationRate < 50) {
+                            priority = 'warning';
+                        } else {
+                            priority = 'normal';
+                        }
+                    }
+
                     groups.push({
                         groupId: group.groupId,
                         projectName,
@@ -110,6 +146,10 @@ export async function GET(request: NextRequest) {
                         auditorName: audit?.auditorName,
                         auditDate: audit?.createdAt.toISOString(),
                         activeMembers,
+                        hasWarnings,
+                        warningsCount,
+                        validatedCount,
+                        priority,
                     });
                 }
             }
