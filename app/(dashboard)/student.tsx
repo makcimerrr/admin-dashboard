@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, CheckCircle2, ExternalLink, UserX, UserCheck, AlertTriangle } from 'lucide-react';
+import { MoreHorizontal, CheckCircle2, ExternalLink, UserX, UserCheck, AlertTriangle, Briefcase } from 'lucide-react';
 import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
@@ -189,7 +189,41 @@ export function Student({ student, rowClassName, cellClassName, promoConfig }: {
     }
   };
 
+  const handleAlternantAction = async (action: 'set' | 'remove') => {
+    setIsLoading(true);
+    try {
+      if (action === 'set') {
+        const response = await fetch(`/api/student/${student.id}/alternant`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (response.ok) {
+          toast.success('Étudiant marqué comme alternant');
+          router.refresh();
+        } else {
+          toast.error('Erreur lors du marquage');
+        }
+      } else {
+        const response = await fetch(`/api/student/${student.id}/alternant`, {
+          method: 'DELETE'
+        });
+        if (response.ok) {
+          toast.success('Statut alternant retiré');
+          router.refresh();
+        } else {
+          toast.error('Erreur lors de la mise à jour');
+        }
+      }
+    } catch (error) {
+      toast.error('Erreur de connexion');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const isDropout = student.isDropout === true;
+  const isAlternant = student.isAlternant === true;
 
   return (
     <>
@@ -226,6 +260,19 @@ export function Student({ student, rowClassName, cellClassName, promoConfig }: {
                             <TooltipContent>
                               <p className="text-xs">Étudiant en perdition</p>
                               {student.dropoutReason && <p className="text-xs text-muted-foreground">Raison: {student.dropoutReason}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {isAlternant && (
+                        <TooltipProvider>
+                          <Tooltip delayDuration={200}>
+                            <TooltipTrigger>
+                              <Briefcase className="h-3.5 w-3.5 text-blue-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Alternant</p>
+                              {student.companyName && <p className="text-xs text-muted-foreground">{student.companyName}</p>}
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -443,6 +490,30 @@ export function Student({ student, rowClassName, cellClassName, promoConfig }: {
                 >
                   <UserX className="h-4 w-4 mr-2" />
                   Marquer en perdition
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {isAlternant ? (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAlternantAction('remove');
+                  }}
+                  className="cursor-pointer text-gray-600 focus:text-gray-600"
+                >
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Retirer statut alternant
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAlternantAction('set');
+                  }}
+                  className="cursor-pointer text-blue-600 focus:text-blue-600"
+                >
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Marquer alternant
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
