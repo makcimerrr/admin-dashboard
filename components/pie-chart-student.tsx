@@ -107,27 +107,27 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
       const chartConfig = {
         bien: {
           label: 'Bien',
-          color: 'hsl(var(--chart-1))'
+          color: 'var(--chart-1)'
         },
         retard: {
           label: 'En Retard',
-          color: 'hsl(var(--chart-2))'
+          color: 'var(--chart-2)'
         },
         avance: {
           label: 'En Avance',
-          color: 'hsl(var(--chart-3))'
+          color: 'var(--chart-3)'
         },
         spécialité: {
           label: 'Spécialité',
-          color: 'hsl(var(--chart-4))'
+          color: 'var(--chart-4)'
         },
         validé: {
           label: 'Validé',
-          color: 'hsl(var(--chart-5))'
+          color: 'var(--chart-5)'
         },
         nonValidé: {
           label: 'Non Validé',
-          color: 'hsl(var(--chart-6))'
+          color: 'var(--chart-6)'
         }
       } satisfies ChartConfig;
 

@@ -53,11 +53,11 @@ function formatNumber(value: number): number {
 const chartConfig = {
   bien: {
     label: 'Bien',
-    color: 'hsl(var(--chart-1))'
+    color: 'var(--chart-1)'
   },
   en_retard: {
     label: 'En Retard',
-    color: 'hsl(var(--chart-2))'
+    color: 'var(--chart-2)'
   }
 } satisfies ChartConfig;
 
