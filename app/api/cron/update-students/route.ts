@@ -415,14 +415,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // D'abord, mettre à jour le timeline
-    // Use a trusted internal base URL instead of user-controlled request.nextUrl.origin
-    const internalBase = process.env.NEXT_PUBLIC_BASE_URL;
-    if (!internalBase) {
-      throw new Error(
-        'NEXT_PUBLIC_BASE_URL must be set to call internal endpoints'
-      );
-    }
-    await fetch(`${internalBase}/api/timeline_project`, { method: 'POST' });
+    await fetch('/api/timeline_project');
 
     // Récupérer les promos archivées pour les exclure
     const archivedPromos = await getArchivedPromotions();
