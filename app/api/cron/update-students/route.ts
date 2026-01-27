@@ -192,7 +192,7 @@ function calculateDelayLevel(
   let promoRustProject: string | null = null;
   let promoJavaProject: string | null = null;
 
-  if (typeof currentPromoProject === 'object' && currentPromoProject !== null) {
+  if (typeof currentPromoProject === 'object') {
     isMultiTrack = true;
     promoRustProject = (currentPromoProject as { rust?: string }).rust ?? null;
     promoJavaProject = (currentPromoProject as { java?: string }).java ?? null;
@@ -415,14 +415,18 @@ export async function GET(request: NextRequest) {
   const rawPromoId = request.nextUrl.searchParams.get('promoId');
   let promoId: string | null = null;
   if (rawPromoId) {
-    const matchedPromo = promotions.find((p) => String(p.eventId) === rawPromoId);
+    // Normalize and canonicalize using the trusted promotions list
+    const matchedPromo = promotions.find(
+      (p) => String(p.eventId) === rawPromoId
+    );
     if (!matchedPromo) {
       return NextResponse.json(
         { success: false, error: `Invalid promoId: ${rawPromoId}` },
         { status: 400 }
       );
     }
-    promoId = rawPromoId;
+    // Use the canonical eventId from the trusted source instead of the raw input
+    promoId = String(matchedPromo.eventId);
   }
 
   try {
