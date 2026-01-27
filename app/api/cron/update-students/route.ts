@@ -411,7 +411,19 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const promoId = request.nextUrl.searchParams.get('promoId');
+  // Validate promoId against known promotions to avoid using user-controlled values in requests
+  const rawPromoId = request.nextUrl.searchParams.get('promoId');
+  let promoId: string | null = null;
+  if (rawPromoId) {
+    const matchedPromo = promotions.find((p) => String(p.eventId) === rawPromoId);
+    if (!matchedPromo) {
+      return NextResponse.json(
+        { success: false, error: `Invalid promoId: ${rawPromoId}` },
+        { status: 400 }
+      );
+    }
+    promoId = rawPromoId;
+  }
 
   try {
     // D'abord, mettre à jour le timeline
