@@ -28,6 +28,12 @@ export const audits = pgTable('audits', {
     summary: text('summary'),                                  // Compte rendu global
     warnings: jsonb('warnings').$type<string[]>().default([]), // Warnings globaux
 
+    // Statut et priorité
+    priority: varchar('priority', { length: 20 }).default('normal'), // urgent | warning | normal
+    isArchived: boolean('is_archived').default(false),
+    validatedCount: integer('validated_count').default(0),    // Nombre de validations (dénormalisé)
+    totalMembers: integer('total_members').default(0),         // Nombre total de membres
+
     // Auditeur
     auditorId: integer('auditor_id').references(() => users.id),
     auditorName: varchar('auditor_name', { length: 255 }).notNull(), // Dénormalisé pour affichage rapide
@@ -91,6 +97,10 @@ export const auditResultsRelations = relations(auditResults, ({ one }) => ({
 // Troncs valides
 export const TRACKS = ['Golang', 'Javascript', 'Rust', 'Java'] as const;
 export type Track = typeof TRACKS[number];
+
+// Niveaux de priorité
+export const PRIORITIES = ['urgent', 'warning', 'normal'] as const;
+export type Priority = typeof PRIORITIES[number];
 
 // Schémas Zod pour validation
 export const insertAuditSchema = createInsertSchema(audits);

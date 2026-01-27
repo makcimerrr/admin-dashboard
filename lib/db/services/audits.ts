@@ -1,5 +1,5 @@
 import { db } from '@/lib/db/config';
-import { eq, desc, and, inArray, not } from 'drizzle-orm';
+import { eq, desc, and, inArray, not, sql, or, isNull, gt, lt } from 'drizzle-orm';
 import {
   audits,
   auditResults,
@@ -7,7 +7,8 @@ import {
   type NewAuditResult,
   type Audit,
   type AuditWithResults,
-  type Track
+  type Track,
+  type Priority
 } from '@/lib/db/schema/audits';
 import { GroupWithAuditStatus } from '../../../app/api/code-reviews/groups/route';
 import promoConfig from '../../../config/promoConfig.json';
@@ -69,9 +70,58 @@ export async function getAuditsByPromoAndTrack(
 }
 
 /**
- * Récupère les derniers code reviews pour le dashboard
+ * Types pour les données enrichies des widgets
  */
-export async function getRecentCodeReviews(limit: number = 5) {
+export interface RecentReviewData {
+  id: number;
+  projectName: string;
+  groupId: string;
+  groupMembers: string[];
+  promotionName: string;
+  promoId: string;
+  track: string;
+  reviewedAt: Date;
+  auditorName: string;
+  // Statuts
+  status: 'OK' | 'WARNING' | 'CRITICAL';
+  priority: Priority;
+  hasWarnings: boolean;
+  warningsCount: number;
+  // Validation
+  validatedCount: number;
+  totalMembers: number;
+  validationRate: number;
+  // Warnings détaillés
+  globalWarnings: string[];
+  memberWarnings: { login: string; warnings: string[] }[];
+}
+
+export interface UrgentReviewData {
+  id: string;
+  type: 'audit_warning' | 'low_validation' | 'pending_old' | 'pending_recent';
+  groupId: string;
+  projectName: string;
+  promoId: string;
+  promotionName: string;
+  track: string;
+  reason: string;
+  reasonDetail?: string;
+  priority: 'urgent' | 'warning' | 'info';
+  // Pour les audits existants
+  auditId?: number;
+  validationRate?: number;
+  warningsCount?: number;
+  auditorName?: string;
+  auditDate?: Date;
+  // Pour les groupes non audités
+  daysPending?: number;
+  membersCount?: number;
+}
+
+/**
+ * Récupère les derniers code reviews pour le dashboard (version enrichie)
+ */
+export async function getRecentCodeReviews(limit: number = 5): Promise<RecentReviewData[]> {
   const auditsList = await db.query.audits.findMany({
     orderBy: [desc(audits.createdAt)],
     limit,
@@ -86,69 +136,142 @@ export async function getRecentCodeReviews(limit: number = 5) {
     );
     const promotionName = promo?.key ?? `Promotion ${audit.promoId}`;
 
+    const globalWarnings = audit.warnings || [];
+    const memberWarnings = audit.results
+      .filter((r) => r.warnings && r.warnings.length > 0)
+      .map((r) => ({ login: r.studentLogin, warnings: r.warnings || [] }));
+
+    const totalWarnings = globalWarnings.length + memberWarnings.reduce((sum, m) => sum + m.warnings.length, 0);
+    const validatedCount = audit.results.filter((r) => r.validated).length;
+    const totalMembers = audit.results.length;
+    const validationRate = totalMembers > 0 ? Math.round((validatedCount / totalMembers) * 100) : 0;
+
+    // Déterminer le statut
+    let status: 'OK' | 'WARNING' | 'CRITICAL' = 'OK';
+    if (totalWarnings > 0 || validationRate < 50) {
+      status = validationRate < 30 || totalWarnings > 2 ? 'CRITICAL' : 'WARNING';
+    }
+
+    // Déterminer la priorité
+    let priority: Priority = audit.priority as Priority || 'normal';
+    if (status === 'CRITICAL') priority = 'urgent';
+    else if (status === 'WARNING') priority = 'warning';
+
     return {
       id: audit.id,
       projectName: audit.projectName,
-      groupName: audit.groupId,
+      groupId: audit.groupId,
       groupMembers: audit.results.map((r) => r.studentLogin),
       promotionName,
+      promoId: audit.promoId,
+      track: audit.track,
       reviewedAt: audit.createdAt,
-      status: (audit.warnings?.length ?? 0) > 0 ? 'WARNING' : 'OK',
-      promoId: audit.promoId
+      auditorName: audit.auditorName,
+      status,
+      priority,
+      hasWarnings: totalWarnings > 0,
+      warningsCount: totalWarnings,
+      validatedCount,
+      totalMembers,
+      validationRate,
+      globalWarnings,
+      memberWarnings
     };
   });
 }
 
 /**
- * Récupère les code reviews urgents :
- * - groupes avec warnings
- * - groupes jamais audités (source Zone01)
+ * Récupère les code reviews urgents avec une logique métier améliorée
+ * Critères d'urgence :
+ * 1. Audits avec warnings (priority: urgent)
+ * 2. Audits avec faible taux de validation < 50% (priority: warning)
+ * 3. Groupes finished non audités depuis > 7 jours (priority: urgent)
+ * 4. Groupes finished non audités récents (priority: info)
  */
 export async function getUrgentCodeReviews(
   promoId?: string,
   projectName?: string,
-  limit: number = 5
-) {
-  // 1) Audits existants avec warnings
+  limit: number = 10
+): Promise<UrgentReviewData[]> {
+  const urgentItems: UrgentReviewData[] = [];
+
+  // 1) Audits avec warnings globaux
   const auditsWithWarnings = await db.query.audits.findMany({
-    where: not(eq(audits.warnings, [])),
-    orderBy: [desc(audits.createdAt)]
+    where: and(
+      sql`${audits.warnings} IS NOT NULL AND jsonb_array_length(COALESCE(${audits.warnings}, '[]'::jsonb)) > 0`,
+      promoId ? eq(audits.promoId, promoId) : undefined
+    ),
+    orderBy: [desc(audits.createdAt)],
+    with: { results: true }
   });
 
-  const urgentFromWarnings = auditsWithWarnings.map((audit) => ({
-    id: `audit-${audit.id}`,
-    groupName: audit.groupId,
-    promotion: audit.promoId,
-    reason: 'Warnings détectés',
-    level: 'URGENT'
-  }));
+  for (const audit of auditsWithWarnings) {
+    const promo = (promoConfig as any[]).find((p) => String(p.eventId) === String(audit.promoId));
+    const validatedCount = audit.results.filter((r) => r.validated).length;
+    const totalMembers = audit.results.length;
 
-  // 2) Groupes jamais audités (Zone01 = source of truth)
-  let urgentNeverAudited: {
-    id: string;
-    groupName: string;
-    promotion: string;
-    reason: string;
-    level: 'URGENT';
-  }[] = [];
-
-  if (promoId && projectName) {
-    const zone01Groups = await fetchGroupsForCodeReview(promoId);
-
-    const auditedGroupIds = await getAuditedGroupIds(promoId, projectName);
-
-    urgentNeverAudited = zone01Groups
-      .filter((group) => !auditedGroupIds.includes(group.groupId))
-      .map((group) => ({
-        id: `zone01-${group.groupId}`,
-        groupName: group.groupId,
-        promotion: promoId,
-        reason: 'Jamais audité',
-        level: 'URGENT'
-      }));
+    urgentItems.push({
+      id: `warning-${audit.id}`,
+      type: 'audit_warning',
+      groupId: audit.groupId,
+      projectName: audit.projectName,
+      promoId: audit.promoId,
+      promotionName: promo?.key ?? `Promotion ${audit.promoId}`,
+      track: audit.track,
+      reason: 'Warnings détectés',
+      reasonDetail: `${audit.warnings?.length || 0} warning(s) global`,
+      priority: 'urgent',
+      auditId: audit.id,
+      validationRate: totalMembers > 0 ? Math.round((validatedCount / totalMembers) * 100) : 0,
+      warningsCount: (audit.warnings?.length || 0) + audit.results.reduce((sum, r) => sum + (r.warnings?.length || 0), 0),
+      auditorName: audit.auditorName,
+      auditDate: audit.createdAt
+    });
   }
 
-  return [...urgentNeverAudited, ...urgentFromWarnings].slice(0, limit);
+  // 2) Audits avec faible taux de validation (< 50%)
+  const allAudits = await db.query.audits.findMany({
+    where: promoId ? eq(audits.promoId, promoId) : undefined,
+    orderBy: [desc(audits.createdAt)],
+    with: { results: true }
+  });
+
+  for (const audit of allAudits) {
+    const validatedCount = audit.results.filter((r) => r.validated).length;
+    const totalMembers = audit.results.length;
+    const validationRate = totalMembers > 0 ? Math.round((validatedCount / totalMembers) * 100) : 100;
+
+    // Déjà ajouté dans les warnings ?
+    if (urgentItems.some((item) => item.auditId === audit.id)) continue;
+
+    if (validationRate < 50 && totalMembers > 0) {
+      const promo = (promoConfig as any[]).find((p) => String(p.eventId) === String(audit.promoId));
+
+      urgentItems.push({
+        id: `lowval-${audit.id}`,
+        type: 'low_validation',
+        groupId: audit.groupId,
+        projectName: audit.projectName,
+        promoId: audit.promoId,
+        promotionName: promo?.key ?? `Promotion ${audit.promoId}`,
+        track: audit.track,
+        reason: 'Faible taux de validation',
+        reasonDetail: `${validatedCount}/${totalMembers} validé(s) (${validationRate}%)`,
+        priority: validationRate < 30 ? 'urgent' : 'warning',
+        auditId: audit.id,
+        validationRate,
+        warningsCount: (audit.warnings?.length || 0) + audit.results.reduce((sum, r) => sum + (r.warnings?.length || 0), 0),
+        auditorName: audit.auditorName,
+        auditDate: audit.createdAt
+      });
+    }
+  }
+
+  // Tri par priorité (urgent > warning > info)
+  const priorityOrder = { urgent: 0, warning: 1, info: 2 };
+  urgentItems.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+  return urgentItems.slice(0, limit);
 }
 
 /**
@@ -284,6 +407,20 @@ export async function createAudit(
   data: CreateAuditInput
 ): Promise<AuditWithResults> {
   return db.transaction(async (tx) => {
+    // Calculer les stats de validation
+    const validatedCount = data.results.filter((r) => r.validated).length;
+    const totalMembers = data.results.length;
+    const validationRate = totalMembers > 0 ? (validatedCount / totalMembers) * 100 : 100;
+    const warningsCount = (data.warnings?.length || 0) + data.results.reduce((sum, r) => sum + (r.warnings?.length || 0), 0);
+
+    // Déterminer la priorité automatiquement
+    let priority: Priority = 'normal';
+    if (warningsCount > 0 || validationRate < 30) {
+      priority = 'urgent';
+    } else if (validationRate < 50) {
+      priority = 'warning';
+    }
+
     // Créer l'audit principal
     const [audit] = await tx
       .insert(audits)
@@ -295,7 +432,10 @@ export async function createAudit(
         summary: data.summary,
         warnings: data.warnings || [],
         auditorId: data.auditorId,
-        auditorName: data.auditorName
+        auditorName: data.auditorName,
+        priority,
+        validatedCount,
+        totalMembers
       })
       .returning();
 
@@ -327,7 +467,7 @@ export async function createAudit(
  */
 export async function updateAudit(
   id: number,
-  data: Partial<Pick<NewAudit, 'summary' | 'warnings'>> & {
+  data: Partial<Pick<NewAudit, 'summary' | 'warnings' | 'priority'>> & {
     results?: {
       studentLogin: string;
       validated: boolean;
@@ -337,12 +477,38 @@ export async function updateAudit(
   }
 ): Promise<AuditWithResults | undefined> {
   return db.transaction(async (tx) => {
+    // Calculer les nouvelles stats si des résultats sont fournis
+    let validatedCount: number | undefined;
+    let totalMembers: number | undefined;
+    let priority: Priority | undefined = data.priority as Priority;
+
+    if (data.results) {
+      validatedCount = data.results.filter((r) => r.validated).length;
+      totalMembers = data.results.length;
+      const validationRate = totalMembers > 0 ? (validatedCount / totalMembers) * 100 : 100;
+      const warningsCount = (data.warnings?.length || 0) + data.results.reduce((sum, r) => sum + (r.warnings?.length || 0), 0);
+
+      // Recalculer la priorité si pas définie explicitement
+      if (!priority) {
+        if (warningsCount > 0 || validationRate < 30) {
+          priority = 'urgent';
+        } else if (validationRate < 50) {
+          priority = 'warning';
+        } else {
+          priority = 'normal';
+        }
+      }
+    }
+
     // Mettre à jour l'audit
     const [updatedAudit] = await tx
       .update(audits)
       .set({
         summary: data.summary,
         warnings: data.warnings,
+        priority,
+        validatedCount,
+        totalMembers,
         updatedAt: new Date()
       })
       .where(eq(audits.id, id))

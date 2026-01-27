@@ -13,7 +13,7 @@ import {
 export interface PromotionInfo {
   promoId: string;
   name: string;
-  isArchived: boolean;
+  isArchived: boolean | null;
   archivedAt: Date | null;
   archivedReason: string | null;
 }

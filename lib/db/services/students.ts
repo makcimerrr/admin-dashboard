@@ -218,7 +218,16 @@ export async function getStudents(
       dropoutAt: students.dropoutAt,
       dropoutReason: students.dropoutReason,
       dropoutNotes: students.dropoutNotes,
-      previousPromo: students.previousPromo
+      previousPromo: students.previousPromo,
+      // Champs alternant
+      isAlternant: students.isAlternant,
+      alternantStartDate: students.alternantStartDate,
+      alternantEndDate: students.alternantEndDate,
+      companyName: students.companyName,
+      companyContact: students.companyContact,
+      companyEmail: students.companyEmail,
+      companyPhone: students.companyPhone,
+      alternantNotes: students.alternantNotes
     })
     .from(students)
     .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
