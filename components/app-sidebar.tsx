@@ -6,13 +6,16 @@ import {
   ArrowUpCircleIcon,
   BarChartIcon,
   BotIcon,
+  BriefcaseIcon,
   CalendarIcon,
   CameraIcon,
+  ClipboardCheckIcon,
   ClipboardListIcon,
   DatabaseIcon,
   FileCodeIcon,
   FileIcon,
   FileTextIcon,
+  FolderArchiveIcon,
   FolderIcon,
   HelpCircleIcon,
   LayoutDashboardIcon,
@@ -48,12 +51,23 @@ const data = {
     {
       title: 'Students',
       url: '/students',
-      icon: ListIcon
+      icon: ListIcon,
+      items: [
+        {
+          title: 'Alternants',
+          url: '/alternants'
+        }
+      ]
     },
     {
       title: 'Analytics',
       url: '/analytics',
       icon: BarChartIcon
+    },
+    {
+      title: 'Code Reviews',
+      url: '/code-reviews',
+      icon: ClipboardCheckIcon
     },
     {
       title: 'Planning',
@@ -178,6 +192,11 @@ const data = {
       name: 'Data Library',
       url: '/promos/status',
       icon: DatabaseIcon
+    },
+    {
+      name: 'Gestion Promos',
+      url: '/promos/manage',
+      icon: FolderArchiveIcon
     },
     {
       name: 'Reports',

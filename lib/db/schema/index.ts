@@ -6,3 +6,5 @@ export * from './updates';
 export * from './hackatonWeeks';
 export * from './conversations';
 export * from './hub';
+export * from './audits';
+export * from './alternants';

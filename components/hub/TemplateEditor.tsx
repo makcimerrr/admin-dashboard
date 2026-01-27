@@ -120,7 +120,7 @@ export default function TemplateEditor({ mode, id }: TemplateEditorProps) {
         toast.success(
           isNew ? "Modèle créé avec succès" : "Modèle mis à jour avec succès"
         );
-        router.push("/hub/templates");
+        router.push("/word-assistant/templates");
       } catch (err) {
         toast.error("Échec de l'enregistrement du modèle");
       }
@@ -178,7 +178,7 @@ export default function TemplateEditor({ mode, id }: TemplateEditorProps) {
   return (
     <div className="p-8">
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="outline" onClick={() => router.push("/hub/templates")}>
+        <Button variant="outline" onClick={() => router.push("/word_assistant/templates")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
 

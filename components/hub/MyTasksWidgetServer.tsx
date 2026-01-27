@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { db } from "@/lib/db/config";
 import { hubEvents, hubEventTasks, hubAssignments } from "@/lib/db/schema/hub";
-import { eq, gte } from "drizzle-orm";
+import { eq, gte, or, ilike } from "drizzle-orm";
 import { addDays } from "date-fns";
 import { getStackSession } from "@/lib/stack-auth";
 
@@ -20,16 +20,45 @@ interface MyTask {
   status: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
 }
 
-async function getMyTasks(userId: string): Promise<MyTask[]> {
+/**
+ * Extrait le prénom d'un displayName
+ */
+function extractFirstName(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const parts = name.trim().split(/[\s.]+/);
+  if (parts.length > 0 && parts[0]) {
+    return parts[0].toLowerCase();
+  }
+  return null;
+}
+
+async function getMyTasks(userId: string, displayName?: string | null): Promise<MyTask[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   try {
-    // Get all assignments for this user
-    const userAssignments = await db
-      .select({ taskId: hubAssignments.taskId })
-      .from(hubAssignments)
-      .where(eq(hubAssignments.userId, userId));
+    const firstName = extractFirstName(displayName);
+
+    // Get all assignments for this user (by userId OR by firstName match)
+    let userAssignments;
+
+    if (firstName) {
+      // Rechercher par userId OU par prénom
+      userAssignments = await db
+        .select({ taskId: hubAssignments.taskId })
+        .from(hubAssignments)
+        .where(
+          or(
+            eq(hubAssignments.userId, userId),
+            ilike(hubAssignments.userId, `%${firstName}%`)
+          )
+        );
+    } else {
+      userAssignments = await db
+        .select({ taskId: hubAssignments.taskId })
+        .from(hubAssignments)
+        .where(eq(hubAssignments.userId, userId));
+    }
 
     if (userAssignments.length === 0) {
       return [];
@@ -103,10 +132,11 @@ function getStatusLabel(status: MyTask["status"]) {
 export async function MyTasksWidgetServer() {
   const session = await getStackSession();
   const userId = session?.user?.id;
+  const displayName = session?.user?.display_name;
 
   let tasks: MyTask[] = [];
   if (userId) {
-    tasks = await getMyTasks(userId);
+    tasks = await getMyTasks(userId, displayName);
   }
 
   const pendingTasks = tasks.filter((t) => t.status !== "COMPLETED");
@@ -143,7 +173,7 @@ export async function MyTasksWidgetServer() {
             </CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm">
-            <Link href="/hub/calendar">
+            <Link href="/word_assistant/calendar">
               Calendrier
               <ArrowRight className="h-4 w-4 ml-1" />
             </Link>
@@ -152,15 +182,13 @@ export async function MyTasksWidgetServer() {
       </CardHeader>
       <CardContent>
         {pendingTasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Aucune tâche assignée
-          </p>
+          <p className="text-sm text-muted-foreground">Aucune tâche assignée</p>
         ) : (
           <div className="space-y-2">
             {pendingTasks.slice(0, 5).map((task) => (
               <Link
                 key={task.id}
-                href={`/app/(dashboard)/word_assistant/events/${task.eventId}`}
+                href={`/word_assistant/events/${task.eventId}`}
                 className="block"
               >
                 <div className="flex items-start gap-3 p-2 rounded-lg border hover:bg-muted/50 transition-colors">
@@ -172,7 +200,7 @@ export async function MyTasksWidgetServer() {
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-muted-foreground">
-                        {format(task.date, "d MMM", { locale: fr })}
+                        {format(task.date, 'd MMM', { locale: fr })}
                       </span>
                       <Badge variant="outline" className="text-xs py-0">
                         {getStatusLabel(task.status)}
@@ -184,7 +212,7 @@ export async function MyTasksWidgetServer() {
             ))}
             {pendingTasks.length > 5 && (
               <Link
-                href="/hub/calendar"
+                href="/word_assistant/calendar"
                 className="text-sm text-primary hover:underline block text-center pt-2"
               >
                 Voir toutes les tâches ({pendingTasks.length})

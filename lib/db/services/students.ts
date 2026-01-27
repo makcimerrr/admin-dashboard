@@ -11,6 +11,22 @@ import { projects } from '../schema/projects';
 import { and, asc, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
 import { SelectStudent } from '@/lib/db/schema/students';
 
+// Helper générique pour normaliser et obtenir la position du projet pour n'importe quel track
+const projectPositionSubquery = (
+  projectName: SQL | string,
+  category: string
+) => sql<number>`(
+  SELECT p.sort_index + 1
+  FROM projects p
+  WHERE
+    regexp_replace(LOWER(p.name), '[^a-z0-9 ]', '', 'g')
+    =
+    regexp_replace(LOWER(${projectName}), '[^a-z0-9 ]', '', 'g')
+  AND p.category = ${category}
+  ORDER BY p.sort_index DESC
+  LIMIT 1
+)`;
+
 export async function getStudents(
   search: string,
   offset: number,
@@ -22,7 +38,7 @@ export async function getStudents(
   track: string | null = null,
   trackCompleted: string | null = null,
   limit: number = 20,
-  dropoutFilter: 'active' | 'dropout' | 'all' = 'active'  // Par défaut, exclure les dropouts
+  dropoutFilter: 'active' | 'dropout' | 'all' = 'active' // Par défaut, exclure les dropouts
 ): Promise<{
   students: SelectStudent[];
   newOffset: number | null;
@@ -61,10 +77,16 @@ export async function getStudents(
     const isCompleted = trackCompleted === 'true';
     switch (track.toLowerCase()) {
       case 'golang':
-        trackFilter = eq(studentSpecialtyProgress.golang_completed, isCompleted);
+        trackFilter = eq(
+          studentSpecialtyProgress.golang_completed,
+          isCompleted
+        );
         break;
       case 'javascript':
-        trackFilter = eq(studentSpecialtyProgress.javascript_completed, isCompleted);
+        trackFilter = eq(
+          studentSpecialtyProgress.javascript_completed,
+          isCompleted
+        );
         break;
       case 'rust':
         trackFilter = eq(studentSpecialtyProgress.rust_completed, isCompleted);
@@ -129,48 +151,21 @@ export async function getStudents(
   ];
 
   // Subqueries pour obtenir la position et le total des projets par catégorie
-  const golangPositionSubquery = sql<number>`(
-    SELECT p.sort_index FROM projects p
-    WHERE LOWER(p.name) = LOWER(${studentCurrentProjects.golang_project})
-    AND p.category = 'Golang'
-    LIMIT 1
-  )`.as('golang_project_position');
-
+  // Position: refactorisé pour tous les tracks via helper générique
   const golangTotalSubquery = sql<number>`(
-    SELECT COUNT(*) FROM projects p WHERE p.category = 'Golang'
+    SELECT COUNT(*) FROM ${projects} p WHERE p.category = 'Golang'
   )`.as('golang_project_total');
 
-  const javascriptPositionSubquery = sql<number>`(
-    SELECT p.sort_index FROM projects p
-    WHERE LOWER(p.name) = LOWER(${studentCurrentProjects.javascript_project})
-    AND p.category = 'Javascript'
-    LIMIT 1
-  )`.as('javascript_project_position');
-
   const javascriptTotalSubquery = sql<number>`(
-    SELECT COUNT(*) FROM projects p WHERE p.category = 'Javascript'
+    SELECT COUNT(*) FROM ${projects} p WHERE p.category = 'Javascript'
   )`.as('javascript_project_total');
 
-  const rustPositionSubquery = sql<number>`(
-    SELECT p.sort_index FROM projects p
-    WHERE LOWER(p.name) = LOWER(${studentCurrentProjects.rust_project})
-    AND p.category = 'Rust'
-    LIMIT 1
-  )`.as('rust_project_position');
-
   const rustTotalSubquery = sql<number>`(
-    SELECT COUNT(*) FROM projects p WHERE p.category = 'Rust'
+    SELECT COUNT(*) FROM ${projects} p WHERE p.category = 'Rust'
   )`.as('rust_project_total');
 
-  const javaPositionSubquery = sql<number>`(
-    SELECT p.sort_index FROM projects p
-    WHERE LOWER(p.name) = LOWER(${studentCurrentProjects.java_project})
-    AND p.category = 'Java'
-    LIMIT 1
-  )`.as('java_project_position');
-
   const javaTotalSubquery = sql<number>`(
-    SELECT COUNT(*) FROM projects p WHERE p.category = 'Java'
+    SELECT COUNT(*) FROM ${projects} p WHERE p.category = 'Java'
   )`.as('java_project_total');
 
   // Requête pour récupérer les étudiants avec les filtres et la jointure
@@ -187,19 +182,32 @@ export async function getStudents(
       delay_level: studentProjects.delay_level,
       golang_project: studentCurrentProjects.golang_project,
       golang_project_status: studentCurrentProjects.golang_project_status,
-      golang_project_position: golangPositionSubquery,
+      golang_project_position: projectPositionSubquery(
+        sql`${studentCurrentProjects.golang_project}`,
+        'Golang'
+      ).as('golang_project_position'),
       golang_project_total: golangTotalSubquery,
       javascript_project: studentCurrentProjects.javascript_project,
-      javascript_project_status: studentCurrentProjects.javascript_project_status,
-      javascript_project_position: javascriptPositionSubquery,
+      javascript_project_status:
+        studentCurrentProjects.javascript_project_status,
+      javascript_project_position: projectPositionSubquery(
+        sql`${studentCurrentProjects.javascript_project}`,
+        'Javascript'
+      ).as('javascript_project_position'),
       javascript_project_total: javascriptTotalSubquery,
       rust_project: studentCurrentProjects.rust_project,
       rust_project_status: studentCurrentProjects.rust_project_status,
-      rust_project_position: rustPositionSubquery,
+      rust_project_position: projectPositionSubquery(
+        sql`${studentCurrentProjects.rust_project}`,
+        'Rust'
+      ).as('rust_project_position'),
       rust_project_total: rustTotalSubquery,
       java_project: studentCurrentProjects.java_project,
       java_project_status: studentCurrentProjects.java_project_status,
-      java_project_position: javaPositionSubquery,
+      java_project_position: projectPositionSubquery(
+        sql`${studentCurrentProjects.java_project}`,
+        'Java'
+      ).as('java_project_position'),
       java_project_total: javaTotalSubquery,
       golang_completed: studentSpecialtyProgress.golang_completed,
       javascript_completed: studentSpecialtyProgress.javascript_completed,
@@ -210,7 +218,16 @@ export async function getStudents(
       dropoutAt: students.dropoutAt,
       dropoutReason: students.dropoutReason,
       dropoutNotes: students.dropoutNotes,
-      previousPromo: students.previousPromo
+      previousPromo: students.previousPromo,
+      // Champs alternant
+      isAlternant: students.isAlternant,
+      alternantStartDate: students.alternantStartDate,
+      alternantEndDate: students.alternantEndDate,
+      companyName: students.companyName,
+      companyContact: students.companyContact,
+      companyEmail: students.companyEmail,
+      companyPhone: students.companyPhone,
+      alternantNotes: students.alternantNotes
     })
     .from(students)
     .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
@@ -331,80 +348,85 @@ export async function getStudents(
     offset >= studentsPerPage ? offset - studentsPerPage : null;
 
   // Mise à jour ou insertion dans delay_status pour chaque promo si promo est vide
-  // NOTE: This part seems to be doing heavy lifting on every request. 
+  // NOTE: This part seems to be doing heavy lifting on every request.
   // Consider moving this to a background job or caching it if performance is an issue.
   // For now, we keep it as is but optimize the queries inside if possible.
-  
+
   if (!promo) {
     // Récupérer toutes les promotions
     const allPromos = await db.select().from(promotions);
 
     // Use Promise.all to run updates in parallel
-    await Promise.all(allPromos.map(async (promo) => {
-      const promoId = promo.promoId;
-      // Filtre promo ET exclure les dropouts (isDropout = false ou NULL)
-      const promoAndActiveFilter = and(
-        eq(students.promoName, promo.name),
-        or(eq(students.isDropout, false), sql`${students.isDropout} IS NULL`)
-      );
+    await Promise.all(
+      allPromos.map(async (promo) => {
+        const promoId = promo.promoId;
+        // Filtre promo ET exclure les dropouts (isDropout = false ou NULL)
+        const promoAndActiveFilter = and(
+          eq(students.promoName, promo.name),
+          or(eq(students.isDropout, false), sql`${students.isDropout} IS NULL`)
+        );
 
-      // Obtenir les comptages groupés par `delay_level` (excluant les dropouts)
-      const delayCounts = await db
-        .select({
-          delay_level: studentProjects.delay_level,
-          count: count()
-        })
-        .from(students)
-        .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
-        .where(promoAndActiveFilter)
-        .groupBy(studentProjects.delay_level)
-        .execute();
+        // Obtenir les comptages groupés par `delay_level` (excluant les dropouts)
+        const delayCounts = await db
+          .select({
+            delay_level: studentProjects.delay_level,
+            count: count()
+          })
+          .from(students)
+          .leftJoin(
+            studentProjects,
+            eq(students.id, studentProjects.student_id)
+          )
+          .where(promoAndActiveFilter)
+          .groupBy(studentProjects.delay_level)
+          .execute();
 
-      // Construire les valeurs de comptage
-      const countsMap = delayCounts.reduce(
-        (acc, row) => {
-          if (row.delay_level === 'bien') acc.goodLateCount = row.count;
-          else if (row.delay_level === 'en retard') acc.lateCount = row.count;
-          else if (row.delay_level === 'en avance')
-            acc.advanceLateCount = row.count;
-          else if (row.delay_level === 'spécialité')
-            acc.specialityCount = row.count;
-          else if (row.delay_level === 'Validé')
-            acc.validatedCount = row.count;
-          else if (row.delay_level === 'Non Validé')
-            acc.notValidatedCount = row.count;
-          return acc;
-        },
-        {
-          goodLateCount: 0,
-          lateCount: 0,
-          advanceLateCount: 0,
-          specialityCount: 0,
-          validatedCount: 0,
-          notValidatedCount: 0
-        }
-      );
+        // Construire les valeurs de comptage
+        const countsMap = delayCounts.reduce(
+          (acc, row) => {
+            if (row.delay_level === 'bien') acc.goodLateCount = row.count;
+            else if (row.delay_level === 'en retard') acc.lateCount = row.count;
+            else if (row.delay_level === 'en avance')
+              acc.advanceLateCount = row.count;
+            else if (row.delay_level === 'spécialité')
+              acc.specialityCount = row.count;
+            else if (row.delay_level === 'Validé')
+              acc.validatedCount = row.count;
+            else if (row.delay_level === 'Non Validé')
+              acc.notValidatedCount = row.count;
+            return acc;
+          },
+          {
+            goodLateCount: 0,
+            lateCount: 0,
+            advanceLateCount: 0,
+            specialityCount: 0,
+            validatedCount: 0,
+            notValidatedCount: 0
+          }
+        );
 
-      // Insérer ou mettre à jour les données dans delayStatus
-      // Check if entry exists first to decide between insert or update if needed, 
-      // or just insert since there is no unique constraint on promoId in the schema shown (it has a serial id)
-      // However, usually we want one entry per promo. The schema shows 'id' as PK.
-      // Assuming we want to keep history or just update the latest. 
-      // The original code was doing insert. Let's stick to insert for now but be aware it might fill up the table.
-      
-      // Optimization: If we only need the latest status, we should probably update or delete old ones.
-      // But following the original logic:
-      await db.insert(delayStatus).values({
-        promoId,
-        lateCount: countsMap.lateCount,
-        goodLateCount: countsMap.goodLateCount,
-        advanceLateCount: countsMap.advanceLateCount,
-        specialityCount: countsMap.specialityCount,
-        validatedCount: countsMap.validatedCount,
-        notValidatedCount: countsMap.notValidatedCount,
-        lastUpdate: new Date()
-      });
-    }));
+        // Insérer ou mettre à jour les données dans delayStatus
+        // Check if entry exists first to decide between insert or update if needed,
+        // or just insert since there is no unique constraint on promoId in the schema shown (it has a serial id)
+        // However, usually we want one entry per promo. The schema shows 'id' as PK.
+        // Assuming we want to keep history or just update the latest.
+        // The original code was doing insert. Let's stick to insert for now but be aware it might fill up the table.
+
+        // Optimization: If we only need the latest status, we should probably update or delete old ones.
+        // But following the original logic:
+        await db.insert(delayStatus).values({
+          promoId,
+          lateCount: countsMap.lateCount,
+          goodLateCount: countsMap.goodLateCount,
+          advanceLateCount: countsMap.advanceLateCount,
+          specialityCount: countsMap.specialityCount,
+          validatedCount: countsMap.validatedCount,
+          notValidatedCount: countsMap.notValidatedCount,
+          lastUpdate: new Date()
+        });
+      })
+    );
   } else {
     // Nouvelle logique pour une promotion spécifique
     // Filtre promo ET exclure les dropouts
@@ -432,10 +454,7 @@ export async function getStudents(
           count: count()
         })
         .from(students)
-        .leftJoin(
-          studentProjects,
-          eq(students.id, studentProjects.student_id)
-        )
+        .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
         .where(promoAndActiveFilter)
         .groupBy(studentProjects.delay_level)
         .execute();
@@ -448,8 +467,7 @@ export async function getStudents(
             acc.advanceLateCount = row.count;
           else if (row.delay_level === 'spécialité')
             acc.specialityCount = row.count;
-          else if (row.delay_level === 'Validé')
-            acc.validatedCount = row.count;
+          else if (row.delay_level === 'Validé') acc.validatedCount = row.count;
           else if (row.delay_level === 'Non Validé')
             acc.notValidatedCount = row.count;
           return acc;
@@ -513,12 +531,18 @@ export async function updateStudentProject(
   project_status: string,
   delay_level: string,
   last_projects_finished: { [key: string]: boolean },
-  common_projects: { [key: string]: { name: string | null, status: string | null } },
+  common_projects: {
+    [key: string]: { name: string | null; status: string | null };
+  },
   promo_name: string
 ) {
   // Récupérer l'ID de l'étudiant depuis son login (avec info dropout)
   const student = await db
-    .select({ id: students.id, promoName: students.promoName, isDropout: students.isDropout })
+    .select({
+      id: students.id,
+      promoName: students.promoName,
+      isDropout: students.isDropout
+    })
     .from(students)
     .where(eq(students.login, login))
     .limit(1);
@@ -616,7 +640,8 @@ export async function updateStudentProject(
         golang_project: common_projects['Golang']?.name || null,
         golang_project_status: common_projects['Golang']?.status || null,
         javascript_project: common_projects['Javascript']?.name || null,
-        javascript_project_status: common_projects['Javascript']?.status || null,
+        javascript_project_status:
+          common_projects['Javascript']?.status || null,
         rust_project: common_projects['Rust']?.name || null,
         rust_project_status: common_projects['Rust']?.status || null,
         java_project: common_projects['Java']?.name || null,
@@ -689,7 +714,10 @@ export async function getProjectProgressStats(
         .execute();
 
       const onExpectedProject = onProjectResult[0]?.count || 0;
-      const percentage = totalStudents > 0 ? Math.round((onExpectedProject / totalStudents) * 100) : 0;
+      const percentage =
+        totalStudents > 0
+          ? Math.round((onExpectedProject / totalStudents) * 100)
+          : 0;
 
       // Compter les étudiants qui ne sont PAS sur le projet attendu, groupés par delay_level
       const offProjectResult = await db
@@ -723,9 +751,11 @@ export async function getProjectProgressStats(
 
         if (delayLevel === 'en avance') offProjectStats.ahead += count;
         else if (delayLevel === 'en retard') offProjectStats.late += count;
-        else if (delayLevel === 'spécialité') offProjectStats.specialty += count;
+        else if (delayLevel === 'spécialité')
+          offProjectStats.specialty += count;
         else if (delayLevel === 'validé') offProjectStats.validated += count;
-        else if (delayLevel === 'non validé') offProjectStats.notValidated += count;
+        else if (delayLevel === 'non validé')
+          offProjectStats.notValidated += count;
         else offProjectStats.other += count;
       });
 
@@ -748,7 +778,10 @@ export async function getProjectProgressStats(
         const rustResult = await db
           .select({ count: count() })
           .from(students)
-          .leftJoin(studentCurrentProjects, eq(students.id, studentCurrentProjects.student_id))
+          .leftJoin(
+            studentCurrentProjects,
+            eq(students.id, studentCurrentProjects.student_id)
+          )
           .where(
             and(
               eq(students.promoName, promoName),
@@ -764,7 +797,10 @@ export async function getProjectProgressStats(
         const javaResult = await db
           .select({ count: count() })
           .from(students)
-          .leftJoin(studentCurrentProjects, eq(students.id, studentCurrentProjects.student_id))
+          .leftJoin(
+            studentCurrentProjects,
+            eq(students.id, studentCurrentProjects.student_id)
+          )
           .where(
             and(
               eq(students.promoName, promoName),
@@ -776,7 +812,10 @@ export async function getProjectProgressStats(
         totalOnExpected += javaOnProject;
       }
 
-      const percentage = totalStudents > 0 ? Math.round((totalOnExpected / totalStudents) * 100) : 0;
+      const percentage =
+        totalStudents > 0
+          ? Math.round((totalOnExpected / totalStudents) * 100)
+          : 0;
 
       // Compter les étudiants qui ne sont sur AUCUN des projets attendus, groupés par delay_level
       const offProjectResult = await db
@@ -786,7 +825,10 @@ export async function getProjectProgressStats(
         })
         .from(students)
         .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
-        .leftJoin(studentCurrentProjects, eq(students.id, studentCurrentProjects.student_id))
+        .leftJoin(
+          studentCurrentProjects,
+          eq(students.id, studentCurrentProjects.student_id)
+        )
         .where(
           and(
             eq(students.promoName, promoName),
@@ -796,8 +838,8 @@ export async function getProjectProgressStats(
                   sql`LOWER(${studentCurrentProjects.java_project}) != LOWER(${javaProject})`
                 )
               : rustProject
-              ? sql`LOWER(${studentCurrentProjects.rust_project}) != LOWER(${rustProject})`
-              : sql`LOWER(${studentCurrentProjects.java_project}) != LOWER(${javaProject})`
+                ? sql`LOWER(${studentCurrentProjects.rust_project}) != LOWER(${rustProject})`
+                : sql`LOWER(${studentCurrentProjects.java_project}) != LOWER(${javaProject})`
           )
         )
         .groupBy(studentProjects.delay_level)
@@ -818,9 +860,11 @@ export async function getProjectProgressStats(
 
         if (delayLevel === 'en avance') offProjectStats.ahead += count;
         else if (delayLevel === 'en retard') offProjectStats.late += count;
-        else if (delayLevel === 'spécialité') offProjectStats.specialty += count;
+        else if (delayLevel === 'spécialité')
+          offProjectStats.specialty += count;
         else if (delayLevel === 'validé') offProjectStats.validated += count;
-        else if (delayLevel === 'non validé') offProjectStats.notValidated += count;
+        else if (delayLevel === 'non validé')
+          offProjectStats.notValidated += count;
         else offProjectStats.other += count;
       });
 
@@ -829,12 +873,19 @@ export async function getProjectProgressStats(
         onExpectedProject: totalOnExpected,
         percentage,
         offProjectStats,
-        rustStats: rustProject ? { total: totalStudents, onProject: rustOnProject } : undefined,
-        javaStats: javaProject ? { total: totalStudents, onProject: javaOnProject } : undefined
+        rustStats: rustProject
+          ? { total: totalStudents, onProject: rustOnProject }
+          : undefined,
+        javaStats: javaProject
+          ? { total: totalStudents, onProject: javaOnProject }
+          : undefined
       };
     }
   } catch (error) {
-    console.error('Erreur lors de la récupération des statistiques de progression:', error);
+    console.error(
+      'Erreur lors de la récupération des statistiques de progression:',
+      error
+    );
     return {
       totalStudents: 0,
       onExpectedProject: 0,

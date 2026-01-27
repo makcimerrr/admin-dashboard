@@ -25,14 +25,14 @@ export async function GET() {
     const maxId = lastRecord.length > 0 ? lastRecord[0].id : 0; // Récupère l'ID maximum ou 0 si la table est vide
 
     // Transformer les données
-    const records = parsedData.data.map(
-      (row: { Photo: any; Nom: any; Prénom: any; Login: any }) => ({
-        imageUrl: row.Photo, // Correspond à la colonne "Photo"
-        last_name: row.Nom, // Correspond à la colonne "Nom"
-        first_name: row.Prénom, // Correspond à la colonne "Prénom"
-        login: row.Login, // Correspond à la colonne "Login"
-        promos: 'P1 2022', // Valeur statique ou dynamique
-        availableAt: new Date() // Date actuelle
+    type CsvRow = { Photo: string; Nom: string; Prénom: string; Login: string };
+    const records = (parsedData.data as CsvRow[]).map(
+      (row) => ({
+        last_name: row.Nom,
+        first_name: row.Prénom,
+        login: row.Login,
+        promoName: 'P1 2022',
+        availableAt: new Date()
       })
     );
 

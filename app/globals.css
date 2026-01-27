@@ -31,12 +31,13 @@
         --border: 214.3 31.8% 91.4%;
         --input: 214.3 31.8% 91.4%;
         --ring: 222.2 84% 4.9%;
-        --chart-1: 226 96% 54%; /* Bien (changed) */
-        --chart-2: 32 100% 42%; /* bg-orange-500 - En Retard */
-        --chart-3: 335 79% 29%; /* bg-blue-600 - En Avance */
-        --chart-4: 275 96% 52%; /* bg-purple-600 - Spécialité */
-        --chart-5: 144 100% 39%; /* bg-green-600 - Validé */
-        --chart-6: 358 100% 25%; /* bg-red-600 - Non Validé */
+
+        --chart-1: #008bf8; /* Bien (changed) */
+        --chart-2: #ff9914; /* bg-orange-500 - En Retard */
+        --chart-3: #1be7ff; /* bg-blue-600 - En Avance */
+        --chart-4: #89fc00; /* bg-purple-600 - Spécialité */
+        --chart-5: #04e762; /* bg-green-600 - Validé */
+        --chart-6: #f21b3f; /* bg-red-600 - Non Validé */
 
         --radius: 0.5rem;
 

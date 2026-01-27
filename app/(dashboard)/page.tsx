@@ -8,6 +8,7 @@ import AlertsPanel from '@/components/alerts-panel';
 import OverviewWidget from '@/components/widgets/overview-widget';
 import RecentActivityWidget from '@/components/widgets/recent-activity-widget';
 import TrackProgressWidget from '@/components/widgets/track-progress-widget';
+import CodeReviewsWidget from '@/components/widgets/code-reviews-widget';
 import { MyTasksWidgetServer } from '@/components/hub/MyTasksWidgetServer';
 import {
   BarChart3,
@@ -127,13 +128,16 @@ export default function DashboardPage() {
         </Suspense>
       </div>
 
-      {/* Activity & Track Progress Widgets */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Activity, Track Progress & Code Reviews Widgets */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
           <RecentActivityWidget />
         </Suspense>
         <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
           <TrackProgressWidget />
+        </Suspense>
+        <Suspense fallback={<Skeleton className="h-[400px] w-full" />}>
+          <CodeReviewsWidget />
         </Suspense>
       </div>
 

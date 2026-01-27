@@ -21,10 +21,17 @@ import {
   Github,
   Target,
   Activity,
+  Briefcase,
+  Building2,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 
 type Student = {
   id: number;
@@ -48,6 +55,14 @@ type Student = {
   java_project: string | null;
   java_project_status: string | null;
   java_completed: boolean | null;
+  // Champs alternant
+  isAlternant: boolean | null;
+  alternantStartDate: string | null;
+  alternantEndDate: string | null;
+  companyName: string | null;
+  companyContact: string | null;
+  companyEmail: string | null;
+  companyPhone: string | null;
 };
 
 type Project = {
@@ -118,6 +133,7 @@ export default function StudentPage() {
   const [externalData, setExternalData] = useState<ExternalUserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingExternal, setLoadingExternal] = useState(false);
+  const [loadingAlternant, setLoadingAlternant] = useState(false);
 
   useEffect(() => {
     if (!studentId) {
@@ -180,16 +196,19 @@ export default function StudentPage() {
       const giteaData = await giteaResponse.json();
       const userFindData = await userFindResponse.json();
 
-      const latestDate = giteaData.heatmap.reduce(
-        (latest: { timestamp: number }, current: { timestamp: number }) => {
-          return current.timestamp > latest.timestamp ? current : latest;
-        }
-      );
+      let timeMessage = 'Aucune contribution';
 
-      const timeMessage = formatDistanceToNow(
-        new Date(latestDate.timestamp * 1000),
-        { locale: fr }
-      );
+      if (Array.isArray(giteaData.heatmap) && giteaData.heatmap.length > 0) {
+        const latestDate = giteaData.heatmap.reduce(
+          (latest: { timestamp: number }, current: { timestamp: number }) =>
+            current.timestamp > latest.timestamp ? current : latest
+        );
+
+        timeMessage = formatDistanceToNow(
+          new Date(latestDate.timestamp * 1000),
+          { locale: fr }
+        );
+      }
 
       const userData = {
         id: userFindData.user[0].id,
@@ -210,6 +229,41 @@ export default function StudentPage() {
       console.error('Error fetching external data:', error);
     } finally {
       setLoadingExternal(false);
+    }
+  };
+
+  const toggleAlternantStatus = async (isAlternant: boolean) => {
+    if (!student) return;
+
+    setLoadingAlternant(true);
+    try {
+      const response = await fetch('/api/alternants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentLogin: student.login,
+          isAlternant,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setStudent((prev) =>
+          prev ? { ...prev, isAlternant } : null
+        );
+        toast.success(
+          isAlternant
+            ? 'Étudiant marqué comme alternant'
+            : 'Statut alternant retiré'
+        );
+      } else {
+        toast.error(data.error || 'Erreur lors de la mise à jour');
+      }
+    } catch (error) {
+      console.error('Error toggling alternant status:', error);
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setLoadingAlternant(false);
     }
   };
 
@@ -576,6 +630,87 @@ export default function StudentPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Alternant Section */}
+      <Card className="border-2 bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Briefcase className="h-5 w-5" />
+            Alternance
+          </CardTitle>
+          <CardDescription>
+            Gérer le statut d'alternance de cet étudiant
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="alternant-switch" className="text-base font-medium">
+                Statut Alternant
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Activer si l'étudiant est en alternance
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {loadingAlternant && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+              <Switch
+                id="alternant-switch"
+                checked={student.isAlternant || false}
+                onCheckedChange={toggleAlternantStatus}
+                disabled={loadingAlternant}
+              />
+            </div>
+          </div>
+
+          {student.isAlternant && (
+            <>
+              <div className="border-t pt-4 space-y-3">
+                {student.companyName && (
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{student.companyName}</span>
+                  </div>
+                )}
+                {(student.alternantStartDate || student.alternantEndDate) && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    {student.alternantStartDate &&
+                      new Date(student.alternantStartDate).toLocaleDateString('fr-FR')}
+                    {' - '}
+                    {student.alternantEndDate
+                      ? new Date(student.alternantEndDate).toLocaleDateString('fr-FR')
+                      : 'En cours'}
+                  </div>
+                )}
+                {student.companyContact && (
+                  <div className="text-sm text-muted-foreground">
+                    Contact: {student.companyContact}
+                    {student.companyEmail && (
+                      <a
+                        href={`mailto:${student.companyEmail}`}
+                        className="ml-2 text-primary hover:underline"
+                      >
+                        {student.companyEmail}
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="border-t pt-4">
+                <Link href={`/alternants?student=${student.id}`}>
+                  <Button variant="outline" className="w-full">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Gérer les contrats et documents
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Contact Actions */}
       <Card className="border-2 bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-950/20 dark:to-pink-950/20">

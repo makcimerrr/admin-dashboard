@@ -28,33 +28,37 @@ export async function GET(request: Request) {
           break;
       }
 
-      // Build base query
-      let baseQuery = db
+      // Build base query - exclure les perditions
+      const baseConditions = [
+        eq(completedColumn, true),
+        eq(students.isDropout, false)
+      ];
+
+      if (promoKey && promoKey !== 'all') {
+        baseConditions.push(eq(students.promoName, promoKey));
+      }
+
+      const completedQuery = await db
         .select({ count: count() })
         .from(students)
-        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id));
+        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
+        .where(and(...baseConditions))
+        .execute();
 
-      // Add promo filter if specified
-      if (promoKey && promoKey !== 'all') {
-        baseQuery = baseQuery.where(
-          and(
-            eq(students.promoName, promoKey),
-            eq(completedColumn, true)
-          )
-        ) as any;
-      } else {
-        baseQuery = baseQuery.where(eq(completedColumn, true)) as any;
-      }
-
-      const completedQuery = await baseQuery.execute();
       const completed = completedQuery[0]?.count || 0;
 
-      // Get total students for the promo
-      let totalQuery = db.select({ count: count() }).from(students);
+      // Get total students for the promo (exclure les perditions)
+      const totalConditions = [eq(students.isDropout, false)];
       if (promoKey && promoKey !== 'all') {
-        totalQuery = totalQuery.where(eq(students.promoName, promoKey)) as any;
+        totalConditions.push(eq(students.promoName, promoKey));
       }
-      const totalResult = await totalQuery.execute();
+
+      const totalResult = await db
+        .select({ count: count() })
+        .from(students)
+        .where(and(...totalConditions))
+        .execute();
+
       const total = totalResult[0]?.count || 0;
 
       const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;

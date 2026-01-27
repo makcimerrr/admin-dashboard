@@ -1,12 +1,367 @@
 import { db } from '../config';
 import { promotions, delayStatus } from '../schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and, or, ne } from 'drizzle-orm';
 import {
   students,
   studentProjects,
   studentCurrentProjects,
   studentSpecialtyProgress
 } from '@/lib/db/schema';
+
+// ============== TYPES ==============
+
+export interface PromotionInfo {
+  promoId: string;
+  name: string;
+  isArchived: boolean | null;
+  archivedAt: Date | null;
+  archivedReason: string | null;
+}
+
+export interface StudentTransferResult {
+  success: boolean;
+  studentId: number;
+  login: string;
+  fromPromo: string;
+  toPromo: string;
+  message: string;
+}
+
+// ============== ARCHIVAGE ==============
+
+/**
+ * Récupère toutes les promotions (actives et archivées)
+ */
+export async function getAllPromotions(includeArchived = false): Promise<PromotionInfo[]> {
+  try {
+    const query = db
+      .select({
+        promoId: promotions.promoId,
+        name: promotions.name,
+        isArchived: promotions.isArchived,
+        archivedAt: promotions.archivedAt,
+        archivedReason: promotions.archivedReason
+      })
+      .from(promotions);
+
+    if (!includeArchived) {
+      return await query.where(
+        or(eq(promotions.isArchived, false), sql`${promotions.isArchived} IS NULL`)
+      ).execute();
+    }
+
+    return await query.execute();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des promotions:', error);
+    throw new Error('Impossible de récupérer les promotions.');
+  }
+}
+
+/**
+ * Récupère uniquement les promotions archivées
+ */
+export async function getArchivedPromotions(): Promise<PromotionInfo[]> {
+  try {
+    return await db
+      .select({
+        promoId: promotions.promoId,
+        name: promotions.name,
+        isArchived: promotions.isArchived,
+        archivedAt: promotions.archivedAt,
+        archivedReason: promotions.archivedReason
+      })
+      .from(promotions)
+      .where(eq(promotions.isArchived, true))
+      .execute();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des promotions archivées:', error);
+    throw new Error('Impossible de récupérer les promotions archivées.');
+  }
+}
+
+/**
+ * Archive une promotion
+ * @param promoName - Nom de la promotion (ex: "P1 2022")
+ * @param reason - Raison de l'archivage (optionnel)
+ */
+export async function archivePromotion(promoName: string, reason?: string): Promise<string> {
+  try {
+    const promo = await db
+      .select()
+      .from(promotions)
+      .where(eq(promotions.name, promoName))
+      .execute();
+
+    if (promo.length === 0) {
+      throw new Error(`Promotion "${promoName}" non trouvée.`);
+    }
+
+    if (promo[0].isArchived) {
+      return `La promotion "${promoName}" est déjà archivée.`;
+    }
+
+    await db
+      .update(promotions)
+      .set({
+        isArchived: true,
+        archivedAt: new Date(),
+        archivedReason: reason || null
+      })
+      .where(eq(promotions.name, promoName))
+      .execute();
+
+    return `Promotion "${promoName}" archivée avec succès.`;
+  } catch (error) {
+    console.error('Erreur lors de l\'archivage de la promotion:', error);
+    throw error;
+  }
+}
+
+/**
+ * Désarchive une promotion
+ * @param promoName - Nom de la promotion (ex: "P1 2022")
+ */
+export async function unarchivePromotion(promoName: string): Promise<string> {
+  try {
+    const promo = await db
+      .select()
+      .from(promotions)
+      .where(eq(promotions.name, promoName))
+      .execute();
+
+    if (promo.length === 0) {
+      throw new Error(`Promotion "${promoName}" non trouvée.`);
+    }
+
+    if (!promo[0].isArchived) {
+      return `La promotion "${promoName}" n'est pas archivée.`;
+    }
+
+    await db
+      .update(promotions)
+      .set({
+        isArchived: false,
+        archivedAt: null,
+        archivedReason: null
+      })
+      .where(eq(promotions.name, promoName))
+      .execute();
+
+    return `Promotion "${promoName}" désarchivée avec succès.`;
+  } catch (error) {
+    console.error('Erreur lors de la désarchivation de la promotion:', error);
+    throw error;
+  }
+}
+
+/**
+ * Vérifie si une promotion est archivée
+ */
+export async function isPromotionArchived(promoName: string): Promise<boolean> {
+  try {
+    const promo = await db
+      .select({ isArchived: promotions.isArchived })
+      .from(promotions)
+      .where(eq(promotions.name, promoName))
+      .execute();
+
+    return promo.length > 0 && promo[0].isArchived === true;
+  } catch (error) {
+    console.error('Erreur lors de la vérification de l\'archivage:', error);
+    return false;
+  }
+}
+
+// ============== TRANSFERT D'ÉTUDIANTS ==============
+
+/**
+ * Transfère un étudiant d'une promotion à une autre
+ * Utile pour les redoublements ou réorientations
+ *
+ * @param studentLogin - Login de l'étudiant
+ * @param targetPromoName - Nom de la promo de destination
+ * @param reason - Raison du transfert (optionnel)
+ */
+export async function transferStudent(
+  studentLogin: string,
+  targetPromoName: string,
+  reason?: string
+): Promise<StudentTransferResult> {
+  try {
+    // Vérifier que l'étudiant existe
+    const student = await db
+      .select({
+        id: students.id,
+        login: students.login,
+        promoName: students.promoName,
+        previousPromo: students.previousPromo
+      })
+      .from(students)
+      .where(eq(students.login, studentLogin))
+      .execute();
+
+    if (student.length === 0) {
+      return {
+        success: false,
+        studentId: 0,
+        login: studentLogin,
+        fromPromo: '',
+        toPromo: targetPromoName,
+        message: `Étudiant "${studentLogin}" non trouvé.`
+      };
+    }
+
+    const currentStudent = student[0];
+    const fromPromo = currentStudent.promoName;
+
+    // Vérifier que la promo de destination existe
+    const targetPromo = await db
+      .select()
+      .from(promotions)
+      .where(eq(promotions.name, targetPromoName))
+      .execute();
+
+    if (targetPromo.length === 0) {
+      return {
+        success: false,
+        studentId: currentStudent.id,
+        login: studentLogin,
+        fromPromo,
+        toPromo: targetPromoName,
+        message: `Promotion de destination "${targetPromoName}" non trouvée.`
+      };
+    }
+
+    // Vérifier que la promo de destination n'est pas archivée
+    if (targetPromo[0].isArchived) {
+      return {
+        success: false,
+        studentId: currentStudent.id,
+        login: studentLogin,
+        fromPromo,
+        toPromo: targetPromoName,
+        message: `Impossible de transférer vers une promotion archivée.`
+      };
+    }
+
+    // Vérifier que l'étudiant n'est pas déjà dans cette promo
+    if (fromPromo === targetPromoName) {
+      return {
+        success: false,
+        studentId: currentStudent.id,
+        login: studentLogin,
+        fromPromo,
+        toPromo: targetPromoName,
+        message: `L'étudiant est déjà dans la promotion "${targetPromoName}".`
+      };
+    }
+
+    // Effectuer le transfert
+    await db
+      .update(students)
+      .set({
+        promoName: targetPromoName,
+        previousPromo: fromPromo,
+        // Réinitialiser le statut de perdition si c'était le cas
+        isDropout: false,
+        dropoutAt: null,
+        dropoutReason: null,
+        dropoutNotes: reason ? `Transféré depuis ${fromPromo}: ${reason}` : `Transféré depuis ${fromPromo}`
+      })
+      .where(eq(students.login, studentLogin))
+      .execute();
+
+    return {
+      success: true,
+      studentId: currentStudent.id,
+      login: studentLogin,
+      fromPromo,
+      toPromo: targetPromoName,
+      message: `Étudiant "${studentLogin}" transféré de "${fromPromo}" vers "${targetPromoName}".`
+    };
+  } catch (error) {
+    console.error('Erreur lors du transfert de l\'étudiant:', error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère l'historique des transferts d'un étudiant
+ */
+export async function getStudentTransferHistory(studentLogin: string) {
+  try {
+    const student = await db
+      .select({
+        id: students.id,
+        login: students.login,
+        firstName: students.first_name,
+        lastName: students.last_name,
+        currentPromo: students.promoName,
+        previousPromo: students.previousPromo,
+        isDropout: students.isDropout,
+        dropoutNotes: students.dropoutNotes
+      })
+      .from(students)
+      .where(eq(students.login, studentLogin))
+      .execute();
+
+    if (student.length === 0) {
+      return null;
+    }
+
+    return student[0];
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'historique:', error);
+    throw error;
+  }
+}
+
+/**
+ * Récupère tous les étudiants transférés (qui ont un previousPromo mais ne sont PAS en perdition)
+ */
+export async function getTransferredStudents(promoName?: string) {
+  try {
+    // Condition de base : a une previousPromo ET n'est pas en perdition
+    const baseConditions = and(
+      sql`${students.previousPromo} IS NOT NULL`,
+      or(eq(students.isDropout, false), sql`${students.isDropout} IS NULL`)
+    );
+
+    if (promoName) {
+      return await db
+        .select({
+          id: students.id,
+          login: students.login,
+          firstName: students.first_name,
+          lastName: students.last_name,
+          currentPromo: students.promoName,
+          previousPromo: students.previousPromo
+        })
+        .from(students)
+        .where(and(
+          baseConditions,
+          eq(students.promoName, promoName)
+        ))
+        .execute();
+    }
+
+    return await db
+      .select({
+        id: students.id,
+        login: students.login,
+        firstName: students.first_name,
+        lastName: students.last_name,
+        currentPromo: students.promoName,
+        previousPromo: students.previousPromo
+      })
+      .from(students)
+      .where(baseConditions)
+      .execute();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des étudiants transférés:', error);
+    throw error;
+  }
+}
 
 /**
  * Ajoute une promotion à la base de données.
@@ -168,8 +523,13 @@ export async function getDelayStatus(promoId: string): Promise<{
   }
 }
 
-export async function fetchStudentsForPromo(promoKey: string) {
+export async function fetchStudentsForPromo(promoKey: string, includeDropouts = false) {
   try {
+    // Exclure les étudiants en perdition par défaut
+    const whereCondition = includeDropouts
+      ? eq(students.promoName, promoKey)
+      : and(eq(students.promoName, promoKey), eq(students.isDropout, false));
+
     const studentsData = await db
       .select({
         id: students.id,
@@ -198,7 +558,7 @@ export async function fetchStudentsForPromo(promoKey: string) {
         studentSpecialtyProgress,
         eq(students.id, studentSpecialtyProgress.student_id)
       )
-      .where(eq(students.promoName, promoKey));
+      .where(whereCondition);
 
     return studentsData;
   } catch (error) {

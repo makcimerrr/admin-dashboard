@@ -105,7 +105,7 @@ export default function EventEditor({ mode, id }: EventEditorProps) {
 
         const event = await res.json();
         toast.success(isNew ? "Événement créé avec succès" : "Événement mis à jour avec succès");
-        router.push(`/hub/events/${isNew ? event.id : id}`);
+        router.push(`/word_assistant/events/${isNew ? event.id : id}`);
       } catch (err) {
         toast.error("Échec de l'enregistrement de l'événement");
       }
