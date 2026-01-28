@@ -30,6 +30,7 @@ import {
 import { getActivePromotions } from '@/lib/config/promotions';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ReviewItemSkeleton, PromoCardSkeleton } from '@/components/code-reviews/skeletons';
 
 interface RecentReview {
   id: number;
@@ -266,9 +267,9 @@ export default function CodeReviewsPage() {
           </CardHeader>
           <CardContent className="space-y-1">
             {isLoading ? (
-              <div className="space-y-2">
-                {[...Array(4)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
+              <div className="space-y-1">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <ReviewItemSkeleton key={i} />
                 ))}
               </div>
             ) : error ? (
@@ -360,9 +361,9 @@ export default function CodeReviewsPage() {
           </CardHeader>
           <CardContent className="space-y-1">
             {isLoading ? (
-              <div className="space-y-2">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
+              <div className="space-y-1">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <ReviewItemSkeleton key={i} />
                 ))}
               </div>
             ) : error ? (
@@ -462,8 +463,8 @@ export default function CodeReviewsPage() {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {promotions.length === 0
-              ? [...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-20" />
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <PromoCardSkeleton key={i} />
                 ))
               : promotions.map((promo) => (
                   <Link

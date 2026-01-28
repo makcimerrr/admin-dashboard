@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StatCardSkeleton, TrackSectionSkeleton } from '@/components/code-reviews/skeletons';
 import {
     ArrowLeft,
     ClipboardCheck,
@@ -322,14 +323,29 @@ export default async function PromoCodeReviewsPage({ params }: PageProps) {
 
             <Suspense
                 fallback={
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-5 gap-3">
-                            {[1, 2, 3, 4, 5].map(i => (
-                                <Skeleton key={i} className="h-20" />
+                    <div className="space-y-6">
+                        {/* Stats Cards Skeleton */}
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <StatCardSkeleton key={i} />
                             ))}
                         </div>
-                        <Skeleton className="h-12" />
-                        <Skeleton className="h-96" />
+
+                        {/* Tabs Skeleton */}
+                        <div className="space-y-4">
+                            <div className="flex gap-2 border-b">
+                                {Array.from({ length: 4 }).map((_, i) => (
+                                    <Skeleton key={i} className="h-10 w-32" />
+                                ))}
+                            </div>
+
+                            {/* Track Sections Skeleton */}
+                            <div className="space-y-8">
+                                {Array.from({ length: 2 }).map((_, i) => (
+                                    <TrackSectionSkeleton key={i} />
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 }
             >

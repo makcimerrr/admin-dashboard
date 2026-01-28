@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/config';
-import { audits } from '@/lib/db/schema/audits';
-import { eq } from 'drizzle-orm';
+import { fetchPromotionProgressions, buildProjectGroups } from '@/lib/services/zone01';
+import { getAuditsByPromoAndTrack } from '@/lib/db/services/audits';
+import { getDropoutLogins } from '@/lib/db/services/dropouts';
+import { getProjectNamesByTrack } from '@/lib/config/projects';
+import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
 import promoConfig from '../../../../config/promoConfig.json';
+import type { Track } from '@/lib/db/schema/audits';
 
-interface GroupMember {
-  id: number;
-  login: string;
-  firstName?: string;
-  lastName?: string;
-}
+const TRACKS: Track[] = ['Golang', 'Javascript', 'Rust', 'Java'];
 
 interface PendingGroup {
   groupId: string;
@@ -17,104 +15,125 @@ interface PendingGroup {
   track: string;
   promoId: string;
   promoName: string;
-  members: GroupMember[];
+  members: { login: string; isDropout: boolean }[];
   membersCount: number;
+  activeMembers: number;
   status: string;
-  finishedAt?: string;
-  daysPending: number;
   priority: 'urgent' | 'warning' | 'normal';
+  priorityScore: number;
+  priorityReasons: string[];
+  membersNeverAudited: number;
 }
 
 /**
  * GET /api/code-reviews/pending
- * Récupère tous les groupes terminés qui n'ont pas encore été audités
+ * Récupère tous les groupes terminés non audités avec calcul de priorité intelligent
  */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const promoIdFilter = searchParams.get('promoId');
 
-    // Récupérer tous les audits existants pour savoir quels groupes ont été audités
-    const existingAudits = await db.query.audits.findMany({
-      columns: {
-        promoId: true,
-        projectName: true,
-        groupId: true
-      }
-    });
+    const allPendingGroups: PendingGroup[] = [];
 
-    // Créer un Set des groupes déjà audités
-    const auditedGroups = new Set(
-      existingAudits.map(a => `${a.promoId}:${a.projectName}:${a.groupId}`)
-    );
-
-    const pendingGroups: PendingGroup[] = [];
     const promos = promoIdFilter
       ? (promoConfig as any[]).filter(p => String(p.eventId) === promoIdFilter)
       : (promoConfig as any[]).filter(p => p.active !== false);
 
-    // Pour chaque promo active, récupérer les groupes depuis l'API Zone01
+    // Récupérer les dropouts une seule fois
+    const dropoutLogins = await getDropoutLogins();
+
+    // Pour chaque promo, récupérer et évaluer les groupes en attente
     for (const promo of promos) {
-      const eventId = String(promo.eventId);
-      const promoName = promo.key ?? `Promo ${eventId}`;
+      const promoId = String(promo.eventId);
+      const promoName = promo.key ?? `Promo ${promoId}`;
 
-      // Récupérer les groupes terminés (finished) pour cette promo
-      // Note: Ceci utilise l'API interne qui elle-même appelle Zone01
       try {
-        const tracks = ['Golang', 'Javascript', 'Rust', 'Java'];
+        // Récupérer les progressions et audits pour cette promo
+        const [progressions, ...auditsPerTrack] = await Promise.all([
+          fetchPromotionProgressions(promoId),
+          ...TRACKS.map(track => getAuditsByPromoAndTrack(promoId, track)),
+        ]);
 
-        for (const track of tracks) {
-          // Appel à l'API interne pour récupérer les groupes
-          const internalUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/code-reviews/groups?promoId=${eventId}&track=${track}`;
+        const auditsByTrack = Object.fromEntries(
+          TRACKS.map((track, i) => [track, auditsPerTrack[i]])
+        ) as Record<Track, typeof auditsPerTrack[0]>;
 
-          try {
-            const response = await fetch(internalUrl, {
-              headers: { 'Content-Type': 'application/json' },
-              cache: 'no-store'
-            });
+        // Construire les groupes finished non audités
+        const pendingGroupsForEval: Array<{
+          groupId: string;
+          projectName: string;
+          track: Track;
+          members: Array<{ login: string; isDropout: boolean }>;
+          activeMembers: number;
+        }> = [];
 
-            if (!response.ok) continue;
+        const groupsData: Map<string, {
+          groupId: string;
+          projectName: string;
+          track: Track;
+          members: { login: string; isDropout: boolean }[];
+          activeMembers: number;
+        }> = new Map();
 
-            const data = await response.json();
-            const groups = data.groups || [];
+        for (const track of TRACKS) {
+          const projectNames = getProjectNamesByTrack(track);
+          const audits = auditsByTrack[track];
+          const auditsByGroupId = new Map(audits.map(a => [a.groupId, a]));
+
+          for (const projectName of projectNames) {
+            const groups = buildProjectGroups(progressions, projectName);
 
             for (const group of groups) {
-              // Vérifier si le groupe est terminé et non audité
               if (group.status !== 'finished') continue;
+              if (auditsByGroupId.has(group.groupId)) continue; // Déjà audité
 
-              const groupKey = `${eventId}:${group.projectName}:${group.groupId}`;
-              if (auditedGroups.has(groupKey)) continue;
+              const membersWithDropout = group.members.map(m => ({
+                login: m.login,
+                isDropout: dropoutLogins.has(m.login.toLowerCase()),
+              }));
+              const activeMembers = membersWithDropout.filter(m => !m.isDropout).length;
 
-              // Calculer le nombre de jours depuis la fin
-              const finishedDate = group.finishedAt ? new Date(group.finishedAt) : new Date();
-              const now = new Date();
-              const daysPending = Math.floor((now.getTime() - finishedDate.getTime()) / (1000 * 60 * 60 * 24));
+              // Ignorer les groupes où tous les membres sont en perdition
+              if (activeMembers === 0) continue;
 
-              // Déterminer la priorité
-              let priority: 'urgent' | 'warning' | 'normal' = 'normal';
-              if (daysPending > 14) {
-                priority = 'urgent';
-              } else if (daysPending > 7) {
-                priority = 'warning';
-              }
-
-              pendingGroups.push({
+              const groupData = {
                 groupId: group.groupId,
-                projectName: group.projectName,
+                projectName,
                 track,
-                promoId: eventId,
-                promoName,
-                members: group.members || [],
-                membersCount: group.members?.length || 0,
-                status: group.status,
-                finishedAt: group.finishedAt,
-                daysPending,
-                priority
-              });
+                members: membersWithDropout,
+                activeMembers,
+              };
+
+              groupsData.set(group.groupId, groupData);
+              pendingGroupsForEval.push(groupData);
             }
-          } catch (err) {
-            // Ignorer les erreurs pour un track spécifique
-            console.error(`Error fetching groups for ${promoName}/${track}:`, err);
+          }
+        }
+
+        // Évaluer les priorités avec la logique intelligente
+        if (pendingGroupsForEval.length > 0) {
+          const evaluation = await evaluatePendingPriorities(promoId, pendingGroupsForEval);
+
+          for (const evalGroup of evaluation.groups) {
+            const groupData = groupsData.get(evalGroup.groupId);
+            if (!groupData) continue;
+
+            allPendingGroups.push({
+              groupId: evalGroup.groupId,
+              projectName: evalGroup.projectName,
+              track: evalGroup.track,
+              promoId,
+              promoName,
+              members: groupData.members,
+              membersCount: groupData.members.length,
+              activeMembers: evalGroup.activeMembers,
+              status: 'finished',
+              priority: evalGroup.priority,
+              priorityScore: evalGroup.priorityScore,
+              priorityReasons: evalGroup.reasons,
+              membersNeverAudited: evalGroup.membersNeverAudited,
+            });
           }
         }
       } catch (err) {
@@ -122,34 +141,34 @@ export async function GET(request: Request) {
       }
     }
 
-    // Trier par priorité puis par jours en attente
-    const priorityOrder = { urgent: 0, warning: 1, normal: 2 };
-    pendingGroups.sort((a, b) => {
-      const pDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-      if (pDiff !== 0) return pDiff;
-      return b.daysPending - a.daysPending;
-    });
+    // Trier par score de priorité décroissant
+    allPendingGroups.sort((a, b) => b.priorityScore - a.priorityScore);
 
     // Statistiques
     const stats = {
-      total: pendingGroups.length,
-      urgent: pendingGroups.filter(g => g.priority === 'urgent').length,
-      warning: pendingGroups.filter(g => g.priority === 'warning').length,
-      normal: pendingGroups.filter(g => g.priority === 'normal').length,
-      avgDaysPending: pendingGroups.length > 0
-        ? Math.round(pendingGroups.reduce((sum, g) => sum + g.daysPending, 0) / pendingGroups.length)
+      total: allPendingGroups.length,
+      urgent: allPendingGroups.filter(g => g.priority === 'urgent').length,
+      warning: allPendingGroups.filter(g => g.priority === 'warning').length,
+      normal: allPendingGroups.filter(g => g.priority === 'normal').length,
+      avgScore: allPendingGroups.length > 0
+        ? Math.round(allPendingGroups.reduce((sum, g) => sum + g.priorityScore, 0) / allPendingGroups.length)
         : 0
     };
 
     return NextResponse.json({
       success: true,
-      pending: pendingGroups,
+      pending: allPendingGroups,
       stats
     });
   } catch (error) {
     console.error('Error fetching pending audits:', error);
     return NextResponse.json(
-      { success: false, error: 'Erreur lors du chargement des audits en attente', pending: [], stats: { total: 0, urgent: 0, warning: 0, normal: 0, avgDaysPending: 0 } },
+      {
+        success: false,
+        error: 'Erreur lors du chargement des audits en attente',
+        pending: [],
+        stats: { total: 0, urgent: 0, warning: 0, normal: 0, avgScore: 0 }
+      },
       { status: 200 } // Return 200 to avoid breaking the UI
     );
   }

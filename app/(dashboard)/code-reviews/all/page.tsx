@@ -71,6 +71,11 @@ import {
 import { formatDistanceToNow, format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import projectConfig from '../../../../config/projects.json';
+import {
+  StatCardSkeleton,
+  AuditsTableSkeleton,
+  PendingGroupsTableSkeleton
+} from '@/components/code-reviews/skeletons';
 
 type Track = 'Golang' | 'Javascript' | 'Rust' | 'Java';
 type SortField =
@@ -81,7 +86,8 @@ type SortField =
   | 'validation'
   | 'priority'
   | 'auditor'
-  | 'members';
+  | 'members'
+  | 'score';
 type SortDirection = 'asc' | 'desc';
 
 interface MemberDetail {
@@ -119,12 +125,14 @@ interface PendingGroup {
   track: Track;
   promoId: string;
   promoName: string;
-  members: { login: string }[];
+  members: { login: string; isDropout: boolean }[];
   membersCount: number;
+  activeMembers: number;
   status: string;
-  finishedAt?: string;
-  daysPending: number;
   priority: 'urgent' | 'warning' | 'normal';
+  priorityScore: number;
+  priorityReasons: string[];
+  membersNeverAudited: number;
 }
 
 const trackColors: Record<Track, string> = {
@@ -290,7 +298,7 @@ export default function AllAuditsPage() {
     urgent: 0,
     warning: 0,
     normal: 0,
-    avgDaysPending: 0
+    avgScore: 0
   });
   const [loading, setLoading] = useState(true);
   const [loadingPending, setLoadingPending] = useState(true);
@@ -344,7 +352,7 @@ export default function AllAuditsPage() {
             urgent: 0,
             warning: 0,
             normal: 0,
-            avgDaysPending: 0
+            avgScore: 0
           }
         );
       }
@@ -624,6 +632,9 @@ export default function AllAuditsPage() {
           const priorityOrder = { urgent: 0, warning: 1, normal: 2 };
           comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
           break;
+        case 'score':
+          comparison = a.priorityScore - b.priorityScore;
+          break;
         case 'members':
           comparison = a.membersCount - b.membersCount;
           break;
@@ -690,24 +701,53 @@ export default function AllAuditsPage() {
   if (loading) {
     return (
       <div className="flex flex-col gap-6 p-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/code-reviews">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
-            <ClipboardCheck className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Centre de Suivi des Code Reviews
-            </h1>
-            <p className="text-muted-foreground">Chargement...</p>
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/code-reviews">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
+              <ClipboardCheck className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Centre de Suivi des Code Reviews
+              </h1>
+              <p className="text-muted-foreground">Chargement...</p>
+            </div>
           </div>
         </div>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
+        </div>
+
+        {/* Filters Skeleton */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-10 bg-muted rounded animate-pulse" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabs Skeleton */}
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <div className="h-10 w-32 bg-muted rounded animate-pulse" />
+            <div className="h-10 w-32 bg-muted rounded animate-pulse" />
+          </div>
+
+          {/* Table Skeleton */}
+          <AuditsTableSkeleton rows={8} />
         </div>
       </div>
     );
@@ -800,8 +840,7 @@ export default function AllAuditsPage() {
                       Audits urgents en attente
                     </h3>
                     <p className="text-sm text-red-700">
-                      {pendingStats.urgent} groupe(s) en attente depuis plus de
-                      14 jours
+                      {pendingStats.urgent} groupe(s) marqués comme urgents (score ≥ 50)
                     </p>
                     <Button
                       variant="link"
@@ -1371,9 +1410,7 @@ export default function AllAuditsPage() {
         {/* Tab: Audits en attente */}
         <TabsContent value="pending" className="mt-4">
           {loadingPending ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
+            <PendingGroupsTableSkeleton rows={8} />
           ) : filteredPendingGroups.length === 0 ? (
             <Card className="border-green-200 bg-green-50">
               <CardContent className="py-12 text-center">
@@ -1431,7 +1468,16 @@ export default function AllAuditsPage() {
                         Tronc
                       </SortButton>
                     </TableHead>
-                    <TableHead className="w-[120px]">En attente</TableHead>
+                    <TableHead className="w-[120px]">
+                      <SortButton
+                        field="score"
+                        currentSort={sortField}
+                        currentDirection={sortDirection}
+                        onSort={handleSort}
+                      >
+                        Score
+                      </SortButton>
+                    </TableHead>
                     <TableHead className="w-[100px]">
                       <SortButton
                         field="priority"
@@ -1533,20 +1579,43 @@ export default function AllAuditsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1.5 text-sm">
-                            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span
-                              className={
-                                group.daysPending > 14
-                                  ? 'text-red-600 font-medium'
-                                  : group.daysPending > 7
-                                    ? 'text-amber-600'
-                                    : ''
-                              }
-                            >
-                              {group.daysPending} jour(s)
-                            </span>
-                          </div>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5 text-sm cursor-help">
+                                  <span
+                                    className={`font-mono font-medium ${
+                                      group.priorityScore >= 50
+                                        ? 'text-red-600'
+                                        : group.priorityScore >= 25
+                                          ? 'text-amber-600'
+                                          : 'text-blue-600'
+                                    }`}
+                                  >
+                                    {group.priorityScore}
+                                  </span>
+                                  {group.membersNeverAudited > 0 && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs bg-rose-50 text-rose-700 border-rose-200"
+                                    >
+                                      {group.membersNeverAudited} jamais audités
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <div className="space-y-1">
+                                  <p className="font-medium">Raisons de priorité:</p>
+                                  <ul className="text-xs space-y-0.5 list-disc pl-4">
+                                    {group.priorityReasons.map((reason, i) => (
+                                      <li key={i}>{reason}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                         <TableCell>
                           {group.priority === 'urgent' ? (
