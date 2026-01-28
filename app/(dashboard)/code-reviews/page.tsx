@@ -24,11 +24,13 @@ import {
   ExternalLink,
   User,
   Eye,
-  ChevronRight
+  ChevronRight,
+  Info
 } from 'lucide-react';
 import { getActivePromotions } from '@/lib/config/promotions';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ReviewItemSkeleton, PromoCardSkeleton } from '@/components/code-reviews/skeletons';
 
 interface RecentReview {
   id: number;
@@ -53,12 +55,12 @@ interface RecentReview {
 
 interface UrgentReview {
   id: string;
-  type: 'audit_warning' | 'low_validation' | 'pending_old' | 'pending_recent';
-  groupId: string;
-  projectName: string;
-  promoId: string;
-  promotionName: string;
-  track: string;
+  type: 'audit_warning' | 'low_validation' | 'pending_old' | 'pending_recent' | 'alert';
+  groupId?: string;
+  projectName?: string;
+  promoId?: string;
+  promotionName?: string;
+  track?: string;
   reason: string;
   reasonDetail?: string;
   priority: 'urgent' | 'warning' | 'info';
@@ -69,6 +71,35 @@ interface UrgentReview {
   auditDate?: string;
   daysPending?: number;
   membersCount?: number;
+}
+
+interface Alert {
+  id: string;
+  type: 'danger' | 'warning' | 'info';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  title: string;
+  description: string;
+  promoKey?: string;
+  count?: number;
+  action?: string;
+}
+
+interface PendingStats {
+  total: number;
+  urgent: number;
+  warning: number;
+  normal: number;
+  avgDaysPending: number;
+}
+
+interface PendingGroup {
+  groupId: string;
+  projectName: string;
+  track: string;
+  promoId: string;
+  promoName: string;
+  daysPending: number;
+  priority: 'urgent' | 'warning' | 'normal';
 }
 
 const trackColors: Record<string, string> = {
@@ -95,6 +126,7 @@ async function safeFetch<T>(path: string): Promise<T | null> {
 export default function CodeReviewsPage() {
   const [recentReviews, setRecentReviews] = useState<RecentReview[] | null>(null);
   const [urgentReviews, setUrgentReviews] = useState<UrgentReview[] | null>(null);
+  const [pendingStats, setPendingStats] = useState<PendingStats | null>(null);
   const [promotions, setPromotions] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,13 +135,75 @@ export default function CodeReviewsPage() {
 
     async function load() {
       try {
-        const [recent, urgent] = await Promise.all([
+        // Fetch recent code reviews, alerts, and pending audits
+        const [recent, alertsResponse, pendingResponse] = await Promise.all([
           safeFetch<RecentReview[]>('/api/code-reviews/recent'),
-          safeFetch<UrgentReview[]>('/api/code-reviews/urgent')
+          safeFetch<{ success: boolean; alerts: Alert[] }>('/api/alerts'),
+          safeFetch<{ success: boolean; pending: PendingGroup[]; stats: PendingStats }>('/api/code-reviews/pending')
         ]);
         if (!mounted) return;
         setRecentReviews(recent || []);
-        setUrgentReviews(urgent || []);
+
+        // Set pending stats
+        if (pendingResponse?.success) {
+          setPendingStats(pendingResponse.stats);
+        }
+
+        // Combine alerts: code-review alerts from /api/alerts + pending audits
+        const urgentItems: UrgentReview[] = [];
+
+        // 1. Add code-review related alerts from main alerts
+        if (alertsResponse?.success && alertsResponse.alerts) {
+          const codeReviewAlerts = alertsResponse.alerts
+            .filter(alert =>
+              alert.id.startsWith('audit-') ||
+              alert.title.toLowerCase().includes('code review') ||
+              alert.title.toLowerCase().includes('audit') ||
+              alert.title.toLowerCase().includes('validation')
+            )
+            .slice(0, 5)
+            .map(alert => ({
+              id: alert.id,
+              type: 'alert' as const,
+              reason: alert.title,
+              reasonDetail: alert.description,
+              priority: alert.severity === 'critical' || alert.severity === 'high'
+                ? 'urgent' as const
+                : alert.severity === 'medium'
+                  ? 'warning' as const
+                  : 'info' as const,
+              promotionName: alert.promoKey,
+              warningsCount: alert.count
+            }));
+          urgentItems.push(...codeReviewAlerts);
+        }
+
+        // 2. Add pending audits (urgent and warning only)
+        if (pendingResponse?.success && pendingResponse.pending) {
+          const pendingAlerts = pendingResponse.pending
+            .filter(g => g.priority === 'urgent' || g.priority === 'warning')
+            .slice(0, 5)
+            .map(group => ({
+              id: `pending-${group.promoId}-${group.groupId}`,
+              type: 'pending_old' as const,
+              groupId: group.groupId,
+              projectName: group.projectName,
+              promoId: group.promoId,
+              promotionName: group.promoName,
+              track: group.track,
+              reason: group.priority === 'urgent' ? 'Audit urgent' : 'Audit à traiter',
+              reasonDetail: `En attente depuis ${group.daysPending} jour(s)`,
+              priority: group.priority === 'urgent' ? 'urgent' as const : 'warning' as const,
+              daysPending: group.daysPending
+            }));
+          urgentItems.push(...pendingAlerts);
+        }
+
+        // Sort by priority
+        const priorityOrder = { urgent: 0, warning: 1, info: 2 };
+        urgentItems.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+        setUrgentReviews(urgentItems.slice(0, 8));
       } catch (e) {
         if (!mounted) return;
         setError('Erreur lors du chargement des données.');
@@ -136,16 +230,24 @@ export default function CodeReviewsPage() {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 bg-primary/10 rounded-lg">
-          <ClipboardCheck className="h-6 w-6 text-primary" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-primary/10 rounded-lg">
+            <ClipboardCheck className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Code Reviews</h1>
+            <p className="text-sm text-muted-foreground">
+              Suivi des audits pédagogiques par promotion
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">Code Reviews</h1>
-          <p className="text-sm text-muted-foreground">
-            Suivi des audits pédagogiques par promotion
-          </p>
-        </div>
+        <Button asChild variant="outline">
+          <Link href="/code-reviews/all">
+            <Eye className="h-4 w-4 mr-2" />
+            Tous les audits
+          </Link>
+        </Button>
       </div>
 
       {/* Widgets */}
@@ -165,9 +267,9 @@ export default function CodeReviewsPage() {
           </CardHeader>
           <CardContent className="space-y-1">
             {isLoading ? (
-              <div className="space-y-2">
-                {[...Array(4)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
+              <div className="space-y-1">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <ReviewItemSkeleton key={i} />
                 ))}
               </div>
             ) : error ? (
@@ -236,19 +338,32 @@ export default function CodeReviewsPage() {
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 Alertes
+                {pendingStats && pendingStats.total > 0 && (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ({pendingStats.total} en attente)
+                  </span>
+                )}
               </CardTitle>
-              {urgentReviews && urgentReviews.length > 0 && (
-                <Badge variant="destructive" className="text-xs">
-                  {urgentReviews.length}
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {urgentReviews && urgentReviews.length > 0 && (
+                  <Badge variant="destructive" className="text-xs">
+                    {urgentReviews.length}
+                  </Badge>
+                )}
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" asChild>
+                  <Link href="/code-reviews/all">
+                    Tout voir
+                    <ChevronRight className="h-3 w-3 ml-1" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-1">
             {isLoading ? (
-              <div className="space-y-2">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
+              <div className="space-y-1">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <ReviewItemSkeleton key={i} />
                 ))}
               </div>
             ) : error ? (
@@ -261,7 +376,9 @@ export default function CodeReviewsPage() {
                     className={`p-3 -mx-2 rounded-lg ${
                       review.priority === 'urgent'
                         ? 'bg-red-50 border border-red-100'
-                        : 'bg-amber-50 border border-amber-100'
+                        : review.priority === 'warning'
+                          ? 'bg-amber-50 border border-amber-100'
+                          : 'bg-blue-50 border border-blue-100'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -269,25 +386,55 @@ export default function CodeReviewsPage() {
                         <div className="flex items-center gap-2">
                           {review.priority === 'urgent' ? (
                             <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-                          ) : (
+                          ) : review.priority === 'warning' ? (
                             <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                          ) : (
+                            <Info className="h-4 w-4 text-blue-600 flex-shrink-0" />
                           )}
-                          <span className="font-medium truncate">{review.projectName}</span>
-                          <div className={`w-2 h-2 rounded-full ${trackColors[review.track] || 'bg-gray-400'}`} />
+                          <span className="font-medium truncate">
+                            {review.projectName || review.reason}
+                          </span>
+                          {review.track && (
+                            <div className={`w-2 h-2 rounded-full ${trackColors[review.track] || 'bg-gray-400'}`} />
+                          )}
+                          {review.warningsCount && review.warningsCount > 0 && (
+                            <Badge variant="outline" className="text-xs px-1.5 py-0">
+                              {review.warningsCount}
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 ml-6">
-                          {review.promotionName} · {review.reason}
-                          {review.reasonDetail && <span className="ml-1">({review.reasonDetail})</span>}
+                          {review.promotionName && <span>{review.promotionName}</span>}
+                          {review.promotionName && (review.reason || review.reasonDetail) && <span> · </span>}
+                          {review.projectName ? review.reason : review.reasonDetail}
                         </div>
                       </div>
-                      {review.auditId && (
-                        <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+                      {review.promoId && review.groupId ? (
+                        <Button
+                          variant={review.type === 'pending_old' ? 'default' : 'ghost'}
+                          size="sm"
+                          className="h-7 px-2"
+                          asChild
+                        >
                           <Link href={`/code-reviews/${review.promoId}/group/${review.groupId}`}>
+                            {review.type === 'pending_old' ? (
+                              <>Auditer</>
+                            ) : (
+                              <>
+                                <Eye className="h-3.5 w-3.5 mr-1" />
+                                Voir
+                              </>
+                            )}
+                          </Link>
+                        </Button>
+                      ) : review.auditId ? (
+                        <Button variant="ghost" size="sm" className="h-7 px-2" asChild>
+                          <Link href="/code-reviews/all">
                             <Eye className="h-3.5 w-3.5 mr-1" />
                             Voir
                           </Link>
                         </Button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 ))}
@@ -316,8 +463,8 @@ export default function CodeReviewsPage() {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {promotions.length === 0
-              ? [...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-20" />
+              ? Array.from({ length: 3 }).map((_, i) => (
+                  <PromoCardSkeleton key={i} />
                 ))
               : promotions.map((promo) => (
                   <Link

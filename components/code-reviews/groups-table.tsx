@@ -152,6 +152,7 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
   const [trackFilter, setTrackFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('status');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   // Override manuel des priorités pour les groupes en attente
@@ -203,6 +204,12 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
       if (statusFilter === 'warnings' && !group.hasWarnings) return false;
       if (projectFilter !== 'all' && group.projectName !== projectFilter) return false;
 
+      // Filtre par priorité
+      if (priorityFilter !== 'all') {
+        const effectivePriority = getEffectivePriority(group);
+        if (priorityFilter !== effectivePriority) return false;
+      }
+
       return true;
     });
 
@@ -236,13 +243,19 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
             : -1;
           comparison = rateA - rateB;
           break;
+        case 'priority':
+          const priorityOrder = { urgent: 0, warning: 1, normal: 2 };
+          const priorityA = priorityOrder[getEffectivePriority(a)];
+          const priorityB = priorityOrder[getEffectivePriority(b)];
+          comparison = priorityA - priorityB;
+          break;
       }
 
       return sortDirection === 'asc' ? comparison : -comparison;
     });
 
     return result;
-  }, [groups, search, trackFilter, statusFilter, projectFilter, sortField, sortDirection]);
+  }, [groups, search, trackFilter, statusFilter, projectFilter, priorityFilter, sortField, sortDirection, manualPriorities]);
 
   const progressPercentage =
     stats.totalGroups > 0
@@ -353,6 +366,28 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
           </SelectContent>
         </Select>
 
+        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <SelectTrigger className="w-[130px] h-8">
+            <SelectValue placeholder="Priorité" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes priorités</SelectItem>
+            <SelectItem value="urgent">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-3 w-3 text-rose-500" />
+                Urgent
+              </div>
+            </SelectItem>
+            <SelectItem value="warning">
+              <div className="flex items-center gap-2">
+                <Flag className="h-3 w-3 text-amber-500" />
+                Warning
+              </div>
+            </SelectItem>
+            <SelectItem value="normal">Normal</SelectItem>
+          </SelectContent>
+        </Select>
+
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground px-2">
           <Filter className="h-3.5 w-3.5" />
           <span>{filteredAndSortedGroups.length} groupes</span>
@@ -389,7 +424,11 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                   Valid.
                 </SortButton>
               </TableHead>
-              <TableHead className="w-[80px]">Priorite</TableHead>
+              <TableHead className="w-[80px]">
+                <SortButton field="priority" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort}>
+                  Priorité
+                </SortButton>
+              </TableHead>
               <TableHead className="w-[100px]">Auditeur</TableHead>
               <TableHead className="w-[120px]">
                 <SortButton field="date" currentSort={sortField} currentDirection={sortDirection} onSort={handleSort}>

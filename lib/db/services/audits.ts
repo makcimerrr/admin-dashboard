@@ -20,6 +20,29 @@ async function fetchGroupsForCodeReview(promoId: string) {
   return data.groups as GroupWithAuditStatus[];
 }
 
+// ============== HELPERS ==============
+
+/**
+ * Helper to safely get warnings count from JSONB field
+ * Handles: arrays, JSON strings, null, undefined
+ */
+function getWarningsArray(warnings: unknown): string[] {
+  if (Array.isArray(warnings)) {
+    return warnings;
+  }
+  if (typeof warnings === 'string') {
+    try {
+      const parsed = JSON.parse(warnings);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // Not valid JSON, return empty
+    }
+  }
+  return [];
+}
+
 // ============== TYPES POUR LE SERVICE ==============
 
 export interface CreateAuditInput {
@@ -136,10 +159,10 @@ export async function getRecentCodeReviews(limit: number = 5): Promise<RecentRev
     );
     const promotionName = promo?.key ?? `Promotion ${audit.promoId}`;
 
-    const globalWarnings = audit.warnings || [];
+    const globalWarnings = getWarningsArray(audit.warnings);
     const memberWarnings = audit.results
-      .filter((r) => r.warnings && r.warnings.length > 0)
-      .map((r) => ({ login: r.studentLogin, warnings: r.warnings || [] }));
+      .filter((r) => getWarningsArray(r.warnings).length > 0)
+      .map((r) => ({ login: r.studentLogin, warnings: getWarningsArray(r.warnings) }));
 
     const totalWarnings = globalWarnings.length + memberWarnings.reduce((sum, m) => sum + m.warnings.length, 0);
     const validatedCount = audit.results.filter((r) => r.validated).length;
@@ -195,41 +218,7 @@ export async function getUrgentCodeReviews(
 ): Promise<UrgentReviewData[]> {
   const urgentItems: UrgentReviewData[] = [];
 
-  // 1) Audits avec warnings globaux
-  const auditsWithWarnings = await db.query.audits.findMany({
-    where: and(
-      sql`${audits.warnings} IS NOT NULL AND jsonb_array_length(COALESCE(${audits.warnings}, '[]'::jsonb)) > 0`,
-      promoId ? eq(audits.promoId, promoId) : undefined
-    ),
-    orderBy: [desc(audits.createdAt)],
-    with: { results: true }
-  });
-
-  for (const audit of auditsWithWarnings) {
-    const promo = (promoConfig as any[]).find((p) => String(p.eventId) === String(audit.promoId));
-    const validatedCount = audit.results.filter((r) => r.validated).length;
-    const totalMembers = audit.results.length;
-
-    urgentItems.push({
-      id: `warning-${audit.id}`,
-      type: 'audit_warning',
-      groupId: audit.groupId,
-      projectName: audit.projectName,
-      promoId: audit.promoId,
-      promotionName: promo?.key ?? `Promotion ${audit.promoId}`,
-      track: audit.track,
-      reason: 'Warnings détectés',
-      reasonDetail: `${audit.warnings?.length || 0} warning(s) global`,
-      priority: 'urgent',
-      auditId: audit.id,
-      validationRate: totalMembers > 0 ? Math.round((validatedCount / totalMembers) * 100) : 0,
-      warningsCount: (audit.warnings?.length || 0) + audit.results.reduce((sum, r) => sum + (r.warnings?.length || 0), 0),
-      auditorName: audit.auditorName,
-      auditDate: audit.createdAt
-    });
-  }
-
-  // 2) Audits avec faible taux de validation (< 50%)
+  // Récupérer tous les audits et filtrer côté JavaScript pour éviter les erreurs SQL
   const allAudits = await db.query.audits.findMany({
     where: promoId ? eq(audits.promoId, promoId) : undefined,
     orderBy: [desc(audits.createdAt)],
@@ -237,16 +226,42 @@ export async function getUrgentCodeReviews(
   });
 
   for (const audit of allAudits) {
+    const promo = (promoConfig as any[]).find((p) => String(p.eventId) === String(audit.promoId));
     const validatedCount = audit.results.filter((r) => r.validated).length;
     const totalMembers = audit.results.length;
     const validationRate = totalMembers > 0 ? Math.round((validatedCount / totalMembers) * 100) : 100;
 
-    // Déjà ajouté dans les warnings ?
-    if (urgentItems.some((item) => item.auditId === audit.id)) continue;
+    // Calculer les warnings de manière sécurisée (gère arrays, JSON strings, null)
+    const globalWarningsArr = getWarningsArray(audit.warnings);
+    const memberWarningsCount = audit.results.reduce((sum, r) => {
+      return sum + getWarningsArray(r.warnings).length;
+    }, 0);
+    const totalWarnings = globalWarningsArr.length + memberWarningsCount;
 
+    // 1) Audits avec warnings
+    if (totalWarnings > 0) {
+      urgentItems.push({
+        id: `warning-${audit.id}`,
+        type: 'audit_warning',
+        groupId: audit.groupId,
+        projectName: audit.projectName,
+        promoId: audit.promoId,
+        promotionName: promo?.key ?? `Promotion ${audit.promoId}`,
+        track: audit.track,
+        reason: 'Warnings détectés',
+        reasonDetail: `${totalWarnings} warning(s)`,
+        priority: 'urgent',
+        auditId: audit.id,
+        validationRate,
+        warningsCount: totalWarnings,
+        auditorName: audit.auditorName,
+        auditDate: audit.createdAt
+      });
+      continue;
+    }
+
+    // 2) Audits avec faible taux de validation (< 50%)
     if (validationRate < 50 && totalMembers > 0) {
-      const promo = (promoConfig as any[]).find((p) => String(p.eventId) === String(audit.promoId));
-
       urgentItems.push({
         id: `lowval-${audit.id}`,
         type: 'low_validation',
@@ -260,7 +275,7 @@ export async function getUrgentCodeReviews(
         priority: validationRate < 30 ? 'urgent' : 'warning',
         auditId: audit.id,
         validationRate,
-        warningsCount: (audit.warnings?.length || 0) + audit.results.reduce((sum, r) => sum + (r.warnings?.length || 0), 0),
+        warningsCount: 0,
         auditorName: audit.auditorName,
         auditDate: audit.createdAt
       });

@@ -1,8 +1,31 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { students, studentProjects, studentSpecialtyProgress } from '@/lib/db/schema';
-import { eq, and, or, sql } from 'drizzle-orm';
+import { audits, auditResults } from '@/lib/db/schema/audits';
+import { eq, and, or, sql, desc } from 'drizzle-orm';
 import type { Alert } from '@/lib/types/alerts';
+import promoConfig from '../../../config/promoConfig.json';
+
+/**
+ * Helper to safely get warnings array from JSONB field
+ * Handles: arrays, JSON strings, null, undefined
+ */
+function getWarningsArray(warnings: unknown): string[] {
+  if (Array.isArray(warnings)) {
+    return warnings;
+  }
+  if (typeof warnings === 'string') {
+    try {
+      const parsed = JSON.parse(warnings);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // Not valid JSON, return empty
+    }
+  }
+  return [];
+}
 
 export async function GET(request: Request) {
   try {
@@ -15,7 +38,7 @@ export async function GET(request: Request) {
     const notDropoutCondition = eq(students.isDropout, false);
 
     // Exécuter toutes les requêtes en parallèle
-    const [lateStudents, withoutGroupStudents, notValidatedStudents, incompleteTracksStudents] = await Promise.all([
+    const [lateStudents, withoutGroupStudents, notValidatedStudents, incompleteTracksStudents, recentAudits] = await Promise.all([
       // 1. Étudiants en retard critique (hors perditions)
       db
         .select({
@@ -98,7 +121,15 @@ export async function GET(request: Request) {
             promoFilter ? eq(students.promoName, promoFilter) : sql`true`
           )
         )
-        .execute()
+        .execute(),
+
+      // 5. Tous les audits récents (filtrage warnings/validation côté JS)
+      db.query.audits.findMany({
+        where: promoFilter ? eq(audits.promoId, promoFilter) : undefined,
+        orderBy: [desc(audits.createdAt)],
+        limit: 50,
+        with: { results: true }
+      })
     ]);
 
     // Traitement des résultats
@@ -171,6 +202,59 @@ export async function GET(request: Request) {
           description: `${data.count} étudiant(s) n'ont pas terminé le tronc ${track}`,
           count: data.count,
           action: 'Vérifier la progression',
+        });
+      }
+    });
+
+    // Traitement des audits - filtrage côté JavaScript pour éviter les erreurs SQL
+    const processedAuditIds = new Set<number>();
+
+    recentAudits.forEach((audit) => {
+      if (processedAuditIds.has(audit.id)) return;
+
+      const promo = (promoConfig as any[]).find(p => String(p.eventId) === audit.promoId);
+      const promoName = promo?.key ?? `Promo ${audit.promoId}`;
+
+      // Calculer warnings de manière sécurisée (gère arrays, JSON strings, null)
+      const globalWarningsArr = getWarningsArray(audit.warnings);
+      const memberWarningsCount = audit.results.reduce((sum, r) => {
+        return sum + getWarningsArray(r.warnings).length;
+      }, 0);
+      const totalWarnings = globalWarningsArr.length + memberWarningsCount;
+
+      // Audits avec warnings
+      if (totalWarnings > 0) {
+        processedAuditIds.add(audit.id);
+        alerts.push({
+          id: `audit-warning-${audit.id}`,
+          type: 'warning',
+          severity: totalWarnings > 2 ? 'high' : 'medium',
+          title: `Code Review avec warnings`,
+          description: `${audit.projectName} (${audit.groupId}) - ${totalWarnings} warning(s) détecté(s)`,
+          promoKey: promoName,
+          count: totalWarnings,
+          action: 'Voir l\'audit',
+        });
+        return;
+      }
+
+      // Audits avec faible validation
+      const totalMembers = audit.totalMembers ?? audit.results.length;
+      const validatedCount = audit.validatedCount ?? audit.results.filter(r => r.validated).length;
+      const validationRate = totalMembers > 0
+        ? Math.round((validatedCount / totalMembers) * 100)
+        : 100;
+
+      if (validationRate < 50 && totalMembers > 0) {
+        processedAuditIds.add(audit.id);
+        alerts.push({
+          id: `audit-lowval-${audit.id}`,
+          type: 'danger',
+          severity: validationRate < 30 ? 'critical' : 'high',
+          title: `Faible taux de validation`,
+          description: `${audit.projectName} (${audit.groupId}) - ${validationRate}% validé (${validatedCount}/${totalMembers})`,
+          promoKey: promoName,
+          action: 'Voir l\'audit',
         });
       }
     });
