@@ -32,6 +32,9 @@ import { toast } from 'react-hot-toast';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { StudentAudits } from '@/components/student-audits';
+import { StudentPendingAudits } from '@/components/student-pending-audits';
+import promoConfigData from '../../../config/promoConfig.json'
 
 type Student = {
   id: number;
@@ -291,6 +294,18 @@ export default function StudentPage() {
     );
   }
 
+  // Récupérer la config de la promo pour vérifier les dates de début des troncs
+  const studentPromoConfig = (promoConfigData as any[]).find(p => p.key === student.promoName);
+  const today = new Date();
+
+  // Vérifier si le tronc Javascript a commencé
+  const jsStartDate = studentPromoConfig?.dates['piscine-js-start'];
+  const jsHasStarted = jsStartDate && jsStartDate !== 'NaN' && !isNaN(new Date(jsStartDate).getTime()) && today >= new Date(jsStartDate);
+
+  // Vérifier si le tronc Rust/Java a commencé
+  const rustJavaStartDate = studentPromoConfig?.dates['piscine-rust-java-start'];
+  const rustJavaHasStarted = rustJavaStartDate && rustJavaStartDate !== 'NaN' && !isNaN(new Date(rustJavaStartDate).getTime()) && today >= new Date(rustJavaStartDate);
+
   // Déterminer quel tronc (Rust ou Java) afficher - priorité à celui qui a des données
   const rustJavaTrack = (() => {
     // Si Rust a un projet ou est complété, utiliser Rust
@@ -313,6 +328,37 @@ export default function StudentPage() {
     };
   })();
 
+  // Déterminer le statut effectif du projet JS en fonction de si le tronc a commencé
+  const getEffectiveJsStatus = () => {
+    if (!jsHasStarted && studentPromoConfig) {
+      // Le tronc n'a pas commencé
+      if (student.javascript_project_status === 'without group' ||
+          student.javascript_project_status === 'not_started' ||
+          !student.javascript_project_status) {
+        return null; // On retournera null pour ne pas afficher ce track
+      }
+    }
+    return student.javascript_project_status;
+  };
+
+  // Déterminer le statut effectif du projet Rust/Java en fonction de si le tronc a commencé
+  const getEffectiveRustJavaStatus = () => {
+    if (!rustJavaHasStarted && studentPromoConfig) {
+      // Le tronc n'a pas commencé
+      const rawStatus = student.java_project_status || student.rust_project_status;
+      if (rawStatus === 'without group' ||
+          rawStatus === 'not_started' ||
+          rawStatus === 'not_chosen' ||
+          !rawStatus) {
+        return null; // On retournera null pour ne pas afficher ce track
+      }
+    }
+    return rustJavaTrack.status;
+  };
+
+  const jsStatus = getEffectiveJsStatus();
+  const rustJavaStatus = getEffectiveRustJavaStatus();
+
   const tracks = [
     {
       name: 'Golang',
@@ -320,19 +366,26 @@ export default function StudentPage() {
       status: student.golang_project_status,
       completed: student.golang_completed,
       color: 'cyan',
+      shouldDisplay: true,
     },
     {
       name: 'Javascript',
-      project: student.javascript_project,
-      status: student.javascript_project_status,
+      project: jsStatus !== null ? student.javascript_project : null,
+      status: jsStatus,
       completed: student.javascript_completed,
       color: 'yellow',
+      shouldDisplay: jsStatus !== null,
     },
-    rustJavaTrack,
-  ];
+    {
+      ...rustJavaTrack,
+      status: rustJavaStatus,
+      shouldDisplay: rustJavaStatus !== null,
+    },
+  ].filter(track => track.shouldDisplay);
 
+  const totalTracksToDisplay = tracks.length;
   const completedTracks = tracks.filter((track) => track.completed).length;
-  const progressPercentage = (completedTracks / 3) * 100;
+  const progressPercentage = totalTracksToDisplay > 0 ? (completedTracks / totalTracksToDisplay) * 100 : 0;
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -420,7 +473,7 @@ export default function StudentPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {completedTracks}/3
+              {completedTracks}/{totalTracksToDisplay}
             </div>
             <p className="text-xs text-muted-foreground">Troncs complétés</p>
           </CardContent>
@@ -630,6 +683,12 @@ export default function StudentPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Pending Audits Section */}
+      <StudentPendingAudits studentId={student.id} />
+
+      {/* Code Reviews Section */}
+      <StudentAudits studentId={student.id} />
 
       {/* Alternant Section */}
       <Card className="border-2 bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/20">
