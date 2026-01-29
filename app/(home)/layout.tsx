@@ -7,6 +7,7 @@ import {
 } from '@/components/ui/sidebar';
 import { DashboardBreadcrumb } from '../(dashboard)/get-breadcrumb-items';
 import { stackServerApp } from '@/lib/stack-server';
+import { unifiedSignOut } from '@/lib/unified-signout';
 import { redirect } from 'next/navigation';
 
 export default async function Layout({
@@ -23,7 +24,7 @@ export default async function Layout({
 
   async function logout() {
     'use server';
-    await stackServerApp.signOut();
+    await unifiedSignOut();
   }
 
   const user = {
@@ -43,6 +44,7 @@ export default async function Layout({
   };
 
   console.log('✅ Home - Utilisateur connecté:', user.email, 'Role:', user.role);
+
   return (
     <SidebarProvider>
       <AppSidebar user={user} logout={logout} />

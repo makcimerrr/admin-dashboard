@@ -49,18 +49,85 @@ export async function middleware(req: NextRequest) {
   // 2. VERIFICATION STACK AUTH
   // ========================================
   const cookies = req.cookies;
-  const stackAccessCookie = cookies.get('stack-access');
-  const refreshCookieName = `stack-refresh-${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}--default`;
+  const stackProjectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID;
+
+  // Stack Auth peut utiliser plusieurs formats de cookies
+  const stackAccessToken = cookies.get('stack-access-token');
+  const stackAccessProject = cookies.get(`stack-access-${stackProjectId}--default`);
+  const refreshCookieName = `stack-refresh-${stackProjectId}--default`;
   const refreshCookie = cookies.get(refreshCookieName);
 
-  if (stackAccessCookie || refreshCookie) {
-    // Récupération du rôle Stack (si présent, sinon 'user')
+  // Utiliser l'access token disponible (project-specific ou global)
+  const accessToken = stackAccessToken || stackAccessProject;
+
+  if (accessToken || refreshCookie) {
     const stackRoleCookie = cookies.get('stack-role');
-    const role = stackRoleCookie?.value || 'user';
-    const response = NextResponse.next();
-    response.cookies.set('role', role, { path: '/' }); // Permet d'exposer le rôle côté Server Component
-    console.log('✅ Middleware - Auth Stack trouvée pour:', url, 'Rôle:', role);
-    return response;
+    const shouldRefreshRole = !stackRoleCookie || stackRoleCookie.value === 'user';
+
+    console.log('🔍 Middleware - Stack Auth détectée:', {
+      accessToken: !!accessToken,
+      refreshToken: !!refreshCookie,
+      stackRole: stackRoleCookie?.value || 'absent',
+      shouldRefresh: shouldRefreshRole
+    });
+
+    // Si le cookie stack-role est absent ou "user", récupérer le rôle depuis Stack Auth
+    if (shouldRefreshRole && accessToken) {
+      try {
+        const userResponse = await fetch('https://api.stack-auth.com/api/v1/users/me', {
+          headers: {
+            'Authorization': `Bearer ${accessToken.value}`,
+            'x-stack-project-id': process.env.NEXT_PUBLIC_STACK_PROJECT_ID!,
+            'x-stack-publishable-client-key': process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
+          },
+        });
+
+        if (userResponse.ok) {
+          const user = await userResponse.json();
+          const role = user.server_metadata?.role ||
+                      user.client_read_only_metadata?.role ||
+                      user.client_metadata?.role ||
+                      'user';
+
+          const response = NextResponse.next();
+
+          // Créer/mettre à jour le cookie stack-role
+          response.cookies.set('stack-role', role, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            path: '/',
+          });
+
+          response.cookies.set('role', role, { path: '/' });
+
+          if (stackRoleCookie && stackRoleCookie.value !== role) {
+            console.log(`🔄 Middleware - Cookie stack-role mis à jour: ${stackRoleCookie.value} → ${role} pour ${url}`);
+          } else {
+            console.log(`✅ Middleware - Cookie stack-role créé: ${role} pour ${url}`);
+          }
+
+          return response;
+        }
+      } catch (fetchError) {
+        console.error('❌ Middleware - Erreur fetch Stack Auth:', fetchError);
+      }
+    }
+
+    // Cookie stack-role présent, utiliser sa valeur
+    if (stackRoleCookie) {
+      const role = stackRoleCookie.value;
+      const response = NextResponse.next();
+      response.cookies.set('role', role, { path: '/' });
+      console.log(`✅ Middleware - Stack Auth OK pour ${url} - Rôle: ${role}`);
+      return response;
+    }
+
+    // Pas de stack-role et pas d'access token pour le créer
+    // Laisser le Server Component gérer l'authentification complète
+    console.log(`⚠️  Middleware - Pas d'access token pour ${url}, délégation au Server Component`);
+    return NextResponse.next();
   }
 
   // ========================================

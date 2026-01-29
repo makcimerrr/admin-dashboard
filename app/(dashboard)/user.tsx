@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { stackServerApp } from '@/lib/stack-server';
+import { unifiedSignOut } from '@/lib/unified-signout';
 import Image from 'next/image';
 import {
   DropdownMenu,
@@ -67,7 +68,7 @@ export async function User() {
               <form
                 action={async () => {
                   'use server';
-                  await stackServerApp.signOut();
+                  await unifiedSignOut();
                 }}
               >
                 <button type="submit">Sign Out</button>

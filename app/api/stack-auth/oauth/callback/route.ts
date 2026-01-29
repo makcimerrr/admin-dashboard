@@ -56,6 +56,39 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Fetch user metadata to get role
+    try {
+      const userResponse = await fetch('https://api.stack-auth.com/api/v1/users/me', {
+        headers: {
+          'Authorization': `Bearer ${data.access_token}`,
+          'x-stack-project-id': process.env.NEXT_PUBLIC_STACK_PROJECT_ID!,
+          'x-stack-publishable-client-key': process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
+        },
+      });
+
+      if (userResponse.ok) {
+        const user = await userResponse.json();
+        const role = user.server_metadata?.role ||
+                    user.client_read_only_metadata?.role ||
+                    user.client_metadata?.role ||
+                    'user';
+
+        // Set role cookie for middleware
+        cookieStore.set('stack-role', role, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+          path: '/',
+        });
+
+        console.log('✅ OAuth callback - Role cookie set:', role);
+      }
+    } catch (roleError) {
+      console.error('Failed to fetch user role:', roleError);
+      // Continue even if role fetch fails - user will have default 'user' role in middleware
+    }
+
     // Redirect to home
     return NextResponse.redirect(new URL('/', req.url));
   } catch (error) {

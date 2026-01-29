@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/sidebar"
 import { useRouter } from "next/navigation"
 import { stackClientApp } from "@/lib/stack-client"
+import { signOut as nextAuthSignOut } from "next-auth/react"
 
 let User: {
   id?: string
@@ -48,11 +49,20 @@ export function NavUser({
 
   const handleSignOut = async () => {
     try {
-      await stackClientApp.signOut()
+      // Sign out from both Stack Auth and NextAuth (Authentik)
+      // This ensures complete logout regardless of which system the user used
+      await Promise.all([
+        stackClientApp.signOut().catch(() => {}), // Ignore Stack Auth errors
+        nextAuthSignOut({ redirect: false }).catch(() => {}), // Ignore NextAuth errors
+      ])
+
       router.push('/login')
       router.refresh()
     } catch (error) {
       console.error('Sign out error:', error)
+      // Still redirect even if there's an error
+      router.push('/login')
+      router.refresh()
     }
   }
 
