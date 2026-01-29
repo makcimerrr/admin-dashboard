@@ -404,7 +404,7 @@ export async function getAuditedStudentsByPromoAndTrack(
   for (const audit of auditsWithResults) {
     const logins = new Set<string>();
     for (const result of audit.results) {
-      logins.add(result.studentLogin);
+      logins.add(result.studentLogin.toLowerCase());
     }
     map.set(audit.groupId, logins);
   }
@@ -677,4 +677,64 @@ export async function getAuditCountByAuditor(
   }
 
   return Array.from(countMap.values()).sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Type pour les audits d'un étudiant
+ */
+export interface StudentAuditData {
+  auditId: number;
+  projectName: string;
+  track: string;
+  promoId: string;
+  promoName: string;
+  groupId: string;
+  auditorName: string;
+  auditDate: Date;
+  validated: boolean;
+  feedback: string | null;
+  warnings: string[];
+  globalSummary: string | null;
+  globalWarnings: string[];
+  priority: Priority;
+}
+
+/**
+ * Récupère tous les audits d'un étudiant par son login
+ */
+export async function getAuditsByStudentLogin(
+  studentLogin: string
+): Promise<StudentAuditData[]> {
+  // Récupérer tous les audit_results pour cet étudiant
+  const studentResults = await db.query.auditResults.findMany({
+    where: eq(auditResults.studentLogin, studentLogin),
+    with: {
+      audit: true
+    },
+    orderBy: [desc(auditResults.createdAt)]
+  });
+
+  return studentResults.map((result) => {
+    const audit = result.audit;
+    const promo = (promoConfig as any[]).find(
+      (p) => String(p.eventId) === String(audit.promoId)
+    );
+
+    return {
+      auditId: audit.id,
+      projectName: audit.projectName,
+      track: audit.track,
+      promoId: audit.promoId,
+      promoName: promo?.key ?? `Promotion ${audit.promoId}`,
+      groupId: audit.groupId,
+      auditorName: audit.auditorName,
+      auditDate: audit.createdAt,
+      validated: result.validated,
+      feedback: result.feedback,
+      warnings: getWarningsArray(result.warnings),
+      globalSummary: audit.summary,
+      globalWarnings: getWarningsArray(audit.warnings),
+      priority: audit.priority as Priority || 'normal'
+    };
+  });
 }

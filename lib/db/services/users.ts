@@ -175,3 +175,44 @@ export async function getUserById(id: string) {
         throw new Error('Unable to fetch user by id from database.');
     }
 }
+
+/**
+ * Gets or creates a user in the database by email.
+ * Used for Stack Auth/Authentik users who need a local DB record.
+ * @param email - The email of the user.
+ * @param name - The name of the user (optional).
+ * @returns The user ID from the local database.
+ */
+export async function getOrCreateUserByEmail(email: string, name?: string): Promise<number> {
+    try {
+        // Check if user exists
+        const existingUser = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.email, email))
+            .limit(1)
+            .execute();
+
+        if (existingUser.length > 0) {
+            return existingUser[0].id;
+        }
+
+        // Create user if doesn't exist
+        const result = await db
+            .insert(users)
+            .values({
+                email,
+                name: name || email,
+                role: 'user', // Default role
+                planningPermission: 'reader', // Default permission
+            })
+            .returning({ id: users.id })
+            .execute();
+
+        console.log('✅ User created in local DB:', email, 'ID:', result[0].id);
+        return result[0].id;
+    } catch (error) {
+        console.error('Error getting or creating user:', error);
+        throw new Error('Unable to get or create user in database.');
+    }
+}

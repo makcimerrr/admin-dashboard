@@ -6,6 +6,7 @@ import {
     getAuditsByPromoAndTrack,
     type CreateAuditInput,
 } from '@/lib/db/services/audits';
+import { getOrCreateUserByEmail } from '@/lib/db/services/users';
 import { fetchPromotionProgressions, buildProjectGroups } from '@/lib/services/zone01';
 import { canAuditGroup } from '@/lib/types/code-reviews';
 import { TRACKS, type Track } from '@/lib/db/schema/audits';
@@ -126,6 +127,20 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Récupérer ou créer l'utilisateur dans la DB locale
+        const userEmail = user.primaryEmail;
+        if (!userEmail) {
+            return NextResponse.json(
+                { error: 'Email utilisateur manquant' },
+                { status: 400 }
+            );
+        }
+
+        const auditorId = await getOrCreateUserByEmail(
+            userEmail,
+            user.displayName || undefined
+        );
+
         // Créer l'audit
         const auditInput: CreateAuditInput = {
             promoId: data.promoId,
@@ -134,7 +149,7 @@ export async function POST(request: NextRequest) {
             groupId: data.groupId,
             summary: data.summary,
             warnings: data.warnings,
-            auditorId: parseInt(user.id, 10) || 0, // Stack Auth user ID
+            auditorId, // ID de la table users locale
             auditorName: user.displayName || user.primaryEmail || 'Anonyme',
             results: data.results.map((r) => ({
                 studentLogin: r.studentLogin,

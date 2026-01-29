@@ -24,6 +24,9 @@ import { audits } from '@/lib/db/schema/audits';
 import { eq } from 'drizzle-orm';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 interface PageProps {
     params: Promise<{ promoId: string; groupId: string }>;
@@ -61,12 +64,27 @@ export default async function GroupDetailPage({ params }: PageProps) {
         p => String(p.group.id) === groupId && p.object.name.toLowerCase() === projectName.toLowerCase()
     );
 
+    // Récupérer les IDs des étudiants depuis la DB
+    const { students: studentsTable } = await import('@/lib/db/schema/students');
+    const memberLogins = groupProgressions.map(p => p.user.login.toLowerCase());
+    const studentsData = memberLogins.length > 0
+        ? await db.query.students.findMany({
+            where: (students, { inArray, sql }) =>
+                sql`LOWER(${students.login}) IN (${sql.join(memberLogins.map(l => sql.raw(`'${l}'`)), sql`, `)})`,
+        })
+        : [];
+
+    const studentIdByLogin = new Map(
+        studentsData.map(s => [s.login.toLowerCase(), s.id])
+    );
+
     const members = groupProgressions.map(p => ({
         login: p.user.login,
         firstName: p.user.firstName,
         lastName: p.user.lastName,
         grade: p.grade ?? null,
         isDropout: dropoutLogins.has(p.user.login.toLowerCase()),
+        studentId: studentIdByLogin.get(p.user.login.toLowerCase()),
     }));
 
     const resultsByLogin = new Map(
@@ -123,46 +141,74 @@ export default async function GroupDetailPage({ params }: PageProps) {
                                 return (
                                     <div
                                         key={member.login}
-                                        className={`flex items-center justify-between p-3 rounded-lg border ${member.isDropout ? 'opacity-50 bg-muted/50' : ''}`}
+                                        className={`flex items-center justify-between p-3 rounded-lg border ${member.isDropout ? 'opacity-50 bg-muted/50' : ''} ${member.studentId ? 'hover:bg-muted/70 transition-colors' : ''}`}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-muted rounded-full">
-                                                <User className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <p className={`font-medium ${member.isDropout ? 'line-through' : ''}`}>
-                                                    {member.login}
-                                                    {member.isDropout && (
-                                                        <Badge variant="outline" className="ml-2 text-xs">
-                                                            Perdition
-                                                        </Badge>
-                                                    )}
-                                                </p>
-                                                {(member.firstName || member.lastName) && (
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {member.firstName} {member.lastName}
+                                        {member.studentId ? (
+                                            <Link
+                                                href={`/student?id=${member.studentId}`}
+                                                className="flex items-center gap-3 flex-1"
+                                            >
+                                                <div className="p-2 bg-muted rounded-full">
+                                                    <User className="h-4 w-4" />
+                                                </div>
+                                                <div>
+                                                    <p className={`font-medium ${member.isDropout ? 'line-through' : ''}`}>
+                                                        {member.login}
+                                                        {member.isDropout && (
+                                                            <Badge variant="outline" className="ml-2 text-xs">
+                                                                Perdition
+                                                            </Badge>
+                                                        )}
                                                     </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        {result && (
-                                            <div className="flex items-center gap-2">
-                                                {result.validated ? (
-                                                    <Badge className="bg-green-100 text-green-800">
-                                                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                                                        Validé
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge variant="destructive">
-                                                        <XCircle className="h-3 w-3 mr-1" />
-                                                        Non validé
-                                                    </Badge>
-                                                )}
-                                                {(result.warnings?.length ?? 0) > 0 && (
-                                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                                )}
+                                                    {(member.firstName || member.lastName) && (
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {member.firstName} {member.lastName}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </Link>
+                                        ) : (
+                                            <div className="flex items-center gap-3 flex-1">
+                                                <div className="p-2 bg-muted rounded-full">
+                                                    <User className="h-4 w-4" />
+                                                </div>
+                                                <div>
+                                                    <p className={`font-medium ${member.isDropout ? 'line-through' : ''}`}>
+                                                        {member.login}
+                                                        {member.isDropout && (
+                                                            <Badge variant="outline" className="ml-2 text-xs">
+                                                                Perdition
+                                                            </Badge>
+                                                        )}
+                                                    </p>
+                                                    {(member.firstName || member.lastName) && (
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {member.firstName} {member.lastName}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
+                                        <div className="flex items-center gap-2">
+                                            {result && (
+                                                <>
+                                                    {result.validated ? (
+                                                        <Badge className="bg-green-100 text-green-800">
+                                                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                                                            Validé
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive">
+                                                            <XCircle className="h-3 w-3 mr-1" />
+                                                            Non validé
+                                                        </Badge>
+                                                    )}
+                                                    {(result.warnings?.length ?? 0) > 0 && (
+                                                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -208,13 +254,15 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
                         {/* Compte rendu */}
                         {audit.summary && (
-                            <div>
-                                <p className="font-medium mb-2">Compte rendu</p>
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                    {audit.summary}
-                                </p>
-                            </div>
-                        )}
+                                    <div>
+                                        <p className="font-medium mb-2">Compte rendu</p>
+                                        <div className="text-sm text-muted-foreground">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                                                {audit.summary}
+                                            </ReactMarkdown>
+                                        </div>
+                                    </div>
+                                )}
 
                         {/* Résultats individuels */}
                         <div>
