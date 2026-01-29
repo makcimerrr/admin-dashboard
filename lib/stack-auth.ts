@@ -13,6 +13,7 @@ export interface StackUser {
   profile_image_url: string | null;
   signed_up_at_millis: number;
   client_metadata: Record<string, any>;
+  client_read_only_metadata: Record<string, any>;
   server_metadata: Record<string, any>;
 }
 
