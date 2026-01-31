@@ -531,28 +531,6 @@ export default async function PromoGroupsIndexPage({
                                       <Link
                                         href={studentHref}
                                         data-prevent-card
-                                        className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium hover:bg-primary/10 transition"
-                                        aria-label={`Voir la fiche de ${m.login}`}
-                                      >
-                                        {(
-                                          m.firstName?.[0] ||
-                                          m.login[0] ||
-                                          ''
-                                        ).toUpperCase()}
-                                      </Link>
-                                    ) : (
-                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium">
-                                        {(
-                                          m.firstName?.[0] ||
-                                          m.login[0] ||
-                                          ''
-                                        ).toUpperCase()}
-                                      </span>
-                                    )}
-                                    {studentHref ? (
-                                      <Link
-                                        href={studentHref}
-                                        data-prevent-card
                                         className="text-primary truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
                                         aria-label={`Voir la fiche de ${m.login}`}
                                       >
