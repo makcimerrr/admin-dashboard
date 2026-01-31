@@ -224,46 +224,61 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
               {/* Members simplified list: name, validated (V/NV), and warning tooltip */}
               <div className="mt-4">
-                <h3 className="text-sm font-medium mb-2">Membres</h3>
-                <div className="space-y-1">
-                  {members.map((m) => {
-                    const res = resultsByLogin.get(m.login.toLowerCase());
-                    const validated = res?.validated === true;
-                    const warnings = res?.warnings ?? [];
-                    const warningsText = warnings.join('\n');
-                    const name = m.firstName || m.lastName ? `${safeText(m.firstName)} ${safeText(m.lastName)}`.trim() : m.login;
+                    <h3 className="text-sm font-medium mb-2">Membres</h3>
+                    <div className="space-y-1">
+                      {members.map((m) => {
+                        const res = resultsByLogin.get(m.login.toLowerCase());
+                        const validated = res?.validated === true;
+                        const warnings = res?.warnings ?? [];
+                        const warningsText = warnings.join('\n');
+                        const name = m.firstName || m.lastName ? `${safeText(m.firstName)} ${safeText(m.lastName)}`.trim() : m.login;
+                        const href = m.studentId ? `/student?id=${m.studentId}` : undefined;
+                        const rowClasses = `flex items-center justify-between text-sm p-2 rounded-md transition-colors ${href ? 'hover:bg-primary/5 cursor-pointer' : 'opacity-80'}`;
 
-                    return (
-                      <div key={m.login} className="flex items-center justify-between text-sm">
-                        <div className="truncate max-w-[12rem]">{name}</div>
+                        const content = (
+                          <>
+                            <div className="flex items-center">
+                              <User className="h-4 w-4 text-muted-foreground mr-2" />
+                              <div className="truncate max-w-[12rem]">{name}</div>
+                            </div>
 
-                        <div className="flex items-center gap-2">
-                          {warnings.length > 0 ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <span className="text-amber-600 text-xs cursor-default" aria-hidden>
-                                    ⚠
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <div className="whitespace-pre-wrap text-xs">{warningsText}</div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : null}
+                            <div className="flex items-center gap-2">
+                              {warnings.length > 0 ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger>
+                                      <span className="text-amber-600 text-xs cursor-default" aria-hidden>
+                                        ⚠
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      <div className="whitespace-pre-wrap text-xs">{warningsText}</div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : null}
 
-                          {validated ? (
-                            <Badge className="bg-green-100 text-green-800 text-xs">V</Badge>
-                          ) : (
-                            <Badge variant="destructive" className="text-xs">NV</Badge>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                              {validated ? (
+                                <Badge className="bg-green-100 text-green-800 text-xs">V</Badge>
+                              ) : (
+                                <Badge variant="destructive" className="text-xs">NV</Badge>
+                              )}
+                            </div>
+                          </>
+                        );
+
+                        return href ? (
+                          <Link key={m.login} href={href} className={rowClasses} aria-label={`Voir la fiche de ${name}`}>
+                            {content}
+                          </Link>
+                        ) : (
+                          <div key={m.login} className={rowClasses} aria-hidden>
+                            {content}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
               {(audit.warnings?.length ?? 0) > 0 ? (
                 <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
@@ -298,7 +313,6 @@ export default async function GroupDetailPage({ params }: PageProps) {
           ) : (
             <div className="space-y-3">
               {audit.results.map((result) => {
-                const resultGrade = members.find(m => m.login.toLowerCase() === result.studentLogin.toLowerCase())?.grade;
                 return (
                   <div key={result.id} className="border rounded-lg p-4 bg-white/50">
                     <div className="flex items-start justify-between">
@@ -306,7 +320,6 @@ export default async function GroupDetailPage({ params }: PageProps) {
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">{initialsFrom(undefined, result.studentLogin)}</div>
                         <div>
                           <div className="font-medium">{result.studentLogin}</div>
-                          <div className="text-xs text-muted-foreground">Grade: {resultGrade ?? '—'}</div>
                         </div>
                       </div>
 
@@ -326,13 +339,19 @@ export default async function GroupDetailPage({ params }: PageProps) {
                       {result.feedback ? (
                         <MarkdownWithTables md={result.feedback} />
                       ) : (
-                        <div className="text-sm text-muted-foreground">Pas de feedback.</div>
+                        <div className="text-sm text-muted-foreground">
+                          Pas de feedback.
+                        </div>
                       )}
 
                       {(result.warnings?.length ?? 0) > 0 && (
                         <div className="flex flex-wrap gap-2 mt-2">
                           {result.warnings?.map((w, i) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-amber-50 text-amber-700">
+                            <Badge
+                              key={i}
+                              variant="outline"
+                              className="text-xs bg-amber-50 text-amber-700"
+                            >
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               {w}
                             </Badge>
