@@ -29,11 +29,8 @@ import GroupFilters from '@/components/code-reviews/group-filters';
 
 const TRACKS = ['Golang', 'Javascript', 'Rust', 'Java'] as const;
 
-export default async function PromoGroupsIndexPage({
-  params
-}: {
-  params: { promoId: string };
-}) {
+export default async function PromoGroupsIndexPage(props: any) {
+  const { params } = props as { params: { promoId: string } };
   const { promoId } = params;
   const promo = parsePromoId(promoId);
   if (!promo) notFound();
