@@ -459,7 +459,7 @@ export default async function PromoGroupsIndexPage({
                             <Link
                               href={`/code-reviews/${promoId}/group/${g.groupId}`}
                               data-prevent-card
-                              className="flex items-center gap-2 text-sm text-primary group"
+                              className="flex items-center gap-2 text-sm text-primary group px-2 py-1 rounded-md hover:bg-primary/5 transition-colors"
                               aria-label={`Créer l'audit du groupe ${g.groupId}`}
                             >
                               <span className="hidden sm:inline transition-transform group-hover:translate-x-1">
@@ -552,7 +552,7 @@ export default async function PromoGroupsIndexPage({
 
                             <Link
                               href={`/code-reviews/${promoId}/group/${g.groupId}`}
-                              className="flex items-center gap-2 text-sm text-primary group"
+                              className="flex items-center gap-2 text-sm text-primary group px-2 py-1 rounded-md hover:bg-primary/5 transition-colors"
                               aria-label={`Ouvrir l'audit du groupe ${g.groupId}`}
                             >
                               <span className="hidden sm:inline transition-transform group-hover:translate-x-1">
