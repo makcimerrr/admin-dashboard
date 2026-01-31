@@ -2,9 +2,20 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { parsePromoId, getAllPromotions, eventIdToString } from '@/lib/config/promotions';
-import { fetchPromotionProgressions, buildProjectGroups } from '@/lib/services/zone01';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent
+} from '@/components/ui/tooltip';
+import {
+  parsePromoId,
+  getAllPromotions,
+  eventIdToString
+} from '@/lib/config/promotions';
+import {
+  fetchPromotionProgressions,
+  buildProjectGroups
+} from '@/lib/services/zone01';
 import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { getAuditsByPromoAndTrack } from '@/lib/db/services/audits';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
@@ -18,25 +29,38 @@ import GroupFilters from '@/components/code-reviews/group-filters';
 
 const TRACKS = ['Golang', 'Javascript', 'Rust', 'Java'] as const;
 
-export default async function PromoGroupsIndexPage({ params }: { params: { promoId: string } }) {
+export default async function PromoGroupsIndexPage({
+  params
+}: {
+  params: { promoId: string };
+}) {
   const { promoId } = params;
   const promo = parsePromoId(promoId);
   if (!promo) notFound();
 
   // compute prev/next promos from config order
   const allPromos = getAllPromotions();
-  const promoIndex = allPromos.findIndex((p) => p.eventId === Number(promo.eventId));
+  const promoIndex = allPromos.findIndex(
+    (p) => p.eventId === Number(promo.eventId)
+  );
   const prevPromo = promoIndex > 0 ? allPromos[promoIndex - 1] : undefined;
-  const nextPromo = promoIndex >= 0 && promoIndex < allPromos.length - 1 ? allPromos[promoIndex + 1] : undefined;
+  const nextPromo =
+    promoIndex >= 0 && promoIndex < allPromos.length - 1
+      ? allPromos[promoIndex + 1]
+      : undefined;
 
   // Fetch data in parallel
   const [progressions, dropoutLogins, ...auditsPerTrack] = await Promise.all([
     fetchPromotionProgressions(String(promo.eventId)),
     getDropoutLogins(),
-    ...TRACKS.map((track) => getAuditsByPromoAndTrack(String(promo.eventId), track))
+    ...TRACKS.map((track) =>
+      getAuditsByPromoAndTrack(String(promo.eventId), track)
+    )
   ]);
 
-  const auditsByTrack = Object.fromEntries(TRACKS.map((t, i) => [t, auditsPerTrack[i]]));
+  const auditsByTrack = Object.fromEntries(
+    TRACKS.map((t, i) => [t, auditsPerTrack[i]])
+  );
 
   // Build finished groups across tracks/projects
   const allGroups: any[] = [];
@@ -57,7 +81,9 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
           isDropout: dropoutLogins.has(m.login.toLowerCase())
         }));
 
-        const activeMembers = membersWithDropout.filter((m: any) => !m.isDropout).length;
+        const activeMembers = membersWithDropout.filter(
+          (m: any) => !m.isDropout
+        ).length;
         if (activeMembers === 0) continue; // skip groups with no active members
 
         let hasWarnings = false;
@@ -67,11 +93,17 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
 
         if (audit) {
           const globalWarnings = audit.warnings?.length || 0;
-          const memberWarnings = audit.results?.reduce((sum: number, r: any) => sum + (r.warnings?.length || 0), 0) || 0;
+          const memberWarnings =
+            audit.results?.reduce(
+              (sum: number, r: any) => sum + (r.warnings?.length || 0),
+              0
+            ) || 0;
           warningsCount = globalWarnings + memberWarnings;
           hasWarnings = warningsCount > 0;
-          validatedCount = audit.results?.filter((r: any) => r.validated).length || 0;
-          const validationRate = activeMembers > 0 ? (validatedCount / activeMembers) * 100 : 100;
+          validatedCount =
+            audit.results?.filter((r: any) => r.validated).length || 0;
+          const validationRate =
+            activeMembers > 0 ? (validatedCount / activeMembers) * 100 : 100;
           if (hasWarnings || validationRate < 30) priority = 'urgent';
           else if (validationRate < 50) priority = 'warning';
         }
@@ -108,9 +140,15 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
   let studentIdByLogin = new Map<string, number>();
   if (memberLogins.length > 0) {
     const studentsData = await db.query.students.findMany({
-      where: (students, { sql }) => sql`LOWER(${students.login}) IN (${sql.join(memberLogins.map((l) => sql.raw(`'${l}'`)), sql`, `)})`
+      where: (students, { sql }) =>
+        sql`LOWER(${students.login}) IN (${sql.join(
+          memberLogins.map((l) => sql.raw(`'${l}'`)),
+          sql`, `
+        )})`
     });
-    studentIdByLogin = new Map(studentsData.map((s: any) => [s.login.toLowerCase(), s.id]));
+    studentIdByLogin = new Map(
+      studentsData.map((s: any) => [s.login.toLowerCase(), s.id])
+    );
   }
 
   for (const g of allGroups) {
@@ -118,7 +156,6 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
       m.studentId = studentIdByLogin.get(m.login.toLowerCase());
     }
   }
-
 
   // Stats
   const stats: any = {
@@ -138,15 +175,23 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
 
   // Evaluate pending priorities
   const pendingGroups = allGroups.filter((g) => !g.isAudited);
-  const pendingEvaluation = await evaluatePendingPriorities(String(promo.eventId), pendingGroups.map((g) => ({
-    groupId: g.groupId,
-    projectName: g.projectName,
-    track: g.track,
-    members: g.members.map((m: any) => ({ login: m.login, isDropout: m.isDropout })),
-    activeMembers: g.activeMembers
-  })));
+  const pendingEvaluation = await evaluatePendingPriorities(
+    String(promo.eventId),
+    pendingGroups.map((g) => ({
+      groupId: g.groupId,
+      projectName: g.projectName,
+      track: g.track,
+      members: g.members.map((m: any) => ({
+        login: m.login,
+        isDropout: m.isDropout
+      })),
+      activeMembers: g.activeMembers
+    }))
+  );
 
-  const pendingPriorityMap = new Map((pendingEvaluation.groups || []).map((g: any) => [g.groupId, g]));
+  const pendingPriorityMap = new Map(
+    (pendingEvaluation.groups || []).map((g: any) => [g.groupId, g])
+  );
   for (const group of allGroups) {
     if (!group.isAudited) {
       const evalData = pendingPriorityMap.get(group.groupId);
@@ -162,8 +207,10 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
   const priorityOrder = { urgent: 0, warning: 1, normal: 2 } as const;
   allGroups.sort((a, b) => {
     if (a.isAudited !== b.isAudited) return a.isAudited ? 1 : -1;
-    const pa = priorityOrder[(a.priority ?? 'normal') as keyof typeof priorityOrder];
-    const pb = priorityOrder[(b.priority ?? 'normal') as keyof typeof priorityOrder];
+    const pa =
+      priorityOrder[(a.priority ?? 'normal') as keyof typeof priorityOrder];
+    const pb =
+      priorityOrder[(b.priority ?? 'normal') as keyof typeof priorityOrder];
     if (pa !== pb) return pa - pb;
     return a.projectName.localeCompare(b.projectName);
   });
@@ -176,9 +223,15 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 rounded-md border bg-muted/5 px-2 py-1">
             <Button variant="ghost" asChild>
-              <Link href="/code-reviews" className="flex items-center gap-2 px-3 py-2" aria-label="Retour à Code Reviews">
+              <Link
+                href="/code-reviews"
+                className="flex items-center gap-2 px-3 py-2"
+                aria-label="Retour à Code Reviews"
+              >
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline text-sm font-medium">Code Reviews</span>
+                <span className="hidden sm:inline text-sm font-medium">
+                  Code Reviews
+                </span>
               </Link>
             </Button>
 
@@ -191,18 +244,29 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" asChild className="px-2 py-2">
-                    <Link href={`/code-reviews/${eventIdToString(prevPromo.eventId)}/group`} className="flex items-center gap-2 px-3 py-2" aria-label={`Aller à ${prevPromo.key}`}>
+                    <Link
+                      href={`/code-reviews/${eventIdToString(prevPromo.eventId)}/group`}
+                      className="flex items-center gap-2 px-3 py-2"
+                      aria-label={`Aller à ${prevPromo.key}`}
+                    >
                       <ArrowLeft className="h-4 w-4 rotate-90" />
                       <span className="hidden md:inline text-sm">Précéd.</span>
                     </Link>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <div className="text-xs">{prevPromo.key} — {prevPromo.title}</div>
+                  <div className="text-xs">
+                    {prevPromo.key} — {prevPromo.title}
+                  </div>
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <Button variant="outline" disabled className="px-3 py-2 opacity-60" aria-label="Aucune promotion précédente">
+              <Button
+                variant="outline"
+                disabled
+                className="px-3 py-2 opacity-60"
+                aria-label="Aucune promotion précédente"
+              >
                 <ArrowLeft className="h-4 w-4 rotate-90 opacity-40" />
               </Button>
             )}
@@ -212,18 +276,29 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" asChild className="px-2 py-2">
-                    <Link href={`/code-reviews/${eventIdToString(nextPromo.eventId)}/group`} className="flex items-center gap-2 px-3 py-2" aria-label={`Aller à ${nextPromo.key}`}>
+                    <Link
+                      href={`/code-reviews/${eventIdToString(nextPromo.eventId)}/group`}
+                      className="flex items-center gap-2 px-3 py-2"
+                      aria-label={`Aller à ${nextPromo.key}`}
+                    >
                       <ArrowLeft className="h-4 w-4 -rotate-90" />
                       <span className="hidden md:inline text-sm">Suiv.</span>
                     </Link>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <div className="text-xs">{nextPromo.key} — {nextPromo.title}</div>
+                  <div className="text-xs">
+                    {nextPromo.key} — {nextPromo.title}
+                  </div>
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <Button variant="outline" disabled className="px-3 py-2 opacity-60" aria-label="Aucune promotion suivante">
+              <Button
+                variant="outline"
+                disabled
+                className="px-3 py-2 opacity-60"
+                aria-label="Aucune promotion suivante"
+              >
                 <ArrowLeft className="h-4 w-4 -rotate-90 opacity-40" />
               </Button>
             )}
@@ -232,7 +307,9 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
 
         {/* Center: title (responsive) */}
         <div className="flex-1 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Groupes — {promo.key}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Groupes — {promo.key}
+          </h1>
           <p className="text-sm text-muted-foreground">{promo.title}</p>
         </div>
 
@@ -241,27 +318,38 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" asChild>
-                <Link href={`/code-reviews/${promoId}`} className="flex items-center gap-2 px-3 py-2" aria-label="Voir la promo">
+                <Link
+                  href={`/code-reviews/${promoId}`}
+                  className="flex items-center gap-2 px-3 py-2"
+                  aria-label="Voir la promo"
+                >
                   <BarChart3 className="h-5 w-5 text-primary" />
-                  <span className="hidden sm:inline text-sm font-medium">Voir la promo</span>
+                  <span className="hidden sm:inline text-sm font-medium">
+                    Voir la promo
+                  </span>
                 </Link>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <div className="text-xs">Ouvrir la vue promo et ses statistiques</div>
+              <div className="text-xs">
+                Ouvrir la vue promo et ses statistiques
+              </div>
             </TooltipContent>
           </Tooltip>
         </div>
       </div>
 
-
       <div>
         <div className="mb-4 rounded-md border bg-card p-4">
           <h3 className="text-lg font-semibold">Vue des audits</h3>
-          <p className="text-sm text-muted-foreground">Sépare les audits en attente et ceux déjà réalisés. Cliquez sur une carte pour ouvrir l'audit (ou créer si en attente). Les membres sont cliquables pour accéder à leur profil.</p>
+          <p className="text-sm text-muted-foreground">
+            Sépare les audits en attente et ceux déjà réalisés. Cliquez sur une
+            carte pour ouvrir l'audit (ou créer si en attente). Les membres sont
+            cliquables pour accéder à leur profil.
+          </p>
         </div>
 
-        <GroupFilters tracks={TRACKS as string[]} />
+        <GroupFilters tracks={TRACKS as unknown as string[]} />
 
         {/* Grouped-by-track with Pending / Audited separation */}
         <div className="space-y-8">
@@ -275,9 +363,13 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold">{track}</h2>
                   <div className="flex items-center gap-3">
-                    <div className="text-sm text-muted-foreground">Total: {groupsForTrack.length}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Total: {groupsForTrack.length}
+                    </div>
                     <Badge variant="outline">Audités {audited.length}</Badge>
-                    <Badge variant="outline" className="bg-muted/10">En attente {pending.length}</Badge>
+                    <Badge variant="outline" className="bg-muted/10">
+                      En attente {pending.length}
+                    </Badge>
                   </div>
                 </div>
 
@@ -289,7 +381,6 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
                       {pending.map((g) => (
                         <GroupCard
                           key={g.groupId}
-                          href={`/code-reviews/${promoId}/audit?groupId=${encodeURIComponent(g.groupId)}&project=${encodeURIComponent(g.projectName)}&track=${encodeURIComponent(g.track)}&priority=${encodeURIComponent(g.priority ?? 'normal')}`}
                           data-group-card
                           data-track={g.track}
                           data-status="pending"
@@ -297,47 +388,85 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold truncate">{g.projectName}</div>
-                              <div className="text-xs text-muted-foreground">Groupe #{g.groupId} — Priorité: <span className="font-medium text-amber-700">{g.priority}</span></div>
-                              <div className="text-xs text-muted-foreground mt-2">{g.activeMembers} membre(s) • {g.warningsCount} warnings</div>
+                              <div className="text-sm font-semibold truncate">
+                                {g.projectName}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Groupe #{g.groupId} — Priorité:{' '}
+                                <span className="font-medium text-amber-700">
+                                  {g.priority}
+                                </span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-2">
+                                {g.activeMembers} membre(s) • {g.warningsCount}{' '}
+                                warnings
+                              </div>
                             </div>
 
                             <div className="flex flex-col items-end gap-2">
-                              <div className="text-xs text-muted-foreground">En attente</div>
-                              <div className="text-xs text-muted-foreground">{g.priority === 'urgent' ? <span className="text-red-600 font-semibold">Urgent</span> : null}</div>
+                              <div className="text-xs text-muted-foreground">
+                                En attente
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {g.priority === 'urgent' ? (
+                                  <span className="text-red-600 font-semibold">
+                                    Urgent
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
 
                           <div className="mt-4 flex items-center justify-between">
                             <div className="flex flex-wrap gap-2">
                               {g.members.slice(0, 3).map((m: any) => {
-                                const studentHref = m.studentId ? `/student?id=${m.studentId}` : undefined;
+                                const studentHref = m.studentId
+                                  ? `/student?id=${m.studentId}`
+                                  : undefined;
                                 return (
-                                  <div key={m.login} className="flex items-center gap-2 text-xs">
+                                  <div
+                                    key={m.login}
+                                    className="flex items-center gap-2 text-xs"
+                                  >
                                     {studentHref ? (
-                                      <Link href={studentHref} data-prevent-card className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium hover:bg-primary/10 transition" aria-label={`Voir la fiche de ${m.login}`}>
-                                        {(m.firstName?.[0] || m.login[0] || '').toUpperCase()}
+                                      <Link
+                                        href={studentHref}
+                                        data-prevent-card
+                                        className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
+                                        aria-label={`Voir la fiche de ${m.login}`}
+                                      >
+                                        {m.firstName
+                                          ? `${m.firstName}`
+                                          : m.login}
                                       </Link>
                                     ) : (
-                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium">{(m.firstName?.[0] || m.login[0] || '').toUpperCase()}</span>
-                                    )}
-                                    {studentHref ? (
-                                      <Link href={studentHref} data-prevent-card className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition" aria-label={`Voir la fiche de ${m.login}`}>
-                                        {m.firstName ? `${m.firstName}` : m.login}
-                                      </Link>
-                                    ) : (
-                                      <span className="truncate max-w-[8rem] text-xs">{m.firstName ? `${m.firstName}` : m.login}</span>
+                                      <span className="truncate max-w-[8rem] text-xs">
+                                        {m.firstName
+                                          ? `${m.firstName}`
+                                          : m.login}
+                                      </span>
                                     )}
                                   </div>
                                 );
                               })}
-                              {g.members.length > 3 && <div className="text-xs text-muted-foreground">+{g.members.length - 3}</div>}
+                              {g.members.length > 3 && (
+                                <div className="text-xs text-muted-foreground">
+                                  +{g.members.length - 3}
+                                </div>
+                              )}
                             </div>
 
-                            <div className="flex items-center gap-2 text-sm text-primary group">
-                              <span className="hidden sm:inline transition-transform group-hover:translate-x-1">Créer l'audit</span>
+                            <Link
+                              href={`/code-reviews/${promoId}/group/${g.groupId}`}
+                              data-prevent-card
+                              className="flex items-center gap-2 text-sm text-primary group"
+                              aria-label={`Créer l'audit du groupe ${g.groupId}`}
+                            >
+                              <span className="hidden sm:inline transition-transform group-hover:translate-x-1">
+                                Créer l'audit
+                              </span>
                               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                            </div>
+                            </Link>
                           </div>
                         </GroupCard>
                       ))}
@@ -353,7 +482,6 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
                       {audited.map((g) => (
                         <GroupCard
                           key={g.groupId}
-                          href={`/code-reviews/${promoId}/group/${g.groupId}`}
                           data-group-card
                           data-track={g.track}
                           data-status="audited"
@@ -361,46 +489,99 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold truncate">{g.projectName}</div>
-                              <div className="text-xs text-muted-foreground">Groupe #{g.groupId} • Auditeur: {g.auditorName ?? '—'}</div>
-                              <div className="text-xs text-muted-foreground mt-2">{g.validatedCount} validé(s) • {g.warningsCount} warnings</div>
+                              <div className="text-sm font-semibold truncate">
+                                {g.projectName}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Groupe #{g.groupId} • Auditeur:{' '}
+                                {g.auditorName ?? '—'}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-2">
+                                {g.validatedCount} validé(s) • {g.warningsCount}{' '}
+                                warnings
+                              </div>
                             </div>
 
                             <div className="flex flex-col items-end gap-2">
-                              <div className="text-xs text-green-600 font-medium">Audité</div>
-                              {g.auditDate ? <div className="text-xs text-muted-foreground">{format(new Date(g.auditDate), 'PPP', { locale: fr })}</div> : null}
+                              <div className="text-xs text-green-600 font-medium">
+                                Audité
+                              </div>
+                              {g.auditDate ? (
+                                <div className="text-xs text-muted-foreground">
+                                  {format(new Date(g.auditDate), 'PPP', {
+                                    locale: fr
+                                  })}
+                                </div>
+                              ) : null}
                             </div>
                           </div>
 
                           <div className="mt-4 flex items-center justify-between">
                             <div className="flex flex-wrap gap-2">
                               {g.members.slice(0, 4).map((m: any) => {
-                                const studentHref = m.studentId ? `/student?id=${m.studentId}` : undefined;
+                                const studentHref = m.studentId
+                                  ? `/student?id=${m.studentId}`
+                                  : undefined;
                                 return (
-                                  <div key={m.login} className="flex items-center gap-2 text-xs">
+                                  <div
+                                    key={m.login}
+                                    className="flex items-center gap-2 text-xs"
+                                  >
                                     {studentHref ? (
-                                      <Link href={studentHref} data-prevent-card className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium hover:bg-primary/10 transition" aria-label={`Voir la fiche de ${m.login}`}>
-                                        {(m.firstName?.[0] || m.login[0] || '').toUpperCase()}
+                                      <Link
+                                        href={studentHref}
+                                        data-prevent-card
+                                        className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium hover:bg-primary/10 transition"
+                                        aria-label={`Voir la fiche de ${m.login}`}
+                                      >
+                                        {(
+                                          m.firstName?.[0] ||
+                                          m.login[0] ||
+                                          ''
+                                        ).toUpperCase()}
                                       </Link>
                                     ) : (
-                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium">{(m.firstName?.[0] || m.login[0] || '').toUpperCase()}</span>
+                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium">
+                                        {(
+                                          m.firstName?.[0] ||
+                                          m.login[0] ||
+                                          ''
+                                        ).toUpperCase()}
+                                      </span>
                                     )}
                                     {studentHref ? (
-                                      <Link href={studentHref} data-prevent-card className="text-primary truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition" aria-label={`Voir la fiche de ${m.login}`}>
-                                        {m.firstName ? `${m.firstName}` : m.login}
+                                      <Link
+                                        href={studentHref}
+                                        data-prevent-card
+                                        className="text-primary truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
+                                        aria-label={`Voir la fiche de ${m.login}`}
+                                      >
+                                        {m.firstName
+                                          ? `${m.firstName}`
+                                          : m.login}
                                       </Link>
                                     ) : (
-                                      <span className="text-primary truncate max-w-[8rem] text-xs">{m.firstName ? `${m.firstName}` : m.login}</span>
+                                      <span className="text-primary truncate max-w-[8rem] text-xs">
+                                        {m.firstName
+                                          ? `${m.firstName}`
+                                          : m.login}
+                                      </span>
                                     )}
                                   </div>
                                 );
                               })}
                             </div>
 
-                            <div className="flex items-center gap-2 text-sm text-primary">
-                              <span className="hidden sm:inline">Ouvrir l'audit</span>
-                              <ChevronRight className="h-4 w-4" />
-                            </div>
+                            <Link
+                              href={`/code-reviews/${promoId}/group/${g.groupId}`}
+                              className="flex items-center gap-2 text-sm text-primary group"
+                              aria-label={`Ouvrir l'audit du groupe ${g.groupId}`}
+                            >
+                              <span className="hidden sm:inline transition-transform group-hover:translate-x-1">
+                                Ouvrir l'audit
+                              </span>
+                              <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                            </Link>
                           </div>
                         </GroupCard>
                       ))}
