@@ -417,28 +417,31 @@ export default async function PromoGroupsIndexPage({
 
                             {/* Membres */}
                             <div className="mt-4 flex flex-wrap gap-2 group-members">
-                              {g.members.slice(0, 4).map((m: any) => {
-                                const studentHref = m.studentId
-                                  ? `/student?id=${m.studentId}`
-                                  : undefined;
-                                return studentHref ? (
-                                  <Link
-                                    key={m.login}
-                                    href={studentHref}
-                                    className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
-                                    aria-label={`Voir la fiche de ${m.login}`}
-                                  >
-                                    {m.firstName || m.login}
-                                  </Link>
-                                ) : (
-                                  <span
-                                    key={m.login}
-                                    className="truncate max-w-[8rem] text-xs"
-                                  >
-                                    {m.firstName || m.login}
-                                  </span>
-                                );
-                              })}
+                              {g.members
+                                .slice(0, 4)
+                                .map((m: any, mi: number) => {
+                                  const studentHref = m.studentId
+                                    ? `/student?id=${m.studentId}`
+                                    : undefined;
+                                  const key = `${m.login}-${mi}`;
+                                  return studentHref ? (
+                                    <Link
+                                      key={key}
+                                      href={studentHref}
+                                      className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
+                                      aria-label={`Voir la fiche de ${m.login}`}
+                                    >
+                                      {m.firstName || m.login}
+                                    </Link>
+                                  ) : (
+                                    <span
+                                      key={key}
+                                      className="truncate max-w-[8rem] text-xs"
+                                    >
+                                      {m.firstName || m.login}
+                                    </span>
+                                  );
+                                })}
                               {g.members.length > 4 && (
                                 <div className="text-xs text-muted-foreground">
                                   +{g.members.length - 4}
@@ -512,28 +515,31 @@ export default async function PromoGroupsIndexPage({
 
                             {/* Membres */}
                             <div className="mt-4 flex flex-wrap gap-2 group-members">
-                              {g.members.slice(0, 4).map((m: any) => {
-                                const studentHref = m.studentId
-                                  ? `/student?id=${m.studentId}`
-                                  : undefined;
-                                return studentHref ? (
-                                  <Link
-                                    key={m.login}
-                                    href={studentHref}
-                                    className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
-                                    aria-label={`Voir la fiche de ${m.login}`}
-                                  >
-                                    {m.firstName || m.login}
-                                  </Link>
-                                ) : (
-                                  <span
-                                    key={m.login}
-                                    className="truncate max-w-[8rem] text-xs"
-                                  >
-                                    {m.firstName || m.login}
-                                  </span>
-                                );
-                              })}
+                              {g.members
+                                .slice(0, 4)
+                                .map((m: any, mi: number) => {
+                                  const studentHref = m.studentId
+                                    ? `/student?id=${m.studentId}`
+                                    : undefined;
+                                  const key = `${m.login}-${mi}`;
+                                  return studentHref ? (
+                                    <Link
+                                      key={key}
+                                      href={studentHref}
+                                      className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
+                                      aria-label={`Voir la fiche de ${m.login}`}
+                                    >
+                                      {m.firstName || m.login}
+                                    </Link>
+                                  ) : (
+                                    <span
+                                      key={key}
+                                      className="truncate max-w-[8rem] text-xs"
+                                    >
+                                      {m.firstName || m.login}
+                                    </span>
+                                  );
+                                })}
                               {g.members.length > 4 && (
                                 <div className="text-xs text-muted-foreground">
                                   +{g.members.length - 4}
