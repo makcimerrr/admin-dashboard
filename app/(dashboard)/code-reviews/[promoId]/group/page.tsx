@@ -384,86 +384,78 @@ export default async function PromoGroupsIndexPage({
                           data-group-card
                           data-track={g.track}
                           data-status="pending"
-                          className="relative block p-4 border rounded-lg bg-background hover:shadow-lg transition cursor-pointer"
+                          className="relative block p-4 border rounded-lg bg-background hover:shadow-lg transition cursor-pointer
+                     flex flex-col justify-between min-h-[180px]" // <-- hauteur uniforme
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold truncate">
-                                {g.projectName}
+                          {/* Contenu principal */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold truncate group-title">
+                                  {g.projectName}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Groupe #{g.groupId} — Priorité:
+                                  <span className="font-medium text-amber-700 ml-1">
+                                    {g.priority}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-2">
+                                  {g.activeMembers} membre(s) •{' '}
+                                  {g.warningsCount} warnings
+                                </div>
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                Groupe #{g.groupId} — Priorité:{' '}
-                                <span className="font-medium text-amber-700">
-                                  {g.priority}
-                                </span>
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-2">
-                                {g.activeMembers} membre(s) • {g.warningsCount}{' '}
-                                warnings
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col items-end gap-2">
-                              <div className="text-xs text-muted-foreground">
+                              <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
                                 En attente
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {g.priority === 'urgent' ? (
+                                {g.priority === 'urgent' && (
                                   <span className="text-red-600 font-semibold">
                                     Urgent
                                   </span>
-                                ) : null}
+                                )}
                               </div>
                             </div>
-                          </div>
 
-                          <div className="mt-4 flex items-center justify-between">
-                            <div className="flex flex-wrap gap-2">
-                              {g.members.slice(0, 3).map((m: any) => {
+                            {/* Membres */}
+                            <div className="mt-4 flex flex-wrap gap-2 group-members">
+                              {g.members.slice(0, 4).map((m: any) => {
                                 const studentHref = m.studentId
                                   ? `/student?id=${m.studentId}`
                                   : undefined;
-                                return (
-                                  <div
+                                return studentHref ? (
+                                  <Link
                                     key={m.login}
-                                    className="flex items-center gap-2 text-xs"
+                                    href={studentHref}
+                                    className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
+                                    aria-label={`Voir la fiche de ${m.login}`}
                                   >
-                                    {studentHref ? (
-                                      <Link
-                                        href={studentHref}
-                                        data-prevent-card
-                                        className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
-                                        aria-label={`Voir la fiche de ${m.login}`}
-                                      >
-                                        {m.firstName
-                                          ? `${m.firstName}`
-                                          : m.login}
-                                      </Link>
-                                    ) : (
-                                      <span className="truncate max-w-[8rem] text-xs">
-                                        {m.firstName
-                                          ? `${m.firstName}`
-                                          : m.login}
-                                      </span>
-                                    )}
-                                  </div>
+                                    {m.firstName || m.login}
+                                  </Link>
+                                ) : (
+                                  <span
+                                    key={m.login}
+                                    className="truncate max-w-[8rem] text-xs"
+                                  >
+                                    {m.firstName || m.login}
+                                  </span>
                                 );
                               })}
-                              {g.members.length > 3 && (
+                              {g.members.length > 4 && (
                                 <div className="text-xs text-muted-foreground">
-                                  +{g.members.length - 3}
+                                  +{g.members.length - 4}
                                 </div>
                               )}
                             </div>
+                          </div>
 
+                          {/* Bouton en bas */}
+                          <div className="mt-4 flex items-center justify-end">
                             <Link
                               href={`/code-reviews/${promoId}/group/${g.groupId}`}
-                              data-prevent-card
                               className="flex items-center gap-2 text-sm text-primary group px-2 py-1 rounded-md hover:bg-primary/5 transition-colors"
                               aria-label={`Créer l'audit du groupe ${g.groupId}`}
                             >
                               <span className="hidden sm:inline transition-transform group-hover:translate-x-1">
-                                Créer l'audit
+                                Créer l’audit
                               </span>
                               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                             </Link>
@@ -485,78 +477,80 @@ export default async function PromoGroupsIndexPage({
                           data-group-card
                           data-track={g.track}
                           data-status="audited"
-                          className="relative block p-4 border rounded-lg bg-white hover:shadow-lg transition cursor-pointer"
+                          className="relative block p-4 border rounded-lg bg-white hover:shadow-lg transition cursor-pointer
+                     flex flex-col justify-between min-h-[180px]" // <-- même hauteur
                         >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold truncate">
-                                {g.projectName}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Groupe #{g.groupId} • Auditeur:{' '}
-                                {g.auditorName ?? '—'}
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-2">
-                                {g.validatedCount} validé(s) • {g.warningsCount}{' '}
-                                warnings
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col items-end gap-2">
-                              <div className="text-xs text-green-600 font-medium">
-                                Audité
-                              </div>
-                              {g.auditDate ? (
-                                <div className="text-xs text-muted-foreground">
-                                  {format(new Date(g.auditDate), 'PPP', {
-                                    locale: fr
-                                  })}
+                          {/* Contenu principal */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold truncate group-title">
+                                  {g.projectName}
                                 </div>
-                              ) : null}
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  Groupe #{g.groupId} • Auditeur:{' '}
+                                  {g.auditorName ?? '—'}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-2">
+                                  {g.validatedCount} validé(s) •{' '}
+                                  {g.warningsCount} warnings
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-2 text-xs">
+                                <div className="text-green-600 font-medium">
+                                  Audité
+                                </div>
+                                {g.auditDate && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {format(new Date(g.auditDate), 'PPP', {
+                                      locale: fr
+                                    })}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
 
-                          <div className="mt-4 flex items-center justify-between">
-                            <div className="flex flex-wrap gap-2">
+                            {/* Membres */}
+                            <div className="mt-4 flex flex-wrap gap-2 group-members">
                               {g.members.slice(0, 4).map((m: any) => {
                                 const studentHref = m.studentId
                                   ? `/student?id=${m.studentId}`
                                   : undefined;
-                                return (
-                                  <div
+                                return studentHref ? (
+                                  <Link
                                     key={m.login}
-                                    className="flex items-center gap-2 text-xs"
+                                    href={studentHref}
+                                    className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
+                                    aria-label={`Voir la fiche de ${m.login}`}
                                   >
-                                    {studentHref ? (
-                                      <Link
-                                        href={studentHref}
-                                        data-prevent-card
-                                        className="text-primary truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition"
-                                        aria-label={`Voir la fiche de ${m.login}`}
-                                      >
-                                        {m.firstName
-                                          ? `${m.firstName}`
-                                          : m.login}
-                                      </Link>
-                                    ) : (
-                                      <span className="text-primary truncate max-w-[8rem] text-xs">
-                                        {m.firstName
-                                          ? `${m.firstName}`
-                                          : m.login}
-                                      </span>
-                                    )}
-                                  </div>
+                                    {m.firstName || m.login}
+                                  </Link>
+                                ) : (
+                                  <span
+                                    key={m.login}
+                                    className="truncate max-w-[8rem] text-xs"
+                                  >
+                                    {m.firstName || m.login}
+                                  </span>
                                 );
                               })}
+                              {g.members.length > 4 && (
+                                <div className="text-xs text-muted-foreground">
+                                  +{g.members.length - 4}
+                                </div>
+                              )}
                             </div>
+                          </div>
 
+                          {/* Bouton en bas */}
+                          <div className="mt-4 flex items-center justify-end">
                             <Link
                               href={`/code-reviews/${promoId}/group/${g.groupId}`}
                               className="flex items-center gap-2 text-sm text-primary group px-2 py-1 rounded-md hover:bg-primary/5 transition-colors"
                               aria-label={`Ouvrir l'audit du groupe ${g.groupId}`}
                             >
                               <span className="hidden sm:inline transition-transform group-hover:translate-x-1">
-                                Ouvrir l'audit
+                                Ouvrir l’audit
                               </span>
                               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                             </Link>

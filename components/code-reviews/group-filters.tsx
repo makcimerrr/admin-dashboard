@@ -1,6 +1,8 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface FiltersProps {
   tracks: string[];
@@ -11,52 +13,117 @@ export default function GroupFilters({ tracks }: FiltersProps) {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [search, setSearch] = useState<string>('');
 
+  // Filtrage des cartes
   useEffect(() => {
-    const cards = Array.from(document.querySelectorAll<HTMLElement>('[data-group-card]'));
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>('[data-group-card]')
+    );
 
     cards.forEach((card) => {
       const cardTrack = card.dataset.track ?? '';
       const cardStatus = card.dataset.status ?? '';
-      const title = (card.querySelector('.group-title') as HTMLElement)?.innerText ?? '';
+      const title =
+        (card.querySelector('.group-title') as HTMLElement)?.innerText ?? '';
 
-      const matchesTrack = selectedTrack === 'all' || cardTrack === selectedTrack;
-      const matchesStatus = selectedStatus === 'all' || cardStatus === selectedStatus;
-      const matchesSearch = !search || title.toLowerCase().includes(search.toLowerCase());
+      // Récupérer tous les noms d'étudiants
+      const members = Array.from(
+        card.querySelectorAll<HTMLElement>('.group-members > *')
+      );
+      const membersText = members.map((m) => m.innerText).join(' ');
 
-      if (matchesTrack && matchesStatus && matchesSearch) {
-        card.style.display = '';
-      } else {
-        card.style.display = 'none';
-      }
+      const matchesTrack =
+        selectedTrack === 'all' || cardTrack === selectedTrack;
+      const matchesStatus =
+        selectedStatus === 'all' || cardStatus === selectedStatus;
+      const matchesSearch =
+        !search ||
+        title.toLowerCase().includes(search.toLowerCase()) ||
+        membersText.toLowerCase().includes(search.toLowerCase());
+
+      card.style.display =
+        matchesTrack && matchesStatus && matchesSearch ? '' : 'none';
     });
   }, [selectedTrack, selectedStatus, search]);
 
+  const resetFilters = () => {
+    setSelectedTrack('all');
+    setSelectedStatus('all');
+    setSearch('');
+  };
+
   return (
-    <div className="flex flex-wrap items-center gap-3 mb-4">
+    <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 mb-6">
+      {/* Tracks */}
       <div className="flex items-center gap-2">
-        <label className="text-sm font-medium">Track</label>
-        <select value={selectedTrack} onChange={(e) => setSelectedTrack(e.target.value)} className="px-2 py-1 border rounded">
-          <option value="all">Toutes</option>
+        <span className="text-sm font-medium">Track:</span>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={selectedTrack === 'all' ? 'default' : 'outline'}
+            onClick={() => setSelectedTrack('all')}
+          >
+            Toutes
+          </Button>
           {tracks.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <Button
+              key={t}
+              size="sm"
+              variant={selectedTrack === t ? 'default' : 'outline'}
+              onClick={() => setSelectedTrack(t)}
+            >
+              {t}
+            </Button>
           ))}
-        </select>
+        </div>
       </div>
 
+      {/* Statut */}
       <div className="flex items-center gap-2">
-        <label className="text-sm font-medium">Statut</label>
-        <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value)} className="px-2 py-1 border rounded">
-          <option value="all">Tous</option>
-          <option value="pending">En attente</option>
-          <option value="audited">Audité</option>
-        </select>
+        <span className="text-sm font-medium">Statut:</span>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={selectedStatus === 'all' ? 'default' : 'outline'}
+            onClick={() => setSelectedStatus('all')}
+          >
+            Tous
+          </Button>
+          <Button
+            size="sm"
+            variant={selectedStatus === 'pending' ? 'default' : 'outline'}
+            onClick={() => setSelectedStatus('pending')}
+          >
+            En attente
+          </Button>
+          <Button
+            size="sm"
+            variant={selectedStatus === 'audited' ? 'default' : 'outline'}
+            onClick={() => setSelectedStatus('audited')}
+          >
+            Audité
+          </Button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-1">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher projet ou groupe..." className="flex-1 px-3 py-1 border rounded" />
+      {/* Recherche */}
+      <div className="flex-1 min-w-[200px]">
+        <Input
+          placeholder="Rechercher projet ou login..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full"
+        />
       </div>
 
-      <button onClick={() => { setSelectedTrack('all'); setSelectedStatus('all'); setSearch(''); }} className="px-3 py-1 border rounded">Réinitialiser</button>
+      {/* Reset */}
+      <Button
+        size="sm"
+        variant="outline"
+        className="ml-auto"
+        onClick={resetFilters}
+      >
+        Réinitialiser
+      </Button>
     </div>
   );
 }
