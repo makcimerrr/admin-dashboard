@@ -1,11 +1,13 @@
+import { Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getStudents } from '@/lib/db/services/students';
 import { StudentsTable } from '../students-table';
 import promos from 'config/promoConfig.json' assert { type: 'json' };
-import ClientImport from '@/components/clien-import';
-import AddStudent from '@/components/add-student';
 import TrackStatsDisplay from '@/components/track-stats-display';
 import { Users, GraduationCap } from 'lucide-react';
+import { StudentsHeader } from './_components/students-header';
+import { QuickStats } from './_components/quick-stats';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PromoDates {
   start: string;
@@ -27,45 +29,96 @@ interface StudentsPageProps {
   searchParams: Promise<Record<string, string | undefined>>;
 }
 
+// Loading skeleton for stats
+function StatsLoadingSkeleton() {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="p-3 border rounded-lg">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-6 w-6 rounded" />
+          </div>
+          <Skeleton className="h-8 w-16 mt-2" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
   const resolvedParams = await searchParams;
-  const { q = '', offset = '0', promo = '', filter = '', direction = '', status = null, delay_level = null, track = null, track_completed = null } = resolvedParams;
+  const {
+    q = '',
+    offset = '0',
+    promo = '',
+    filter = '',
+    direction = '',
+    status = null,
+    delay_level = null,
+    track = null,
+    track_completed = null,
+    dropout_filter = 'active'
+  } = resolvedParams;
+
   const search = q;
   const offsetNumber = Number(offset);
 
-  // Trouver la promo sélectionnée
+  // Find selected promo
   const selectedPromo = promos.find((p) => p.key === promo);
   const eventId: string = selectedPromo ? String(selectedPromo.eventId) : '';
 
-  // Appel au backend pour récupérer les données des étudiants
+  // Fetch students data
   const { students, newOffset, totalStudents, previousOffset, currentOffset } =
-    await getStudents(search, offsetNumber, promo, filter, direction, status, delay_level, track, track_completed);
+    await getStudents(
+      search,
+      offsetNumber,
+      promo,
+      filter,
+      direction,
+      status,
+      delay_level,
+      track,
+      track_completed
+    );
+
+  // Fetch stats for all students (for header display)
+  const allStudentsData = await getStudents('', 0, promo, '', '', null, null, null, null, -1, 'all');
+  const activeStudentsData = await getStudents('', 0, promo, '', '', null, null, null, null, -1, 'active');
+
+  const totalAll = allStudentsData.totalStudents;
+  const totalActive = activeStudentsData.totalStudents;
+  const totalDropout = totalAll - totalActive;
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-primary/10 rounded-lg">
-          <GraduationCap className="h-6 w-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestion des étudiants</h1>
-          <p className="text-muted-foreground">
-            Gérez et suivez les étudiants de toutes les promotions
-          </p>
-        </div>
-      </div>
+      {/* Header with stats */}
+      <StudentsHeader
+        totalStudents={totalAll}
+        activeStudents={totalActive}
+        dropoutStudents={totalDropout}
+      />
+
+      {/* Quick Stats Cards */}
+      <QuickStats
+        totalStudents={totalAll}
+        activeStudents={totalActive}
+        dropoutStudents={totalDropout}
+      />
 
       {/* Track Statistics */}
-      <TrackStatsDisplay selectedPromo={promo || 'all'} />
+      <Suspense fallback={<StatsLoadingSkeleton />}>
+        <TrackStatsDisplay selectedPromo={promo || 'all'} />
+      </Suspense>
 
+      {/* Promo Tabs + Table */}
       <Tabs value={promo || 'all'} className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <TabsList className="w-full sm:w-auto overflow-x-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+          <TabsList className="w-full sm:w-auto overflow-x-auto flex-shrink-0">
             <TabsTrigger value="all" asChild>
               <a
                 href={`/students?q=${search}&offset=${0}`}
-                className="gap-2"
+                className="gap-2 inline-flex items-center"
               >
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Toutes les promotions</span>
@@ -82,13 +135,9 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               </TabsTrigger>
             ))}
           </TabsList>
-          <div className="ml-auto flex items-center gap-2">
-            <ClientImport />
-            <AddStudent />
-          </div>
         </div>
 
-        <TabsContent value="all">
+        <TabsContent value="all" className="mt-0">
           <StudentsTable
             students={students}
             currentOffset={currentOffset ?? 0}
@@ -97,12 +146,13 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             previousOffset={previousOffset}
             search={search}
             promo={promo}
-            eventId={"all"}
+            eventId="all"
             promoConfig={promos as Promo[]}
           />
         </TabsContent>
+
         {promos.map(({ key, title }) => (
-          <TabsContent key={key} value={key}>
+          <TabsContent key={key} value={key} className="mt-0">
             <StudentsTable
               students={students}
               currentOffset={currentOffset ?? 0}

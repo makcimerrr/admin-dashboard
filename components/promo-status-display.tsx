@@ -2,10 +2,23 @@
 
 import React, { useEffect, useState } from 'react';
 import promoStatus from '../config/promoStatus.json';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Lightbulb, Trophy, Code2, Workflow, CheckCircle2, Users, TrendingUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Trophy,
+  Code2,
+  Workflow,
+  CheckCircle2,
+  Users,
+  TrendingUp,
+  TrendingDown,
+  AlertCircle,
+  Clock,
+  Zap,
+  Target
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PromoStatusDisplayProps {
   selectedPromo: string;
@@ -27,6 +40,543 @@ interface ProgressStats {
   javaStats?: { total: number; onProject: number };
 }
 
+// Loading skeleton
+function PromoStatusSkeleton({ isAllPromos }: { isAllPromos: boolean }) {
+  if (isAllPromos) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 p-3 rounded-lg border">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-2 w-full" />
+            </div>
+            <Skeleton className="h-6 w-16 rounded-full" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-12 w-12 rounded-xl" />
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </div>
+      <Skeleton className="h-3 w-full rounded-full" />
+      <div className="grid grid-cols-3 gap-3">
+        <Skeleton className="h-16 rounded-lg" />
+        <Skeleton className="h-16 rounded-lg" />
+        <Skeleton className="h-16 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+// Progress ring component
+function ProgressRing({
+  percentage,
+  size = 48,
+  strokeWidth = 4
+}: {
+  percentage: number;
+  size?: number;
+  strokeWidth?: number;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (percentage / 100) * circumference;
+
+  const getColor = (pct: number) => {
+    if (pct >= 80) return 'text-emerald-500';
+    if (pct >= 50) return 'text-amber-500';
+    return 'text-red-500';
+  };
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg className="transform -rotate-90" width={size} height={size}>
+        <circle
+          className="text-muted/30"
+          strokeWidth={strokeWidth}
+          stroke="currentColor"
+          fill="transparent"
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+        <circle
+          className={cn('transition-all duration-500', getColor(percentage))}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          stroke="currentColor"
+          fill="transparent"
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-xs font-bold">{percentage}%</span>
+      </div>
+    </div>
+  );
+}
+
+// Stat item component
+function StatItem({
+  label,
+  value,
+  color,
+  icon: Icon
+}: {
+  label: string;
+  value: number;
+  color: string;
+  icon: React.ElementType;
+}) {
+  if (value === 0) return null;
+
+  return (
+    <div className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors">
+      <div className="flex items-center gap-2">
+        <div className={cn('h-2 w-2 rounded-full', color)} />
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </div>
+      <Badge variant="secondary" className="h-5 text-xs font-semibold">
+        {value}
+      </Badge>
+    </div>
+  );
+}
+
+// Single promo view component
+function SinglePromoView({
+  project,
+  stats,
+  isLoading
+}: {
+  project: any;
+  stats: ProgressStats | null;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return <PromoStatusSkeleton isAllPromos={false} />;
+  }
+
+  // Formation terminée
+  if (typeof project === 'string' && project.toLowerCase() === 'fin') {
+    return (
+      <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
+        <div className="p-3 bg-emerald-500 rounded-xl shadow-lg shadow-emerald-500/20">
+          <Trophy className="h-6 w-6 text-white" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
+            Formation Terminée
+          </h3>
+          <p className="text-sm text-emerald-600/70 dark:text-emerald-400/70">
+            Tous les projets ont été complétés avec succès
+          </p>
+        </div>
+        <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white">
+          <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+          Validé
+        </Badge>
+      </div>
+    );
+  }
+
+  // Projet simple
+  if (typeof project === 'string') {
+    return (
+      <div className="space-y-4">
+        {/* Project header */}
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
+            <Code2 className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xl font-bold truncate">{project}</h3>
+              <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+                Projet actuel
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Projet sur lequel les étudiants devraient travailler
+            </p>
+          </div>
+        </div>
+
+        {stats && (
+          <>
+            {/* Progress section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Main progress */}
+              <div className="lg:col-span-2 p-4 bg-muted/30 rounded-xl border">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Progression</span>
+                  </div>
+                  <span className="text-2xl font-bold">
+                    {stats.percentage}%
+                  </span>
+                </div>
+                <Progress value={stats.percentage} className="h-3 mb-2" />
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>{stats.onExpectedProject} sur le projet</span>
+                  <span>{stats.totalStudents} au total</span>
+                </div>
+              </div>
+
+              {/* Stats cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
+                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span className="text-xs text-emerald-600 font-medium">Sur le projet</span>
+                  </div>
+                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+                    {stats.onExpectedProject}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <span className="text-xs text-amber-600 font-medium">Hors projet</span>
+                  </div>
+                  <p className="text-xl font-bold text-amber-700 dark:text-amber-400 mt-1">
+                    {stats.totalStudents - stats.onExpectedProject}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Off-project breakdown */}
+            {(stats.offProjectStats.ahead > 0 ||
+              stats.offProjectStats.late > 0 ||
+              stats.offProjectStats.specialty > 0 ||
+              stats.offProjectStats.validated > 0 ||
+              stats.offProjectStats.notValidated > 0) && (
+              <div className="p-4 bg-muted/20 rounded-xl border">
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Répartition des étudiants hors projet
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                  {stats.offProjectStats.ahead > 0 && (
+                    <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-center">
+                      <TrendingUp className="h-4 w-4 text-blue-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold text-blue-700">{stats.offProjectStats.ahead}</p>
+                      <p className="text-xs text-blue-600">En avance</p>
+                    </div>
+                  )}
+                  {stats.offProjectStats.late > 0 && (
+                    <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950/30 text-center">
+                      <TrendingDown className="h-4 w-4 text-red-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold text-red-700">{stats.offProjectStats.late}</p>
+                      <p className="text-xs text-red-600">En retard</p>
+                    </div>
+                  )}
+                  {stats.offProjectStats.specialty > 0 && (
+                    <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30 text-center">
+                      <Zap className="h-4 w-4 text-orange-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold text-orange-700">{stats.offProjectStats.specialty}</p>
+                      <p className="text-xs text-orange-600">Spécialité</p>
+                    </div>
+                  )}
+                  {stats.offProjectStats.validated > 0 && (
+                    <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-center">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold text-emerald-700">{stats.offProjectStats.validated}</p>
+                      <p className="text-xs text-emerald-600">Validé</p>
+                    </div>
+                  )}
+                  {stats.offProjectStats.notValidated > 0 && (
+                    <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-center">
+                      <AlertCircle className="h-4 w-4 text-rose-600 mx-auto mb-1" />
+                      <p className="text-lg font-bold text-rose-700">{stats.offProjectStats.notValidated}</p>
+                      <p className="text-xs text-rose-600">Non validé</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // Multi-choice (Rust/Java)
+  if (typeof project === 'object' && project !== null) {
+    return (
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl shadow-lg shadow-orange-500/20">
+            <Workflow className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xl font-bold">Tronc Multi-choix</h3>
+              <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">
+                Rust ou Java
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Les étudiants choisissent leur spécialisation
+            </p>
+          </div>
+        </div>
+
+        {/* Track cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Rust track */}
+          <div className="relative overflow-hidden p-4 rounded-xl border-2 border-cyan-200 dark:border-cyan-800 bg-gradient-to-br from-cyan-50 to-white dark:from-cyan-950/30 dark:to-transparent">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full -mr-8 -mt-8" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-1 bg-cyan-500 rounded-full" />
+                  <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-400">
+                    Tronc Rust
+                  </span>
+                </div>
+                {stats?.rustStats && (
+                  <ProgressRing
+                    percentage={Math.round(
+                      (stats.rustStats.onProject / stats.rustStats.total) * 100
+                    )}
+                    size={40}
+                    strokeWidth={3}
+                  />
+                )}
+              </div>
+              <h4 className="text-lg font-bold mb-2">{project.rust || 'N/A'}</h4>
+              {stats?.rustStats && (
+                <div className="space-y-2">
+                  <Progress
+                    value={Math.round(
+                      (stats.rustStats.onProject / stats.rustStats.total) * 100
+                    )}
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {stats.rustStats.onProject} / {stats.rustStats.total} étudiants
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Java track */}
+          <div className="relative overflow-hidden p-4 rounded-xl border-2 border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-transparent">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full -mr-8 -mt-8" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-1 bg-red-500 rounded-full" />
+                  <span className="text-sm font-semibold text-red-700 dark:text-red-400">
+                    Tronc Java
+                  </span>
+                </div>
+                {stats?.javaStats && (
+                  <ProgressRing
+                    percentage={Math.round(
+                      (stats.javaStats.onProject / stats.javaStats.total) * 100
+                    )}
+                    size={40}
+                    strokeWidth={3}
+                  />
+                )}
+              </div>
+              <h4 className="text-lg font-bold mb-2">{project.java || 'N/A'}</h4>
+              {stats?.javaStats && (
+                <div className="space-y-2">
+                  <Progress
+                    value={Math.round(
+                      (stats.javaStats.onProject / stats.javaStats.total) * 100
+                    )}
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {stats.javaStats.onProject} / {stats.javaStats.total} étudiants
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Global progress */}
+        {stats && (
+          <div className="p-4 bg-muted/30 rounded-xl border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Progression globale</span>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'font-bold',
+                  stats.percentage >= 80
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : stats.percentage >= 50
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-red-50 text-red-700 border-red-200'
+                )}
+              >
+                {stats.percentage}%
+              </Badge>
+            </div>
+            <Progress value={stats.percentage} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-2">
+              {stats.onExpectedProject} étudiants sur leur projet attendu sur {stats.totalStudents} au total
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-xl border-2 border-dashed">
+      <Code2 className="h-8 w-8 text-muted-foreground" />
+      <p className="text-muted-foreground">
+        Aucune information disponible pour cette promotion.
+      </p>
+    </div>
+  );
+}
+
+// All promos view component
+function AllPromosView({
+  statusData,
+  allStats,
+  isLoading
+}: {
+  statusData: Record<string, any>;
+  allStats: Record<string, ProgressStats>;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return <PromoStatusSkeleton isAllPromos={true} />;
+  }
+
+  const promos = Object.entries(statusData);
+
+  return (
+    <div className="space-y-2">
+      {promos.map(([promoKey, project]) => {
+        const stats = allStats[promoKey];
+        const isFin = typeof project === 'string' && project.toLowerCase() === 'fin';
+        const isMultiChoice = typeof project === 'object' && project !== null;
+
+        return (
+          <div
+            key={promoKey}
+            className={cn(
+              'flex items-center gap-4 p-3 rounded-xl border transition-all hover:shadow-md',
+              isFin && 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
+            )}
+          >
+            {/* Icon */}
+            <div
+              className={cn(
+                'p-2 rounded-lg',
+                isFin
+                  ? 'bg-emerald-500'
+                  : isMultiChoice
+                  ? 'bg-gradient-to-br from-orange-500 to-amber-500'
+                  : 'bg-gradient-to-br from-blue-500 to-blue-600'
+              )}
+            >
+              {isFin ? (
+                <Trophy className="h-5 w-5 text-white" />
+              ) : isMultiChoice ? (
+                <Workflow className="h-5 w-5 text-white" />
+              ) : (
+                <Code2 className="h-5 w-5 text-white" />
+              )}
+            </div>
+
+            {/* Promo name */}
+            <div className="w-20 shrink-0">
+              <span className="font-bold text-sm">{promoKey}</span>
+            </div>
+
+            {/* Project info */}
+            <div className="flex-1 min-w-0">
+              {isFin ? (
+                <span className="text-sm font-medium text-emerald-600">
+                  Formation Terminée
+                </span>
+              ) : isMultiChoice ? (
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="text-cyan-600 font-medium truncate">
+                    {project.rust}
+                  </span>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="text-red-600 font-medium truncate">
+                    {project.java}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-sm font-medium truncate block">
+                  {project}
+                </span>
+              )}
+            </div>
+
+            {/* Progress */}
+            {!isFin && stats && (
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="hidden sm:block w-32">
+                  <Progress value={stats.percentage} className="h-2" />
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  <span>
+                    {stats.onExpectedProject}/{stats.totalStudents}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Percentage badge */}
+            <Badge
+              variant="outline"
+              className={cn(
+                'shrink-0 w-14 justify-center font-bold',
+                isFin
+                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                  : stats
+                  ? stats.percentage >= 80
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : stats.percentage >= 50
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-red-50 text-red-700 border-red-200'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {isFin ? '100%' : stats ? `${stats.percentage}%` : '-'}
+            </Badge>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Main component
 const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
   const statusData = promoStatus as Record<string, any>;
   const [progressStats, setProgressStats] = useState<ProgressStats | null>(null);
@@ -36,7 +586,6 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
   useEffect(() => {
     const fetchProgressStats = async () => {
       if (selectedPromo === 'all') {
-        // Fetch stats for all promos
         setIsLoading(true);
         const statsMap: Record<string, ProgressStats> = {};
 
@@ -45,9 +594,12 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
             if (!project || project === 'Fin') return;
 
             try {
-              const projectParam = typeof project === 'string' ? project : JSON.stringify(project);
+              const projectParam =
+                typeof project === 'string' ? project : JSON.stringify(project);
               const response = await fetch(
-                `/api/project-progress-stats?promo=${encodeURIComponent(promoKey)}&project=${encodeURIComponent(projectParam)}`
+                `/api/project-progress-stats?promo=${encodeURIComponent(
+                  promoKey
+                )}&project=${encodeURIComponent(projectParam)}`
               );
 
               if (response.ok) {
@@ -55,7 +607,10 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
                 statsMap[promoKey] = data;
               }
             } catch (error) {
-              console.error(`Erreur lors de la récupération des stats pour ${promoKey}:`, error);
+              console.error(
+                `Erreur lors de la récupération des stats pour ${promoKey}:`,
+                error
+              );
             }
           })
         );
@@ -74,9 +629,12 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
 
       setIsLoading(true);
       try {
-        const projectParam = typeof project === 'string' ? project : JSON.stringify(project);
+        const projectParam =
+          typeof project === 'string' ? project : JSON.stringify(project);
         const response = await fetch(
-          `/api/project-progress-stats?promo=${encodeURIComponent(selectedPromo)}&project=${encodeURIComponent(projectParam)}`
+          `/api/project-progress-stats?promo=${encodeURIComponent(
+            selectedPromo
+          )}&project=${encodeURIComponent(projectParam)}`
         );
 
         if (response.ok) {
@@ -93,448 +651,22 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
     fetchProgressStats();
   }, [selectedPromo]);
 
-  const getProjectIcon = (project: any) => {
-    if (typeof project === 'string' && project.toLowerCase() === 'fin') {
-      return <Trophy className="h-5 w-5 text-emerald-500" />;
-    }
-    if (typeof project === 'object' && project !== null) {
-      return <Workflow className="h-5 w-5 text-orange-500" />;
-    }
-    return <Code2 className="h-5 w-5 text-blue-500" />;
-  };
-
-  const renderProject = (project: any, promoKey?: string) => {
-    if (typeof project === 'string') {
-      if (project.toLowerCase() === 'fin') {
-        return (
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <Trophy className="h-6 w-6 text-emerald-500" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-emerald-600">Formation Terminée</span>
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Validé
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">Tous les projets ont été complétés</p>
-            </div>
-          </div>
-        );
-      }
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Code2 className="h-6 w-6 text-blue-500" />
-            </div>
-            <div className="flex-1">
-              <span className="text-xl font-bold text-foreground">{project}</span>
-              <p className="text-sm text-muted-foreground mt-1">Projet actuel de la promotion</p>
-            </div>
-          </div>
-          {progressStats && (
-            <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Progression</span>
-                </div>
-                <Badge variant="outline" className="bg-primary/10">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  {progressStats.percentage}%
-                </Badge>
-              </div>
-              <Progress value={progressStats.percentage} className="h-2" />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{progressStats.onExpectedProject} étudiants sur le projet</span>
-                <span>{progressStats.totalStudents} total</span>
-              </div>
-
-              {/* Détail des étudiants hors projet */}
-              {(progressStats.offProjectStats.ahead > 0 ||
-                progressStats.offProjectStats.late > 0 ||
-                progressStats.offProjectStats.specialty > 0 ||
-                progressStats.offProjectStats.validated > 0 ||
-                progressStats.offProjectStats.notValidated > 0 ||
-                progressStats.offProjectStats.other > 0) && (
-                <div className="pt-3 border-t space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Étudiants hors projet ({progressStats.totalStudents - progressStats.onExpectedProject}) :
-                  </p>
-                  {progressStats.offProjectStats.ahead > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                        <span className="text-blue-600 font-medium">En avance</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-blue-500/10 text-blue-700">
-                        {progressStats.offProjectStats.ahead}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.late > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-red-500" />
-                        <span className="text-red-600 font-medium">En retard</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-red-500/10 text-red-700">
-                        {progressStats.offProjectStats.late}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.specialty > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-orange-500" />
-                        <span className="text-orange-600 font-medium">Spécialité</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-orange-500/10 text-orange-700">
-                        {progressStats.offProjectStats.specialty}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.validated > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-emerald-600 font-medium">Validé</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-emerald-500/10 text-emerald-700">
-                        {progressStats.offProjectStats.validated}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.notValidated > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-rose-500" />
-                        <span className="text-rose-600 font-medium">Non validé</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-rose-500/10 text-rose-700">
-                        {progressStats.offProjectStats.notValidated}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.other > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-gray-500" />
-                        <span className="text-gray-600 font-medium">Autre</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-gray-500/10 text-gray-700">
-                        {progressStats.offProjectStats.other}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      );
-    }
-    if (typeof project === 'object' && project !== null) {
-      return (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/10 rounded-lg">
-              <Workflow className="h-6 w-6 text-orange-500" />
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-muted-foreground">Tronc multi-choix</h4>
-              <p className="text-xs text-muted-foreground">Les étudiants choisissent entre Rust ou Java</p>
-            </div>
-          </div>
-
-          {progressStats && (
-            <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Progression globale</span>
-                </div>
-                <Badge variant="outline" className="bg-primary/10">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  {progressStats.percentage}%
-                </Badge>
-              </div>
-              <Progress value={progressStats.percentage} className="h-2" />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{progressStats.onExpectedProject} étudiants sur un projet attendu</span>
-                <span>{progressStats.totalStudents} total</span>
-              </div>
-
-              {/* Détail des étudiants hors projet */}
-              {(progressStats.offProjectStats.ahead > 0 ||
-                progressStats.offProjectStats.late > 0 ||
-                progressStats.offProjectStats.specialty > 0 ||
-                progressStats.offProjectStats.validated > 0 ||
-                progressStats.offProjectStats.notValidated > 0 ||
-                progressStats.offProjectStats.other > 0) && (
-                <div className="pt-3 border-t space-y-1.5">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">
-                    Étudiants hors projet ({progressStats.totalStudents - progressStats.onExpectedProject}) :
-                  </p>
-                  {progressStats.offProjectStats.ahead > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                        <span className="text-blue-600 font-medium">En avance</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-blue-500/10 text-blue-700">
-                        {progressStats.offProjectStats.ahead}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.late > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-red-500" />
-                        <span className="text-red-600 font-medium">En retard</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-red-500/10 text-red-700">
-                        {progressStats.offProjectStats.late}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.specialty > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-orange-500" />
-                        <span className="text-orange-600 font-medium">Spécialité</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-orange-500/10 text-orange-700">
-                        {progressStats.offProjectStats.specialty}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.validated > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-emerald-600 font-medium">Validé</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-emerald-500/10 text-emerald-700">
-                        {progressStats.offProjectStats.validated}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.notValidated > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-rose-500" />
-                        <span className="text-rose-600 font-medium">Non validé</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-rose-500/10 text-rose-700">
-                        {progressStats.offProjectStats.notValidated}
-                      </Badge>
-                    </div>
-                  )}
-                  {progressStats.offProjectStats.other > 0 && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-gray-500" />
-                        <span className="text-gray-600 font-medium">Autre</span>
-                      </span>
-                      <Badge variant="secondary" className="text-xs h-5 bg-gray-500/10 text-gray-700">
-                        {progressStats.offProjectStats.other}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="grid gap-3">
-            <div className="space-y-2 p-3 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-1 bg-cyan-500 rounded-full" />
-                <div className="flex-1">
-                  <div className="text-xs font-medium text-cyan-600 mb-1">Tronc Rust</div>
-                  <div className="text-lg font-bold text-foreground">{project.rust || 'N/A'}</div>
-                </div>
-                {progressStats?.rustStats && (
-                  <Badge variant="secondary" className="bg-cyan-500/10 text-cyan-700">
-                    {progressStats.rustStats.onProject} étudiants
-                  </Badge>
-                )}
-              </div>
-              {progressStats?.rustStats && (
-                <Progress
-                  value={Math.round((progressStats.rustStats.onProject / progressStats.rustStats.total) * 100)}
-                  className="h-1.5"
-                />
-              )}
-            </div>
-
-            <div className="space-y-2 p-3 bg-red-500/5 border border-red-500/20 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-1 bg-red-500 rounded-full" />
-                <div className="flex-1">
-                  <div className="text-xs font-medium text-red-600 mb-1">Tronc Java</div>
-                  <div className="text-lg font-bold text-foreground">{project.java || 'N/A'}</div>
-                </div>
-                {progressStats?.javaStats && (
-                  <Badge variant="secondary" className="bg-red-500/10 text-red-700">
-                    {progressStats.javaStats.onProject} étudiants
-                  </Badge>
-                )}
-              </div>
-              {progressStats?.javaStats && (
-                <Progress
-                  value={Math.round((progressStats.javaStats.onProject / progressStats.javaStats.total) * 100)}
-                  className="h-1.5"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-gray-500/10 rounded-lg">
-          <Code2 className="h-6 w-6 text-gray-500" />
-        </div>
-        <span className="text-xl font-semibold text-muted-foreground">Aucune information disponible</span>
-      </div>
-    );
-  };
-
-  const renderAllPromos = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {Object.entries(statusData).map(([promo, project]) => {
-        const stats = allProgressStats[promo];
-        const isFin = typeof project === 'string' && project.toLowerCase() === 'fin';
-
-        return (
-          <Card key={promo} className="overflow-hidden hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3 bg-gradient-to-br from-muted/50 to-muted/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {getProjectIcon(project)}
-                  <CardTitle className="text-base">{promo}</CardTitle>
-                </div>
-                {stats && !isFin && (
-                  <Badge
-                    variant="outline"
-                    className={`text-xs font-bold ${
-                      stats.percentage >= 80
-                        ? 'bg-green-500/10 text-green-700 border-green-300'
-                        : stats.percentage >= 50
-                        ? 'bg-yellow-500/10 text-yellow-700 border-yellow-300'
-                        : 'bg-red-500/10 text-red-700 border-red-300'
-                    }`}
-                  >
-                    {stats.percentage}%
-                  </Badge>
-                )}
-                {isFin && (
-                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-300 text-xs font-bold">
-                    100%
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {typeof project === 'string' ? (
-                project.toLowerCase() === 'fin' ? (
-                  <div className="flex items-center gap-2">
-                    <Trophy className="h-5 w-5 text-emerald-500" />
-                    <span className="font-semibold text-emerald-600">Formation Terminée</span>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Code2 className="h-5 w-5 text-blue-500" />
-                      <span className="font-medium">{project}</span>
-                    </div>
-                    {stats && (
-                      <div className="space-y-1">
-                        <Progress value={stats.percentage} className="h-1.5" />
-                        <p className="text-xs text-muted-foreground">
-                          {stats.onExpectedProject}/{stats.totalStudents} étudiants
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )
-              ) : typeof project === 'object' && project !== null ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Workflow className="h-5 w-5 text-orange-500" />
-                    <span className="text-sm font-medium text-muted-foreground">Multi-choix</span>
-                  </div>
-                  <div className="text-xs space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-cyan-600 font-medium">Rust:</span>
-                      <span>{project.rust || 'N/A'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-600 font-medium">Java:</span>
-                      <span>{project.java || 'N/A'}</span>
-                    </div>
-                  </div>
-                  {stats && (
-                    <div className="space-y-1 pt-1">
-                      <Progress value={stats.percentage} className="h-1.5" />
-                      <p className="text-xs text-muted-foreground">
-                        {stats.onExpectedProject}/{stats.totalStudents} étudiants
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <span className="text-muted-foreground">Aucune info</span>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
-  );
-
-  const renderSinglePromo = () => {
-    const project = statusData[selectedPromo];
-    if (!project) {
-      return (
-        <div className="flex items-center gap-3 p-6 bg-muted/30 rounded-lg">
-          <Code2 className="h-8 w-8 text-muted-foreground" />
-          <p className="text-muted-foreground">Aucune information de statut disponible pour cette promotion.</p>
-        </div>
-      );
-    }
-    return <div>{renderProject(project, selectedPromo)}</div>;
-  };
-
   return (
-    <Card className="mb-6 border-2 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Lightbulb className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <CardTitle className="text-xl">
-              {selectedPromo === 'all' ? 'Projets Attendus Actuels' : `Projet Attendu - ${selectedPromo}`}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {selectedPromo === 'all'
-                ? 'Vue d\'ensemble des projets en cours pour toutes les promotions'
-                : 'Projet sur lequel les étudiants devraient travailler actuellement'}
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-6">
-        {selectedPromo === 'all' ? renderAllPromos() : renderSinglePromo()}
-      </CardContent>
-    </Card>
+    <div>
+      {selectedPromo === 'all' ? (
+        <AllPromosView
+          statusData={statusData}
+          allStats={allProgressStats}
+          isLoading={isLoading}
+        />
+      ) : (
+        <SinglePromoView
+          project={statusData[selectedPromo]}
+          stats={progressStats}
+          isLoading={isLoading}
+        />
+      )}
+    </div>
   );
 };
 
