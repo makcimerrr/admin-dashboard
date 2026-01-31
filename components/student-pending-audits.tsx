@@ -87,15 +87,15 @@ export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
   }
 
   return (
-    <Card className="border-2 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20">
+    <Card className="border-2 bg-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-amber-600" />
+          <Clock className="h-5 w-5 text-primary" />
           Audits en attente
         </CardTitle>
         <CardDescription>
-          <div className="flex items-center gap-2 text-amber-700">
-            <AlertCircle className="h-4 w-4" />
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <AlertCircle className="h-4 w-4 text-primary" />
             {pendingAudits.length} projet{pendingAudits.length > 1 ? 's' : ''} terminé
             {pendingAudits.length > 1 ? 's' : ''} en attente de code review
           </div>
@@ -106,12 +106,12 @@ export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
           {pendingAudits.map((audit, idx) => (
             <div
               key={`${audit.groupId}-${idx}`}
-              className="p-3 rounded-lg border bg-background/50 hover:bg-background/80 transition-colors"
+              className="p-3 rounded-lg border bg-background/50 hover:bg-background/80 transition-colors group"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-lg">
-                    <FileCode className="h-4 w-4 text-amber-600" />
+                  <div className="p-2 bg-muted/5 rounded-lg">
+                    <FileCode className="h-4 w-4 text-primary" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -125,10 +125,10 @@ export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/code-reviews/${audit.promoId}/group/${audit.groupId}/audit`}>
+                <Button variant="outline" size="sm" asChild className="group transition">
+                  <Link href={`/code-reviews/${audit.promoId}/group/${audit.groupId}/audit`} className="flex items-center gap-1 transition-transform group-hover:translate-x-1">
                     <ExternalLink className="h-3 w-3 mr-1" />
-                    Auditer
+                    <span className="text-sm">Auditer</span>
                   </Link>
                 </Button>
               </div>
@@ -140,7 +140,7 @@ export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
                       <Badge
                         key={`${member.login}-${mIdx}`}
                         variant="secondary"
-                        className="text-xs font-normal"
+                        className="text-xs font-normal transition-colors hover:bg-primary/10 rounded-md px-2 py-0.5 cursor-default"
                       >
                         {member.firstName && member.lastName
                           ? `${member.firstName} ${member.lastName}`

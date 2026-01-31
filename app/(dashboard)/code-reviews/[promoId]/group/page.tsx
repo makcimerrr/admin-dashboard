@@ -9,11 +9,12 @@ import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { getAuditsByPromoAndTrack } from '@/lib/db/services/audits';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
-import { BarChart3, ArrowLeft } from 'lucide-react';
+import { BarChart3, ArrowLeft, ChevronRight } from 'lucide-react';
 import { db } from '@/lib/db/config';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import GroupCard from '@/components/code-reviews/group-card';
+import GroupFilters from '@/components/code-reviews/group-filters';
 
 const TRACKS = ['Golang', 'Javascript', 'Rust', 'Java'] as const;
 
@@ -255,118 +256,162 @@ export default async function PromoGroupsIndexPage({ params }: { params: { promo
 
 
       <div>
-        {/* New grouped-by-track card grid view */}
-        <div className="space-y-6">
+        <div className="mb-4 rounded-md border bg-card p-4">
+          <h3 className="text-lg font-semibold">Vue des audits</h3>
+          <p className="text-sm text-muted-foreground">Sépare les audits en attente et ceux déjà réalisés. Cliquez sur une carte pour ouvrir l'audit (ou créer si en attente). Les membres sont cliquables pour accéder à leur profil.</p>
+        </div>
+
+        <GroupFilters tracks={TRACKS as string[]} />
+
+        {/* Grouped-by-track with Pending / Audited separation */}
+        <div className="space-y-8">
           {TRACKS.map((track) => {
             const groupsForTrack = allGroups.filter((g) => g.track === track);
+            const pending = groupsForTrack.filter((g) => !g.isAudited);
+            const audited = groupsForTrack.filter((g) => g.isAudited);
+
             return (
               <section key={track}>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">
-                    {track} <Badge variant="outline">{groupsForTrack.length}</Badge>
-                  </h2>
-                  <p className="text-sm text-muted-foreground">{stats.byTrack[track]?.audited ?? 0} audité(s)</p>
+                  <h2 className="text-xl font-semibold">{track}</h2>
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm text-muted-foreground">Total: {groupsForTrack.length}</div>
+                    <Badge variant="outline">Audités {audited.length}</Badge>
+                    <Badge variant="outline" className="bg-muted/10">En attente {pending.length}</Badge>
+                  </div>
                 </div>
 
-                <div className="mt-2">
-                  {groupsForTrack.length === 0 ? (
-                    <div className="text-sm text-muted-foreground">Aucun groupe terminé pour ce track.</div>
-                  ) : (
+                {/* Pending first */}
+                {pending.length > 0 && (
+                  <div className="mt-3">
+                    <h3 className="text-sm font-medium mb-2">En attente</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {groupsForTrack.map((g) => {
-                        const groupHref = g.isAudited
-                          ? `/code-reviews/${promoId}/group/${g.groupId}`
-                          : `/code-reviews/${promoId}/audit?groupId=${encodeURIComponent(g.groupId)}&project=${encodeURIComponent(g.projectName)}&track=${encodeURIComponent(g.track)}&priority=${encodeURIComponent(g.priority ?? 'normal')}`;
-                        return (
-                          <GroupCard
-                            key={g.groupId}
-                            href={g.isAudited
-                              ? `/code-reviews/${promoId}/group/${g.groupId}`
-                              : `/code-reviews/${promoId}/audit?groupId=${encodeURIComponent(g.groupId)}&project=${encodeURIComponent(g.projectName)}&track=${encodeURIComponent(g.track)}&priority=${encodeURIComponent(g.priority ?? 'normal')}`
-                            }
-                            className="block p-4 border rounded-lg hover:shadow-md transition relative z-10 bg-background cursor-pointer"
-                          >
-                            <div>
-                               <div className="flex items-start justify-between gap-4">
-                                 <div className="flex-1 min-w-0">
-                                   <div className="font-medium text-sm truncate">{g.projectName}</div>
-                                   <div className="text-xs truncate">
-                                     {g.isAudited ? (
-                                       <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">Auditeur: {g.auditorName ?? '—'}</Badge>
-                                     ) : (
-                                       <Badge variant="outline" className="text-xs px-2 py-1">En attente</Badge>
-                                     )}
-                                   </div>
-                                   <div className="text-xs text-muted-foreground mt-1">{g.validatedCount} validé(s) • {g.notValidatedCount} non validé(s) • {g.warningsCount} warnings</div>
-                                 </div>
-                                 <div className="flex-shrink-0 flex flex-col items-end gap-2">
-                                   <div className="flex items-center gap-2">
-                                     {g.isAudited ? <Badge className="bg-green-100 text-green-800 text-xs">A</Badge> : <Badge className="text-xs">NA</Badge>}
-                                     {g.priority === 'urgent' ? (
-                                       <Badge className="bg-red-100 text-red-800 text-xs">Urgent</Badge>
-                                     ) : g.priority === 'warning' ? (
-                                       <Badge className="bg-amber-50 text-amber-700 text-xs">Warning</Badge>
-                                     ) : null}
-                                   </div>
-                                   {g.auditDate ? (
-                                     <div className="text-xs text-muted-foreground">{format(new Date(g.auditDate), 'PPP à HH:mm', { locale: fr })}</div>
-                                   ) : null}
-                                 </div>
-                               </div>
-                               {g.priorityReasons && g.priorityReasons.length > 0 ? (
-                                 <div className="mt-2 text-xs text-amber-700">{g.priorityReasons.join(' • ')}</div>
-                               ) : null}
-                               {/* Members displayed as avatar badges (no grades) */}
-                               <div className="mt-3 flex flex-wrap gap-3">
-                                 {g.members.map((m: any) => {
-                                   const name = m.firstName || m.lastName ? `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() : m.login;
-                                   const initials = (m.firstName ? m.firstName[0] : m.login[0] || '').toUpperCase() + (m.lastName ? m.lastName[0] : '');
-                                   const studentHref = m.studentId ? `/student?id=${m.studentId}` : undefined;
-                                   return (
-                                     <div key={m.login} className="flex items-center gap-2">
-                                       <Tooltip>
-                                         <TooltipTrigger asChild>
-                                           {studentHref ? (
-                                            <Link href={studentHref} data-prevent-card className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-medium text-foreground hover:shadow-md hover:ring-2 hover:ring-primary transition cursor-pointer z-30" aria-label={`Voir la fiche de ${name}`}>
-                                              <span className="pointer-events-none">{initials}</span>
-                                            </Link>
-                                           ) : (
-                                             <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-medium text-foreground z-20">
-                                               {initials}
-                                             </div>
-                                           )}
-                                         </TooltipTrigger>
-                                         <TooltipContent>
-                                           <div className="text-xs">
-                                             <div className="font-medium">{name}</div>
-                                             <div className="text-muted-foreground">{m.login}{m.isDropout ? ' • absent' : ''}</div>
-                                             {studentHref ? <div className="text-muted-foreground text-[11px]">Cliquer pour ouvrir la fiche étudiant</div> : <div className="text-muted-foreground text-[11px]">Pas de fiche disponible</div>}
-                                           </div>
-                                         </TooltipContent>
-                                       </Tooltip>
-                                      {studentHref ? (
-                                        <Link href={studentHref} data-prevent-card className="text-sm truncate max-w-[10rem] hover:underline text-primary z-30">
-                                          {name}
-                                        </Link>
-                                      ) : (
-                                        <div className="text-sm truncate max-w-[10rem]">{name}</div>
-                                      )}
-                                     </div>
-                                   );
-                                 })}
-                               </div>
+                      {pending.map((g) => (
+                        <GroupCard
+                          key={g.groupId}
+                          href={`/code-reviews/${promoId}/audit?groupId=${encodeURIComponent(g.groupId)}&project=${encodeURIComponent(g.projectName)}&track=${encodeURIComponent(g.track)}&priority=${encodeURIComponent(g.priority ?? 'normal')}`}
+                          data-group-card
+                          data-track={g.track}
+                          data-status="pending"
+                          className="relative block p-4 border rounded-lg bg-background hover:shadow-lg transition cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold truncate">{g.projectName}</div>
+                              <div className="text-xs text-muted-foreground">Groupe #{g.groupId} — Priorité: <span className="font-medium text-amber-700">{g.priority}</span></div>
+                              <div className="text-xs text-muted-foreground mt-2">{g.activeMembers} membre(s) • {g.warningsCount} warnings</div>
                             </div>
-                          </GroupCard>
-                        );
-                       })}
-                     </div>
-                   )}
-                 </div>
-               </section>
-             );
-           })}
-         </div>
-       </div>
-     </div>
-   );
- }
+
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="text-xs text-muted-foreground">En attente</div>
+                              <div className="text-xs text-muted-foreground">{g.priority === 'urgent' ? <span className="text-red-600 font-semibold">Urgent</span> : null}</div>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex items-center justify-between">
+                            <div className="flex flex-wrap gap-2">
+                              {g.members.slice(0, 3).map((m: any) => {
+                                const studentHref = m.studentId ? `/student?id=${m.studentId}` : undefined;
+                                return (
+                                  <div key={m.login} className="flex items-center gap-2 text-xs">
+                                    {studentHref ? (
+                                      <Link href={studentHref} data-prevent-card className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium hover:bg-primary/10 transition" aria-label={`Voir la fiche de ${m.login}`}>
+                                        {(m.firstName?.[0] || m.login[0] || '').toUpperCase()}
+                                      </Link>
+                                    ) : (
+                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium">{(m.firstName?.[0] || m.login[0] || '').toUpperCase()}</span>
+                                    )}
+                                    {studentHref ? (
+                                      <Link href={studentHref} data-prevent-card className="truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition" aria-label={`Voir la fiche de ${m.login}`}>
+                                        {m.firstName ? `${m.firstName}` : m.login}
+                                      </Link>
+                                    ) : (
+                                      <span className="truncate max-w-[8rem] text-xs">{m.firstName ? `${m.firstName}` : m.login}</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {g.members.length > 3 && <div className="text-xs text-muted-foreground">+{g.members.length - 3}</div>}
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm text-primary group">
+                              <span className="hidden sm:inline transition-transform group-hover:translate-x-1">Créer l'audit</span>
+                              <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                            </div>
+                          </div>
+                        </GroupCard>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Audited */}
+                {audited.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-medium mb-2">Audités</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {audited.map((g) => (
+                        <GroupCard
+                          key={g.groupId}
+                          href={`/code-reviews/${promoId}/group/${g.groupId}`}
+                          data-group-card
+                          data-track={g.track}
+                          data-status="audited"
+                          className="relative block p-4 border rounded-lg bg-white hover:shadow-lg transition cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold truncate">{g.projectName}</div>
+                              <div className="text-xs text-muted-foreground">Groupe #{g.groupId} • Auditeur: {g.auditorName ?? '—'}</div>
+                              <div className="text-xs text-muted-foreground mt-2">{g.validatedCount} validé(s) • {g.warningsCount} warnings</div>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="text-xs text-green-600 font-medium">Audité</div>
+                              {g.auditDate ? <div className="text-xs text-muted-foreground">{format(new Date(g.auditDate), 'PPP', { locale: fr })}</div> : null}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex items-center justify-between">
+                            <div className="flex flex-wrap gap-2">
+                              {g.members.slice(0, 4).map((m: any) => {
+                                const studentHref = m.studentId ? `/student?id=${m.studentId}` : undefined;
+                                return (
+                                  <div key={m.login} className="flex items-center gap-2 text-xs">
+                                    {studentHref ? (
+                                      <Link href={studentHref} data-prevent-card className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium hover:bg-primary/10 transition" aria-label={`Voir la fiche de ${m.login}`}>
+                                        {(m.firstName?.[0] || m.login[0] || '').toUpperCase()}
+                                      </Link>
+                                    ) : (
+                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-[11px] font-medium">{(m.firstName?.[0] || m.login[0] || '').toUpperCase()}</span>
+                                    )}
+                                    {studentHref ? (
+                                      <Link href={studentHref} data-prevent-card className="text-primary truncate max-w-[8rem] text-xs px-2 py-1 rounded-md hover:bg-primary/5 transition" aria-label={`Voir la fiche de ${m.login}`}>
+                                        {m.firstName ? `${m.firstName}` : m.login}
+                                      </Link>
+                                    ) : (
+                                      <span className="text-primary truncate max-w-[8rem] text-xs">{m.firstName ? `${m.firstName}` : m.login}</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="flex items-center gap-2 text-sm text-primary">
+                              <span className="hidden sm:inline">Ouvrir l'audit</span>
+                              <ChevronRight className="h-4 w-4" />
+                            </div>
+                          </div>
+                        </GroupCard>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

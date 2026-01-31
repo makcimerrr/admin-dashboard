@@ -3,13 +3,13 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 
-interface GroupCardProps {
+interface GroupCardProps extends React.HTMLAttributes<HTMLDivElement> {
   href: string;
   children: React.ReactNode;
   className?: string;
 }
 
-export default function GroupCard({ href, children, className = '' }: GroupCardProps) {
+export default function GroupCard({ href, children, className = '', ...rest }: GroupCardProps) {
   const router = useRouter();
 
   function shouldIgnoreEvent(target: EventTarget | null) {
@@ -42,7 +42,8 @@ export default function GroupCard({ href, children, className = '' }: GroupCardP
       tabIndex={0}
       onClick={onClick}
       onKeyDown={onKeyDown}
-      className={className}
+      className={`${className}`}
+      {...rest}
     >
       {children}
     </div>
