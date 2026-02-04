@@ -131,6 +131,7 @@ export default async function AuditEditPage({ params }: PageProps) {
         id: r.id,
         studentLogin: r.studentLogin,
         validated: !!r.validated,
+        absent: !!r.absent,
         feedback: r.feedback ?? null,
         warnings: r.warnings ?? []
       }))}

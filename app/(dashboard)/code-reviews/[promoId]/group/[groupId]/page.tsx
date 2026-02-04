@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   ClipboardCheck,
   User,
+  UserX,
   Calendar,
   Edit
 } from 'lucide-react';
@@ -125,8 +126,9 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
   // Derived stats
   const validatedCount = audit.results.filter((r) => r.validated).length;
+  const absentCount = audit.results.filter((r) => r.absent).length;
   const totalResults = audit.results.length;
-  const notValidatedCount = totalResults - validatedCount;
+  const notValidatedCount = totalResults - validatedCount - absentCount;
   const warningsCount = audit.warnings ? audit.warnings.length : 0;
   const dropoutsCount = members.filter((m) => m.isDropout).length;
 
@@ -173,8 +175,8 @@ export default async function GroupDetailPage({ params }: PageProps) {
                 <div className="text-sm font-medium">{warningsCount} warnings</div>
               </div>
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                <div className="text-sm font-medium">{dropoutsCount} absents</div>
+                <UserX className="h-4 w-4 text-orange-500" />
+                <div className="text-sm font-medium">{absentCount} absent(s)</div>
               </div>
             </div>
           </div>
@@ -229,6 +231,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                       {members.map((m) => {
                         const res = resultsByLogin.get(m.login.toLowerCase());
                         const validated = res?.validated === true;
+                        const absent = res?.absent === true;
                         const warnings = res?.warnings ?? [];
                         const warningsText = warnings.join('\n');
                         const name = m.firstName || m.lastName ? `${safeText(m.firstName)} ${safeText(m.lastName)}`.trim() : m.login;
@@ -238,8 +241,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
                         const content = (
                           <>
                             <div className="flex items-center">
-                              <User className="h-4 w-4 text-muted-foreground mr-2" />
-                              <div className="truncate max-w-[12rem]">{name}</div>
+                              {absent ? (
+                                <UserX className="h-4 w-4 text-orange-500 mr-2" />
+                              ) : (
+                                <User className="h-4 w-4 text-muted-foreground mr-2" />
+                              )}
+                              <div className={`truncate max-w-[12rem] ${absent ? 'text-orange-600' : ''}`}>{name}</div>
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -258,7 +265,9 @@ export default async function GroupDetailPage({ params }: PageProps) {
                                 </TooltipProvider>
                               ) : null}
 
-                              {validated ? (
+                              {absent ? (
+                                <Badge className="bg-orange-100 text-orange-800 text-xs">ABS</Badge>
+                              ) : validated ? (
                                 <Badge className="bg-green-100 text-green-800 text-xs">V</Badge>
                               ) : (
                                 <Badge variant="destructive" className="text-xs">NV</Badge>
@@ -324,7 +333,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {result.validated ? (
+                        {result.absent ? (
+                          <Badge className="bg-orange-100 text-orange-800">
+                            <UserX className="h-3 w-3 mr-1" />
+                            Absent
+                          </Badge>
+                        ) : result.validated ? (
                           <Badge className="bg-green-100 text-green-800">Validé</Badge>
                         ) : (
                           <Badge variant="destructive">Non validé</Badge>
