@@ -57,6 +57,7 @@ export interface CreateAuditInput {
   results: {
     studentLogin: string;
     validated: boolean;
+    absent?: boolean;
     feedback?: string;
     warnings?: string[];
   }[];
@@ -459,6 +460,7 @@ export async function createAudit(
       auditId: audit.id,
       studentLogin: r.studentLogin,
       validated: r.validated,
+      absent: r.absent || false,
       feedback: r.feedback,
       warnings: r.warnings || []
     }));
@@ -486,6 +488,7 @@ export async function updateAudit(
     results?: {
       studentLogin: string;
       validated: boolean;
+      absent?: boolean;
       feedback?: string;
       warnings?: string[];
     }[];
@@ -543,6 +546,7 @@ export async function updateAudit(
         auditId: id,
         studentLogin: r.studentLogin,
         validated: r.validated,
+        absent: r.absent || false,
         feedback: r.feedback,
         warnings: r.warnings || []
       }));
@@ -692,6 +696,7 @@ export interface StudentAuditData {
   auditorName: string;
   auditDate: Date;
   validated: boolean;
+  absent: boolean;
   feedback: string | null;
   warnings: string[];
   globalSummary: string | null;
@@ -730,6 +735,7 @@ export async function getAuditsByStudentLogin(
       auditorName: audit.auditorName,
       auditDate: audit.createdAt,
       validated: result.validated,
+      absent: result.absent,
       feedback: result.feedback,
       warnings: getWarningsArray(result.warnings),
       globalSummary: audit.summary,

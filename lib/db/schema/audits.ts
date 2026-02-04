@@ -67,6 +67,7 @@ export const auditResults = pgTable('audit_results', {
 
     // Évaluation individuelle
     validated: boolean('validated').default(false).notNull(),
+    absent: boolean('absent').default(false).notNull(),
     feedback: text('feedback'),
     warnings: jsonb('warnings').$type<string[]>().default([]),
 
