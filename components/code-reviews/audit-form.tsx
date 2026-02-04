@@ -28,6 +28,7 @@ import {
     Loader2,
     CheckCircle2,
     User,
+    UserX,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Track } from '@/lib/db/schema/audits';
@@ -38,6 +39,7 @@ const auditResultSchema = z.object({
     studentLogin: z.string(),
     studentName: z.string().optional(),
     validated: z.boolean(),
+    absent: z.boolean(),
     feedback: z.string().optional(),
     warnings: z.array(z.string()),
 });
@@ -80,6 +82,7 @@ export function AuditForm({
                     ? `${m.firstName} ${m.lastName}`
                     : undefined,
                 validated: false,
+                absent: false,
                 feedback: '',
                 warnings: [],
             })),
@@ -141,7 +144,7 @@ export function AuditForm({
             }
 
             toast.success('Audit enregistré avec succès');
-            router.push(`/code-reviews/${promoId}/${track.toLowerCase()}/${encodeURIComponent(projectName)}/${groupId}`);
+            router.push(`/code-reviews/${promoId}`);
             router.refresh();
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Une erreur est survenue');
@@ -300,25 +303,60 @@ function StudentResultCard({
                             </span>
                         )}
                     </CardTitle>
-                    <FormField
-                        control={form.control}
-                        name={`results.${index}.validated`}
-                        render={({ field }) => (
-                            <div className="flex items-center gap-2">
-                                <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                />
-                                <span
-                                    className={
-                                        field.value ? 'text-green-600 font-medium' : 'text-muted-foreground'
-                                    }
-                                >
-                                    {field.value ? 'Validé' : 'Non validé'}
-                                </span>
-                            </div>
-                        )}
-                    />
+                    <div className="flex items-center gap-4">
+                        <FormField
+                            control={form.control}
+                            name={`results.${index}.absent`}
+                            render={({ field }) => (
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={(checked) => {
+                                            field.onChange(checked);
+                                            // Si absent, désactiver la validation
+                                            if (checked) {
+                                                form.setValue(`results.${index}.validated`, false);
+                                            }
+                                        }}
+                                    />
+                                    <span
+                                        className={
+                                            field.value ? 'text-orange-600 font-medium' : 'text-muted-foreground'
+                                        }
+                                    >
+                                        {field.value ? (
+                                            <span className="flex items-center gap-1">
+                                                <UserX className="h-3 w-3" />
+                                                Absent
+                                            </span>
+                                        ) : 'Présent'}
+                                    </span>
+                                </div>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={`results.${index}.validated`}
+                            render={({ field }) => (
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={result.absent}
+                                    />
+                                    <span
+                                        className={
+                                            result.absent
+                                                ? 'text-muted-foreground/50'
+                                                : field.value ? 'text-green-600 font-medium' : 'text-muted-foreground'
+                                        }
+                                    >
+                                        {field.value ? 'Validé' : 'Non validé'}
+                                    </span>
+                                </div>
+                            )}
+                        />
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-3">

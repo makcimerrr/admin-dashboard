@@ -9,13 +9,14 @@ import { Switch } from "@/components/ui/switch";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import { Eye, EyeOff, FileText } from 'lucide-react';
+import { Eye, EyeOff, FileText, UserX } from 'lucide-react';
 import MarkdownWithTables from './markdown-with-tables';
 
 type Member = {
   id: number;
   studentLogin: string;
   validated: boolean;
+  absent: boolean;
   feedback?: string | null;
   warnings?: string[];
 };
@@ -74,6 +75,7 @@ export default function AuditEditForm({
           results: results.map((r) => ({
             studentLogin: r.studentLogin,
             validated: r.validated,
+            absent: r.absent,
             feedback: r.feedback ?? null,
             warnings: r.warnings ?? [],
           })),
@@ -171,12 +173,29 @@ export default function AuditEditForm({
             <div key={r.studentLogin} className="p-4 rounded-lg border space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2"><span className="font-medium">{r.studentLogin}</span></div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm">Validé</label>
-                  <Switch
-                    checked={r.validated}
-                    onCheckedChange={(checked: boolean) => updateMember(r.studentLogin, { validated: checked })}
-                  />
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm">Absent</label>
+                    <Switch
+                      checked={r.absent}
+                      onCheckedChange={(checked: boolean) => {
+                        updateMember(r.studentLogin, { absent: checked });
+                        // Si absent, désactiver la validation
+                        if (checked) {
+                          updateMember(r.studentLogin, { validated: false });
+                        }
+                      }}
+                    />
+                    {r.absent && <UserX className="h-4 w-4 text-orange-600" />}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm">Validé</label>
+                    <Switch
+                      checked={r.validated}
+                      onCheckedChange={(checked: boolean) => updateMember(r.studentLogin, { validated: checked })}
+                      disabled={r.absent}
+                    />
+                  </div>
                 </div>
               </div>
 
