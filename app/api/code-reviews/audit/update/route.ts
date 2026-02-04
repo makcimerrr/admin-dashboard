@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/config';
 import { audits, auditResults } from '@/lib/db/schema/audits';
 import { eq, inArray, and } from 'drizzle-orm';
@@ -10,6 +11,15 @@ export async function POST(request: Request) {
 
     if (!auditId) {
       return NextResponse.json({ success: false, error: 'Missing auditId' }, { status: 400 });
+    }
+
+    // Récupérer l'audit pour obtenir le promoId
+    const audit = await db.query.audits.findFirst({
+      where: eq(audits.id, Number(auditId))
+    });
+
+    if (!audit) {
+      return NextResponse.json({ success: false, error: 'Audit not found' }, { status: 404 });
     }
 
     // Transactional update
@@ -30,6 +40,7 @@ export async function POST(request: Request) {
           auditId: Number(auditId),
           studentLogin: login,
           validated: !!r.validated,
+          absent: !!r.absent,
           feedback: r.feedback ?? null,
           warnings: r.warnings ?? []
         };
@@ -37,7 +48,7 @@ export async function POST(request: Request) {
         if (existingMap.has(login)) {
           // Update only if changed
           const ex = existingMap.get(login);
-          const changed = ex.validated !== payload.validated || (ex.feedback ?? null) !== (payload.feedback ?? null) || JSON.stringify(ex.warnings || []) !== JSON.stringify(payload.warnings || []);
+          const changed = ex.validated !== payload.validated || ex.absent !== payload.absent || (ex.feedback ?? null) !== (payload.feedback ?? null) || JSON.stringify(ex.warnings || []) !== JSON.stringify(payload.warnings || []);
           if (changed) {
             await tx.update(auditResults).set(payload).where(and(eq(auditResults.auditId, Number(auditId)), eq(auditResults.studentLogin, login)));
           }
@@ -54,6 +65,9 @@ export async function POST(request: Request) {
         await tx.delete(auditResults).where(and(eq(auditResults.auditId, Number(auditId)), inArray(auditResults.studentLogin, toDelete)));
       }
     });
+
+    // Invalider le cache de la page du tableau
+    revalidatePath(`/code-reviews/${audit.promoId}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

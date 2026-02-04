@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { stackServerApp } from '@/lib/stack-server';
 import {
     createAudit,
@@ -23,6 +24,7 @@ const createAuditSchema = z.object({
     results: z.array(z.object({
         studentLogin: z.string().min(1),
         validated: z.boolean(),
+        absent: z.boolean().default(false),
         feedback: z.string().nullable().optional(),
         warnings: z.array(z.string()).default([]),
     })),
@@ -154,12 +156,16 @@ export async function POST(request: NextRequest) {
             results: data.results.map((r) => ({
                 studentLogin: r.studentLogin,
                 validated: r.validated,
+                absent: r.absent,
                 feedback: r.feedback ?? undefined,
                 warnings: r.warnings,
             })),
         };
 
         const audit = await createAudit(auditInput);
+
+        // Invalider le cache de la page du tableau pour qu'elle se mette à jour
+        revalidatePath(`/code-reviews/${data.promoId}`);
 
         return NextResponse.json(audit, { status: 201 });
     } catch (error) {
