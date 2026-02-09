@@ -15,6 +15,7 @@ import {
     ArrowLeft,
     ClipboardCheck,
     User,
+    UserX,
     Save,
     AlertTriangle,
     Loader2,
@@ -40,6 +41,7 @@ interface GroupData {
 interface MemberResult {
     login: string;
     validated: boolean;
+    absent: boolean;
     feedback: string;
     warnings: string[];
 }
@@ -98,6 +100,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                         .map((m: GroupMember) => ({
                             login: m.login,
                             validated: true,
+                            absent: false,
                             feedback: '',
                             warnings: [],
                         }))
@@ -130,6 +133,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                     results: memberResults.map(r => ({
                         studentLogin: r.login,
                         validated: r.validated,
+                        absent: r.absent,
                         feedback: r.feedback || null,
                         warnings: r.warnings.filter(w => w.trim()),
                     })),
@@ -309,25 +313,47 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                 <div key={result.login} className="p-4 rounded-lg border">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
-                                            <User className="h-4 w-4" />
-                                            <span className="font-medium">{result.login}</span>
+                                            {result.absent ? (
+                                                <UserX className="h-4 w-4 text-orange-500" />
+                                            ) : (
+                                                <User className="h-4 w-4" />
+                                            )}
+                                            <span className={`font-medium ${result.absent ? 'text-orange-600' : ''}`}>{result.login}</span>
                                             {member.firstName && (
                                                 <span className="text-sm text-muted-foreground">
                                                     ({member.firstName})
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Label htmlFor={`validated-${result.login}`} className="text-sm">
-                                                {result.validated ? 'Validé' : 'Non validé'}
-                                            </Label>
-                                            <Switch
-                                                id={`validated-${result.login}`}
-                                                checked={result.validated}
-                                                onCheckedChange={(checked) =>
-                                                    updateMemberResult(result.login, { validated: checked })
-                                                }
-                                            />
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <Label htmlFor={`absent-${result.login}`} className={`text-sm ${result.absent ? 'text-orange-600 font-medium' : ''}`}>
+                                                    {result.absent ? 'Absent' : 'Présent'}
+                                                </Label>
+                                                <Switch
+                                                    id={`absent-${result.login}`}
+                                                    checked={result.absent}
+                                                    onCheckedChange={(checked) => {
+                                                        updateMemberResult(result.login, { absent: checked });
+                                                        if (checked) {
+                                                            updateMemberResult(result.login, { validated: false });
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Label htmlFor={`validated-${result.login}`} className={`text-sm ${result.absent ? 'opacity-50' : ''}`}>
+                                                    {result.validated ? 'Validé' : 'Non validé'}
+                                                </Label>
+                                                <Switch
+                                                    id={`validated-${result.login}`}
+                                                    checked={result.validated}
+                                                    disabled={result.absent}
+                                                    onCheckedChange={(checked) =>
+                                                        updateMemberResult(result.login, { validated: checked })
+                                                    }
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                     <Textarea
