@@ -309,10 +309,10 @@ export default function CodeReviewsPage() {
                         variant="outline"
                         className={
                           review.validationRate >= 80
-                            ? 'border-green-200 bg-green-50 text-green-700'
+                            ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-400'
                             : review.validationRate >= 50
-                              ? 'border-blue-200 bg-blue-50 text-blue-700'
-                              : 'border-red-200 bg-red-50 text-red-700'
+                              ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
+                              : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400'
                         }
                       >
                         {review.validatedCount}/{review.totalMembers}
@@ -332,11 +332,11 @@ export default function CodeReviewsPage() {
         </Card>
 
         {/* Urgent Reviews Widget */}
-        <Card className={urgentReviews && urgentReviews.length > 0 ? 'border-amber-200' : ''}>
+        <Card className={urgentReviews && urgentReviews.length > 0 ? 'border-amber-200 dark:border-amber-800' : ''}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 Alertes
                 {pendingStats && pendingStats.total > 0 && (
                   <span className="text-xs font-normal text-muted-foreground">
@@ -375,21 +375,21 @@ export default function CodeReviewsPage() {
                     key={review.id}
                     className={`p-3 -mx-2 rounded-lg ${
                       review.priority === 'urgent'
-                        ? 'bg-red-50 border border-red-100'
+                        ? 'bg-red-50 border border-red-100 dark:bg-red-950/40 dark:border-red-900'
                         : review.priority === 'warning'
-                          ? 'bg-amber-50 border border-amber-100'
-                          : 'bg-blue-50 border border-blue-100'
+                          ? 'bg-amber-50 border border-amber-100 dark:bg-amber-950/40 dark:border-amber-900'
+                          : 'bg-blue-50 border border-blue-100 dark:bg-blue-950/40 dark:border-blue-900'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           {review.priority === 'urgent' ? (
-                            <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
                           ) : review.priority === 'warning' ? (
-                            <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
                           ) : (
-                            <Info className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                           )}
                           <span className="font-medium truncate">
                             {review.projectName || review.reason}
@@ -441,8 +441,8 @@ export default function CodeReviewsPage() {
               </div>
             ) : (
               <div className="py-8 text-center text-muted-foreground">
-                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500 opacity-50" />
-                <p className="text-sm text-green-700">Aucune alerte</p>
+                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500 dark:text-green-400 opacity-50" />
+                <p className="text-sm text-green-700 dark:text-green-400">Aucune alerte</p>
               </div>
             )}
           </CardContent>
