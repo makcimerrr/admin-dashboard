@@ -58,7 +58,7 @@ export default function EventsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-1">Événements</h1>
+          <h1 className="text-xl md:text-3xl font-bold mb-1">Événements</h1>
           <p className="text-muted-foreground">Liste des événements instanciés</p>
         </div>
 
