@@ -16,16 +16,23 @@ jobs:
       - name: Label based on title/branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          REPO: ${{ github.repository }}
         run: |
-          if [ "${{ github.event_name }}" = "issues" ]; then
-            TITLE="${{ github.event.issue.title }}"
-            NUMBER="${{ github.event.issue.number }}"
+          if [ "$EVENT_NAME" = "issues" ]; then
+            TITLE="$ISSUE_TITLE"
+            NUMBER="$ISSUE_NUMBER"
             TYPE="issue"
           else
-            TITLE="${{ github.event.pull_request.title }}"
-            NUMBER="${{ github.event.pull_request.number }}"
+            TITLE="$PR_TITLE"
+            NUMBER="$PR_NUMBER"
             TYPE="pr"
-            BRANCH="${{ github.event.pull_request.head.ref }}"
+            BRANCH="$PR_BRANCH"
           fi
 
           LABELS=""
@@ -64,13 +71,13 @@ jobs:
             # Ensure labels exist
             IFS=',' read -ra LABEL_ARRAY <<< "$LABELS"
             for LABEL in "${LABEL_ARRAY[@]}"; do
-              gh label create "$LABEL" --repo "${{ github.repository }}" 2>/dev/null || true
+              gh label create "$LABEL" --repo "$REPO" 2>/dev/null || true
             done
 
             if [ "$TYPE" = "issue" ]; then
-              gh issue edit "$NUMBER" --repo "${{ github.repository }}" --add-label "$LABELS"
+              gh issue edit "$NUMBER" --repo "$REPO" --add-label "$LABELS"
             else
-              gh pr edit "$NUMBER" --repo "${{ github.repository }}" --add-label "$LABELS"
+              gh pr edit "$NUMBER" --repo "$REPO" --add-label "$LABELS"
             fi
             echo "Added labels: $LABELS"
           else
