@@ -10,6 +10,8 @@ jobs:
   add-to-project:
     name: Add to project
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/add-to-project@v1.0.2
         with:
