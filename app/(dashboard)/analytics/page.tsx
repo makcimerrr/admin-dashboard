@@ -19,16 +19,16 @@ export default function AnalyticsPage() {
     : promos.filter(promo => promo.key === selectedPromo);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-primary/10 rounded-lg">
-            <BarChart3 className="h-6 w-6 text-primary" />
+          <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
+            <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Analytics</h1>
+            <p className="text-sm text-muted-foreground hidden sm:block">
               Suivez les métriques clés et les statistiques pour chaque promotion
             </p>
           </div>
@@ -36,7 +36,7 @@ export default function AnalyticsPage() {
 
         {/* Filter */}
         <Select value={selectedPromo} onValueChange={setSelectedPromo}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Toutes les promos" />
           </SelectTrigger>
           <SelectContent>
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
 
       {/* Charts Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-[600px]">
           <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
           <TabsTrigger value="distribution">Répartition</TabsTrigger>
           <TabsTrigger value="progression">Progression</TabsTrigger>

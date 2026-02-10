@@ -270,15 +270,15 @@ async function PromoContent({ promoId }: { promoId: string }) {
                     <CardContent>
                         <div className="grid gap-4 md:grid-cols-3">
                             <div className="text-center p-4 rounded-lg bg-muted/50">
-                                <p className="text-3xl font-bold">{stats.totalGroups}</p>
+                                <p className="text-xl md:text-3xl font-bold">{stats.totalGroups}</p>
                                 <p className="text-sm text-muted-foreground">Groupes finished</p>
                             </div>
                             <div className="text-center p-4 rounded-lg bg-green-50">
-                                <p className="text-3xl font-bold text-green-700">{stats.auditedGroups}</p>
+                                <p className="text-xl md:text-3xl font-bold text-green-700">{stats.auditedGroups}</p>
                                 <p className="text-sm text-green-600">Groupes audités</p>
                             </div>
                             <div className="text-center p-4 rounded-lg bg-amber-50">
-                                <p className="text-3xl font-bold text-amber-700">{stats.pendingGroups}</p>
+                                <p className="text-xl md:text-3xl font-bold text-amber-700">{stats.pendingGroups}</p>
                                 <p className="text-sm text-amber-600">En attente d'audit</p>
                             </div>
                         </div>
@@ -298,7 +298,7 @@ export default async function PromoCodeReviewsPage({ params }: PageProps) {
     }
 
     return (
-        <div className="flex flex-col gap-6 p-6">
+        <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -311,7 +311,7 @@ export default async function PromoCodeReviewsPage({ params }: PageProps) {
                         <ClipboardCheck className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight">
+                        <h1 className="text-xl md:text-2xl font-bold tracking-tight">
                             Code Reviews - {promo.key}
                         </h1>
                         <p className="text-muted-foreground">

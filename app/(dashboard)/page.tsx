@@ -22,21 +22,21 @@ import {
 
 export default function DashboardPage() {
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
-            <BarChart3 className="h-6 w-6 text-primary" />
+          <div className="p-2 sm:p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
+            <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Tableau de Bord</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Tableau de Bord</h1>
+            <p className="text-sm text-muted-foreground hidden sm:block">
               Bienvenue sur le dashboard administratif de Zone01 Normandie
             </p>
           </div>
         </div>
-        <Badge variant="outline" className="text-sm px-3 py-1">
+        <Badge variant="outline" className="text-sm px-3 py-1 hidden sm:inline-flex">
           zone01normandie.org
         </Badge>
       </div>

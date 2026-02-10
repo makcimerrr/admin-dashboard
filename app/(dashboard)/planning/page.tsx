@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, LayoutTemplate, Users, Clock, List, Grid } from 'lucide-react';
 import { useToast } from '@/components/hooks/use-toast';
 import { useUser } from '@stackframe/stack';
+import { useIsMobile } from '@/components/hooks/use-mobile';
 import { PlanningPageHeader } from '@/components/planning/planning-page-header';
 import { WeekSelector } from '@/components/planning/week-selector';
 import { PlanningToolbar, type PaintMode, type SlotType } from '@/components/planning/planning-toolbar';
@@ -41,6 +42,7 @@ export default function PlanningPage() {
     ? ((stackUser.clientReadOnlyMetadata?.planningPermission || stackUser.clientMetadata?.planningPermission || 'reader') as string)
     : 'reader';
   const isEditor = planningPermission === 'editor';
+  const isMobile = useIsMobile();
 
   const { toast } = useToast();
 
@@ -58,6 +60,9 @@ export default function PlanningPage() {
   // UI state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'person' | 'table'>('grid');
+
+  // Force person view on mobile (grid drag is not viable on touch)
+  const effectiveViewMode = isMobile && viewMode === 'grid' ? 'person' : viewMode;
 
   // Holidays
   const [holidays, setHolidays] = useState<Record<string, string>>({});
@@ -258,7 +263,7 @@ export default function PlanningPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] p-3 gap-2 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] p-2 md:p-3 gap-2 overflow-hidden">
       {/* Header */}
       <PlanningPageHeader
         title="Planning"
@@ -287,17 +292,19 @@ export default function PlanningPage() {
 
         {/* View switcher */}
         <div className="inline-flex rounded-md bg-muted p-0.5">
+          {!isMobile && (
+            <Button
+              variant={effectiveViewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('grid')}
+              className="h-7 px-2 text-xs"
+            >
+              <Grid className="h-3 w-3 mr-1" />
+              Grille
+            </Button>
+          )}
           <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="h-7 px-2 text-xs"
-          >
-            <Grid className="h-3 w-3 mr-1" />
-            Grille
-          </Button>
-          <Button
-            variant={viewMode === 'person' ? 'default' : 'ghost'}
+            variant={effectiveViewMode === 'person' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('person')}
             className="h-7 px-2 text-xs"
@@ -306,7 +313,7 @@ export default function PlanningPage() {
             Personne
           </Button>
           <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
+            variant={effectiveViewMode === 'table' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setViewMode('table')}
             className="h-7 px-2 text-xs"
@@ -317,8 +324,8 @@ export default function PlanningPage() {
         </div>
       </PlanningPageHeader>
 
-      {/* Toolbar (only in grid view) */}
-      {viewMode === 'grid' && (
+      {/* Toolbar (only in grid view on desktop) */}
+      {effectiveViewMode === 'grid' && (
         <div className="flex-shrink-0">
           <PlanningToolbar
             employees={employees}
@@ -341,7 +348,7 @@ export default function PlanningPage() {
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
-        ) : viewMode === 'grid' ? (
+        ) : effectiveViewMode === 'grid' ? (
           <PlanningGrid
             employees={employees}
             daysOfWeek={daysOfWeek}
@@ -359,7 +366,7 @@ export default function PlanningPage() {
             onSlotDeleted={() => toast({ title: 'Créneau supprimé' })}
             onDeselectEmployee={() => { setActiveEmployeeId(null); setPaintMode('paint'); }}
           />
-        ) : viewMode === 'person' ? (
+        ) : effectiveViewMode === 'person' ? (
           <PersonView
             employees={employees}
             daysOfWeek={daysOfWeek}
@@ -381,7 +388,7 @@ export default function PlanningPage() {
       </div>
 
       {/* Footer: total hours per employee */}
-      {viewMode === 'grid' && !loading && (
+      {effectiveViewMode === 'grid' && !loading && (
         <div className="flex-shrink-0 flex items-center gap-3 px-2 py-1.5 bg-muted/30 rounded-lg border text-xs overflow-x-auto">
           <span className="text-muted-foreground font-medium flex-shrink-0">Totaux :</span>
           {employees.map((emp) => (

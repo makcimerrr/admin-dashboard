@@ -60,7 +60,7 @@ export default async function HubCalendarPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Calendrier des tâches</h1>
+        <h1 className="text-xl md:text-2xl font-bold">Calendrier des tâches</h1>
         <p className="text-muted-foreground">
           Vue calendrier de toutes les tâches planifiées
         </p>

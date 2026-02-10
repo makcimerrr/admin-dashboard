@@ -6,7 +6,7 @@ import { AlertTriangle, BarChart3 } from 'lucide-react';
 
 export default function ReportsPage() {
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -14,7 +14,7 @@ export default function ReportsPage() {
             <AlertTriangle className="h-6 w-6 text-orange-600" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Rapports & Alertes</h1>
+            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Rapports & Alertes</h1>
             <p className="text-muted-foreground">
               Surveillance des situations nécessitant une attention particulière
             </p>

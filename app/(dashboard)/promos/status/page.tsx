@@ -135,7 +135,7 @@ export default function PromosPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -143,7 +143,7 @@ export default function PromosPage() {
             <BarChart3 className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Statut des Promotions</h1>
+            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Statut des Promotions</h1>
             <p className="text-muted-foreground">
               Suivi en temps réel de l'avancement et de la santé de chaque promotion
             </p>
@@ -167,7 +167,7 @@ export default function PromosPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{promos.length}</div>
+                <div className="text-xl md:text-3xl font-bold">{promos.length}</div>
                 <p className="text-xs text-muted-foreground mt-1">Promotions actives</p>
               </CardContent>
             </Card>
@@ -180,7 +180,7 @@ export default function PromosPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{totalStudents}</div>
+                <div className="text-xl md:text-3xl font-bold">{totalStudents}</div>
                 <p className="text-xs text-muted-foreground mt-1">Toutes promos confondues</p>
               </CardContent>
             </Card>
@@ -193,7 +193,7 @@ export default function PromosPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">{okPromos.length}</div>
+                <div className="text-xl md:text-3xl font-bold text-green-600">{okPromos.length}</div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {((okPromos.length / promos.length) * 100).toFixed(0)}% des promotions
                 </p>
@@ -208,7 +208,7 @@ export default function PromosPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">{avgProgress}%</div>
+                <div className="text-xl md:text-3xl font-bold">{avgProgress}%</div>
                 <Progress value={avgProgress} className="h-1.5 mt-2" />
               </CardContent>
             </Card>

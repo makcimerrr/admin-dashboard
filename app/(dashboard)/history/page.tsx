@@ -186,7 +186,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] p-3 gap-2 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] p-2 md:p-3 gap-2 overflow-hidden">
       <PlanningPageHeader
         title="Historique"
         subtitle="Suivi des modifications du planning"

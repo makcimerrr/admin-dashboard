@@ -132,7 +132,7 @@ export default function EmployeesPage() {
   const activeCount = employees.filter(e => e.isActive !== false).length;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] p-3 gap-2 overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] p-2 md:p-3 gap-2 overflow-hidden">
       <PlanningPageHeader
         title="Employés"
         subtitle="Ajoutez et gérez les membres de votre équipe"

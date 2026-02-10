@@ -138,7 +138,7 @@ export default async function HubDashboardPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Assistant - Gestion des événements</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Assistant - Gestion des événements</h1>
           <p className="text-muted-foreground">
             Planifiez et suivez vos événements
           </p>
