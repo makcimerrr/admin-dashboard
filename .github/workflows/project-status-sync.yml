@@ -127,10 +127,10 @@ jobs:
       - name: Move linked issues to In Review
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          # Get PR body and find linked issue numbers (closes #X, fixes #X, resolves #X)
-          BODY="${{ github.event.pull_request.body }}"
-          PR_BRANCH="${{ github.event.pull_request.head.ref }}"
+          BODY="$PR_BODY"
 
           # Extract issue numbers from body (closes/fixes/resolves #N)
           ISSUE_NUMBERS=$(echo "$BODY" | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#[0-9]+' | grep -oE '[0-9]+' || true)
@@ -196,9 +196,10 @@ jobs:
       - name: Move linked issues to Done
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
-          PR_BRANCH="${{ github.event.pull_request.head.ref }}"
+          BODY="$PR_BODY"
 
           ISSUE_NUMBERS=$(echo "$BODY" | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#[0-9]+' | grep -oE '[0-9]+' || true)
 
@@ -260,9 +261,10 @@ jobs:
       - name: Move linked issues to In Progress
         env:
           GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
-          PR_BRANCH="${{ github.event.pull_request.head.ref }}"
+          BODY="$PR_BODY"
 
           ISSUE_NUMBERS=$(echo "$BODY" | grep -oiE '(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#[0-9]+' | grep -oE '[0-9]+' || true)
 
