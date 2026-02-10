@@ -1,130 +1,93 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { useToast } from "@/components/hooks/use-toast"
-import { Users, Plus, Trash2, Edit, Home, Calendar, LayoutTemplate, Clock } from "lucide-react"
-import Link from "next/link"
-import type { Employee } from "@/lib/db/schema/employees"
-import { Separator } from "@radix-ui/react-separator"
-import { useUser } from "@stackframe/stack"
-import { PlanningNavigation } from '@/components/planning/planning-navigation'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useToast } from "@/components/hooks/use-toast";
+import { Users, Plus, Trash2, Edit, Loader2, Mail, Phone } from "lucide-react";
+import type { Employee } from "@/lib/db/schema/employees";
+import { useUser } from "@stackframe/stack";
+import { PlanningPageHeader } from '@/components/planning/planning-page-header';
 
 const colors = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#6366F1",
-  "#EC4899",
-  "#14B8A6",
-  "#F97316",
-  "#84CC16",
-]
+  "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6",
+  "#6366F1", "#EC4899", "#14B8A6", "#F97316", "#84CC16",
+];
 
 export default function EmployeesPage() {
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [loading, setLoading] = useState(true)
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newEmployee, setNewEmployee] = useState({
-    name: "",
-    initial: "",
-    role: "",
-    email: "",
-    phone: "",
-  })
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
-  const [showAddDialog, setShowAddDialog] = useState(false)
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const { toast } = useToast()
-  const stackUser = useUser()
+    name: "", initial: "", role: "", email: "", phone: "",
+  });
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const { toast } = useToast();
+  const stackUser = useUser();
   const planningPermission = stackUser
-    ? (stackUser.clientReadOnlyMetadata?.planningPermission ||
+    ? ((stackUser.clientReadOnlyMetadata?.planningPermission ||
        stackUser.clientMetadata?.planningPermission ||
-       'reader')
-    : 'reader'
+       'reader') as string)
+    : 'reader';
 
   useEffect(() => {
-    fetchEmployees()
-  }, [])
+    fetchEmployees();
+  }, []);
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch("/api/employees")
+      const response = await fetch("/api/employees");
       if (response.ok) {
-        const data = await response.json()
-        setEmployees(data)
+        const data = await response.json();
+        setEmployees(data);
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les employés",
-        variant: "destructive",
-      })
+      toast({ title: "Erreur", description: "Impossible de charger les employés", variant: "destructive" });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleAddEmployee = async () => {
     if (!newEmployee.name.trim() || !newEmployee.role.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le nom et le poste sont obligatoires",
-        variant: "destructive",
-      })
-      return
+      toast({ title: "Erreur", description: "Le nom et le poste sont obligatoires", variant: "destructive" });
+      return;
     }
-
     try {
       const response = await fetch("/api/employees", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...newEmployee,
           color: colors[employees.length % colors.length],
           email: newEmployee.email || `${newEmployee.name.toLowerCase().replace(" ", ".")}@entreprise.com`,
         }),
-      })
-
+      });
       if (response.ok) {
-        const employee = await response.json()
-        setEmployees([...employees, employee])
-        setNewEmployee({ name: "", initial: "", role: "", email: "", phone: "" })
-        setShowAddDialog(false)
-        toast({
-          title: "Succès",
-          description: "Employé ajouté avec succès",
-        })
+        const employee = await response.json();
+        setEmployees([...employees, employee]);
+        setNewEmployee({ name: "", initial: "", role: "", email: "", phone: "" });
+        setShowAddDialog(false);
+        toast({ title: "Succès", description: "Employé ajouté avec succès" });
       } else {
-        throw new Error("Failed to create employee")
+        throw new Error("Failed to create employee");
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible d'ajouter l'employé",
-        variant: "destructive",
-      })
+      toast({ title: "Erreur", description: "Impossible d'ajouter l'employé", variant: "destructive" });
     }
-  }
+  };
 
   const handleEditEmployee = async () => {
-    if (!editingEmployee) return
-
+    if (!editingEmployee) return;
     try {
       const response = await fetch(`/api/employees/${editingEmployee.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: editingEmployee.name === '' ? '' : editingEmployee.name,
           initial: editingEmployee.initial === '' ? '' : editingEmployee.initial,
@@ -136,85 +99,59 @@ export default function EmployeesPage() {
           isActive: editingEmployee.isActive,
           hoursPerWeek: editingEmployee.hoursPerWeek === '' ? null : editingEmployee.hoursPerWeek,
         }),
-      })
-
+      });
       if (response.ok) {
-        const updatedEmployee = await response.json()
-        setEmployees(employees.map((emp) => (emp.id === updatedEmployee.id ? updatedEmployee : emp)))
-        setEditingEmployee(null)
-        setShowEditDialog(false)
-        toast({
-          title: "Succès",
-          description: "Employé modifié avec succès",
-        })
+        const updatedEmployee = await response.json();
+        setEmployees(employees.map((emp) => (emp.id === updatedEmployee.id ? updatedEmployee : emp)));
+        setEditingEmployee(null);
+        setShowEditDialog(false);
+        toast({ title: "Succès", description: "Employé modifié avec succès" });
       } else {
-        throw new Error("Failed to update employee")
+        throw new Error("Failed to update employee");
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier l'employé",
-        variant: "destructive",
-      })
+      toast({ title: "Erreur", description: "Impossible de modifier l'employé", variant: "destructive" });
     }
-  }
+  };
 
   const handleDeleteEmployee = async (employeeId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cet employé ?")) return
-
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cet employé ?")) return;
     try {
-      const response = await fetch(`/api/employees/${employeeId}`, {
-        method: "DELETE",
-      })
-
+      const response = await fetch(`/api/employees/${employeeId}`, { method: "DELETE" });
       if (response.ok) {
-        setEmployees(employees.filter((emp) => emp.id !== employeeId))
-        toast({
-          title: "Succès",
-          description: "Employé supprimé avec succès",
-        })
+        setEmployees(employees.filter((emp) => emp.id !== employeeId));
+        toast({ title: "Succès", description: "Employé supprimé avec succès" });
       } else {
-        throw new Error("Failed to delete employee")
+        throw new Error("Failed to delete employee");
       }
     } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer l'employé",
-        variant: "destructive",
-      })
+      toast({ title: "Erreur", description: "Impossible de supprimer l'employé", variant: "destructive" });
     }
-  }
+  };
+
+  const activeCount = employees.filter(e => e.isActive !== false).length;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      {/* Header moderne */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-primary/10 rounded-lg">
-          <Users className="h-6 w-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestion des employés</h1>
-          <p className="text-muted-foreground">Ajoutez et gérez les membres de votre équipe</p>
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <PlanningNavigation planningPermission={planningPermission} />
-
-      {/* Badge droits planning */}
-      <div className="flex items-center gap-2">
-        <span className="font-semibold">Droits planning :</span>
-        <span className={`px-2 py-1 rounded text-xs font-bold ${planningPermission === 'editor' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-          {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
-        </span>
-      </div>
-      {/* Bouton Ajouter un Employé aligné à droite sous le header */}
-      <div className="flex justify-end mb-2">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] p-3 gap-2 overflow-hidden">
+      <PlanningPageHeader
+        title="Employés"
+        subtitle="Ajoutez et gérez les membres de votre équipe"
+        icon={Users}
+        permission={planningPermission}
+      >
+        <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
+          {activeCount} actif{activeCount > 1 ? 's' : ''}
+        </Badge>
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="font-semibold" variant="default" disabled={planningPermission !== 'editor'} title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}>
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter un Employé
+            <Button
+              size="sm"
+              className="h-7 text-xs gap-1"
+              disabled={planningPermission !== 'editor'}
+              title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
+            >
+              <Plus className="h-3 w-3" />
+              Ajouter
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -224,144 +161,114 @@ export default function EmployeesPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name">Nom complet *</Label>
-                <Input
-                  id="name"
-                  value={newEmployee.name}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                  placeholder="Ex: Jean Dupont"
-                />
+                <Input id="name" value={newEmployee.name} onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })} placeholder="Ex: Jean Dupont" />
               </div>
               <div>
-                <Label htmlFor="name">Initiales *</Label>
-                <Input
-                  id="initials"
-                  value={newEmployee.initial}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, initial: e.target.value })}
-                  placeholder="Ex: JED"
-                />
+                <Label htmlFor="initials">Initiales *</Label>
+                <Input id="initials" value={newEmployee.initial} onChange={(e) => setNewEmployee({ ...newEmployee, initial: e.target.value })} placeholder="Ex: JED" />
               </div>
               <div>
                 <Label htmlFor="role">Poste *</Label>
-                <Input
-                  id="role"
-                  value={newEmployee.role}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                  placeholder="Ex: Développeur"
-                />
+                <Input id="role" value={newEmployee.role} onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })} placeholder="Ex: Développeur" />
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newEmployee.email}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
-                  placeholder="Ex: jean.dupont@entreprise.com"
-                />
+                <Input id="email" type="email" value={newEmployee.email} onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })} placeholder="Ex: jean.dupont@entreprise.com" />
               </div>
               <div>
                 <Label htmlFor="phone">Téléphone</Label>
-                <Input
-                  id="phone"
-                  value={newEmployee.phone}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
-                  placeholder="Ex: 06 12 34 56 78"
-                />
+                <Input id="phone" value={newEmployee.phone} onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })} placeholder="Ex: 06 12 34 56 78" />
               </div>
               <div className="flex gap-2 pt-4">
-                <Button onClick={handleAddEmployee} className="flex-1">
-                  Ajouter
-                </Button>
-                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                  Annuler
-                </Button>
+                <Button onClick={handleAddEmployee} className="flex-1">Ajouter</Button>
+                <Button variant="outline" onClick={() => setShowAddDialog(false)}>Annuler</Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-      {/* Contenu principal dans un conteneur harmonisé */}
-      <div className="rounded-lg border bg-background p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Équipe ({employees.length} employés)</h2>
+      </PlanningPageHeader>
+
+      <div className="flex-1 min-h-0 overflow-auto">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-          <Badge variant="outline">{employees.length} actifs</Badge>
-        </div>
-        <div className="p-6">
-          {loading ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Chargement...</p>
-            </div>
-          ) : employees.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">Aucun employé pour le moment</p>
-              <Button onClick={() => setShowAddDialog(true)} disabled={planningPermission !== 'editor'} title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}>
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter le premier employé
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {employees.map((employee) => (
-                <div key={employee.id} className="rounded-lg border bg-background p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <Avatar>
-                        <AvatarImage src={`https://avatar.vercel.sh/${employee.id}.png`} />
-                        <AvatarFallback>{employee.name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-semibold">{employee.name}</h3>
-                        <p className="text-sm text-muted-foreground">{employee.role}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditingEmployee(employee)
-                          setShowEditDialog(true)
-                        }}
-                        disabled={planningPermission !== 'editor'}
-                        title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteEmployee(employee.id)}
-                        disabled={planningPermission !== 'editor'}
-                        title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+        ) : employees.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3">
+            <Users className="h-10 w-10 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Aucun employé pour le moment</p>
+            <Button size="sm" onClick={() => setShowAddDialog(true)} disabled={planningPermission !== 'editor'}>
+              <Plus className="h-3 w-3 mr-1" />
+              Ajouter le premier employé
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-1">
+            {employees.map((employee) => (
+              <div
+                key={employee.id}
+                className="rounded-xl border bg-background p-3 border-l-4 transition-shadow hover:shadow-md"
+                style={{ borderLeftColor: employee.color || '#8884d8' }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar className="h-9 w-9 ring-2 ring-offset-1" style={{ ['--tw-ring-color' as string]: employee.color || '#8884d8' }}>
+                      <AvatarImage src={`https://avatar.vercel.sh/${employee.id}.png`} />
+                      <AvatarFallback className="text-xs font-bold">{employee.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold text-sm leading-tight">{employee.name}</h3>
+                      <p className="text-[11px] text-muted-foreground">{employee.role}</p>
                     </div>
                   </div>
-                  <div className="mt-4 space-y-2">
-                    {employee.email && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{employee.email}</span>
-                      </div>
-                    )}
-                    {employee.phone && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{employee.phone}</span>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 p-0"
+                      onClick={() => { setEditingEmployee(employee); setShowEditDialog(true); }}
+                      disabled={planningPermission !== 'editor'}
+                      title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteEmployee(employee.id)}
+                      disabled={planningPermission !== 'editor'}
+                      title={planningPermission !== 'editor' ? 'Accès en lecture seule' : undefined}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <div className="mt-2 space-y-1">
+                  {employee.email && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Mail className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{employee.email}</span>
+                    </div>
+                  )}
+                  {employee.phone && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Phone className="h-3 w-3 flex-shrink-0" />
+                      <span>{employee.phone}</span>
+                    </div>
+                  )}
+                  {employee.hoursPerWeek && (
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 mt-1" style={{ borderColor: employee.color || '#8884d8', color: employee.color || '#8884d8' }}>
+                      {employee.hoursPerWeek}h/sem
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Dialog d'édition */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
@@ -371,57 +278,32 @@ export default function EmployeesPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="edit-name">Nom complet *</Label>
-                <Input
-                  id="edit-name"
-                  value={editingEmployee.name}
-                  onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
-                />
+                <Input id="edit-name" value={editingEmployee.name} onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })} />
               </div>
               <div>
-                <Label htmlFor="edit-name">Initiales *</Label>
-                <Input
-                  id="edit-initial"
-                  value={editingEmployee.initial}
-                  onChange={(e) => setEditingEmployee({ ...editingEmployee, initial: e.target.value })}
-                />
+                <Label htmlFor="edit-initial">Initiales *</Label>
+                <Input id="edit-initial" value={editingEmployee.initial} onChange={(e) => setEditingEmployee({ ...editingEmployee, initial: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="edit-role">Poste *</Label>
-                <Input
-                  id="edit-role"
-                  value={editingEmployee.role}
-                  onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
-                />
+                <Input id="edit-role" value={editingEmployee.role} onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="edit-email">Email</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={editingEmployee.email}
-                  onChange={(e) => setEditingEmployee({ ...editingEmployee, email: e.target.value })}
-                />
+                <Input id="edit-email" type="email" value={editingEmployee.email} onChange={(e) => setEditingEmployee({ ...editingEmployee, email: e.target.value })} />
               </div>
               <div>
                 <Label htmlFor="edit-phone">Téléphone</Label>
-                <Input
-                  id="edit-phone"
-                  value={editingEmployee.phone ?? ""}
-                  onChange={(e) => setEditingEmployee({ ...editingEmployee, phone: e.target.value })}
-                />
+                <Input id="edit-phone" value={editingEmployee.phone ?? ""} onChange={(e) => setEditingEmployee({ ...editingEmployee, phone: e.target.value })} />
               </div>
               <div className="flex gap-2 pt-4">
-                <Button onClick={handleEditEmployee} className="flex-1">
-                  Sauvegarder
-                </Button>
-                <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-                  Annuler
-                </Button>
+                <Button onClick={handleEditEmployee} className="flex-1">Sauvegarder</Button>
+                <Button variant="outline" onClick={() => setShowEditDialog(false)}>Annuler</Button>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
