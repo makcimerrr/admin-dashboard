@@ -1,2279 +1,96 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Loader2, LayoutTemplate, Users, Clock, List, Grid } from 'lucide-react';
 import { useToast } from '@/components/hooks/use-toast';
-import {
-  Calendar as CalendarIcon,
-  Clock,
-  Users,
-  PhoneCall,
-  ChevronLeft,
-  ChevronRight,
-  Grid,
-  List,
-  Settings,
-  Loader2,
-  Home,
-  Copy,
-  Plus,
-  Trash2,
-  Edit,
-  LayoutTemplate,
-  EyeIcon,
-  EyeOffIcon
-} from 'lucide-react';
-import { Separator } from '@radix-ui/react-separator';
-import Link from 'next/link';
-import { PlanningNavigation } from '@/components/planning/planning-navigation';
+import { useUser } from '@stackframe/stack';
+import { PlanningPageHeader } from '@/components/planning/planning-page-header';
+import { WeekSelector } from '@/components/planning/week-selector';
+import { PlanningToolbar, type PaintMode, type SlotType } from '@/components/planning/planning-toolbar';
+import { PlanningGrid } from '@/components/planning/planning-grid';
+import { PlanningSidebar } from '@/components/planning/planning-sidebar';
 import {
   getWeekDates,
   getWeekNumber,
   getWeekKey,
   formatDate,
-  EMPLOYEE_COLORS
 } from '@/lib/db/utils';
 import type { Employee } from '@/lib/db/schema/employees';
 import type { TimeSlot } from '@/lib/db/schema/schedules';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from '@/components/ui/popover';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { CallStack } from 'next/dist/client/components/react-dev-overlay/ui/components/errors/call-stack/call-stack';
-import { useUser } from "@stackframe/stack";
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-// Étendre le type Employee pour inclure les plannings
 interface EmployeeWithSchedule extends Employee {
-  schedule: {
-    [weekKey: string]: {
-      [day: string]: TimeSlot[];
-    };
-  };
+  schedule: { [weekKey: string]: { [day: string]: TimeSlot[] } };
 }
 
-// Définition globale des modèles de semaine type
-const weekTemplates: {
-  key: string;
-  label: string;
-  days: {
-    [day: string]: {
-      start: string;
-      end: string;
-      isWorking: boolean;
-      type: TimeSlot['type'];
-    }[];
-  };
-}[] = [
-  {
-    key: 'classic',
-    label: 'Classique bureau (L-V 9h-17h)',
-    days: {
-      lundi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }],
-      mardi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }],
-      mercredi: [
-        { start: '09:00', end: '17:00', isWorking: true, type: 'work' }
-      ],
-      jeudi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }],
-      vendredi: [
-        { start: '09:00', end: '17:00', isWorking: true, type: 'work' }
-      ],
-      samedi: [],
-      dimanche: []
-    }
-  },
-  {
-    key: 'alternance',
-    label: 'Alternance (L-M, J-V 9h-17h)',
-    days: {
-      lundi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }],
-      mardi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }],
-      mercredi: [],
-      jeudi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' }],
-      vendredi: [
-        { start: '09:00', end: '17:00', isWorking: true, type: 'work' }
-      ],
-      samedi: [],
-      dimanche: []
-    }
-  },
-  {
-    key: '4jours',
-    label: '4 jours (L-J 8h-18h)',
-    days: {
-      lundi: [{ start: '08:00', end: '18:00', isWorking: true, type: 'work' }],
-      mardi: [{ start: '08:00', end: '18:00', isWorking: true, type: 'work' }],
-      mercredi: [
-        { start: '08:00', end: '18:00', isWorking: true, type: 'work' }
-      ],
-      jeudi: [{ start: '08:00', end: '18:00', isWorking: true, type: 'work' }],
-      vendredi: [],
-      samedi: [],
-      dimanche: []
-    }
-  }
-];
+const daysOfWeek = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 
-// Configuration des types de créneaux
-const slotTypeConfig = {
-  work: {
-    label: 'Travail',
-    icon: Clock,
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    textColor: 'text-blue-800'
-  },
-  vacation: {
-    label: 'Congés',
-    icon: CalendarIcon,
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200',
-    textColor: 'text-orange-800'
-  },
-  sick: {
-    label: 'Arrêt maladie',
-    icon: CalendarIcon,
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    textColor: 'text-red-800'
-  },
-  personal: {
-    label: 'Personnel',
-    icon: CalendarIcon,
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200',
-    textColor: 'text-purple-800'
-  }
+const slotTypeConfig: Record<string, { label: string; bgColor: string; borderColor: string; textColor: string }> = {
+  work: { label: 'Travail', bgColor: 'bg-blue-50 dark:bg-blue-950/30', borderColor: 'border-blue-200 dark:border-blue-800', textColor: 'text-blue-800 dark:text-blue-400' },
+  vacation: { label: 'Congés', bgColor: 'bg-orange-50 dark:bg-orange-950/30', borderColor: 'border-orange-200 dark:border-orange-800', textColor: 'text-orange-800 dark:text-orange-400' },
+  sick: { label: 'Arrêt maladie', bgColor: 'bg-red-50 dark:bg-red-950/30', borderColor: 'border-red-200 dark:border-red-800', textColor: 'text-red-800 dark:text-red-400' },
+  personal: { label: 'Personnel', bgColor: 'bg-purple-50 dark:bg-purple-950/30', borderColor: 'border-purple-200 dark:border-purple-800', textColor: 'text-purple-800 dark:text-purple-400' },
 };
-
-const daysOfWeek = [
-  'lundi',
-  'mardi',
-  'mercredi',
-  'jeudi',
-  'vendredi',
-  'samedi',
-  'dimanche'
-];
-const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8h à 22h
-
-// Ajout de la fonction utilitaire en dehors du composant
-function getContrastYIQ(hexcolor: string): string {
-  let color = hexcolor.replace('#', '');
-  if (color.length === 3)
-    color = color
-      .split('')
-      .map((x: string) => x + x)
-      .join('');
-  const r = parseInt(color.substr(0, 2), 16);
-  const g = parseInt(color.substr(2, 2), 16);
-  const b = parseInt(color.substr(4, 2), 16);
-  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-  return yiq >= 128 ? '#222' : '#fff';
-}
-
-// Modifier l'interface EmployeeManagementView pour utiliser des types synchrones
-function EmployeeManagementView({
-  employees,
-  currentWeekKey,
-  currentWeekDates,
-  weekNumber,
-  daysOfWeek,
-  getTotalHoursForWeek,
-  updateLocalSchedule,
-  getEmployeeScheduleForDay,
-  slotTypeConfig,
-  currentWeekOffset,
-  setCurrentWeekOffset,
-  setSchedules,
-  setEmployees,
-  reloadSchedules,
-  planningPermission
-}: {
-  employees: EmployeeWithSchedule[];
-  currentWeekKey: string;
-  currentWeekDates: Date[];
-  weekNumber: number;
-  daysOfWeek: string[];
-  getTotalHoursForWeek: (employeeId: string) => number;
-  updateLocalSchedule: (
-    employeeId: string,
-    day: string,
-    timeSlots: TimeSlot[],
-    weekKey?: string
-  ) => void;
-  getEmployeeScheduleForDay: (employeeId: string, day: string) => TimeSlot[];
-  slotTypeConfig: {
-    [key: string]: {
-      label: string;
-      icon: any;
-      bgColor: string;
-      borderColor: string;
-      textColor: string;
-    };
-  };
-  currentWeekOffset: number;
-  setCurrentWeekOffset: (offset: number) => void;
-  setSchedules: React.Dispatch<
-    React.SetStateAction<Record<string, TimeSlot[]>>
-  >;
-  setEmployees: React.Dispatch<React.SetStateAction<EmployeeWithSchedule[]>>;
-  reloadSchedules: () => Promise<void>;
-  planningPermission: string;
-}) {
-  // Regrouper tous les useState au début
-  const [copyFromWeek, setCopyFromWeek] = useState(currentWeekOffset - 1);
-  const [copyToWeek, setCopyToWeek] = useState(currentWeekOffset);
-  const [selectedEmployeesForCopy, setSelectedEmployeesForCopy] = useState<
-    string[]
-  >([]);
-  const [selectedEmployeeForDetail, setSelectedEmployeeForDetail] = useState<
-    string | null
-  >(null);
-  const [loading, setLoading] = useState(true);
-  const [showWorkOptions, setShowWorkOptions] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [customStartTime, setCustomStartTime] = useState('');
-  const [customEndTime, setCustomEndTime] = useState('');
-  const [endDate, setEndDate] = useState<Date | null>(null);
-  const [selectedType, setSelectedType] = useState<TimeSlot['type'] | null>(
-    null
-  );
-  const [hoursData, setHoursData] = useState<
-    Record<string, Record<string, string>>
-  >({});
-  const [totalHours, setTotalHours] = useState<Record<string, number>>({});
-  const { toast } = useToast();
-  const [editingSlot, setEditingSlot] = useState<{
-    day: string;
-    index: number;
-  } | null>(null);
-  const [isAbsenceLoading, setIsAbsenceLoading] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
-  const [selectedEmployeesForTemplate, setSelectedEmployeesForTemplate] =
-    useState<string[]>([]);
-  // Multi-semaine
-  const [selectedWeeks, setSelectedWeeks] = useState<number[]>([
-    currentWeekOffset
-  ]);
-  const weekOptions = getMultiWeekOptions();
-
-  // Fonction d'application du modèle
-  const applyTemplateToEmployees = async () => {
-    if (!selectedTemplate)
-      return toast({
-        title: 'Erreur',
-        description: 'Sélectionnez un modèle.',
-        variant: 'destructive'
-      });
-    if (selectedEmployeesForTemplate.length === 0)
-      return toast({
-        title: 'Erreur',
-        description: 'Sélectionnez au moins un employé.',
-        variant: 'destructive'
-      });
-    if (selectedWeeks.length === 0)
-      return toast({
-        title: 'Erreur',
-        description: 'Sélectionnez au moins une semaine.',
-        variant: 'destructive'
-      });
-    const template = weekTemplates.find((t) => t.key === selectedTemplate);
-    if (!template) return;
-    for (const weekOffset of selectedWeeks) {
-      const weekKey = getWeekKey(weekOffset);
-      for (const employeeId of selectedEmployeesForTemplate) {
-        for (const day of daysOfWeek) {
-          const slots = (
-            template.days[day as keyof typeof template.days] || []
-          ).map(
-            (slot: {
-              start: string;
-              end: string;
-              isWorking: boolean;
-              type: TimeSlot['type'];
-            }) => ({
-              ...slot,
-              type: slot.type as TimeSlot['type']
-            })
-          );
-          // updateLocalSchedule doit pouvoir prendre un weekKey custom
-          await updateLocalSchedule(employeeId, day, slots, weekKey);
-        }
-      }
-    }
-    toast({
-      title: 'Succès',
-      description: 'Modèle appliqué sur les semaines sélectionnées.'
-    });
-    setSelectedEmployeesForTemplate([]);
-  };
-
-  // Regrouper tous les useEffect après les useState
-  useEffect(() => {
-    const loadData = () => {
-      setLoading(true);
-      const newHoursData: Record<string, Record<string, string>> = {};
-      const newTotalHours: Record<string, number> = {};
-
-      for (const employee of employees) {
-        newHoursData[employee.id] = {};
-        for (const day of daysOfWeek) {
-          const schedule = getEmployeeScheduleForDay(employee.id, day);
-          const workSlots = schedule.filter(
-            (slot: TimeSlot) => slot.type === 'work'
-          );
-          const vacationSlots = schedule.filter(
-            (slot: TimeSlot) => slot.type !== 'work'
-          );
-
-          if (workSlots.length === 0 && vacationSlots.length === 0) {
-            newHoursData[employee.id][day] = 'Repos';
-          } else if (workSlots.length === 0 && vacationSlots.length > 0) {
-            newHoursData[employee.id][day] = vacationSlots
-              .map((slot: TimeSlot) => slotTypeConfig[slot.type].label)
-              .join(', ');
-          } else {
-            newHoursData[employee.id][day] = workSlots
-              .map((slot: TimeSlot) => `${slot.start}-${slot.end}`)
-              .join(', ');
-          }
-        }
-        newTotalHours[employee.id] = getTotalHoursForWeek(employee.id);
-      }
-
-      setHoursData(newHoursData);
-      setTotalHours(newTotalHours);
-      setLoading(false);
-    };
-
-    loadData();
-  }, [
-    employees,
-    currentWeekKey,
-    daysOfWeek,
-    getEmployeeScheduleForDay,
-    getTotalHoursForWeek,
-    slotTypeConfig
-  ]);
-
-  // Fonctions utilitaires
-  const getWeekOptions = () => {
-    const options = [];
-    for (let i = -4; i <= 4; i++) {
-      const weekDates = getWeekDates(i);
-      const weekNum = getWeekNumber(weekDates[0]);
-      options.push({
-        value: i,
-        label: `Semaine ${weekNum} (${formatDate(weekDates[0])} - ${formatDate(weekDates[6])})`,
-        dates: weekDates
-      });
-    }
-    return options;
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[600px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  const copySchedules = async () => {
-    try {
-      const fromWeekKey = getWeekKey(copyFromWeek);
-      const toWeekKey = getWeekKey(copyToWeek);
-
-      const employeesToCopy =
-        selectedEmployeesForCopy.length > 0
-          ? selectedEmployeesForCopy
-          : employees.map((emp) => emp.id);
-
-      // Récupérer les plannings de la semaine source
-      const response = await fetch(`/api/schedules?weekKey=${fromWeekKey}`);
-      if (!response.ok) throw new Error('Failed to fetch source schedules');
-      const sourceSchedules = await response.json();
-
-      // Copier les plannings pour chaque employé
-      for (const employeeId of employeesToCopy) {
-        const employeeSchedules = sourceSchedules.filter(
-          (s: any) => s.employeeId === employeeId
-        );
-        for (const schedule of employeeSchedules) {
-          await fetch('/api/schedules', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              employeeId,
-              weekKey: toWeekKey,
-              day: schedule.day,
-              timeSlots: schedule.timeSlots
-            })
-          });
-        }
-      }
-
-      // Recharger les données depuis la base de données
-      const schedulesResponse = await fetch(
-        `/api/schedules?weekKey=${currentWeekKey}`
-      );
-      if (schedulesResponse.ok) {
-        const data = await schedulesResponse.json();
-        const schedulesMap: Record<string, any[]> = {};
-
-        if (Array.isArray(data)) {
-          data.forEach((schedule: any) => {
-            const key = `${schedule.employeeId}-${schedule.day}`;
-            schedulesMap[key] = Array.isArray(schedule.timeSlots)
-              ? schedule.timeSlots
-              : [];
-          });
-        }
-
-        setSchedules(schedulesMap);
-
-        // Mettre à jour les employés avec les nouvelles données
-        setEmployees((prev) =>
-          prev.map((emp) => ({
-            ...emp,
-            schedule: {
-              ...emp.schedule,
-              [currentWeekKey]: daysOfWeek.reduce(
-                (acc, day) => {
-                  acc[day] = Array.isArray(schedulesMap[`${emp.id}-${day}`])
-                    ? schedulesMap[`${emp.id}-${day}`]
-                    : [];
-                  return acc;
-                },
-                {} as { [day: string]: TimeSlot[] }
-              )
-            }
-          }))
-        );
-      }
-
-      toast({
-        title: 'Succès',
-        description: 'Plannings copiés avec succès'
-      });
-      setSelectedEmployeesForCopy([]);
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de copier les plannings',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const clearEmployeeDay = async (employeeId: string, day: string) => {
-    try {
-      const response = await fetch(
-        `/api/schedules?employeeId=${employeeId}&weekKey=${currentWeekKey}&day=${day}`,
-        { method: 'DELETE' }
-      );
-      if (!response.ok) throw new Error('Failed to clear schedule');
-
-      // Mettre à jour l'état local immédiatement
-      updateLocalSchedule(employeeId, day, []);
-
-      // Mettre à jour les schedules
-      setSchedules((prev: Record<string, TimeSlot[]>) => {
-        const newSchedules = { ...prev };
-        delete newSchedules[`${employeeId}-${day}`];
-        return newSchedules;
-      });
-
-      toast({
-        title: 'Succès',
-        description: 'Journée effacée avec succès'
-      });
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: "Impossible d'effacer la journée",
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const setStandardWorkDay = async (
-    employeeId: string,
-    day: string,
-    type: 'full' | 'morning' | 'afternoon'
-  ) => {
-    try {
-      let timeSlots: TimeSlot[] = [];
-      switch (type) {
-        case 'full':
-          timeSlots = [
-            {
-              start: '09:00',
-              end: '17:00',
-              isWorking: true,
-              type: 'work' as const
-            }
-          ];
-          break;
-        case 'morning':
-          timeSlots = [
-            {
-              start: '09:00',
-              end: '12:00',
-              isWorking: true,
-              type: 'work' as const
-            }
-          ];
-          break;
-        case 'afternoon':
-          timeSlots = [
-            {
-              start: '13:00',
-              end: '17:00',
-              isWorking: true,
-              type: 'work' as const
-            }
-          ];
-          break;
-      }
-
-      const response = await fetch('/api/schedules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId,
-          weekKey: currentWeekKey,
-          day,
-          timeSlots
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to update schedule');
-
-      // Mettre à jour l'état local
-      updateLocalSchedule(employeeId, day, timeSlots);
-
-      toast({
-        title: 'Succès',
-        description: 'Planning mis à jour avec succès'
-      });
-    } catch (error) {
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de mettre à jour le planning',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Semaine selector en haut de la vue Gestion */}
-      <div className="flex justify-end">
-        <WeekSelector
-          currentWeekOffset={currentWeekOffset}
-          setCurrentWeekOffset={setCurrentWeekOffset}
-          currentWeekDates={currentWeekDates}
-          weekNumber={weekNumber}
-        />
-      </div>
-      {/* Semaine type */}
-      <div className="rounded-lg border bg-background mb-4">
-        <div className="p-6 border-b flex items-center gap-4 flex-wrap">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <LayoutTemplate className="h-5 w-5" />
-            Semaine type
-          </h2>
-          <select
-            className="border rounded px-2 py-1 text-base"
-            value={selectedTemplate}
-            onChange={(e) => setSelectedTemplate(e.target.value)}
-            style={{ minWidth: 200 }}
-          >
-            <option value="">Choisir un modèle...</option>
-            {weekTemplates.map((t: (typeof weekTemplates)[number]) => (
-              <option key={t.key} value={t.key}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-          {/* Multi-semaine */}
-          <div className="flex items-center gap-2">
-            <Label>Semaines</Label>
-            <div className="flex flex-wrap gap-2">
-              {weekOptions.map((opt) => (
-                <label
-                  key={opt.value}
-                  className="flex items-center gap-1 text-xs cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedWeeks.includes(opt.value)}
-                    onChange={(e) => {
-                      if (e.target.checked)
-                        setSelectedWeeks((list) => [...list, opt.value]);
-                      else
-                        setSelectedWeeks((list) =>
-                          list.filter((v) => v !== opt.value)
-                        );
-                    }}
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="flex-1" />
-          <Button
-            variant="default"
-            onClick={applyTemplateToEmployees}
-            disabled={
-              !selectedTemplate ||
-              selectedEmployeesForTemplate.length === 0 ||
-              selectedWeeks.length === 0
-            }
-          >
-            Appliquer aux semaines
-          </Button>
-        </div>
-        <div className="p-6">
-          <Label>Employés concernés</Label>
-          <div className="flex flex-wrap gap-3 mt-2">
-            {employees.map((emp) => (
-              <label
-                key={emp.id}
-                className="flex items-center gap-2 px-3 py-1 rounded border cursor-pointer shadow-sm"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedEmployeesForTemplate.includes(emp.id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedEmployeesForTemplate((list) => [
-                        ...list,
-                        emp.id
-                      ]);
-                    } else {
-                      setSelectedEmployeesForTemplate((list) =>
-                        list.filter((id) => id !== emp.id)
-                      );
-                    }
-                  }}
-                />
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: emp.color }}
-                />
-                <span>{emp.name}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-      {/* Outil de copier-coller */}
-      <div className="rounded-lg border bg-background">
-        <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Copy className="h-5 w-5" />
-            Copier-Coller Planning
-          </h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label>Copier depuis la semaine</Label>
-                <Select
-                  value={copyFromWeek.toString()}
-                  onValueChange={(value) =>
-                    setCopyFromWeek(Number.parseInt(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getWeekOptions().map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value.toString()}
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Vers la semaine</Label>
-                <Select
-                  value={copyToWeek.toString()}
-                  onValueChange={(value) =>
-                    setCopyToWeek(Number.parseInt(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getWeekOptions().map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value.toString()}
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <Label>Employés à copier (laisser vide pour tous)</Label>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {employees.map((employee) => (
-                  <div
-                    key={employee.id}
-                    className="flex items-center space-x-2"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`copy-${employee.id}`}
-                      checked={selectedEmployeesForCopy.includes(employee.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedEmployeesForCopy([
-                            ...selectedEmployeesForCopy,
-                            employee.id
-                          ]);
-                        } else {
-                          setSelectedEmployeesForCopy(
-                            selectedEmployeesForCopy.filter(
-                              (id) => id !== employee.id
-                            )
-                          );
-                        }
-                      }}
-                      className="rounded"
-                    />
-                    <label
-                      htmlFor={`copy-${employee.id}`}
-                      className="text-sm flex items-center gap-2"
-                    >
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: employee.color }}
-                      />
-                      {employee.name}
-                    </label>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  onClick={copySchedules}
-                  className="flex-1"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Copie en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copier Planning
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedEmployeesForCopy([])}
-                >
-                  Tout désélectionner
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Liste des employés simplifiée */}
-      <div className="rounded-lg border bg-background">
-        <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Employés - Semaine {weekNumber}
-          </h2>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {employees.map((employee: EmployeeWithSchedule) => (
-              <div
-                key={employee.id}
-                className="rounded-lg border bg-background p-4"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: employee.color }}
-                  />
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage
-                      src={`https://avatar.vercel.sh/${employee.id}.png`}
-                      alt={employee.name}
-                    />
-                    <AvatarFallback className="text-sm">
-                      {employee.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-sm flex items-center gap-2">
-                      {employee.name}
-                      {/* Sélecteur de couleur */}
-                      <Select
-                        value={employee.color}
-                        onValueChange={async (color) => {
-                          // Appel API pour mettre à jour la couleur
-                          const response = await fetch(
-                            `/api/employees/${employee.id}`,
-                            {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ color })
-                            }
-                          );
-                          if (response.ok) {
-                            setEmployees((prev) =>
-                              prev.map((emp) =>
-                                emp.id === employee.id ? { ...emp, color } : emp
-                              )
-                            );
-                            toast({
-                              title: 'Succès',
-                              description: 'Couleur modifiée avec succès'
-                            });
-                          } else {
-                            toast({
-                              title: 'Erreur',
-                              description: 'Impossible de modifier la couleur',
-                              variant: 'destructive'
-                            });
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-8 h-8 p-0 border-none bg-transparent">
-                          <span className="sr-only">Changer la couleur</span>
-                          <div
-                            className="w-5 h-5 rounded-full border"
-                            style={{ backgroundColor: employee.color }}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {EMPLOYEE_COLORS.map((color) => (
-                            <SelectItem
-                              key={color}
-                              value={color}
-                              className="flex items-center gap-2"
-                            >
-                              <div
-                                className="w-5 h-5 rounded-full border"
-                                style={{ backgroundColor: color }}
-                              />
-                              <span>{color}</span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {employee.role}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Heures travaillées:</span>
-                    <Badge variant="outline">
-                      {getTotalHoursForWeek(employee.id)}h
-                    </Badge>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() =>
-                        setSelectedEmployeeForDetail(
-                          selectedEmployeeForDetail === employee.id
-                            ? null
-                            : employee.id
-                        )
-                      }
-                    >
-                      {selectedEmployeeForDetail === employee.id
-                        ? 'Masquer'
-                        : 'Gérer'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setCopyFromWeek(currentWeekOffset - 1);
-                        setCopyToWeek(currentWeekOffset);
-                        setSelectedEmployeesForCopy([employee.id]);
-                        copySchedules();
-                      }}
-                      title="Copier depuis la semaine précédente"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Planning détaillé (affiché si sélectionné) */}
-                {selectedEmployeeForDetail === employee.id && (
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="grid grid-cols-1 gap-3">
-                      {daysOfWeek.map((day, dayIndex) => (
-                        <div
-                          key={day}
-                          className="border rounded p-3 bg-muted/50"
-                        >
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="text-sm font-medium capitalize">
-                              {day} {formatDate(currentWeekDates[dayIndex])}
-                            </div>
-                            <div className="flex gap-1">
-                              {/* Ajout/édition de créneau */}
-                              <Dialog modal={false}>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-6 px-2"
-                                  >
-                                    {employee.schedule?.[currentWeekKey]?.[day]
-                                      ?.length > 0 ? (
-                                      <Edit className="h-3 w-3" />
-                                    ) : (
-                                      <Plus className="h-3 w-3" />
-                                    )}
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-md p-6 rounded-xl shadow-xl">
-                                  <DialogHeader>
-                                    <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                                      <Plus className="h-5 w-5 text-blue-600" />
-                                      Ajouter un créneau
-                                    </DialogTitle>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      {employee.name} – {day}{' '}
-                                      {formatDate(currentWeekDates[dayIndex])}
-                                    </p>
-                                  </DialogHeader>
-                                  <Separator className="my-3" />
-                                  {/* Résumé dynamique */}
-                                  {selectedType && (
-                                    <div className="mb-2 flex items-center gap-2 text-base font-medium">
-                                      <span className="text-muted-foreground">
-                                        Type sélectionné :
-                                      </span>
-                                      {(() => {
-                                        const config =
-                                          slotTypeConfig[selectedType];
-                                        const Icon = config.icon;
-                                        return (
-                                          <span className="flex items-center gap-1 px-2 py-1 rounded bg-muted border">
-                                            <Icon className="h-4 w-4" />
-                                            {config.label}
-                                          </span>
-                                        );
-                                      })()}
-                                    </div>
-                                  )}
-                                  {/* Étape 1 : Sélection du type de créneau */}
-                                  <div>
-                                    <Label className="block mb-2">
-                                      Type de créneau
-                                    </Label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                      {Object.entries(slotTypeConfig).map(
-                                        ([type, config]) => {
-                                          const Icon = config.icon;
-                                          return (
-                                            <button
-                                              key={type}
-                                              type="button"
-                                              aria-pressed={
-                                                selectedType === type
-                                              }
-                                              onClick={() => {
-                                                setSelectedType(
-                                                  type as TimeSlot['type']
-                                                );
-                                                setShowWorkOptions(false);
-                                                setShowDatePicker(false);
-                                              }}
-                                              className={`flex flex-col items-center justify-center gap-1 p-3 rounded-lg border transition-all duration-150 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-400/60 ${selectedType === type ? 'bg-blue-50 border-blue-500 shadow' : 'bg-background border-muted hover:bg-muted/60'}`}
-                                            >
-                                              <Icon
-                                                className={`h-6 w-6 ${selectedType === type ? 'text-blue-600' : 'text-muted-foreground'}`}
-                                              />
-                                              <span className="font-semibold text-sm">
-                                                {config.label}
-                                              </span>
-                                            </button>
-                                          );
-                                        }
-                                      )}
-                                    </div>
-                                  </div>
-                                  <Separator className="my-4" />
-                                  {/* Étape 2 : Formulaire selon le type sélectionné */}
-                                  {selectedType === 'work' && (
-                                    <div className="space-y-6">
-                                      <div>
-                                        <Label className="block mb-2">
-                                          Options rapides
-                                        </Label>
-                                        <div className="grid grid-cols-1 gap-2">
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() =>
-                                              setStandardWorkDay(
-                                                employee.id,
-                                                day,
-                                                'full'
-                                              )
-                                            }
-                                            className="w-full"
-                                          >
-                                            Journée complète (9h-17h)
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() =>
-                                              setStandardWorkDay(
-                                                employee.id,
-                                                day,
-                                                'morning'
-                                              )
-                                            }
-                                            className="w-full"
-                                          >
-                                            Matin (9h-12h)
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() =>
-                                              setStandardWorkDay(
-                                                employee.id,
-                                                day,
-                                                'afternoon'
-                                              )
-                                            }
-                                            className="w-full"
-                                          >
-                                            Après-midi (13h-17h)
-                                          </Button>
-                                        </div>
-                                      </div>
-                                      <Separator className="my-2" />
-                                      <div>
-                                        <Label className="block mb-2">
-                                          Créneau personnalisé
-                                        </Label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="space-y-2">
-                                            <Label className="text-xs">
-                                              Heure de début
-                                            </Label>
-                                            <Input
-                                              type="time"
-                                              value={customStartTime}
-                                              onChange={(e) =>
-                                                setCustomStartTime(
-                                                  e.target.value
-                                                )
-                                              }
-                                              className="h-8"
-                                              aria-label="Heure de début"
-                                            />
-                                          </div>
-                                          <div className="space-y-2">
-                                            <Label className="text-xs">
-                                              Heure de fin
-                                            </Label>
-                                            <Input
-                                              type="time"
-                                              value={customEndTime}
-                                              onChange={(e) =>
-                                                setCustomEndTime(e.target.value)
-                                              }
-                                              className="h-8"
-                                              aria-label="Heure de fin"
-                                            />
-                                          </div>
-                                        </div>
-                                        <Button
-                                          variant="default"
-                                          size="sm"
-                                          className="w-full mt-2"
-                                          onClick={() => {
-                                            if (
-                                              customStartTime &&
-                                              customEndTime
-                                            ) {
-                                              const timeSlots: TimeSlot[] = [
-                                                {
-                                                  start: customStartTime,
-                                                  end: customEndTime,
-                                                  isWorking: true,
-                                                  type: 'work' as const
-                                                }
-                                              ];
-                                              fetch('/api/schedules', {
-                                                method: 'POST',
-                                                headers: {
-                                                  'Content-Type':
-                                                    'application/json'
-                                                },
-                                                body: JSON.stringify({
-                                                  employeeId: employee.id,
-                                                  weekKey: currentWeekKey,
-                                                  day,
-                                                  timeSlots
-                                                })
-                                              }).then(() => {
-                                                updateLocalSchedule(
-                                                  employee.id,
-                                                  day,
-                                                  timeSlots
-                                                );
-                                                setCustomStartTime('');
-                                                setCustomEndTime('');
-                                                toast({
-                                                  title: 'Succès',
-                                                  description: 'Créneau ajouté'
-                                                });
-                                              });
-                                            }
-                                          }}
-                                        >
-                                          Ajouter le créneau personnalisé
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {selectedType && selectedType !== 'work' && (
-                                    <div className="space-y-6">
-                                      <div>
-                                        <Label className="block mb-2">
-                                          Période d'absence
-                                        </Label>
-                                        <div className="flex flex-col gap-2">
-                                          <div className="flex items-center gap-2">
-                                            <CalendarIcon className="h-4 w-4 text-orange-500" />
-                                            <span className="font-medium">
-                                              Début :{' '}
-                                              {formatDate(
-                                                currentWeekDates[dayIndex]
-                                              )}
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <CalendarIcon className="h-4 w-4 text-orange-500" />
-                                            <span className="font-medium">
-                                              Fin :{' '}
-                                              {endDate ? (
-                                                format(endDate, 'PPP', {
-                                                  locale: fr
-                                                })
-                                              ) : (
-                                                <span className="text-muted-foreground">
-                                                  Sélectionner une date (non
-                                                  incluse)
-                                                </span>
-                                              )}
-                                            </span>
-                                          </div>
-                                          <Popover>
-                                            <PopoverTrigger asChild>
-                                              <Button
-                                                variant="outline"
-                                                className="w-full justify-start text-left font-normal mt-2"
-                                                aria-label="Sélectionner la date de fin"
-                                              >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {endDate
-                                                  ? format(endDate, 'PPP', {
-                                                      locale: fr
-                                                    })
-                                                  : 'Sélectionner une date'}
-                                              </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent
-                                              className="w-[340px] p-4 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                                              align="center"
-                                            >
-                                              <Calendar
-                                                mode="single"
-                                                selected={endDate || undefined}
-                                                onSelect={(
-                                                  date: Date | undefined
-                                                ) => setEndDate(date || null)}
-                                                initialFocus
-                                                locale={fr}
-                                                fromDate={new Date(2000, 0, 1)}
-                                                toDate={new Date(2100, 11, 31)}
-                                                defaultMonth={
-                                                  currentWeekDates[dayIndex]
-                                                }
-                                              />
-                                            </PopoverContent>
-                                          </Popover>
-                                        </div>
-                                      </div>
-                                      <Button
-                                        variant="default"
-                                        className="w-full mt-2"
-                                        disabled={isAbsenceLoading}
-                                        onClick={async () => {
-                                          if (!endDate)
-                                            return toast({
-                                              title: 'Erreur',
-                                              description:
-                                                'Sélectionnez une date de fin',
-                                              variant: 'destructive'
-                                            });
-                                          const startDate =
-                                            currentWeekDates[dayIndex];
-                                          if (endDate < startDate) {
-                                            toast({
-                                              title: 'Erreur',
-                                              description:
-                                                'La date de fin doit être après la date de début',
-                                              variant: 'destructive'
-                                            });
-                                            return;
-                                          }
-                                          setIsAbsenceLoading(true);
-                                          try {
-                                            // Supprimer tous les créneaux existants sur la plage pour l'employé
-                                            let current = new Date(startDate);
-                                            current.setHours(0, 0, 0, 0);
-                                            const end = new Date(endDate);
-                                            end.setHours(0, 0, 0, 0);
-                                            while (current <= end) {
-                                              const weekKey = `${current.getFullYear()}-W${getWeekNumber(current)}`;
-                                              const dayIdx =
-                                                current.getDay() === 0
-                                                  ? 6
-                                                  : current.getDay() - 1;
-                                              const dayName =
-                                                daysOfWeek[dayIdx];
-                                              await fetch(
-                                                `/api/schedules?employeeId=${employee.id}&weekKey=${weekKey}&day=${dayName}`,
-                                                { method: 'DELETE' }
-                                              );
-                                              current.setDate(
-                                                current.getDate() + 1
-                                              );
-                                            }
-                                            // Appel API range pour créer l'absence
-                                            const res = await fetch(
-                                              '/api/schedules/range',
-                                              {
-                                                method: 'POST',
-                                                headers: {
-                                                  'Content-Type':
-                                                    'application/json'
-                                                },
-                                                body: JSON.stringify({
-                                                  employeeId: employee.id,
-                                                  startDate: startDate
-                                                    .toISOString()
-                                                    .slice(0, 10),
-                                                  endDate: endDate
-                                                    .toISOString()
-                                                    .slice(0, 10),
-                                                  slotType: selectedType
-                                                })
-                                              }
-                                            );
-                                            if (res.ok) {
-                                              const weekKeys =
-                                                new Set<string>();
-                                              let cur = new Date(startDate);
-                                              cur.setHours(0, 0, 0, 0);
-                                              const endAbs = new Date(endDate);
-                                              endAbs.setHours(0, 0, 0, 0);
-                                              while (cur <= endAbs) {
-                                                weekKeys.add(
-                                                  `${cur.getFullYear()}-W${getWeekNumber(cur)}`
-                                                );
-                                                cur.setDate(cur.getDate() + 1);
-                                              }
-                                              const schedulesMap: Record<
-                                                string,
-                                                any[]
-                                              > = {};
-                                              for (const weekKey of weekKeys) {
-                                                const schedulesResponse =
-                                                  await fetch(
-                                                    `/api/schedules?weekKey=${weekKey}`
-                                                  );
-                                                if (schedulesResponse.ok) {
-                                                  const data =
-                                                    await schedulesResponse.json();
-                                                  if (Array.isArray(data)) {
-                                                    data.forEach(
-                                                      (schedule: any) => {
-                                                        const key = `${schedule.employeeId}-${schedule.day}`;
-                                                        schedulesMap[key] =
-                                                          Array.isArray(
-                                                            schedule.timeSlots
-                                                          )
-                                                            ? schedule.timeSlots
-                                                            : [];
-                                                      }
-                                                    );
-                                                  }
-                                                }
-                                              }
-                                              setSchedules(schedulesMap);
-                                              setEmployees((prev) =>
-                                                prev.map((emp) => ({
-                                                  ...emp,
-                                                  schedule: {
-                                                    ...emp.schedule,
-                                                    ...Array.from(
-                                                      weekKeys
-                                                    ).reduce(
-                                                      (acc, weekKey) => {
-                                                        acc[weekKey] =
-                                                          daysOfWeek.reduce(
-                                                            (acc2, d) => {
-                                                              acc2[d] =
-                                                                Array.isArray(
-                                                                  schedulesMap[
-                                                                    `${emp.id}-${d}`
-                                                                  ]
-                                                                )
-                                                                  ? schedulesMap[
-                                                                      `${emp.id}-${d}`
-                                                                    ]
-                                                                  : [];
-                                                              return acc2;
-                                                            },
-                                                            {} as {
-                                                              [
-                                                                day: string
-                                                              ]: TimeSlot[];
-                                                            }
-                                                          );
-                                                        return acc;
-                                                      },
-                                                      {} as {
-                                                        [weekKey: string]: {
-                                                          [
-                                                            day: string
-                                                          ]: TimeSlot[];
-                                                        };
-                                                      }
-                                                    )
-                                                  }
-                                                }))
-                                              );
-                                              toast({
-                                                title: 'Succès',
-                                                description: 'Absence ajoutée'
-                                              });
-                                              setEndDate(null);
-                                              setSelectedType(null);
-                                              if (reloadSchedules)
-                                                await reloadSchedules();
-                                            } else {
-                                              toast({
-                                                title: 'Erreur',
-                                                description:
-                                                  "Impossible d'ajouter l'absence",
-                                                variant: 'destructive'
-                                              });
-                                            }
-                                          } finally {
-                                            setIsAbsenceLoading(false);
-                                          }
-                                        }}
-                                      >
-                                        {isAbsenceLoading ? (
-                                          <Loader2 className="animate-spin w-4 h-4 mx-auto" />
-                                        ) : (
-                                          "Valider l'absence"
-                                        )}
-                                      </Button>
-                                    </div>
-                                  )}
-                                  <Separator className="my-4" />
-                                  <div className="flex justify-end gap-2">
-                                    <Button
-                                      variant="outline"
-                                      onClick={() => {
-                                        setSelectedType(null);
-                                        setEndDate(null);
-                                        setCustomStartTime('');
-                                        setCustomEndTime('');
-                                        setShowWorkOptions(false);
-                                        setShowDatePicker(false);
-                                      }}
-                                    >
-                                      Annuler
-                                    </Button>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
-                              {employee.schedule?.[currentWeekKey]?.[day]
-                                ?.length > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    clearEmployeeDay(employee.id, day)
-                                  }
-                                  className="h-6 px-2 text-red-600 hover:bg-red-50"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Créneaux du jour */}
-                          <div className="space-y-1">
-                            {(
-                              employee.schedule?.[currentWeekKey]?.[day] || []
-                            ).map((slot: TimeSlot, index: number) => {
-                              const config = slotTypeConfig[
-                                slot.type as keyof typeof slotTypeConfig
-                              ] as {
-                                label: string;
-                                icon: any;
-                                bgColor: string;
-                                borderColor: string;
-                                textColor: string;
-                              };
-                              const Icon = config.icon;
-                              return (
-                                <div
-                                  key={index}
-                                  className={`flex justify-between items-center p-2 rounded text-xs ${config.bgColor} ${config.borderColor} border`}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <Icon className="h-3 w-3" />
-                                    <span className={config.textColor}>
-                                      {slot.type === 'work'
-                                        ? `${slot.start}-${slot.end}`
-                                        : config.label}
-                                    </span>
-                                    {slot.note && (
-                                      <span className="text-muted-foreground">
-                                        ({slot.note})
-                                      </span>
-                                    )}
-                                  </div>
-                                  {/*<Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={async () => {
-                                      const newSlots = Array.isArray(employee.schedule?.[currentWeekKey]?.[day])
-                                        ? [...employee.schedule[currentWeekKey][day]]
-                                        : [];
-                                      newSlots.splice(index, 1);
-                                      try {
-                                        const response = await fetch("/api/schedules", {
-                                          method: "POST",
-                                          headers: { "Content-Type": "application/json" },
-                                          body: JSON.stringify({
-                                            employeeId: employee.id,
-                                            weekKey: currentWeekKey,
-                                            day,
-                                            timeSlots: newSlots,
-                                          }),
-                                        });
-                                        if (response.ok) {
-                                          updateLocalSchedule(employee.id, day, newSlots);
-                                          setSchedules(prev => ({
-                                            ...prev,
-                                            [`${employee.id}-${day}`]: newSlots
-                                          }));
-                                          toast({
-                                            title: "Succès",
-                                            description: "Créneau supprimé",
-                                          });
-                                        }
-                                      } catch (error) {
-                                        toast({
-                                          title: "Erreur",
-                                          description: "Impossible de supprimer le créneau",
-                                          variant: "destructive",
-                                        });
-                                      }
-                                    }}
-                                    className="h-4 w-4 p-0"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>*/}
-                                </div>
-                              );
-                            })}
-                            {(!employee.schedule?.[currentWeekKey]?.[day] ||
-                              employee.schedule[currentWeekKey][day].length ===
-                                0) && (
-                              <div className="text-xs text-muted-foreground text-center py-2">
-                                Aucun créneau
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Composant WeekSelector pour changer de semaine
-function WeekSelector({
-  currentWeekOffset,
-  setCurrentWeekOffset,
-  currentWeekDates,
-  weekNumber
-}: {
-  currentWeekOffset: number;
-  setCurrentWeekOffset: (offset: number) => void;
-  currentWeekDates: Date[];
-  weekNumber: number;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setCurrentWeekOffset(currentWeekOffset - 1)}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <div className="text-center px-2">
-        <div className="font-medium">
-          Semaine {weekNumber} ({formatDate(currentWeekDates[0])} -{' '}
-          {formatDate(currentWeekDates[6])})
-        </div>
-      </div>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setCurrentWeekOffset(currentWeekOffset + 1)}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-}
-
-// Utilitaire pour obtenir les options de semaines sur plusieurs semaines
-function getMultiWeekOptions(range = 4) {
-  const options = [];
-  for (let i = -range; i <= range; i++) {
-    const weekDates = getWeekDates(i);
-    const weekNum = getWeekNumber(weekDates[0]);
-    options.push({
-      value: i,
-      label: `Semaine ${weekNum} (${formatDate(weekDates[0])} - ${formatDate(weekDates[6])})`,
-      weekKey: getWeekKey(i),
-      weekNumber: weekNum,
-      dates: weekDates
-    });
-  }
-  return options;
-}
 
 export default function PlanningPage() {
   const stackUser = useUser();
   const planningPermission = stackUser
-    ? (stackUser.clientReadOnlyMetadata?.planningPermission ||
-       stackUser.clientMetadata?.planningPermission ||
-       'reader')
+    ? ((stackUser.clientReadOnlyMetadata?.planningPermission || stackUser.clientMetadata?.planningPermission || 'reader') as string)
     : 'reader';
+  const isEditor = planningPermission === 'editor';
+
+  const { toast } = useToast();
+
+  // Core state
   const [employees, setEmployees] = useState<EmployeeWithSchedule[]>([]);
-  // Compact view state
-  const [compactView, setCompactView] = useState(false);
   const [schedules, setSchedules] = useState<Record<string, TimeSlot[]>>({});
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [openDialogs, setOpenDialogs] = useState<Record<string, boolean>>({});
-  const [viewMode, setViewMode] = useState<'calendar' | 'person' | 'slot'>(
-    'calendar'
-  );
-  const { toast } = useToast();
 
-  // NEW: State for visible employees (by id)
-  const [visibleEmployeeIds, setVisibleEmployeeIds] = useState<string[]>([]);
+  // Paint state
+  const [activeEmployeeId, setActiveEmployeeId] = useState<string | null>(null);
+  const [paintMode, setPaintMode] = useState<PaintMode>('paint');
+  const [slotType, setSlotType] = useState<SlotType>('work');
 
-  const currentWeekDates = useMemo(
-    () => getWeekDates(currentWeekOffset),
-    [currentWeekOffset]
-  );
-  const currentWeekKey = useMemo(
-    () => getWeekKey(currentWeekOffset),
-    [currentWeekOffset]
-  );
-  const weekNumber = useMemo(
-    () => getWeekNumber(currentWeekDates[0]),
-    [currentWeekDates]
-  );
+  // UI state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'person' | 'table'>('grid');
 
-  const [resizeSlot, setResizeSlot] = useState<{
-    employeeId: string;
-    day: string;
-    slotIndex: number;
-    type: 'start' | 'end';
-  } | null>(null);
-  const [resizeValue, setResizeValue] = useState<string | null>(null);
-  const slotDragRef = useRef<HTMLDivElement | null>(null);
+  // Holidays
+  const [holidays, setHolidays] = useState<Record<string, string>>({});
 
-  // Ajout de l'état pour le drag & drop de créneau
-  const [dragSlot, setDragSlot] = useState<{
-    employeeId: string;
-    day: string;
-    slotIndex: number;
-    duration: number; // en minutes
-    originalStart: string;
-  } | null>(null);
-  const [dragGhostTime, setDragGhostTime] = useState<string | null>(null);
-  const dragOffsetRef = useRef<number>(0);
+  // Derived
+  const currentWeekDates = useMemo(() => getWeekDates(currentWeekOffset), [currentWeekOffset]);
+  const currentWeekKey = useMemo(() => getWeekKey(currentWeekOffset), [currentWeekOffset]);
 
-  // Gestion du drag & drop vertical
+  // Hackaton state
+  const [hackatonWeeks, setHackatonWeeks] = useState<Record<string, boolean>>({});
+  const isHackaton = !!hackatonWeeks[currentWeekKey];
+  const weekNumber = useMemo(() => getWeekNumber(currentWeekDates[0]), [currentWeekDates]);
+
+  // Load employees
   useEffect(() => {
-    if (!dragSlot) return;
-    const onMouseMove = (e: MouseEvent) => {
-      const grid = document.getElementById(`day-grid-${dragSlot.day}`);
-      if (!grid) return;
-      const rect = grid.getBoundingClientRect();
-      let y = e.clientY - rect.top - dragOffsetRef.current;
-      y = Math.max(0, Math.min(y, rect.height - 1));
-      const hour =
-        (isHackaton ? 6 : 8) + (y / rect.height) * (isHackaton ? 24 : 14);
-      const h = Math.floor(hour);
-      const m = Math.round(((hour - h) * 60) / 5) * 5;
-      let time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-      // Clamp pour ne pas dépasser la journée
-      const [origH, origM] = dragSlot.originalStart.split(':').map(Number);
-      const maxMinutes =
-        ((isHackaton ? 6 : 8) + (isHackaton ? 24 : 14)) * 60 -
-        dragSlot.duration;
-      let minutes = h * 60 + m;
-      if (minutes < (isHackaton ? 6 : 8) * 60)
-        minutes = (isHackaton ? 6 : 8) * 60;
-      if (minutes > maxMinutes) minutes = maxMinutes;
-      const ch = Math.floor(minutes / 60);
-      const cm = minutes % 60;
-      time = `${ch.toString().padStart(2, '0')}:${cm.toString().padStart(2, '0')}`;
-      setDragGhostTime(time);
-    };
-    const onMouseUp = async () => {
-      if (
-        dragSlot &&
-        dragGhostTime &&
-        dragGhostTime !== dragSlot.originalStart
-      ) {
-        const { employeeId, day, slotIndex, duration } = dragSlot;
-        const slots = getEmployeeScheduleForDay(employeeId, day);
-        const slot = slots[slotIndex];
-        if (!slot) return;
-        // Calcule la nouvelle heure de fin
-        const [sh, sm] = dragGhostTime.split(':').map(Number);
-        const startMinutes = sh * 60 + sm;
-        const endMinutes = startMinutes + duration;
-        const eh = Math.floor(endMinutes / 60);
-        const em = endMinutes % 60;
-        const newStart = dragGhostTime;
-        const newEnd = `${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
-        const newSlots = slots.map((s, i) =>
-          i === slotIndex ? { ...s, start: newStart, end: newEnd } : s
-        );
-        await updateLocalSchedule(employeeId, day, newSlots);
-      }
-      setDragSlot(null);
-      setDragGhostTime(null);
-    };
-    document.body.style.userSelect = 'none';
-    document.body.style.cursor = 'grab';
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [dragSlot, dragGhostTime]);
+    fetch('/api/employees')
+      .then((res) => res.ok ? res.json() : [])
+      .then((data) => setEmployees(data.map((e: Employee) => ({ ...e, schedule: {} }))))
+      .catch(() => toast({ title: 'Erreur', description: 'Impossible de charger les employés', variant: 'destructive' }));
+  }, []);
 
-  // Charger les employés
-  useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const response = await fetch('/api/employees');
-        if (response.ok) {
-          const data = await response.json();
-          // Initialiser la propriété schedule pour chaque employé
-          const employeesWithSchedule = data.map((employee: Employee) => ({
-            ...employee,
-            schedule: {}
-          }));
-          setEmployees(employeesWithSchedule);
-        }
-      } catch (error) {
-        toast({
-          title: 'Erreur',
-          description: 'Impossible de charger les employés',
-          variant: 'destructive'
-        });
-      }
-    };
-
-    fetchEmployees();
-  }, [toast]);
-
-  // Charger les plannings de la semaine
-  useEffect(() => {
+  // Load schedules
+  const loadSchedules = useCallback(async () => {
     if (employees.length === 0) return;
     setLoading(true);
-
-    const loadSchedules = async () => {
-      try {
-        const response = await fetch(
-          `/api/schedules?weekKey=${currentWeekKey}`
-        );
-        if (!response.ok) throw new Error('Failed to fetch schedules');
-
-        const data = await response.json();
-        const schedulesMap: Record<string, any[]> = {};
-
-        if (Array.isArray(data)) {
-          data.forEach((schedule: any) => {
-            const key = `${schedule.employeeId}-${schedule.day}`;
-            schedulesMap[key] = Array.isArray(schedule.timeSlots)
-              ? schedule.timeSlots
-              : [];
-          });
-        }
-
-        // Mettre à jour les schedules
-        setSchedules(schedulesMap);
-
-        // Mettre à jour les employés avec les nouvelles données
-        setEmployees((prev) =>
-          prev.map((emp) => ({
-            ...emp,
-            schedule: {
-              ...emp.schedule,
-              [currentWeekKey]: daysOfWeek.reduce(
-                (acc, day) => {
-                  acc[day] = Array.isArray(schedulesMap[`${emp.id}-${day}`])
-                    ? schedulesMap[`${emp.id}-${day}`]
-                    : [];
-                  return acc;
-                },
-                {} as { [day: string]: TimeSlot[] }
-              )
-            }
-          }))
-        );
-      } catch (error) {
-        console.error('Erreur lors du chargement des plannings:', error);
-        toast({
-          title: 'Erreur',
-          description: 'Impossible de charger les plannings',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // On rend loadSchedules accessible via une ref
-    (window as any).reloadSchedules = loadSchedules;
-    loadSchedules();
-  }, [currentWeekKey, employees.length, daysOfWeek, toast]);
-
-  // Ajouter un effet pour initialiser le créneau du samedi
-  // useEffect(() => {
-  //   const initializeSaturdaySlot = async () => {
-  //     const saturdayEmployee = getSaturdayEmployee();
-  //     if (saturdayEmployee) {
-  //       const timeSlots: TimeSlot[] = [{
-  //         start: "10:00",
-  //         end: "20:00",
-  //         isWorking: true,
-  //         type: "work" as const,
-  //       }];
-  //
-  //       try {
-  //         const response = await fetch("/api/schedules", {
-  //           method: "POST",
-  //           headers: { "Content-Type": "application/json" },
-  //           body: JSON.stringify({
-  //             employeeId: saturdayEmployee,
-  //             weekKey: currentWeekKey,
-  //             day: "samedi",
-  //             timeSlots,
-  //           }),
-  //         });
-  //
-  //         if (response.ok) {
-  //           // Mettre à jour l'état local
-  //           updateLocalSchedule(saturdayEmployee, "samedi", timeSlots);
-  //           setSchedules(prev => ({
-  //             ...prev,
-  //             [`${saturdayEmployee}-samedi`]: timeSlots
-  //           }));
-  //         }
-  //       } catch (error) {
-  //         console.error("Erreur lors de l'initialisation du créneau du samedi:", error);
-  //       }
-  //     }
-  //   };
-  //
-  //   initializeSaturdaySlot();
-  // }, [currentWeekKey]);
-
-  // Ajouter une fonction pour obtenir le prochain employé disponible pour le week-end
-  const getNextWeekendEmployee = (currentEmployeeId: string | null): string => {
-    const availableEmployees = employees.filter((emp) => emp.isActive);
-    if (availableEmployees.length === 0) return '';
-
-    if (!currentEmployeeId) return availableEmployees[0].id;
-
-    const currentIndex = availableEmployees.findIndex(
-      (emp) => emp.id === currentEmployeeId
-    );
-    const nextIndex = (currentIndex + 1) % availableEmployees.length;
-    return availableEmployees[nextIndex].id;
-  };
-
-  // Modifier la fonction updateLocalSchedule
-  const updateLocalSchedule = async (
-    employeeId: string,
-    day: string,
-    timeSlots: TimeSlot[],
-    weekKey?: string
-  ) => {
     try {
-      // Mettre à jour la base de données
-      const response = await fetch('/api/schedules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId,
-          weekKey: weekKey || currentWeekKey,
-          day,
-          timeSlots
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to update schedule');
-
-      // Mettre à jour l'état local des schedules
-      setSchedules((prev) => ({
-        ...prev,
-        [`${employeeId}-${day}`]: timeSlots
-      }));
-
-      // Mettre à jour l'état local des employés
-      setEmployees((prev) =>
-        prev.map((emp) =>
-          emp.id === employeeId
-            ? {
-                ...emp,
-                schedule: {
-                  ...emp.schedule,
-                  [weekKey || currentWeekKey]: {
-                    ...emp.schedule[weekKey || currentWeekKey],
-                    [day]: timeSlots
-                  }
-                }
-              }
-            : emp
-        )
-      );
-
-      // Recharger les données depuis la base de données pour s'assurer de la synchronisation
-      const schedulesResponse = await fetch(
-        `/api/schedules?weekKey=${weekKey || currentWeekKey}`
-      );
-      if (schedulesResponse.ok) {
-        const data = await schedulesResponse.json();
-        const schedulesMap: Record<string, any[]> = {};
-
-        if (Array.isArray(data)) {
-          data.forEach((schedule: any) => {
-            const key = `${schedule.employeeId}-${schedule.day}`;
-            schedulesMap[key] = Array.isArray(schedule.timeSlots)
-              ? schedule.timeSlots
-              : [];
-          });
-        }
-
-        setSchedules(schedulesMap);
-
-        // Mettre à jour les employés avec les nouvelles données
-        setEmployees((prev) =>
-          prev.map((emp) => ({
-            ...emp,
-            schedule: {
-              ...emp.schedule,
-              [weekKey || currentWeekKey]: daysOfWeek.reduce(
-                (acc, day) => {
-                  acc[day] = Array.isArray(schedulesMap[`${emp.id}-${day}`])
-                    ? schedulesMap[`${emp.id}-${day}`]
-                    : [];
-                  return acc;
-                },
-                {} as { [day: string]: TimeSlot[] }
-              )
-            }
-          }))
-        );
-      }
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du planning:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de mettre à jour le planning',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // Modifier la fonction getSaturdayEmployee pour qu'elle soit synchrone
-  // const getSaturdayEmployee = (): string | null => {
-  //   // Chercher d'abord dans les schedules existants
-  //   for (const employee of employees) {
-  //     const saturdaySchedule = employee.schedule?.[currentWeekKey]?.["samedi"];
-  //     if (saturdaySchedule && saturdaySchedule.length > 0) {
-  //       return employee.id;
-  //     }
-  //   }
-  //
-  //   // Si aucun employé n'a de créneau, retourner le premier employé actif
-  //   const activeEmployees = employees.filter(emp => emp.isActive);
-  //   return activeEmployees.length > 0 ? activeEmployees[0].id : null;
-  // };
-
-  // Modifier la fonction getEmployeeScheduleForDay pour retourner les créneaux correctement
-  const getEmployeeScheduleForDay = (
-    employeeId: string,
-    day: string
-  ): TimeSlot[] => {
-    // Récupérer les créneaux depuis l'état local
-    const schedule = schedules[`${employeeId}-${day}`];
-
-    // Si des créneaux existent, les retourner
-    if (Array.isArray(schedule) && schedule.length > 0) {
-      return schedule;
-    }
-
-    // Si aucun créneau n'est trouvé, retourner un tableau vide
-    return [];
-  };
-
-  // Modifier la fonction getTotalHoursForWeek pour calculer correctement les heures
-  const getTotalHoursForWeek = (employeeId: string): number => {
-    let total = 0;
-
-    for (const day of daysOfWeek) {
-      const daySchedule = getEmployeeScheduleForDay(employeeId, day);
-      const workSlots = daySchedule.filter((slot) => slot.type === 'work');
-
-      for (const slot of workSlots) {
-        const start =
-          Number.parseInt(slot.start.split(':')[0]) +
-          Number.parseInt(slot.start.split(':')[1]) / 60;
-        const end =
-          Number.parseInt(slot.end.split(':')[0]) +
-          Number.parseInt(slot.end.split(':')[1]) / 60;
-        total += end - start;
-      }
-    }
-
-    return Math.round(total * 10) / 10;
-  };
-
-  // Modifier la fonction getEmployeeHoursForDay pour gérer l'asynchrone
-  const getEmployeeHoursForDay = (employeeId: string, day: string): string => {
-    const daySchedule = getEmployeeScheduleForDay(employeeId, day);
-    const workSlots = daySchedule.filter(
-      (slot: TimeSlot) => slot.type === 'work'
-    );
-    const vacationSlots = daySchedule.filter(
-      (slot: TimeSlot) => slot.type !== 'work'
-    );
-
-    if (workSlots.length === 0 && vacationSlots.length === 0) return 'Repos';
-    if (workSlots.length === 0 && vacationSlots.length > 0) {
-      return vacationSlots
-        .map((slot: TimeSlot) => slotTypeConfig[slot.type].label)
-        .join(', ');
-    }
-
-    return workSlots
-      .map((slot: TimeSlot) => `${slot.start}-${slot.end}`)
-      .join(', ');
-  };
-
-  const getTimeSlotPosition = (startTime: string, endTime: string) => {
-    const startHour =
-      Number.parseInt(startTime.split(':')[0]) +
-      Number.parseInt(startTime.split(':')[1]) / 60;
-    const endHour =
-      Number.parseInt(endTime.split(':')[0]) +
-      Number.parseInt(endTime.split(':')[1]) / 60;
-    const base = isHackaton ? 6 : 8;
-    const range = isHackaton ? 24 : 14;
-    const top = ((startHour - base) / range) * 100;
-    const height = ((endHour - startHour) / range) * 100;
-    return { top: `${top}%`, height: `${height}%` };
-  };
-
-  const TableView = () => {
-    const [hoursData, setHoursData] = useState<
-      Record<string, Record<string, string>>
-    >({});
-    const [totalHours, setTotalHours] = useState<Record<string, number>>({});
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-      const loadData = () => {
-        setLoading(true);
-        const newHoursData: Record<string, Record<string, string>> = {};
-        const newTotalHours: Record<string, number> = {};
-
-        for (const employee of employees) {
-          newHoursData[employee.id] = {};
-          for (const day of daysOfWeek) {
-            newHoursData[employee.id][day] = getEmployeeHoursForDay(
-              employee.id,
-              day
-            );
-          }
-          newTotalHours[employee.id] = getTotalHoursForWeek(employee.id);
-        }
-
-        setHoursData(newHoursData);
-        setTotalHours(newTotalHours);
-        setLoading(false);
-      };
-
-      loadData();
-    }, [employees, currentWeekKey]);
-
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center h-[600px]">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      );
-    }
-
-    return (
-      <div className="rounded-lg border bg-background">
-        <div className="p-6 border-b flex items-center justify-between">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <List className="h-5 w-5" />
-            Vue Tableau
-          </h2>
-          <WeekSelector
-            currentWeekOffset={currentWeekOffset}
-            setCurrentWeekOffset={setCurrentWeekOffset}
-            currentWeekDates={currentWeekDates}
-            weekNumber={weekNumber}
-          />
-        </div>
-        <div className="p-6">
-          <ScrollArea className="h-[600px]">
-            <div className="w-full">
-              <table className="w-full border-collapse table-auto">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-medium sticky left-0 bg-background z-10">
-                      Employé
-                    </th>
-                    {daysOfWeek.map((day, index) => (
-                      <th
-                        key={day}
-                        className="text-center p-3 font-medium w-32 border-b"
-                      >
-                        <div className="font-semibold">{day}</div>
-                        <div className="text-xs text-muted-foreground font-normal">
-                          {formatDate(currentWeekDates[index])}
-                        </div>
-                      </th>
-                    ))}
-                    <th className="text-center p-3 font-medium border-b">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.map((employee) => (
-                    <tr
-                      key={employee.id}
-                      className="border-b hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="p-3 sticky left-0 bg-background z-10">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: employee.color }}
-                            />
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage
-                                src={`https://avatar.vercel.sh/${employee.id}.png`}
-                                alt={employee.name}
-                              />
-                              <AvatarFallback className="text-xs">
-                                {employee.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                          </div>
-                          <div>
-                            <div className="font-medium">{employee.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {employee.role}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      {daysOfWeek.map((day) => (
-                        <td key={day} className="p-3 text-center border-b">
-                          <div className="space-y-1">
-                            <div className="text-sm">
-                              {hoursData[employee.id]?.[day] || 'Chargement...'}
-                            </div>
-                          </div>
-                        </td>
-                      ))}
-                      <td className="p-3 text-center font-medium border-b">
-                        {totalHours[employee.id] || 0}h
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </ScrollArea>
-        </div>
-      </div>
-    );
-  };
-
-  // Modifier la fonction handleSaturdayEmployeeChange pour recharger les données
-  const handleSaturdayEmployeeChange = async (
-    employeeId: string,
-    day: string
-  ) => {
-    // Supprimer le créneau de travail pour ce jour pour tous les employés
-    for (const emp of employees) {
-      await fetch('/api/schedules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId: emp.id,
-          weekKey: currentWeekKey,
-          day,
-          timeSlots: []
-        })
-      });
-    }
-    // Si on veut assigner quelqu'un
-    if (employeeId) {
-      const timeSlot: TimeSlot = {
-        start: '10:00',
-        end: '20:00',
-        isWorking: true,
-        type: 'work'
-      };
-      await fetch('/api/schedules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId,
-          weekKey: currentWeekKey,
-          day,
-          timeSlots: [timeSlot]
-        })
-      });
-    }
-    // Recharge les plannings
-    const schedulesResponse = await fetch(
-      `/api/schedules?weekKey=${currentWeekKey}`
-    );
-    if (schedulesResponse.ok) {
-      const data = await schedulesResponse.json();
-      const schedulesMap: Record<string, any[]> = {};
+      const response = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
+      if (!response.ok) throw new Error('Failed');
+      const data = await response.json();
+      const schedulesMap: Record<string, TimeSlot[]> = {};
       if (Array.isArray(data)) {
-        data.forEach((schedule: any) => {
-          const key = `${schedule.employeeId}-${schedule.day}`;
-          schedulesMap[key] = Array.isArray(schedule.timeSlots)
-            ? schedule.timeSlots
-            : [];
+        data.forEach((s: any) => {
+          schedulesMap[`${s.employeeId}-${s.day}`] = Array.isArray(s.timeSlots) ? s.timeSlots : [];
         });
       }
       setSchedules(schedulesMap);
@@ -2282,1431 +99,467 @@ export default function PlanningPage() {
           ...emp,
           schedule: {
             ...emp.schedule,
-            [currentWeekKey]: daysOfWeek.reduce(
-              (acc, d) => {
-                acc[d] = Array.isArray(schedulesMap[`${emp.id}-${d}`])
-                  ? schedulesMap[`${emp.id}-${d}`]
-                  : [];
-                return acc;
-              },
-              {} as { [day: string]: TimeSlot[] }
-            )
-          }
+            [currentWeekKey]: daysOfWeek.reduce((acc, day) => {
+              acc[day] = schedulesMap[`${emp.id}-${day}`] || [];
+              return acc;
+            }, {} as Record<string, TimeSlot[]>),
+          },
         }))
       );
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible de charger les plannings', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [currentWeekKey, employees.length]);
 
-  // Modifier la fonction getOverlappingTimeSlots
-  const getOverlappingTimeSlots = (day: string) => {
-    const slots: Array<{
-      employee: EmployeeWithSchedule;
-      slot: TimeSlot;
-      startHour: number;
-      endHour: number;
-    }> = [];
+  useEffect(() => { loadSchedules(); }, [loadSchedules]);
 
-    employees.forEach((employee) => {
-      const daySchedule = getEmployeeScheduleForDay(employee.id, day);
-      daySchedule.forEach((slot) => {
-        // Ne pas inclure les congés (vacation) sur samedi/dimanche
-        if (
-          (day === 'samedi' || day === 'dimanche') &&
-          slot.type === 'vacation'
-        )
-          return;
-        const startHour =
-          Number.parseInt(slot.start.split(':')[0]) +
-          Number.parseInt(slot.start.split(':')[1]) / 60;
-        const endHour =
-          Number.parseInt(slot.end.split(':')[0]) +
-          Number.parseInt(slot.end.split(':')[1]) / 60;
-        slots.push({ employee, slot, startHour, endHour });
-      });
-    });
-
-    return slots.sort((a, b) => a.startHour - b.startHour);
-  };
-
-  // Ajoute une fonction utilitaire pour calculer les colonnes de placement des créneaux (calendar event stacking)
-  type StackedSlot = {
-    employee: any;
-    slot: any;
-    startHour: number;
-    endHour: number;
-    slotColumn?: number;
-  };
-  function getStackedSlots(daySlots: Array<StackedSlot>) {
-    // Trie par heure de début
-    const sorted: StackedSlot[] = [...daySlots].sort(
-      (a, b) => a.startHour - b.startHour || a.endHour - b.endHour
-    );
-    const columns: Array<Array<StackedSlot>> = [];
-    sorted.forEach((slot) => {
-      // Cherche une colonne où ce créneau ne chevauche pas le dernier créneau de la colonne
-      let placed = false;
-      for (let col = 0; col < columns.length; col++) {
-        const last = columns[col][columns[col].length - 1];
-        if (last.endHour <= slot.startHour) {
-          columns[col].push(slot);
-          slot.slotColumn = col;
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) {
-        columns.push([slot]);
-        slot.slotColumn = columns.length - 1;
-      }
-    });
-    // maxOverlap = nombre de colonnes nécessaires
-    const maxOverlap = columns.length;
-    return { stacked: sorted, maxOverlap };
-  }
-
-  // Gestion globale du drag
+  // Load hackaton state
   useEffect(() => {
-    if (!resizeSlot) return;
-    const onMouseMove = (e: MouseEvent) => {
-      if (!slotDragRef.current) return;
-      const rect = slotDragRef.current.parentElement!.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const totalHeight = rect.height;
-      const hour =
-        (isHackaton ? 6 : 8) + (y / totalHeight) * (isHackaton ? 24 : 14);
-      const h = Math.floor(hour);
-      const m = Math.round(((hour - h) * 60) / 5) * 5;
-      const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-      setResizeValue(time);
-    };
-    const onMouseUp = async () => {
-      if (resizeSlot && resizeValue) {
-        const { employeeId, day, slotIndex, type } = resizeSlot;
-        const slots = getEmployeeScheduleForDay(employeeId, day);
-        const slot = slots[slotIndex];
-        if (!slot) return;
-        let newStart = slot.start;
-        let newEnd = slot.end;
-        if (type === 'start' && resizeValue < slot.end) newStart = resizeValue;
-        if (type === 'end' && resizeValue > slot.start) newEnd = resizeValue;
-        if (newStart !== slot.start || newEnd !== slot.end) {
-          const newSlots = slots.map((s, i) =>
-            i === slotIndex ? { ...s, start: newStart, end: newEnd } : s
-          );
-          await updateLocalSchedule(employeeId, day, newSlots);
-        }
-      }
-      setResizeSlot(null);
-      setResizeValue(null);
-    };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
-  }, [resizeSlot, resizeValue]);
-
-  // Ajout d'un style pour la ligne ghost et le label d'heure
-  const ghostLineStyle = {
-    position: 'absolute' as const,
-    left: 0,
-    right: 0,
-    height: 2,
-    background: '#2563eb',
-    zIndex: 20,
-    pointerEvents: 'none' as const
-  };
-  const ghostLabelStyle = {
-    position: 'absolute' as const,
-    left: '100%',
-    marginLeft: 8,
-    background: '#2563eb',
-    color: '#fff',
-    borderRadius: 4,
-    padding: '2px 8px',
-    fontSize: 12,
-    fontWeight: 700,
-    zIndex: 30,
-    pointerEvents: 'none' as const,
-    boxShadow: '0 2px 8px #2563eb44'
-  };
-
-  // Ajoute un style pour le label d'aperçu horaire
-  const previewLabelStyle = {
-    position: 'absolute' as const,
-    left: '100%',
-    marginLeft: 12,
-    background: '#25a6eb',
-    color: '#fff',
-    borderRadius: 4,
-    padding: '4px 10px',
-    fontSize: 14,
-    fontWeight: 700,
-    zIndex: 40,
-    pointerEvents: 'none' as const,
-    boxShadow: '0 2px 8px #22c55e44',
-    whiteSpace: 'nowrap' as const
-  };
-
-  // Empêcher la sélection de texte pendant le resize
-  useEffect(() => {
-    if (resizeSlot != null) {
-      document.body.style.userSelect = 'none';
-      document.body.style.cursor = 'ns-resize';
-    } else {
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-    }
-    return () => {
-      document.body.style.userSelect = '';
-      document.body.style.cursor = '';
-    };
-  }, [resizeSlot]);
-
-  // Ajout de l'état pour les jours fériés
-  const [holidays, setHolidays] = useState<{ [date: string]: string }>({});
-
-  useEffect(() => {
-    fetch(
-      'https://etalab.github.io/jours-feries-france-data/json/metropole.json'
-    )
-      .then((res) => res.json())
-      .then(setHolidays);
-  }, []);
-
-  // After employees are loaded, set all as visible by default
-  useEffect(() => {
-    if (employees.length > 0 && visibleEmployeeIds.length === 0) {
-      setVisibleEmployeeIds(employees.map((e) => e.id));
-    }
-  }, [employees]);
-
-  // Ajout pour semaine type en vue calendrier
-  const [calendarTemplateOpen, setCalendarTemplateOpen] = useState(false);
-  const [calendarSelectedTemplate, setCalendarSelectedTemplate] =
-    useState<string>('');
-  const [calendarSelectedEmployees, setCalendarSelectedEmployees] = useState<
-    string[]
-  >([]);
-  const [calendarSelectedWeeks, setCalendarSelectedWeeks] = useState<number[]>([
-    currentWeekOffset
-  ]);
-  const calendarWeekOptions = getMultiWeekOptions();
-
-  const applyTemplateToEmployeesCalendar = async () => {
-    if (!calendarSelectedTemplate)
-      return toast({
-        title: 'Erreur',
-        description: 'Sélectionnez un modèle.',
-        variant: 'destructive'
-      });
-    if (calendarSelectedEmployees.length === 0)
-      return toast({
-        title: 'Erreur',
-        description: 'Sélectionnez au moins un employé.',
-        variant: 'destructive'
-      });
-    if (calendarSelectedWeeks.length === 0)
-      return toast({
-        title: 'Erreur',
-        description: 'Sélectionnez au moins une semaine.',
-        variant: 'destructive'
-      });
-    const template = weekTemplates.find(
-      (t) => t.key === calendarSelectedTemplate
-    );
-    if (!template) return;
-    for (const weekOffset of calendarSelectedWeeks) {
-      const weekKey = getWeekKey(weekOffset);
-      for (const employeeId of calendarSelectedEmployees) {
-        for (const day of daysOfWeek) {
-          const slots = (
-            template.days[day as keyof typeof template.days] || []
-          ).map(
-            (slot: {
-              start: string;
-              end: string;
-              isWorking: boolean;
-              type: TimeSlot['type'];
-            }) => ({
-              ...slot,
-              type: slot.type as TimeSlot['type']
-            })
-          );
-          await updateLocalSchedule(employeeId, day, slots, weekKey);
-        }
-      }
-    }
-    toast({
-      title: 'Succès',
-      description: 'Modèle appliqué sur les semaines sélectionnées.'
-    });
-    setCalendarSelectedEmployees([]);
-    setCalendarTemplateOpen(false);
-  };
-
-  // Semaine hackaton : état par semaine (persistant via API)
-  const [hackatonWeeks, setHackatonWeeks] = useState<{
-    [weekKey: string]: boolean;
-  }>({});
-  const isHackaton = !!hackatonWeeks[currentWeekKey];
-
-  // Charge l'état hackaton pour la semaine courante
-  useEffect(() => {
-    let cancelled = false;
     fetch(`/api/hackaton-week?weekKey=${currentWeekKey}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled && typeof data.isHackaton === 'boolean') {
-          setHackatonWeeks((weeks) => ({
-            ...weeks,
-            [currentWeekKey]: data.isHackaton
-          }));
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d.isHackaton === 'boolean') {
+          setHackatonWeeks((w) => ({ ...w, [currentWeekKey]: d.isHackaton }));
         }
-      });
-    return () => {
-      cancelled = true;
-    };
+      })
+      .catch(() => {});
   }, [currentWeekKey]);
 
-  // Toggle hackaton (API)
+  // Load holidays
+  useEffect(() => {
+    fetch('https://etalab.github.io/jours-feries-france-data/json/metropole.json')
+      .then((r) => r.json())
+      .then(setHolidays)
+      .catch(() => {});
+  }, []);
+
+  // Toggle hackaton
   const handleToggleHackaton = (checked: boolean) => {
-    setHackatonWeeks((weeks) => ({ ...weeks, [currentWeekKey]: checked }));
+    setHackatonWeeks((w) => ({ ...w, [currentWeekKey]: checked }));
     fetch('/api/hackaton-week', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekKey: currentWeekKey, isHackaton: checked })
+      body: JSON.stringify({ weekKey: currentWeekKey, isHackaton: checked }),
     });
   };
 
-  // Heures dynamiques selon mode hackaton
-  const calendarHours = isHackaton
-    ? Array.from({ length: 24 }, (_, i) => (i + 6) % 24)
-    : hours;
+  // Core functions
+  const getEmployeeScheduleForDay = useCallback((employeeId: string, day: string): TimeSlot[] => {
+    return schedules[`${employeeId}-${day}`] || [];
+  }, [schedules]);
+
+  const getTotalHoursForWeek = useCallback((employeeId: string): number => {
+    let total = 0;
+    for (const day of daysOfWeek) {
+      const slots = getEmployeeScheduleForDay(employeeId, day);
+      for (const slot of slots.filter((s) => s.type === 'work')) {
+        const sh = parseInt(slot.start.split(':')[0]) + parseInt(slot.start.split(':')[1]) / 60;
+        const eh = parseInt(slot.end.split(':')[0]) + parseInt(slot.end.split(':')[1]) / 60;
+        total += eh - sh;
+      }
+    }
+    return Math.round(total * 10) / 10;
+  }, [getEmployeeScheduleForDay]);
+
+  const updateLocalSchedule = useCallback(async (employeeId: string, day: string, timeSlots: TimeSlot[], weekKey?: string) => {
+    const wk = weekKey || currentWeekKey;
+    try {
+      const response = await fetch('/api/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId, weekKey: wk, day, timeSlots }),
+      });
+      if (!response.ok) throw new Error('Failed');
+
+      // Optimistic update
+      setSchedules((prev) => ({ ...prev, [`${employeeId}-${day}`]: timeSlots }));
+      setEmployees((prev) =>
+        prev.map((emp) =>
+          emp.id === employeeId
+            ? { ...emp, schedule: { ...emp.schedule, [wk]: { ...emp.schedule[wk], [day]: timeSlots } } }
+            : emp
+        )
+      );
+
+      // Reload for consistency
+      const schedulesResponse = await fetch(`/api/schedules?weekKey=${wk}`);
+      if (schedulesResponse.ok) {
+        const data = await schedulesResponse.json();
+        const schedulesMap: Record<string, TimeSlot[]> = {};
+        if (Array.isArray(data)) {
+          data.forEach((s: any) => {
+            schedulesMap[`${s.employeeId}-${s.day}`] = Array.isArray(s.timeSlots) ? s.timeSlots : [];
+          });
+        }
+        setSchedules(schedulesMap);
+        setEmployees((prev) =>
+          prev.map((emp) => ({
+            ...emp,
+            schedule: {
+              ...emp.schedule,
+              [wk]: daysOfWeek.reduce((acc, d) => {
+                acc[d] = schedulesMap[`${emp.id}-${d}`] || [];
+                return acc;
+              }, {} as Record<string, TimeSlot[]>),
+            },
+          }))
+        );
+      }
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible de mettre à jour le planning', variant: 'destructive' });
+    }
+  }, [currentWeekKey, toast]);
+
+  const getOverlappingTimeSlots = useCallback((day: string) => {
+    const slots: Array<{ employee: EmployeeWithSchedule; slot: TimeSlot; startHour: number; endHour: number }> = [];
+    employees.forEach((employee) => {
+      const daySchedule = getEmployeeScheduleForDay(employee.id, day);
+      daySchedule.forEach((slot) => {
+        if ((day === 'samedi' || day === 'dimanche') && slot.type === 'vacation') return;
+        const startHour = parseInt(slot.start.split(':')[0]) + parseInt(slot.start.split(':')[1]) / 60;
+        const endHour = parseInt(slot.end.split(':')[0]) + parseInt(slot.end.split(':')[1]) / 60;
+        slots.push({ employee, slot, startHour, endHour });
+      });
+    });
+    return slots.sort((a, b) => a.startHour - b.startHour);
+  }, [employees, getEmployeeScheduleForDay]);
+
+  const handleSaturdayEmployeeChange = useCallback(async (employeeId: string, day: string) => {
+    for (const emp of employees) {
+      await fetch('/api/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: emp.id, weekKey: currentWeekKey, day, timeSlots: [] }),
+      });
+    }
+    if (employeeId) {
+      await fetch('/api/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId,
+          weekKey: currentWeekKey,
+          day,
+          timeSlots: [{ start: '10:00', end: '20:00', isWorking: true, type: 'work' }],
+        }),
+      });
+    }
+    await loadSchedules();
+  }, [employees, currentWeekKey, loadSchedules]);
+
+  if (loading && employees.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      {/* Header moderne */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-primary/10 rounded-lg">
-            <LayoutTemplate className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Planning</h1>
-            <p className="text-muted-foreground">
-              Gérez les plannings et les horaires de votre équipe
-            </p>
-          </div>
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] p-3 gap-2 overflow-hidden">
+      {/* Header */}
+      <PlanningPageHeader
+        title="Planning"
+        subtitle={isEditor ? 'Cliquez sur un crayon puis peignez la grille' : 'Consultation'}
+        icon={LayoutTemplate}
+        permission={planningPermission}
+      >
+        <WeekSelector
+          currentWeekOffset={currentWeekOffset}
+          setCurrentWeekOffset={setCurrentWeekOffset}
+          currentWeekDates={currentWeekDates}
+          weekNumber={weekNumber}
+        />
+
+        {isEditor && (
+          <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+            <input
+              type="checkbox"
+              checked={isHackaton}
+              onChange={(e) => handleToggleHackaton(e.target.checked)}
+              className="accent-pink-600 w-4 h-4"
+            />
+            <span className="font-semibold text-pink-600">Hackaton</span>
+          </label>
+        )}
+
+        {/* View switcher */}
+        <div className="inline-flex rounded-md bg-muted p-0.5">
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-7 px-2 text-xs"
+          >
+            <Grid className="h-3 w-3 mr-1" />
+            Grille
+          </Button>
+          <Button
+            variant={viewMode === 'person' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('person')}
+            className="h-7 px-2 text-xs"
+          >
+            <Users className="h-3 w-3 mr-1" />
+            Personne
+          </Button>
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('table')}
+            className="h-7 px-2 text-xs"
+          >
+            <List className="h-3 w-3 mr-1" />
+            Tableau
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCompactView(!compactView)}
-        >
-          {compactView ? 'Afficher tout' : 'Mode compact'}
-        </Button>
+      </PlanningPageHeader>
+
+      {/* Toolbar (only in grid view) */}
+      {viewMode === 'grid' && (
+        <div className="flex-shrink-0">
+          <PlanningToolbar
+            employees={employees}
+            activeEmployeeId={activeEmployeeId}
+            paintMode={paintMode}
+            slotType={slotType}
+            isEditor={isEditor}
+            getTotalHoursForWeek={getTotalHoursForWeek}
+            onSelectEmployee={setActiveEmployeeId}
+            onSetPaintMode={setPaintMode}
+            onSetSlotType={setSlotType}
+            onOpenSidebar={() => setSidebarOpen(true)}
+          />
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 min-h-0 flex flex-col">
+        {loading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : viewMode === 'grid' ? (
+          <PlanningGrid
+            employees={employees}
+            daysOfWeek={daysOfWeek}
+            currentWeekDates={currentWeekDates}
+            isHackaton={isHackaton}
+            isEditor={isEditor}
+            holidays={holidays}
+            activeEmployeeId={activeEmployeeId}
+            paintMode={paintMode}
+            slotType={slotType}
+            getEmployeeScheduleForDay={getEmployeeScheduleForDay}
+            getOverlappingTimeSlots={getOverlappingTimeSlots}
+            updateLocalSchedule={updateLocalSchedule}
+            handleSaturdayEmployeeChange={handleSaturdayEmployeeChange}
+            onSlotDeleted={() => toast({ title: 'Créneau supprimé' })}
+            onDeselectEmployee={() => { setActiveEmployeeId(null); setPaintMode('paint'); }}
+          />
+        ) : viewMode === 'person' ? (
+          <PersonView
+            employees={employees}
+            daysOfWeek={daysOfWeek}
+            currentWeekDates={currentWeekDates}
+            getEmployeeScheduleForDay={getEmployeeScheduleForDay}
+            getTotalHoursForWeek={getTotalHoursForWeek}
+            slotTypeConfig={slotTypeConfig}
+          />
+        ) : (
+          <TableView
+            employees={employees}
+            daysOfWeek={daysOfWeek}
+            currentWeekDates={currentWeekDates}
+            getEmployeeScheduleForDay={getEmployeeScheduleForDay}
+            getTotalHoursForWeek={getTotalHoursForWeek}
+            slotTypeConfig={slotTypeConfig}
+          />
+        )}
       </div>
 
-      {/* Everything except the calendar is hidden in compactView */}
-      {!compactView && (
-        <>
-          {/* Navigation links */}
-          <PlanningNavigation planningPermission={planningPermission} />
-          {/* Juste après le header harmonisé ou avant le contenu principal : */}
-          <div className="mb-1 flex items-center gap-1">
-            <span className="font-semibold">Droits planning :</span>
-            <span
-              className={`px-2 py-1 rounded text-xs font-bold ${planningPermission === 'editor' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
-            >
-              {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
-            </span>
-          </div>
-          {/* Hackaton toggle + semaine selector */}
-          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 mb-1">
-            <WeekSelector
-              currentWeekOffset={currentWeekOffset}
-              setCurrentWeekOffset={setCurrentWeekOffset}
-              currentWeekDates={currentWeekDates}
-              weekNumber={weekNumber}
-            />
-            <label className="flex items-center gap-1 ml-0 sm:ml-4 cursor-pointer select-none text-xs sm:text-base">
-              <input
-                type="checkbox"
-                checked={isHackaton}
-                onChange={(e) =>
-                  planningPermission === 'editor' &&
-                  handleToggleHackaton(e.target.checked)
-                }
-                className="accent-pink-600 w-5 h-5"
-                disabled={planningPermission !== 'editor'}
-              />
-              <span className="font-semibold text-pink-600">
-                Semaine hackaton (horaires étendus)
-              </span>
-            </label>
-          </div>
-        </>
+      {/* Footer: total hours per employee */}
+      {viewMode === 'grid' && !loading && (
+        <div className="flex-shrink-0 flex items-center gap-3 px-2 py-1.5 bg-muted/30 rounded-lg border text-xs overflow-x-auto">
+          <span className="text-muted-foreground font-medium flex-shrink-0">Totaux :</span>
+          {employees.map((emp) => (
+            <div key={emp.id} className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: emp.color }} />
+              <span className="font-medium">{emp.initial || emp.name.split(' ').map((n) => n[0]).join('')}</span>
+              <span className="text-muted-foreground">{getTotalHoursForWeek(emp.id)}h</span>
+            </div>
+          ))}
+        </div>
       )}
-      {/* Contenu principal dans un conteneur harmonisé */}
-      <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
-        <Tabs
-          defaultValue="calendar"
-          className="w-full flex-1 flex flex-col min-h-0"
-        >
-          <TabsList
-            className={`grid w-full ${planningPermission === 'editor' ? 'grid-cols-3' : 'grid-cols-2'} max-w-xl text-xs sm:text-base`}
+
+      {/* Sidebar */}
+      <PlanningSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        employees={employees}
+        daysOfWeek={daysOfWeek}
+        currentWeekOffset={currentWeekOffset}
+        currentWeekKey={currentWeekKey}
+        currentWeekDates={currentWeekDates}
+        updateLocalSchedule={updateLocalSchedule}
+        reloadSchedules={loadSchedules}
+        setEmployees={setEmployees}
+        setSchedules={setSchedules}
+      />
+    </div>
+  );
+}
+
+// Person view (secondary)
+function PersonView({
+  employees,
+  daysOfWeek,
+  currentWeekDates,
+  getEmployeeScheduleForDay,
+  getTotalHoursForWeek,
+  slotTypeConfig,
+}: {
+  employees: Employee[];
+  daysOfWeek: string[];
+  currentWeekDates: Date[];
+  getEmployeeScheduleForDay: (id: string, day: string) => TimeSlot[];
+  getTotalHoursForWeek: (id: string) => number;
+  slotTypeConfig: Record<string, { label: string; bgColor: string; borderColor: string; textColor: string }>;
+}) {
+  return (
+    <ScrollArea className="h-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-1">
+        {employees.map((employee) => (
+          <div
+            key={employee.id}
+            className="rounded-xl border bg-background p-3 border-l-4"
+            style={{ borderLeftColor: employee.color || '#8884d8' }}
           >
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <Grid className="h-4 w-4" />
-              <span className="hidden xs:inline">Calendrier</span>
-            </TabsTrigger>
-            {planningPermission === 'editor' && (
-              <TabsTrigger
-                value="management"
-                className="flex items-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                <span className="hidden xs:inline">Gestion</span>
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="table" className="flex items-center gap-2">
-              <List className="h-4 w-4" />
-              <span className="hidden xs:inline">Tableau</span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent
-            value="calendar"
-            className="flex-1 flex flex-col min-h-0"
-          >
-            {/* View mode switcher: segmented control */}
-            {!compactView && (
-              <div className="flex justify-end my-2 sm:my-4">
-                <div className="inline-flex rounded-md shadow-sm bg-muted p-1">
-                  <Button
-                    variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-                    onClick={() => setViewMode('calendar')}
-                    className="rounded-l-md flex items-center gap-2 text-xs sm:text-base"
-                    aria-pressed={viewMode === 'calendar'}
-                  >
-                    <Grid className="h-4 w-4" />
-                    Calendrier
-                  </Button>
-                  <Button
-                    variant={viewMode === 'person' ? 'default' : 'ghost'}
-                    onClick={() => setViewMode('person')}
-                    className="flex items-center gap-2 text-xs sm:text-base"
-                    aria-pressed={viewMode === 'person'}
-                  >
-                    <Users className="h-4 w-4" />
-                    Personne
-                  </Button>
-                  <Button
-                    variant={viewMode === 'slot' ? 'default' : 'ghost'}
-                    onClick={() => setViewMode('slot')}
-                    className="rounded-r-md flex items-center gap-2 text-xs sm:text-base"
-                    aria-pressed={viewMode === 'slot'}
-                  >
-                    <Clock className="h-4 w-4" />
-                    Créneau
-                  </Button>
+            <div className="flex items-center gap-2.5 mb-2">
+              <Avatar className="h-9 w-9 ring-2 ring-offset-1" style={{ ['--tw-ring-color' as string]: employee.color || '#8884d8' }}>
+                <AvatarImage src={`https://avatar.vercel.sh/${employee.id}.png`} alt={employee.name} />
+                <AvatarFallback className="text-xs font-bold">{employee.name.split(' ').map((n) => n[0]).join('')}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-sm leading-tight">{employee.name}</div>
+                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                  {employee.role}
+                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 font-bold" style={{ borderColor: employee.color || '#8884d8', color: employee.color || '#8884d8' }}>
+                    {getTotalHoursForWeek(employee.id)}h
+                  </Badge>
                 </div>
               </div>
-            )}
-            {/* Affichage exclusif de la vue sélectionnée */}
-            {viewMode === 'calendar' && (
-              <>
-                {/* Legend is moved inside the scrollable section to ensure stickiness */}
-                <section className="rounded-lg border bg-background flex-1 overflow-y-auto min-h-0 w-full relative">
-                  <div className="p-6">
-                    {loading ? (
-                      <div className="flex items-center justify-center h-[600px]">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                      </div>
+            </div>
+            <div className="space-y-1">
+              {daysOfWeek.map((day, i) => {
+                const slots = getEmployeeScheduleForDay(employee.id, day);
+                const filtered = (day === 'samedi' || day === 'dimanche') ? slots.filter((s) => s.type !== 'vacation') : slots;
+                return (
+                  <div key={day} className="flex items-center gap-2 text-xs">
+                    <span className="w-16 font-medium text-[11px] capitalize text-muted-foreground">{day}</span>
+                    {filtered.length === 0 ? (
+                      <span className="text-[10px] italic text-muted-foreground">Repos</span>
                     ) : (
-                      <div className="w-full">
-                        {/* Sticky employee legend placed inside the scroll container */}
-                        {!compactView ? (
-                          <div className="sticky top-0 z-50 flex flex-wrap gap-1 sm:gap-2 mb-2 p-1 sm:p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
-                            {employees.map((employee) => {
-                              const isVisible = visibleEmployeeIds.includes(
-                                employee.id
-                              );
-                              return (
-                                <div
-                                  key={`legend-${employee.id}`}
-                                  className="flex items-center gap-2 cursor-move px-2 py-1 sm:px-3 sm:py-1 rounded-lg shadow border border-muted/40 hover:shadow-md transition-all text-xs sm:text-sm"
-                                  draggable={planningPermission === 'editor'}
-                                  style={{
-                                    opacity: isVisible ? 1 : 0.5,
-                                    cursor:
-                                      planningPermission !== 'editor'
-                                        ? 'not-allowed'
-                                        : 'move'
-                                  }}
-                                  title={
-                                    planningPermission !== 'editor'
-                                      ? 'Accès en lecture seule'
-                                      : undefined
-                                  }
-                                  onDragStart={(e) => {
-                                    if (planningPermission !== 'editor') return;
-                                    e.dataTransfer.setData(
-                                      'employeeId',
-                                      employee.id
-                                    );
-                                  }}
-                                >
-                                  <div
-                                    className="w-3 h-3 sm:w-4 sm:h-4 rounded"
-                                    style={{ backgroundColor: employee.color }}
-                                  />
-                                  <span className="font-medium">
-                                    {employee.name}
-                                  </span>
-                                  <span className="hidden sm:inline text-xs text-muted-foreground">
-                                    ({getTotalHoursForWeek(employee.id)}h)
-                                  </span>
-                                  <button
-                                    type="button"
-                                    aria-label={
-                                      isVisible
-                                        ? 'Cacher du planning'
-                                        : 'Afficher sur le planning'
-                                    }
-                                    onClick={() => {
-                                      setVisibleEmployeeIds((ids) =>
-                                        isVisible
-                                          ? ids.filter(
-                                              (id) => id !== employee.id
-                                            )
-                                          : [...ids, employee.id]
-                                      );
-                                    }}
-                                    className={`ml-2 flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full border transition-all duration-150 ${
-                                      isVisible
-                                        ? 'bg-blue-100 border-blue-400 text-blue-700 hover:bg-blue-200'
-                                        : 'bg-gray-100 border-gray-300 text-gray-400 hover:bg-gray-200'
-                                    } shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40`}
-                                    style={{ fontSize: 16 }}
-                                  >
-                                    {isVisible ? (
-                                      <EyeIcon className="w-4 h-4" />
-                                    ) : (
-                                      <EyeOffIcon className="w-4 h-4" />
-                                    )}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="sticky top-0 z-50 flex flex-wrap gap-1 sm:gap-2 mb-2 p-1 sm:p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
-                            {employees.map((employee) => {
-                              const isVisible = visibleEmployeeIds.includes(
-                                employee.id
-                              );
-                              return (
-                                <div
-                                  key={`legend-compact-${employee.id}`}
-                                  className="flex items-center gap-2 cursor-move px-2 py-1 rounded-lg border text-xs"
-                                  draggable={planningPermission === 'editor'}
-                                  style={{
-                                    opacity: isVisible ? 1 : 0.5,
-                                    cursor:
-                                      planningPermission !== 'editor'
-                                        ? 'not-allowed'
-                                        : 'move'
-                                  }}
-                                  title={
-                                    planningPermission !== 'editor'
-                                      ? 'Accès en lecture seule'
-                                      : 'Glissez-déposez un employé sur un jour pour créer 9h-17h'
-                                  }
-                                  onDragStart={(e) => {
-                                    if (planningPermission !== 'editor') return;
-                                    e.dataTransfer.setData(
-                                      'employeeId',
-                                      employee.id
-                                    );
-                                  }}
-                                >
-                                  <div
-                                    className="w-3 h-3 rounded"
-                                    style={{ backgroundColor: employee.color }}
-                                  />
-                                  <span className="font-medium truncate max-w-[9rem]">
-                                    {employee.name}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    aria-label={
-                                      isVisible
-                                        ? 'Cacher du planning'
-                                        : 'Afficher sur le planning'
-                                    }
-                                    onClick={() => {
-                                      setVisibleEmployeeIds((ids) =>
-                                        isVisible
-                                          ? ids.filter(
-                                              (id) => id !== employee.id
-                                            )
-                                          : [...ids, employee.id]
-                                      );
-                                    }}
-                                    className={`ml-1 flex items-center justify-center w-6 h-6 rounded-full border ${
-                                      isVisible
-                                        ? 'bg-blue-100 border-blue-400 text-blue-700'
-                                        : 'bg-gray-100 border-gray-300 text-gray-400'
-                                    }`}
-                                  >
-                                    {isVisible ? (
-                                      <EyeIcon className="w-3.5 h-3.5" />
-                                    ) : (
-                                      <EyeOffIcon className="w-3.5 h-3.5" />
-                                    )}
-                                  </button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                        <div className="w-full">
-                          {/* Jours semaine + weekend dans la même grille */}
-                          <div className="mb-2">
-                            {/* Header sticky pour tous les jours (offset to sit below legend) */}
-                            <div className="grid grid-cols-[40px_repeat(7,minmax(80px,1fr))] gap-1 mb-0 sticky top-12 z-40 bg-background w-full">
-                              <div className="p-2 text-center font-medium text-muted-foreground text-lg"></div>
-                              {daysOfWeek.map((day, dayIndex) => {
-                                const dateStr = currentWeekDates[dayIndex]
-                                  .toISOString()
-                                  .slice(0, 10);
-                                const holidayName = holidays[dateStr];
-                                return (
-                                  <div
-                                    key={day}
-                                    className="p-2 text-center font-bold bg-muted rounded text-lg truncate flex flex-col items-center sticky top-0 z-10"
-                                    style={
-                                      holidayName
-                                        ? {
-                                            background: `repeating-linear-gradient(135deg, #f87171 0px, #f87171 8px, #fff 8px, #fff 16px)`
-                                          }
-                                        : {}
-                                    }
-                                  >
-                                    <div className="font-bold flex items-center justify-center gap-2">
-                                      {day}
-                                      {holidayName && (
-                                        <span className="ml-2 px-2 py-1 rounded bg-red-100 text-red-700 text-xs font-bold border border-red-300">
-                                          {holidayName}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-base text-muted-foreground">
-                                      {formatDate(currentWeekDates[dayIndex])}
-                                    </div>
-                                    {/* Sélecteur de personne en charge pour le weekend */}
-                                    {(day === 'samedi' ||
-                                      day === 'dimanche') && (
-                                      <Select
-                                        value={(() => {
-                                          // Trouver l'employé en charge pour ce jour
-                                          const found = employees.find(
-                                            (emp) => {
-                                              const slots =
-                                                getEmployeeScheduleForDay(
-                                                  emp.id,
-                                                  day
-                                                );
-                                              return (
-                                                slots &&
-                                                slots.length > 0 &&
-                                                slots.some(
-                                                  (slot) => slot.type === 'work'
-                                                )
-                                              );
-                                            }
-                                          );
-                                          return found ? found.id : 'none';
-                                        })()}
-                                        onValueChange={(empId) =>
-                                          planningPermission === 'editor' &&
-                                          handleSaturdayEmployeeChange(
-                                            empId === 'none' ? '' : empId,
-                                            day
-                                          )
-                                        }
-                                        disabled={
-                                          planningPermission !== 'editor'
-                                        }
-                                      >
-                                        <SelectTrigger
-                                          className="mt-1 w-full max-w-[160px] mx-auto"
-                                          title={
-                                            planningPermission !== 'editor'
-                                              ? 'Accès en lecture seule'
-                                              : undefined
-                                          }
-                                        >
-                                          <SelectValue placeholder="Choisir..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem
-                                            value="none"
-                                            className="flex items-center gap-2 text-muted-foreground"
-                                          >
-                                            <span className="w-3 h-3 rounded-full inline-block mr-2 bg-gray-300" />
-                                            Aucune (retirer)
-                                          </SelectItem>
-                                          {employees.map((emp) => (
-                                            <SelectItem
-                                              key={emp.id}
-                                              value={emp.id}
-                                              className="flex items-center gap-2"
-                                            >
-                                              <span
-                                                className="w-3 h-3 rounded-full inline-block mr-2"
-                                                style={{
-                                                  backgroundColor: emp.color
-                                                }}
-                                              />
-                                              {emp.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {/* Grille des créneaux pour tous les jours */}
-                            <div className="grid grid-cols-[40px_repeat(7,minmax(80px,1fr))] gap-1 mb-2 mt-2 w-full">
-                              <div className="space-y-1">
-                                {calendarHours.map((hour) => (
-                                  <div
-                                    key={hour}
-                                    className="h-16 p-2 text-center text-xs text-muted-foreground font-semibold w-full"
-                                  >
-                                    {hour}h
-                                  </div>
-                                ))}
-                              </div>
-                              {daysOfWeek.map((day, dayIndex) => {
-                                const dateStr = currentWeekDates[dayIndex]
-                                  .toISOString()
-                                  .slice(0, 10);
-                                const holidayName = holidays[dateStr];
-                                return (
-                                  <div
-                                    key={day}
-                                    className="relative space-y-1 overflow-visible w-full"
-                                    id={`day-grid-${day}`}
-                                    style={
-                                      holidayName
-                                        ? {
-                                            background: `repeating-linear-gradient(135deg, #f87171 0px, #f87171 8px, #fff 8px, #fff 16px)`
-                                          }
-                                        : {}
-                                    }
-                                    onDragOver={(e) => e.preventDefault()}
-                                    onDrop={async (e) => {
-                                      if (planningPermission !== 'editor')
-                                        return;
-                                      const employeeId =
-                                        e.dataTransfer.getData('employeeId');
-                                      if (!employeeId) return;
-                                      // Only allow drop if employee is visible
-                                      if (
-                                        !visibleEmployeeIds.includes(employeeId)
-                                      )
-                                        return;
-                                      const slots = getEmployeeScheduleForDay(
-                                        employeeId,
-                                        day
-                                      );
-                                      if (slots && slots.length > 0) {
-                                        toast({
-                                          title: 'Erreur',
-                                          description:
-                                            'Un créneau existe déjà pour cet employé ce jour-là',
-                                          variant: 'destructive'
-                                        });
-                                        return;
-                                      }
-                                      // Ajoute un créneau 09:00-17:00
-                                      await updateLocalSchedule(
-                                        employeeId,
-                                        day,
-                                        [
-                                          {
-                                            start: '09:00',
-                                            end: '17:00',
-                                            isWorking: true,
-                                            type: 'work'
-                                          }
-                                        ]
-                                      );
-                                      toast({
-                                        title: 'Créneau ajouté',
-                                        description: 'Journée de 8h ajoutée'
-                                      });
-                                    }}
-                                  >
-                                    {calendarHours.map((hour) => (
-                                      <div
-                                        key={hour}
-                                        className="h-16 border border-border rounded hover:bg-muted/50 transition-colors"
-                                      />
-                                    ))}
-                                    {/* Créneaux */}
-                                    {(() => {
-                                      // Filter slots to only visible employees
-                                      const daySlots = getOverlappingTimeSlots(
-                                        day
-                                      ).filter(({ employee }) =>
-                                        visibleEmployeeIds.includes(employee.id)
-                                      );
-                                      const { stacked, maxOverlap } =
-                                        getStackedSlots(daySlots);
-                                      return stacked.map(
-                                        (
-                                          {
-                                            employee,
-                                            slot,
-                                            startHour,
-                                            endHour,
-                                            slotColumn
-                                          },
-                                          index
-                                        ) => {
-                                          const isAbsence =
-                                            slot.type !== 'work';
-                                          const { top, height } =
-                                            getTimeSlotPosition(
-                                              slot.type !== 'work'
-                                                ? isHackaton
-                                                  ? '06:00'
-                                                  : '08:00'
-                                                : slot.start,
-                                              slot.type !== 'work'
-                                                ? isHackaton
-                                                  ? '30:00'
-                                                  : '22:00'
-                                                : slot.end
-                                            );
-                                          const isWork = slot.type === 'work';
-                                          // Ne pas afficher les congés (vacation) sur samedi/dimanche
-                                          if (
-                                            (day === 'samedi' ||
-                                              day === 'dimanche') &&
-                                            slot.type === 'vacation'
-                                          )
-                                            return null;
-                                          // Style spécial pour absences
-                                          let absenceBg =
-                                            'repeating-linear-gradient(135deg, #cbd5e1 0px, #cbd5e1 10px, #f1f5f9 10px, #f1f5f9 20px)';
-                                          let absenceBorder =
-                                            '2px solid #64748b';
-                                          let absenceOpacity = 0.85;
-                                          const bgColor =
-                                            employee.color || '#8884d8';
-                                          const textColor =
-                                            getContrastYIQ(bgColor);
-                                          const hatch = !isWork
-                                            ? absenceBg
-                                            : bgColor;
-                                          const border = !isWork
-                                            ? absenceBorder
-                                            : `2px solid ${bgColor}`;
-                                          const opacity = !isWork
-                                            ? absenceOpacity
-                                            : 1;
-                                          const width = `calc(${100 / maxOverlap}% - 4px)`;
-                                          const left = `calc(${((slotColumn || 0) * 100) / maxOverlap}% + 2px)`;
-                                          // Identifiant unique du slot
-                                          const slotIndex =
-                                            getEmployeeScheduleForDay(
-                                              employee.id,
-                                              day
-                                            ).findIndex(
-                                              (s) =>
-                                                s.start === slot.start &&
-                                                s.end === slot.end &&
-                                                s.type === slot.type
-                                            );
-                                          // Affichage temporaire pendant le drag
-                                          let displayStart = slot.start;
-                                          let displayEnd = slot.end;
-                                          if (
-                                            resizeSlot &&
-                                            resizeSlot.employeeId ===
-                                              employee.id &&
-                                            resizeSlot.day === day &&
-                                            resizeSlot.slotIndex === slotIndex
-                                          ) {
-                                            if (
-                                              resizeSlot.type === 'start' &&
-                                              resizeValue
-                                            )
-                                              displayStart =
-                                                resizeValue < slot.end
-                                                  ? resizeValue
-                                                  : slot.start;
-                                            if (
-                                              resizeSlot.type === 'end' &&
-                                              resizeValue
-                                            )
-                                              displayEnd =
-                                                resizeValue > slot.start
-                                                  ? resizeValue
-                                                  : slot.end;
-                                          }
-                                          // Correction : holidayName doit être défini ici pour chaque slot
-                                          // (déjà défini plus haut)
-                                          return (
-                                            <div
-                                              key={`${employee.id}-${slot.start}-${slot.end}`}
-                                              ref={(el) => {
-                                                if (
-                                                  resizeSlot != null &&
-                                                  resizeSlot.employeeId ===
-                                                    employee.id &&
-                                                  resizeSlot.day === day &&
-                                                  resizeSlot.slotIndex ===
-                                                    slotIndex
-                                                ) {
-                                                  slotDragRef.current = el;
-                                                }
-                                              }}
-                                              className={`absolute rounded-lg shadow-lg p-1 text-sm font-bold flex flex-col items-center justify-center transition-all duration-200 hover:scale-[1.03] group ${resizeSlot != null && resizeSlot.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex ? 'ring-4 ring-blue-400/60 border-blue-600 shadow-2xl' : ''} ${dragSlot != null && dragSlot.employeeId === employee.id && dragSlot.day === day && dragSlot.slotIndex === slotIndex ? 'ring-4 ring-green-400/60 border-green-600 shadow-2xl opacity-90' : ''}`}
-                                              style={{
-                                                top:
-                                                  dragSlot != null &&
-                                                  dragSlot.employeeId ===
-                                                    employee.id &&
-                                                  dragSlot.day === day &&
-                                                  dragSlot.slotIndex ===
-                                                    slotIndex &&
-                                                  dragGhostTime
-                                                    ? `calc(${((Number(dragGhostTime.split(':')[0]) + Number(dragGhostTime.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}% )`
-                                                    : top,
-                                                height: `calc(${height} - 4px)`,
-                                                width,
-                                                left,
-                                                zIndex: (slotColumn || 0) + 1,
-                                                maxWidth: '100%',
-                                                margin: 0,
-                                                background: hatch,
-                                                color: textColor,
-                                                border: border,
-                                                opacity: opacity,
-                                                transition:
-                                                  'height 0.15s cubic-bezier(.4,2,.6,1), top 0.1s cubic-bezier(.4,2,.6,1)',
-                                                boxShadow:
-                                                  dragSlot != null &&
-                                                  dragSlot.employeeId ===
-                                                    employee.id &&
-                                                  dragSlot.day === day &&
-                                                  dragSlot.slotIndex ===
-                                                    slotIndex
-                                                    ? '0 8px 32px #22c55e44'
-                                                    : undefined,
-                                                pointerEvents:
-                                                  slot.type !== 'work'
-                                                    ? 'none'
-                                                    : resizeSlot
-                                                      ? 'none'
-                                                      : undefined,
-                                                cursor:
-                                                  slot.type !== 'work'
-                                                    ? 'default'
-                                                    : dragSlot != null &&
-                                                        dragSlot.employeeId ===
-                                                          employee.id &&
-                                                        dragSlot.day === day &&
-                                                        dragSlot.slotIndex ===
-                                                          slotIndex
-                                                      ? 'grabbing'
-                                                      : 'grab',
-                                                userSelect: 'none'
-                                              }}
-                                              title={
-                                                isWork
-                                                  ? employee.name
-                                                  : `${employee.name} - ${slotTypeConfig[slot.type as keyof typeof slotTypeConfig].label}`
-                                              }
-                                              onMouseDown={(e) => {
-                                                if (
-                                                  planningPermission !==
-                                                  'editor'
-                                                )
-                                                  return;
-                                                // Drag uniquement si pas sur un handle
-                                                if (
-                                                  !(
-                                                    e.target as HTMLElement
-                                                  ).classList.contains(
-                                                    'resize-handle'
-                                                  )
-                                                ) {
-                                                  e.stopPropagation();
-                                                  const slotStartY =
-                                                    e.currentTarget.getBoundingClientRect()
-                                                      .top;
-                                                  dragOffsetRef.current =
-                                                    e.clientY - slotStartY;
-                                                  const duration =
-                                                    Number(
-                                                      slot.end.split(':')[0]
-                                                    ) *
-                                                      60 +
-                                                    Number(
-                                                      slot.end.split(':')[1]
-                                                    ) -
-                                                    (Number(
-                                                      slot.start.split(':')[0]
-                                                    ) *
-                                                      60 +
-                                                      Number(
-                                                        slot.start.split(':')[1]
-                                                      ));
-                                                  setDragSlot({
-                                                    employeeId: employee.id,
-                                                    day,
-                                                    slotIndex,
-                                                    duration,
-                                                    originalStart: slot.start
-                                                  });
-                                                  setDragGhostTime(slot.start);
-                                                }
-                                              }}
-                                            >
-                                              {/* Aperçu horaire pendant le drag */}
-                                              {dragSlot != null &&
-                                                dragSlot.employeeId ===
-                                                  employee.id &&
-                                                dragSlot.day === day &&
-                                                dragSlot.slotIndex ===
-                                                  slotIndex &&
-                                                dragGhostTime &&
-                                                (() => {
-                                                  // Calcule l'heure de fin
-                                                  const [sh, sm] = dragGhostTime
-                                                    .split(':')
-                                                    .map(Number);
-                                                  const startMinutes =
-                                                    sh * 60 + sm;
-                                                  const endMinutes =
-                                                    startMinutes +
-                                                    dragSlot.duration;
-                                                  const eh = Math.floor(
-                                                    endMinutes / 60
-                                                  );
-                                                  const em = endMinutes % 60;
-                                                  const preview = `${dragGhostTime} - ${eh.toString().padStart(2, '0')}:${em.toString().padStart(2, '0')}`;
-                                                  return (
-                                                    <div
-                                                      style={{
-                                                        ...previewLabelStyle,
-                                                        top: `calc(50% - 18px)`
-                                                      }}
-                                                    >
-                                                      {preview}
-                                                    </div>
-                                                  );
-                                                })()}
-                                              {/* Handle haut */}
-                                              <div
-                                                className="resize-handle"
-                                                style={{
-                                                  position: 'absolute',
-                                                  top: 0,
-                                                  left: 0,
-                                                  right: 0,
-                                                  height: 8,
-                                                  cursor:
-                                                    planningPermission !==
-                                                    'editor'
-                                                      ? 'not-allowed'
-                                                      : 'ns-resize',
-                                                  zIndex: 10
-                                                }}
-                                                onMouseDown={(e) => {
-                                                  if (
-                                                    planningPermission !==
-                                                    'editor'
-                                                  )
-                                                    return;
-                                                  e.stopPropagation();
-                                                  setResizeSlot({
-                                                    employeeId: employee.id,
-                                                    day,
-                                                    slotIndex,
-                                                    type: 'start'
-                                                  });
-                                                  setResizeValue(slot.start);
-                                                }}
-                                              />
-                                              {/* Ligne ghost et label d'heure pour le handle haut */}
-                                              {resizeSlot &&
-                                                resizeSlot.employeeId ===
-                                                  employee.id &&
-                                                resizeSlot.day === day &&
-                                                resizeSlot.slotIndex ===
-                                                  slotIndex &&
-                                                resizeSlot.type === 'start' &&
-                                                resizeValue && (
-                                                  <>
-                                                    <div
-                                                      style={{
-                                                        ...ghostLineStyle,
-                                                        top: 0,
-                                                        transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}%))`,
-                                                        background: '#2563eb'
-                                                      }}
-                                                    />
-                                                    <div
-                                                      style={{
-                                                        ...ghostLabelStyle,
-                                                        top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}% - 12px)`
-                                                      }}
-                                                    >
-                                                      {resizeValue}
-                                                    </div>
-                                                  </>
-                                                )}
-                                              {slot.type !== 'work' ? (
-                                                <span
-                                                  className="w-full text-center truncate"
-                                                  style={{ userSelect: 'none' }}
-                                                >
-                                                  {employee.initial}
-                                                </span>
-                                              ) : (
-                                                <>
-                                                  <span
-                                                    className="w-full text-center truncate"
-                                                    style={{
-                                                      userSelect: 'none'
-                                                    }}
-                                                  >
-                                                    {employee.initial}
-                                                  </span>
-                                                  <span
-                                                    className="text-xs opacity-80"
-                                                    style={{
-                                                      userSelect: 'none'
-                                                    }}
-                                                  >
-                                                    {displayStart} -{' '}
-                                                    {displayEnd}{' '}
-                                                    {holidayName &&
-                                                      slot.type === 'work' && (
-                                                        <span className="text-red-600 font-bold">
-                                                          (férié travaillé)
-                                                        </span>
-                                                      )}
-                                                  </span>
-                                                  {/* Handles, drag, etc. ici uniquement pour work */}
-                                                </>
-                                              )}
-                                              {/* Handle bas */}
-                                              <div
-                                                className="resize-handle"
-                                                style={{
-                                                  position: 'absolute',
-                                                  bottom: 0,
-                                                  left: 0,
-                                                  right: 0,
-                                                  height: 8,
-                                                  cursor:
-                                                    planningPermission !==
-                                                    'editor'
-                                                      ? 'not-allowed'
-                                                      : 'ns-resize',
-                                                  zIndex: 10
-                                                }}
-                                                onMouseDown={(e) => {
-                                                  if (
-                                                    planningPermission !==
-                                                    'editor'
-                                                  )
-                                                    return;
-                                                  e.stopPropagation();
-                                                  setResizeSlot({
-                                                    employeeId: employee.id,
-                                                    day,
-                                                    slotIndex,
-                                                    type: 'end'
-                                                  });
-                                                  setResizeValue(slot.end);
-                                                }}
-                                              />
-                                              {/* Ligne ghost et label d'heure pour le handle bas */}
-                                              {resizeSlot &&
-                                                resizeSlot.employeeId ===
-                                                  employee.id &&
-                                                resizeSlot.day === day &&
-                                                resizeSlot.slotIndex ===
-                                                  slotIndex &&
-                                                resizeSlot.type === 'end' &&
-                                                resizeValue && (
-                                                  <>
-                                                    <div
-                                                      style={{
-                                                        ...ghostLineStyle,
-                                                        bottom: 0,
-                                                        transform: `translateY(calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}%))`,
-                                                        background: '#2563eb'
-                                                      }}
-                                                    />
-                                                    <div
-                                                      style={{
-                                                        ...ghostLabelStyle,
-                                                        top: `calc(${((Number(resizeValue.split(':')[0]) + Number(resizeValue.split(':')[1]) / 60 - (isHackaton ? 6 : 8)) / (isHackaton ? 24 : 14)) * 100}% - 12px)`
-                                                      }}
-                                                    >
-                                                      {resizeValue}
-                                                    </div>
-                                                  </>
-                                                )}
-                                              {/* Icône poubelle au hover */}
-                                              <button
-                                                type="button"
-                                                onClick={async (e) => {
-                                                  e.stopPropagation();
-                                                  const slots =
-                                                    getEmployeeScheduleForDay(
-                                                      employee.id,
-                                                      day
-                                                    );
-                                                  const newSlots = [...slots];
-                                                  newSlots.splice(slotIndex, 1);
-                                                  await updateLocalSchedule(
-                                                    employee.id,
-                                                    day,
-                                                    newSlots
-                                                  );
-                                                  toast({
-                                                    title: 'Créneau supprimé'
-                                                  });
-                                                }}
-                                                style={{
-                                                  position: 'absolute',
-                                                  top: 2,
-                                                  right: 2,
-                                                  zIndex: 50,
-                                                  background:
-                                                    'rgba(255,255,255,0.7)',
-                                                  borderRadius: 4
-                                                }}
-                                                className="hidden group-hover:inline-block hover:bg-red-100"
-                                              >
-                                                <Trash2 className="h-4 w-4 text-red-600" />
-                                              </button>
-                                            </div>
-                                          );
-                                        }
-                                      );
-                                    })()}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </section>
-              </>
-            )}
-            {viewMode === 'person' && (
-              <div className="p-2 sm:p-6 bg-muted rounded-lg">
-                <div className="flex flex-col sm:flex-row items-center justify-between mb-2 sm:mb-4 gap-2 sm:gap-0">
-                  <h2 className="text-lg sm:text-xl font-bold">
-                    Vue par personne
-                  </h2>
-                  <WeekSelector
-                    currentWeekOffset={currentWeekOffset}
-                    setCurrentWeekOffset={setCurrentWeekOffset}
-                    currentWeekDates={currentWeekDates}
-                    weekNumber={weekNumber}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6">
-                  {employees.map((employee) => (
-                    <div
-                      key={employee.id}
-                      className="bg-background rounded-lg shadow p-2 sm:p-4"
-                    >
-                      <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                          <AvatarImage
-                            src={`https://avatar.vercel.sh/${employee.id}.png`}
-                            alt={employee.name}
-                          />
-                          <AvatarFallback className="text-base sm:text-lg">
-                            {employee.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-bold text-base sm:text-lg">
-                            {employee.name}
-                          </div>
-                          <div className="text-xs sm:text-sm text-muted-foreground">
-                            {employee.role}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-1 sm:space-y-2 mt-2">
-                        {daysOfWeek.map((day, i) => {
-                          const slots = getEmployeeScheduleForDay(
-                            employee.id,
-                            day
-                          );
-                          // Ne pas afficher les congés sur samedi/dimanche
-                          const filteredSlots =
-                            day === 'samedi' || day === 'dimanche'
-                              ? slots.filter((s) => s.type !== 'vacation')
-                              : slots;
+                      <div className="flex flex-wrap gap-1">
+                        {filtered.map((slot, idx) => {
+                          const config = slotTypeConfig[slot.type];
                           return (
-                            <div
-                              key={day}
-                              className="flex items-center gap-2 text-xs sm:text-sm"
-                            >
-                              <span className="w-16 sm:w-20 font-medium">
-                                {day}
-                              </span>
-                              {filteredSlots.length === 0 ? (
-                                <span className="text-muted-foreground">
-                                  Repos
-                                </span>
-                              ) : (
-                                filteredSlots.map((slot, idx) => (
-                                  <span
-                                    key={idx}
-                                    className={`px-2 py-1 rounded text-xs font-bold ${slotTypeConfig[slot.type].bgColor} ${slotTypeConfig[slot.type].textColor} border ${slotTypeConfig[slot.type].borderColor}`}
-                                  >
-                                    {slotTypeConfig[slot.type].label}{' '}
-                                    {slot.start}-{slot.end}
-                                  </span>
-                                ))
-                              )}
-                            </div>
+                            <span key={idx} className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${config?.bgColor} ${config?.textColor} border ${config?.borderColor}`}>
+                              {config?.label} {slot.start}-{slot.end}
+                            </span>
                           );
                         })}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {viewMode === 'slot' && (
-              <div className="p-2 sm:p-6 bg-muted rounded-lg">
-                <div className="flex flex-col sm:flex-row items-center justify-between mb-2 sm:mb-4 gap-2 sm:gap-0">
-                  <h2 className="text-lg sm:text-xl font-bold">
-                    Vue par créneau
-                  </h2>
-                  <WeekSelector
-                    currentWeekOffset={currentWeekOffset}
-                    setCurrentWeekOffset={setCurrentWeekOffset}
-                    currentWeekDates={currentWeekDates}
-                    weekNumber={weekNumber}
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-6">
-                  {daysOfWeek.map((day, i) => {
-                    const slots = getOverlappingTimeSlots(day);
-                    // Ne pas afficher les congés sur samedi/dimanche
-                    const filteredSlots =
-                      day === 'samedi' || day === 'dimanche'
-                        ? slots.filter(({ slot }) => slot.type !== 'vacation')
-                        : slots;
-                    return (
-                      <div
-                        key={day}
-                        className="bg-background rounded-lg shadow p-2 sm:p-4"
-                      >
-                        <div className="font-bold text-base sm:text-lg mb-2">
-                          {day} ({formatDate(currentWeekDates[i])})
-                        </div>
-                        {filteredSlots.length === 0 ? (
-                          <span className="text-muted-foreground">
-                            Aucun créneau
-                          </span>
-                        ) : (
-                          filteredSlots.map(({ employee, slot }, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center gap-2 mb-1 text-xs sm:text-sm"
-                            >
-                              <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
-                                <AvatarImage
-                                  src={`https://avatar.vercel.sh/${employee.id}.png`}
-                                  alt={employee.name}
-                                />
-                                <AvatarFallback className="text-xs">
-                                  {employee.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-bold">{employee.name}</span>
-                              <span
-                                className={`px-2 py-0.5 rounded text-xs font-bold ${slotTypeConfig[slot.type].bgColor} ${slotTypeConfig[slot.type].textColor} border ${slotTypeConfig[slot.type].borderColor}`}
-                              >
-                                {slotTypeConfig[slot.type].label}
-                              </span>
-                              <span className="text-xs opacity-80">
-                                {slot.start} - {slot.end}
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          {planningPermission === 'editor' && (
-            <TabsContent value="management">
-              <EmployeeManagementView
-                employees={employees}
-                currentWeekKey={currentWeekKey}
-                currentWeekDates={currentWeekDates}
-                weekNumber={weekNumber}
-                daysOfWeek={daysOfWeek}
-                getTotalHoursForWeek={getTotalHoursForWeek}
-                updateLocalSchedule={updateLocalSchedule}
-                getEmployeeScheduleForDay={getEmployeeScheduleForDay}
-                slotTypeConfig={slotTypeConfig}
-                currentWeekOffset={currentWeekOffset}
-                setCurrentWeekOffset={setCurrentWeekOffset}
-                setSchedules={setSchedules}
-                setEmployees={setEmployees}
-                reloadSchedules={(window as any).reloadSchedules}
-                planningPermission={planningPermission}
-              />
-            </TabsContent>
-          )}
-
-          <TabsContent value="table">
-            <div className="overflow-x-auto">
-              <TableView />
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        ))}
       </div>
-    </div>
+    </ScrollArea>
+  );
+}
+
+// Table view (secondary)
+function TableView({
+  employees,
+  daysOfWeek,
+  currentWeekDates,
+  getEmployeeScheduleForDay,
+  getTotalHoursForWeek,
+  slotTypeConfig,
+}: {
+  employees: Employee[];
+  daysOfWeek: string[];
+  currentWeekDates: Date[];
+  getEmployeeScheduleForDay: (id: string, day: string) => TimeSlot[];
+  getTotalHoursForWeek: (id: string) => number;
+  slotTypeConfig: Record<string, { label: string; bgColor: string; borderColor: string; textColor: string }>;
+}) {
+  const renderCell = (employeeId: string, day: string) => {
+    const slots = getEmployeeScheduleForDay(employeeId, day);
+    const workSlots = slots.filter((s) => s.type === 'work');
+    const otherSlots = slots.filter((s) => s.type !== 'work');
+    if (workSlots.length === 0 && otherSlots.length === 0) {
+      return <span className="text-[10px] italic text-muted-foreground">Repos</span>;
+    }
+    return (
+      <div className="flex flex-col items-center gap-0.5">
+        {workSlots.map((s, i) => (
+          <span key={i} className="text-[10px] font-medium">{s.start}-{s.end}</span>
+        ))}
+        {otherSlots.map((s, i) => {
+          const config = slotTypeConfig[s.type];
+          return (
+            <span key={`o${i}`} className={`px-1 py-0 rounded text-[9px] font-bold ${config?.bgColor} ${config?.textColor} border ${config?.borderColor}`}>
+              {config?.label}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
+  return (
+    <ScrollArea className="h-full">
+      <div className="rounded-lg border bg-background overflow-hidden">
+        <table className="w-full border-collapse text-xs">
+          <thead className="sticky top-0 bg-muted/80 backdrop-blur-sm z-10">
+            <tr className="border-b">
+              <th className="text-left p-2 text-[11px] uppercase tracking-wider font-medium text-muted-foreground sticky left-0 bg-muted/80 backdrop-blur-sm z-20">Employé</th>
+              {daysOfWeek.map((day, i) => (
+                <th key={day} className="text-center p-2 text-[11px] uppercase tracking-wider font-medium text-muted-foreground">
+                  <div>{day.slice(0, 3)}.</div>
+                  <div className="text-[9px] font-normal">{formatDate(currentWeekDates[i])}</div>
+                </th>
+              ))}
+              <th className="text-center p-2 text-[11px] uppercase tracking-wider font-medium text-muted-foreground">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {employees.map((employee) => (
+              <tr key={employee.id} className="border-b hover:bg-muted/30 align-middle">
+                <td className="p-2 sticky left-0 bg-background z-10">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: employee.color || '#8884d8' }} />
+                    <span className="font-medium text-xs">{employee.name}</span>
+                  </div>
+                </td>
+                {daysOfWeek.map((day) => (
+                  <td key={day} className="p-2 text-center">{renderCell(employee.id, day)}</td>
+                ))}
+                <td className="p-2 text-center font-bold text-xs" style={{ color: employee.color || '#8884d8' }}>
+                  {getTotalHoursForWeek(employee.id)}h
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </ScrollArea>
   );
 }
