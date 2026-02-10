@@ -1,0 +1,78 @@
+name: Auto-label issues and PRs
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
+
+jobs:
+  auto-label:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Label based on title/branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            TITLE="${{ github.event.issue.title }}"
+            NUMBER="${{ github.event.issue.number }}"
+            TYPE="issue"
+          else
+            TITLE="${{ github.event.pull_request.title }}"
+            NUMBER="${{ github.event.pull_request.number }}"
+            TYPE="pr"
+            BRANCH="${{ github.event.pull_request.head.ref }}"
+          fi
+
+          LABELS=""
+
+          # Detect from title prefix
+          case "$TITLE" in
+            feat:*|feat\(*) LABELS="enhancement" ;;
+            fix:*|fix\(*)   LABELS="bug" ;;
+            docs:*|doc:*)   LABELS="documentation" ;;
+            refactor:*)     LABELS="refactor" ;;
+            test:*)         LABELS="test" ;;
+            ci:*)           LABELS="ci" ;;
+          esac
+
+          # Detect from branch name for PRs
+          if [ "$TYPE" = "pr" ] && [ -z "$LABELS" ]; then
+            case "$BRANCH" in
+              feature/*|feat/*) LABELS="enhancement" ;;
+              fix/*|bugfix/*)   LABELS="bug" ;;
+              hotfix/*)         LABELS="bug,urgent" ;;
+              refactor/*)       LABELS="refactor" ;;
+            esac
+          fi
+
+          # Detect from emoji in title
+          if [ -z "$LABELS" ]; then
+            case "$TITLE" in
+              *🐛*|*🐞*) LABELS="bug" ;;
+              *✨*|*🚀*) LABELS="enhancement" ;;
+              *📝*|*📖*) LABELS="documentation" ;;
+              *📲*)      LABELS="mobile" ;;
+            esac
+          fi
+
+          if [ -n "$LABELS" ]; then
+            # Ensure labels exist
+            IFS=',' read -ra LABEL_ARRAY <<< "$LABELS"
+            for LABEL in "${LABEL_ARRAY[@]}"; do
+              gh label create "$LABEL" --repo "${{ github.repository }}" 2>/dev/null || true
+            done
+
+            if [ "$TYPE" = "issue" ]; then
+              gh issue edit "$NUMBER" --repo "${{ github.repository }}" --add-label "$LABELS"
+            else
+              gh pr edit "$NUMBER" --repo "${{ github.repository }}" --add-label "$LABELS"
+            fi
+            echo "Added labels: $LABELS"
+          else
+            echo "No labels to add"
+          fi
