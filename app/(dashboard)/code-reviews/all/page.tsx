@@ -700,7 +700,7 @@ export default function AllAuditsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
         {/* Header Skeleton */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -713,7 +713,7 @@ export default function AllAuditsPage() {
               <ClipboardCheck className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-xl md:text-2xl font-bold tracking-tight">
                 Centre de Suivi des Code Reviews
               </h1>
               <p className="text-muted-foreground">Chargement...</p>
@@ -755,14 +755,14 @@ export default function AllAuditsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/code-reviews">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold">Erreur</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Erreur</h1>
         </div>
         <Card className="border-red-200 bg-red-50">
           <CardContent className="p-6 text-red-700">{error}</CardContent>
@@ -772,7 +772,7 @@ export default function AllAuditsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -785,7 +785,7 @@ export default function AllAuditsPage() {
             <ClipboardCheck className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
               Centre de Suivi des Code Reviews
             </h1>
             <p className="text-muted-foreground">
