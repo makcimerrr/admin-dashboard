@@ -23,8 +23,11 @@ import {
   Mail,
   BellRing,
   Info,
+  LayoutGrid,
+  Rows3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUIPreferences, type Density, type ColorScheme } from '@/contexts/ui-preferences-context';
 
 const themeOptions = [
   { value: 'light', label: 'Clair', icon: Sun, description: 'Thème lumineux' },
@@ -32,17 +35,30 @@ const themeOptions = [
   { value: 'system', label: 'Système', icon: Monitor, description: 'Suit les préférences OS' },
 ] as const;
 
+const densityOptions: { value: Density; label: string; icon: typeof LayoutGrid; description: string }[] = [
+  { value: 'default', label: 'Default', icon: LayoutGrid, description: 'Espacement normal' },
+  { value: 'compact', label: 'Compact', icon: Rows3, description: 'Plus de contenu visible' },
+];
+
+const colorSchemeOptions: { value: ColorScheme; label: string; color: string }[] = [
+  { value: 'blue', label: 'Bleu', color: 'bg-blue-500' },
+  { value: 'purple', label: 'Violet', color: 'bg-purple-500' },
+  { value: 'green', label: 'Vert', color: 'bg-green-500' },
+  { value: 'orange', label: 'Orange', color: 'bg-orange-500' },
+  { value: 'rose', label: 'Rose', color: 'bg-rose-500' },
+];
+
 export default function SettingsPage() {
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'profile';
   const { theme, setTheme } = useTheme();
   const user = useUser();
+  const { density, setDensity, colorScheme, setColorScheme } = useUIPreferences();
   const [mounted, setMounted] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [browserNotifications, setBrowserNotifications] = useState(false);
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | null>(null);
 
-  // Load notification preferences from Stack Auth client metadata
   useEffect(() => {
     setMounted(true);
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -59,7 +75,6 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  // Persist notification preferences to Stack Auth client metadata
   const updateNotificationPref = async (key: string, value: boolean) => {
     if (!user) return;
     try {
@@ -92,12 +107,11 @@ export default function SettingsPage() {
     updateNotificationPref('browserNotifications', checked);
   };
 
-  // Extract user role and planning permission
   const userRole = (user?.clientReadOnlyMetadata as Record<string, unknown>)?.role as string || 'user';
   const planningPermission = (user?.clientReadOnlyMetadata as Record<string, unknown>)?.planningPermission as string || 'reader';
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+    <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
@@ -130,7 +144,6 @@ export default function SettingsPage() {
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="mt-6 space-y-6">
-          {/* Role & Permissions Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -165,7 +178,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Stack Auth Account Settings */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -184,6 +196,7 @@ export default function SettingsPage() {
 
         {/* Appearance Tab */}
         <TabsContent value="appearance" className="mt-6 space-y-6">
+          {/* Theme */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -191,7 +204,7 @@ export default function SettingsPage() {
                 Thème
               </CardTitle>
               <CardDescription>
-                Choisissez le thème de l'interface
+                Choisissez le thème de l&apos;interface
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -237,6 +250,101 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Density */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Rows3 className="h-5 w-5 text-primary" />
+                Densité d&apos;affichage
+              </CardTitle>
+              <CardDescription>
+                Ajustez l&apos;espacement des éléments de l&apos;interface
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {densityOptions.map((option) => {
+                  const Icon = option.icon;
+                  const isActive = density === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => setDensity(option.value)}
+                      className={cn(
+                        'flex flex-col items-center gap-3 p-6 rounded-lg border-2 transition-all',
+                        'hover:border-primary/50 hover:bg-accent/50',
+                        isActive
+                          ? 'border-primary bg-primary/5 shadow-sm'
+                          : 'border-border'
+                      )}
+                    >
+                      <div className={cn(
+                        'p-3 rounded-full',
+                        isActive ? 'bg-primary/10' : 'bg-muted'
+                      )}>
+                        <Icon className={cn(
+                          'h-6 w-6',
+                          isActive ? 'text-primary' : 'text-muted-foreground'
+                        )} />
+                      </div>
+                      <div className="text-center">
+                        <p className={cn(
+                          'font-medium',
+                          isActive ? 'text-primary' : 'text-foreground'
+                        )}>
+                          {option.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {option.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Color Scheme */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="h-5 w-5 text-primary" />
+                Palette de couleurs
+              </CardTitle>
+              <CardDescription>
+                Choisissez la couleur d&apos;accent de l&apos;interface
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
+                {colorSchemeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setColorScheme(option.value)}
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div className={cn(
+                      'w-10 h-10 rounded-full transition-all',
+                      option.color,
+                      colorScheme === option.value
+                        ? 'ring-2 ring-offset-2 ring-offset-background ring-primary scale-110'
+                        : 'hover:scale-105'
+                    )} />
+                    <span className={cn(
+                      'text-xs',
+                      colorScheme === option.value
+                        ? 'text-primary font-medium'
+                        : 'text-muted-foreground'
+                    )}>
+                      {option.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Notifications Tab */}
@@ -252,7 +360,6 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Email notifications */}
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -274,7 +381,6 @@ export default function SettingsPage() {
                 />
               </div>
 
-              {/* Browser notifications */}
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-orange-500/10 rounded-lg">
@@ -304,7 +410,6 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Info Card */}
           <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
             <CardContent className="flex items-start gap-3 pt-6">
               <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
