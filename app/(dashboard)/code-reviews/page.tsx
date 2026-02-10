@@ -228,7 +228,7 @@ export default function CodeReviewsPage() {
   const isLoading = recentReviews === null || urgentReviews === null;
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+    <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
