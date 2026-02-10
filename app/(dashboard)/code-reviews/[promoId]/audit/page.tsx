@@ -179,7 +179,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
 
     if (loading) {
         return (
-            <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+            <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
                 <Skeleton className="h-12 w-96" />
                 <div className="grid gap-6 lg:grid-cols-2">
                     <Skeleton className="h-64" />
@@ -210,7 +210,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
     const activeMembers = groupData.members.filter(m => !m.isDropout);
 
     return (
-        <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+        <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
