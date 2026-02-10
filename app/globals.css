@@ -129,3 +129,100 @@ html, body {
     -webkit-overflow-scrolling: touch;
     -webkit-tap-highlight-color: transparent;
 }
+
+/* ===== Density System ===== */
+
+:root, .density-default {
+    --density-card-padding: 1.5rem;
+    --density-card-gap: 1.5rem;
+    --density-table-cell-py: 1rem;
+    --density-table-cell-px: 1rem;
+    --density-table-header-h: 3rem;
+    --density-page-gap: 1.5rem;
+    --density-page-padding: 1.5rem;
+}
+
+.density-compact {
+    --density-card-padding: 1rem;
+    --density-card-gap: 1rem;
+    --density-table-cell-py: 0.5rem;
+    --density-table-cell-px: 0.75rem;
+    --density-table-header-h: 2.25rem;
+    --density-page-gap: 0.75rem;
+    --density-page-padding: 1rem;
+}
+
+/* Compact: cards */
+.density-compact [data-slot="card-header"]:not([data-sidebar] *) {
+    padding: var(--density-card-padding);
+    padding-bottom: 0;
+    gap: 0.25rem;
+}
+.density-compact [data-slot="card-content"]:not([data-sidebar] *) {
+    padding: var(--density-card-padding);
+    padding-top: 0.5rem;
+}
+.density-compact [data-slot="card-footer"]:not([data-sidebar] *) {
+    padding: var(--density-card-padding);
+    padding-top: 0;
+}
+
+/* Compact: tables */
+.density-compact table:not([data-sidebar] table) th {
+    padding: var(--density-table-cell-py) var(--density-table-cell-px);
+    height: var(--density-table-header-h);
+    font-size: 0.8125rem;
+}
+.density-compact table:not([data-sidebar] table) td {
+    padding: var(--density-table-cell-py) var(--density-table-cell-px);
+    font-size: 0.8125rem;
+}
+
+/* Compact: page containers */
+.density-compact .page-container {
+    padding: var(--density-page-padding) !important;
+    gap: var(--density-page-gap) !important;
+}
+
+@media (min-width: 768px) {
+    .density-compact .page-container {
+        padding: var(--density-page-padding) !important;
+    }
+}
+
+/* ===== Color Schemes ===== */
+
+.scheme-blue :root, .scheme-blue {
+    --primary: 221 83% 53%;
+}
+.scheme-blue.dark, .dark.scheme-blue {
+    --primary: 217 91% 60%;
+}
+
+.scheme-purple {
+    --primary: 262 83% 58%;
+}
+.scheme-purple.dark {
+    --primary: 270 95% 75%;
+}
+
+.scheme-green {
+    --primary: 142 76% 36%;
+}
+.scheme-green.dark {
+    --primary: 142 70% 50%;
+}
+
+.scheme-orange {
+    --primary: 25 95% 53%;
+}
+.scheme-orange.dark {
+    --primary: 32 95% 60%;
+}
+
+.scheme-rose {
+    --primary: 347 77% 50%;
+}
+.scheme-rose.dark {
+    --primary: 347 77% 65%;
+}
