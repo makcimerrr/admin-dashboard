@@ -9,12 +9,36 @@ type DelayData = {
   count: number;
 };
 
-const COLORS = {
-  'bien': '#22c55e',
-  'en retard': '#ef4444',
-  'Validé': '#3b82f6',
-  'Non Validé': '#f43f5e',
+const DELAY_CHART_VARS: Record<string, string> = {
+  'bien': '--chart-5',
+  'en retard': '--chart-6',
+  'Validé': '--chart-1',
+  'Non Validé': '--chart-2',
 };
+
+function useDelayColors() {
+  const [colors, setColors] = useState<Record<string, string>>({
+    'bien': '#22c55e',
+    'en retard': '#ef4444',
+    'Validé': '#3b82f6',
+    'Non Validé': '#f43f5e',
+  });
+  useEffect(() => {
+    function read() {
+      const style = getComputedStyle(document.documentElement);
+      const c: Record<string, string> = {};
+      for (const [level, cssVar] of Object.entries(DELAY_CHART_VARS)) {
+        c[level] = style.getPropertyValue(cssVar).trim() || '#8884d8';
+      }
+      setColors(c);
+    }
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+  return colors;
+}
 
 const LABELS = {
   'bien': 'En bonne progression',
@@ -26,6 +50,7 @@ const LABELS = {
 export default function DelayDistributionChart({ promoKey }: { promoKey: string }) {
   const [data, setData] = useState<DelayData[]>([]);
   const [loading, setLoading] = useState(true);
+  const delayColors = useDelayColors();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -87,7 +112,7 @@ export default function DelayDistributionChart({ promoKey }: { promoKey: string 
           {chartData.map((entry, index) => (
             <Cell
               key={`cell-${index}`}
-              fill={COLORS[data[index].level as keyof typeof COLORS] || '#8884d8'}
+              fill={delayColors[data[index].level] || '#8884d8'}
             />
           ))}
         </Pie>

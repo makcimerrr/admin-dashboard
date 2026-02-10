@@ -213,7 +213,7 @@ export default async function PromoGroupsIndexPage(props: any) {
   });
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="page-container flex flex-col gap-6 p-6">
       {/* Header: grouped navigation (left), title (center), actions (right) */}
       <div className="flex items-center justify-between">
         {/* Left: navigation group */}

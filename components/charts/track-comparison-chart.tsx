@@ -11,16 +11,46 @@ type TrackData = {
   percentage: number;
 };
 
-const COLORS = {
-  Golang: '#00ADD8',
-  Javascript: '#F7DF1E',
-  Rust: '#CE422B',
-  Java: '#007396',
+// Fallback colors per track, used when CSS variables aren't available
+const TRACK_CHART_VARS: Record<string, string> = {
+  Golang: '--chart-1',
+  Javascript: '--chart-2',
+  Rust: '--chart-6',
+  Java: '--chart-3',
 };
+
+function useTrackColors() {
+  const [colors, setColors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const root = document.documentElement;
+    const style = getComputedStyle(root);
+    const c: Record<string, string> = {};
+    for (const [track, cssVar] of Object.entries(TRACK_CHART_VARS)) {
+      c[track] = style.getPropertyValue(cssVar).trim() || '#8884d8';
+    }
+    setColors(c);
+  }, []);
+  // Re-read on scheme change by observing class changes
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const root = document.documentElement;
+      const style = getComputedStyle(root);
+      const c: Record<string, string> = {};
+      for (const [track, cssVar] of Object.entries(TRACK_CHART_VARS)) {
+        c[track] = style.getPropertyValue(cssVar).trim() || '#8884d8';
+      }
+      setColors(c);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+  return colors;
+}
 
 export default function TrackComparisonChart({ promoKey }: { promoKey: string }) {
   const [data, setData] = useState<TrackData[]>([]);
   const [loading, setLoading] = useState(true);
+  const trackColors = useTrackColors();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,7 +120,7 @@ export default function TrackComparisonChart({ promoKey }: { promoKey: string })
         <Legend />
         <Bar dataKey="percentage" name="Taux de complétion (%)" radius={[8, 8, 0, 0]}>
           {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[entry.track as keyof typeof COLORS] || '#8884d8'} />
+            <Cell key={`cell-${index}`} fill={trackColors[entry.track] || '#8884d8'} />
           ))}
         </Bar>
       </BarChart>
