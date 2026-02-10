@@ -27,7 +27,7 @@ import {
   Rows3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useUIPreferences, type Density, type ColorScheme } from '@/contexts/ui-preferences-context';
+import { useUIPreferences, type Density, type ThemeName } from '@/contexts/ui-preferences-context';
 
 const themeOptions = [
   { value: 'light', label: 'Clair', icon: Sun, description: 'Thème lumineux' },
@@ -36,16 +36,52 @@ const themeOptions = [
 ] as const;
 
 const densityOptions: { value: Density; label: string; icon: typeof LayoutGrid; description: string }[] = [
-  { value: 'default', label: 'Default', icon: LayoutGrid, description: 'Espacement normal' },
-  { value: 'compact', label: 'Compact', icon: Rows3, description: 'Plus de contenu visible' },
+  { value: 'comfort', label: 'Confort', icon: LayoutGrid, description: 'Espacement standard, lisibilité maximale' },
+  { value: 'compact', label: 'Dense', icon: Rows3, description: 'Plus de contenu visible à l\'écran' },
 ];
 
-const colorSchemeOptions: { value: ColorScheme; label: string; color: string }[] = [
-  { value: 'blue', label: 'Bleu', color: 'bg-blue-500' },
-  { value: 'purple', label: 'Violet', color: 'bg-purple-500' },
-  { value: 'green', label: 'Vert', color: 'bg-green-500' },
-  { value: 'orange', label: 'Orange', color: 'bg-orange-500' },
-  { value: 'rose', label: 'Rose', color: 'bg-rose-500' },
+const colorThemeOptions: {
+  value: ThemeName;
+  label: string;
+  description: string;
+  preview: { sidebar: string; primary: string; card: string; accent: string };
+}[] = [
+  {
+    value: 'aurora-admin',
+    label: 'Aurora Admin',
+    description: 'Premium, lumineux, élégant',
+    preview: { sidebar: '#ede8f5', primary: '#7C3AED', card: '#f9f7fc', accent: '#d5f0e5' },
+  },
+  {
+    value: 'solar-desk',
+    label: 'Solar Desk',
+    description: 'Chaleureux, accessible',
+    preview: { sidebar: '#f0e8dc', primary: '#EA580C', card: '#faf5ee', accent: '#f0e0c8' },
+  },
+  {
+    value: 'carbon-redline',
+    label: 'Carbon Redline',
+    description: 'Industriel, critique, autorité',
+    preview: { sidebar: '#1a1d22', primary: '#B91C1C', card: '#e6e8ea', accent: '#d0d3d8' },
+  },
+  {
+    value: 'oceanic-flow',
+    label: 'Oceanic Flow',
+    description: 'Calme, analytique, fluide',
+    preview: { sidebar: '#152535', primary: '#0369A1', card: '#f0f5f8', accent: '#d8ede8' },
+  },
+  {
+    value: 'clay-studio',
+    label: 'Clay Studio',
+    description: 'Éditorial, design, chaleureux',
+    preview: { sidebar: '#ede6de', primary: '#C2410C', card: '#f5f0ea', accent: '#dde5d8' },
+  },
+  {
+    value: 'blueprint',
+    label: 'Blueprint',
+    description: 'Classique ShadCN, bleu & blanc',
+    preview: { sidebar: '#fafafa', primary: '#2563EB', card: '#ffffff', accent: '#e8edf4' },
+  },
 ];
 
 export default function SettingsPage() {
@@ -53,7 +89,7 @@ export default function SettingsPage() {
   const defaultTab = searchParams.get('tab') || 'profile';
   const { theme, setTheme } = useTheme();
   const user = useUser();
-  const { density, setDensity, colorScheme, setColorScheme } = useUIPreferences();
+  const { density, setDensity, colorTheme, setColorTheme } = useUIPreferences();
   const [mounted, setMounted] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [browserNotifications, setBrowserNotifications] = useState(false);
@@ -306,42 +342,74 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Color Scheme */}
+          {/* Color Theme */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Palette className="h-5 w-5 text-primary" />
-                Palette de couleurs
+                Thème de couleurs
               </CardTitle>
               <CardDescription>
-                Choisissez la couleur d&apos;accent de l&apos;interface
+                Personnalisez l&apos;ensemble de la palette du dashboard
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-wrap gap-4 justify-center sm:justify-start">
-                {colorSchemeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => setColorScheme(option.value)}
-                    className="flex flex-col items-center gap-2 group"
-                  >
-                    <div className={cn(
-                      'w-10 h-10 rounded-full transition-all',
-                      option.color,
-                      colorScheme === option.value
-                        ? 'ring-2 ring-offset-2 ring-offset-background ring-primary scale-110'
-                        : 'hover:scale-105'
-                    )} />
-                    <span className={cn(
-                      'text-xs',
-                      colorScheme === option.value
-                        ? 'text-primary font-medium'
-                        : 'text-muted-foreground'
-                    )}>
-                      {option.label}
-                    </span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {mounted && colorThemeOptions.map((option) => {
+                  const isActive = colorTheme === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => setColorTheme(option.value)}
+                      className={cn(
+                        'flex flex-col rounded-lg border-2 transition-all overflow-hidden',
+                        'hover:border-primary/50 hover:shadow-md',
+                        isActive
+                          ? 'border-primary shadow-sm ring-1 ring-primary/20'
+                          : 'border-border'
+                      )}
+                    >
+                      {/* Mini dashboard preview */}
+                      <div className="flex h-20 w-full">
+                        {/* Sidebar preview */}
+                        <div
+                          className="w-1/4 h-full flex flex-col items-center justify-center gap-1 px-1"
+                          style={{ backgroundColor: option.preview.sidebar }}
+                        >
+                          <div className="w-3/4 h-1.5 rounded-full opacity-40" style={{ backgroundColor: option.preview.primary }} />
+                          <div className="w-3/4 h-1.5 rounded-full opacity-20" style={{ backgroundColor: option.preview.primary }} />
+                          <div className="w-3/4 h-1.5 rounded-full opacity-20" style={{ backgroundColor: option.preview.primary }} />
+                        </div>
+                        {/* Content preview */}
+                        <div className="flex-1 p-2 flex flex-col gap-1.5" style={{ backgroundColor: option.preview.card }}>
+                          {/* Top bar */}
+                          <div className="h-2 w-1/3 rounded-sm" style={{ backgroundColor: option.preview.primary }} />
+                          {/* Cards row */}
+                          <div className="flex gap-1 flex-1">
+                            <div className="flex-1 rounded-sm border" style={{ backgroundColor: option.preview.accent, borderColor: option.preview.accent }}>
+                              <div className="h-1.5 w-2/3 rounded-sm mt-1 ml-1" style={{ backgroundColor: option.preview.primary, opacity: 0.6 }} />
+                            </div>
+                            <div className="flex-1 rounded-sm border" style={{ backgroundColor: option.preview.accent, borderColor: option.preview.accent }}>
+                              <div className="h-1.5 w-1/2 rounded-sm mt-1 ml-1" style={{ backgroundColor: option.preview.primary, opacity: 0.4 }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Label */}
+                      <div className="p-3 text-left border-t">
+                        <p className={cn(
+                          'text-sm font-medium',
+                          isActive ? 'text-primary' : 'text-foreground'
+                        )}>
+                          {option.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {option.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
