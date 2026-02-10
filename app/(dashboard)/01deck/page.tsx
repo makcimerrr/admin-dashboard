@@ -432,14 +432,14 @@ const AdminScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-5xl mx-auto">
+    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6 max-w-5xl mx-auto">
       {/* Header moderne */}
       <div className="flex items-center gap-3">
         <div className="p-3 bg-primary/10 rounded-lg">
           <LayoutGrid className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">01Deck</h1>
+          <h1 className="text-xl md:text-3xl font-bold tracking-tight">01Deck</h1>
           <p className="text-muted-foreground">Créez des cartes éducatives pour l'application mobile</p>
         </div>
       </div>
