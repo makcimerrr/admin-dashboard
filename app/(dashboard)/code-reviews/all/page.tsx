@@ -700,7 +700,7 @@ export default function AllAuditsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+      <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
         {/* Header Skeleton */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -755,7 +755,7 @@ export default function AllAuditsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+      <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/code-reviews">
@@ -772,7 +772,7 @@ export default function AllAuditsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+    <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
