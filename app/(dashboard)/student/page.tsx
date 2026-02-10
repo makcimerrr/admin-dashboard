@@ -272,7 +272,7 @@ export default function StudentPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
         <Skeleton className="h-12 w-full" />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Skeleton className="h-40 w-full" />
@@ -388,7 +388,7 @@ export default function StudentPage() {
   const progressPercentage = totalTracksToDisplay > 0 ? (completedTracks / totalTracksToDisplay) * 100 : 0;
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -406,7 +406,7 @@ export default function StudentPage() {
             </AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-xl md:text-3xl font-bold tracking-tight">
               {student.first_name} {student.last_name}
             </h1>
             <p className="text-muted-foreground font-mono text-sm">
