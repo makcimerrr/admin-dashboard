@@ -1,11 +1,8 @@
 {
-  "P1 2024": {
-    "rust": "0-shell",
-    "java": "Lets-Travel"
-  },
+  "P1 2024": "Spécialité",
   "P2 2023": "Fin",
   "P1 2023": "Fin",
   "P1 2022": "Fin",
-  "P1 2025": "Real-time-forum",
-  "P2 2025": "Groupie-tracker"
+  "P1 2025": "Graphql",
+  "P2 2025": "Lem-in"
 }
