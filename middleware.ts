@@ -42,6 +42,18 @@ function shouldUseSecureCookies() {
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.pathname;
 
+  // Debug: lister les noms de cookies présents dans l'en-tête Cookie (ne pas afficher les valeurs)
+  try {
+    const cookieHeader = req.headers.get('cookie');
+    const cookieNames = cookieHeader
+      ? cookieHeader.split(';').map((c) => c.split('=')[0].trim()).filter(Boolean)
+      : [];
+    console.log('🧾 Middleware - cookies names for', url, ':', cookieNames);
+    console.log('🌐 Middleware - host header for', url, ':', req.headers.get('host'));
+  } catch (e) {
+    // Ignore logging failure
+  }
+
   // ========================================
   // 1. ROUTES PUBLIQUES (pas d'auth requise)
   // ========================================
