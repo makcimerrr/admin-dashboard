@@ -27,6 +27,18 @@ import { getToken } from 'next-auth/jwt';
 
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
 
+function shouldUseSecureCookies() {
+  try {
+    if (process.env.NEXTAUTH_URL) {
+      const url = new URL(process.env.NEXTAUTH_URL);
+      return url.protocol === 'https:';
+    }
+  } catch (e) {
+    // ignore and fallback
+  }
+  return process.env.NODE_ENV === 'production';
+}
+
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.pathname;
 
@@ -136,8 +148,11 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({
     req,
     secret: NEXTAUTH_SECRET,
-    secureCookie: process.env.NODE_ENV === 'production'
+    secureCookie: shouldUseSecureCookies(),
   });
+
+  // Debug: afficher le token pour faciliter le diagnostic en production
+  console.log('🔐 Middleware - getToken result for', url, ':', token ? { hasToken: true, groups: token.groups } : { hasToken: false });
 
   if (token) {
     // Si l'utilisateur est dans le groupe "authentik Admins", rôle = admin
