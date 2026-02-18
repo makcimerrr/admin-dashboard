@@ -76,7 +76,8 @@ export async function middleware(req: NextRequest) {
   const stackProjectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID;
 
   // Stack Auth peut utiliser plusieurs formats de cookies
-  const stackAccessToken = cookies.get('stack-access-token');
+  // Accept multiple possible cookie names observed in different environments
+  const stackAccessToken = cookies.get('stack-access') || cookies.get('stack-access-token');
   const stackAccessProject = cookies.get(`stack-access-${stackProjectId}--default`);
   const refreshCookieName = `stack-refresh-${stackProjectId}--default`;
   const refreshCookie = cookies.get(refreshCookieName);
