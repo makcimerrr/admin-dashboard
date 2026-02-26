@@ -18,15 +18,17 @@ export async function getAllUpdates(): Promise<Update[]> {
   const updatesList = await db
     .select({
       eventId: updates.event_id,
-      lastUpdate: sql<Date>`MAX(
-            ${updates.last_update}
-            )`.as('lastUpdate'),
-      isAuto: sql<boolean>`bool_or(${updates.is_auto})`.as('isAuto')
+      lastUpdate: sql<Date>`MAX(${updates.last_update})`.as('lastUpdate'),
+      isAuto: sql<boolean>`(
+        SELECT u2.is_auto FROM updates u2
+        WHERE u2.event_id = updates.event_id
+        ORDER BY u2.last_update DESC
+        LIMIT 1
+      )`.as('isAuto')
     })
     .from(updates)
     .groupBy(updates.event_id);
 
-  // Transforme les résultats pour respecter la structure
   return updatesList.map((update) => ({
     last_update: update.lastUpdate,
     event_id: update.eventId,
