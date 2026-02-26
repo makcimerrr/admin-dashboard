@@ -19,7 +19,8 @@ import {
   User,
   UserX,
   Calendar,
-  Edit
+  Edit,
+  Crown
 } from 'lucide-react';
 import { fetchPromotionProgressions } from '@/lib/services/zone01';
 import { getDropoutLogins } from '@/lib/db/services/dropouts';
@@ -118,6 +119,11 @@ export default async function GroupDetailPage({ params }: PageProps) {
   const studentIdByLogin = new Map(
     studentsData.map((s) => [s.login.toLowerCase(), s.id])
   );
+
+  const captainLogin =
+    groupProgressions.find((p) => p.group.captainLogin)?.group.captainLogin ??
+    groupProgressions[0]?.user.login ??
+    null;
 
   const members = groupProgressions.map((p) => ({
     login: p.user.login,
@@ -246,15 +252,17 @@ export default async function GroupDetailPage({ params }: PageProps) {
                         const href = m.studentId ? `/student?id=${m.studentId}` : undefined;
                         const rowClasses = `flex items-center justify-between text-sm p-2 rounded-md transition-colors ${href ? 'hover:bg-primary/5 cursor-pointer' : 'opacity-80'}`;
 
+                        const isCaptain = captainLogin !== null && m.login === captainLogin;
                         const content = (
                           <>
-                            <div className="flex items-center">
+                            <div className="flex items-center gap-1.5">
                               {absent ? (
-                                <UserX className="h-4 w-4 text-orange-500 mr-2" />
+                                <UserX className="h-4 w-4 text-orange-500 flex-shrink-0" />
                               ) : (
-                                <User className="h-4 w-4 text-muted-foreground mr-2" />
+                                <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               )}
-                              <div className={`truncate max-w-[12rem] ${absent ? 'text-orange-600' : ''}`}>{name}</div>
+                              <span className={`truncate max-w-[11rem] ${absent ? 'text-orange-600' : ''}`}>{name}</span>
+                              {isCaptain && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -336,7 +344,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">{initialsFrom(undefined, result.studentLogin)}</div>
                         <div>
-                          <div className="font-medium">{result.studentLogin}</div>
+                          <div className="font-medium flex items-center gap-1.5">
+                            {result.studentLogin}
+                            {captainLogin !== null && result.studentLogin === captainLogin && (
+                              <Crown className="h-3.5 w-3.5 text-amber-500" />
+                            )}
+                          </div>
                         </div>
                       </div>
 
