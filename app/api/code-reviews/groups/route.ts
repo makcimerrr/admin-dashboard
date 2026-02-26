@@ -34,6 +34,7 @@ export interface GroupWithAuditStatus {
   auditorName?: string;
   auditDate?: string;
   activeMembers: number;
+  captainLogin?: string;
   // Champs de priorité (calculés automatiquement)
   hasWarnings?: boolean;
   warningsCount?: number;
@@ -182,6 +183,7 @@ export async function GET(request: NextRequest) {
             projectName,
             track,
             status: group.status,
+            captainLogin: group.captainLogin,
             members: membersWithDropout,
             isAudited,
             auditId: audit?.id,
