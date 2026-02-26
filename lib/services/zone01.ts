@@ -33,6 +33,7 @@ export interface Zone01ProgressEntry {
     group: {
         id: number;
         status: Zone01GroupStatus;
+        captainLogin?: string;
     };
     grade?: number | null;
 }
@@ -40,7 +41,7 @@ export interface Zone01ProgressEntry {
 /**
  * Statuts possibles d'un groupe (projet)
  */
-export type Zone01GroupStatus = 'finished' | 'in_progress' | 'setup' | 'failed' | 'without group';
+export type Zone01GroupStatus = 'finished' | 'in_progress' | 'setup' | 'failed' | 'without group' | 'audit';
 
 // ============== TYPES NORMALISÉS ==============
 
@@ -61,6 +62,7 @@ export interface ProjectGroup {
     groupId: string;
     projectName: string;
     status: Zone01GroupStatus;
+    captainLogin?: string;
     members: GroupMember[];
 }
 
@@ -175,6 +177,7 @@ export function buildProjectGroups(
                 groupId,
                 projectName: prog.object.name,
                 status: prog.group.status,
+                captainLogin: prog.group.captainLogin ?? prog.user.login,
                 members: [],
             };
             groupsMap.set(groupId, group);
@@ -307,6 +310,7 @@ export function countGroupsByStatus(
         'setup': 0,
         'failed': 0,
         'without group': 0,
+        'audit': 0,
     };
 
     for (const group of groups) {
