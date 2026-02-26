@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateStudentProject } from '@/lib/db/services/students';
-import { db } from '@/lib/db/config';
-import { updates } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 import { getArchivedPromotions } from '@/lib/db/services/promotions';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getAllProjects } from '@/lib/config/projects';
 import { getAllPromoStatus } from '@/lib/db/services/promoStatus';
+import { updateLastUpdate } from '@/lib/db/services/updates';
 import type { ProjectsConfig } from '@/lib/types/code-reviews';
 
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -449,23 +447,7 @@ export async function GET(request: NextRequest) {
 
     const eventIdForLog = promoId || 'all';
 
-    const existing = await db
-      .select()
-      .from(updates)
-      .where(eq(updates.event_id, eventIdForLog))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(updates)
-        .set({ last_update: new Date() })
-        .where(eq(updates.event_id, eventIdForLog));
-    } else {
-      await db.insert(updates).values({
-        event_id: eventIdForLog,
-        last_update: new Date()
-      });
-    }
+    await updateLastUpdate(eventIdForLog, true);
 
     const totalUpdated = results.reduce((sum, r) => sum + r.updated, 0);
     const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);

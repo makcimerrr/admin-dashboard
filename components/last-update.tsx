@@ -3,17 +3,19 @@ import React, { useEffect, useState } from 'react';
 interface LastUpdateProps {
   lastUpdate: string | null;
   eventId: string;
-  allUpdate?: string | null; // Prop pour la dernière mise à jour de la promo 'all'
+  allUpdate?: string | null;
+  isAuto?: boolean; // Flag pour indiquer si la MAJ a été faite automatiquement
+  allIsAuto?: boolean; // Flag pour la MAJ "all"
 }
 
 const getTimeAgo = (time: string): string => {
   const now = new Date();
   const updatedTime = new Date(time);
 
-  const timeOffset = now.getTimezoneOffset() * 60 * 1000; // Décalage en millisecondes
+  const timeOffset = now.getTimezoneOffset() * 60 * 1000;
   const diff = Math.floor(
     (now.getTime() - updatedTime.getTime() + timeOffset) / 1000
-  ); // Différence ajustée
+  );
 
   const minutes = Math.floor(diff / 60);
   const hours = Math.floor(diff / 3600);
@@ -25,18 +27,22 @@ const getTimeAgo = (time: string): string => {
   return `${diff} seconde${diff > 1 ? 's' : ''} ago`;
 };
 
-const LastUpdate = ({ lastUpdate, eventId, allUpdate }: LastUpdateProps) => {
+const AutoBadge = () => (
+  <span className="inline-flex items-center ml-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+    ⚡ MAJ AUTO
+  </span>
+);
+
+const LastUpdate = ({ lastUpdate, eventId, allUpdate, isAuto, allIsAuto }: LastUpdateProps) => {
   const [timeAgo, setTimeAgo] = useState<string | null>(null);
   const [timeAgoAll, setTimeAgoAll] = useState<string | null>(null);
 
   useEffect(() => {
     if (lastUpdate) {
-      // Recalculer le temps écoulé pour la promo actuelle
       setTimeAgo(getTimeAgo(lastUpdate));
     }
 
     if (allUpdate) {
-      // Recalculer le temps écoulé pour la promo 'all'
       setTimeAgoAll(getTimeAgo(allUpdate));
     }
 
@@ -45,7 +51,7 @@ const LastUpdate = ({ lastUpdate, eventId, allUpdate }: LastUpdateProps) => {
       if (allUpdate) setTimeAgoAll(getTimeAgo(allUpdate));
     }, 1000);
 
-    return () => clearInterval(interval); // Nettoyer à la destruction du composant
+    return () => clearInterval(interval);
   }, [lastUpdate, allUpdate]);
 
   const compareUpdates = () => {
@@ -64,14 +70,16 @@ const LastUpdate = ({ lastUpdate, eventId, allUpdate }: LastUpdateProps) => {
       {eventId !== 'all' ? (
         <>
           {updateType === 'lastUpdate' ? (
-            <p>
+            <p className="flex items-center flex-wrap gap-1">
               Dernière mise à jour pour la promo {eventId} : {timeAgo}
+              {isAuto && <AutoBadge />}
             </p>
           ) : (
             <>
               {updateType === 'allUpdate' ? (
-                <p>
+                <p className="flex items-center flex-wrap gap-1">
                   Dernière mise à jour pour toutes les promos : {timeAgoAll}
+                  {allIsAuto && <AutoBadge />}
                 </p>
               ) : (
                 <p>Aucune mise à jour pour la promo {eventId}.</p>
@@ -82,7 +90,10 @@ const LastUpdate = ({ lastUpdate, eventId, allUpdate }: LastUpdateProps) => {
       ) : (
         <>
           {updateType === 'allUpdate' ? (
-            <p>Dernière mise à jour pour toutes les promos : {timeAgoAll}</p>
+            <p className="flex items-center flex-wrap gap-1">
+              Dernière mise à jour pour toutes les promos : {timeAgoAll}
+              {allIsAuto && <AutoBadge />}
+            </p>
           ) : (
             <p>Aucune mise à jour pour toutes les promos.</p>
           )}

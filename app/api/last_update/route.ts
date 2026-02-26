@@ -31,7 +31,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { eventId } = body; // Extraire l'event_id de la requête
+    const { eventId, isAuto } = body; // Extraire l'event_id et le flag isAuto
 
     if (!eventId) {
       return new Response(
@@ -40,8 +40,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const lastUpdate = await updateLastUpdate(eventId); // Passer l'event_id lors de la mise à jour
-    return new Response(JSON.stringify({ last_update: lastUpdate.last_update, event_id: lastUpdate.event_id }), { status: 200 });
+    const lastUpdate = await updateLastUpdate(eventId, isAuto ?? false); // Passer l'event_id et isAuto lors de la mise à jour
+    return new Response(JSON.stringify({ last_update: lastUpdate.last_update, event_id: lastUpdate.event_id, is_auto: lastUpdate.is_auto }), { status: 200 });
   } catch (error) {
     return new Response(
       JSON.stringify({ message: 'Error updating last update.', error: error }),
