@@ -21,7 +21,6 @@ import {
   Calendar,
   Edit
 } from 'lucide-react';
-import { parsePromoId } from '@/lib/config/promotions';
 import { fetchPromotionProgressions } from '@/lib/services/zone01';
 import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { db } from '@/lib/db/config';
@@ -29,8 +28,6 @@ import { audits } from '@/lib/db/schema/audits';
 import { eq } from 'drizzle-orm';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 import SaveToastTrigger from '@/components/code-reviews/save-toast-trigger';
 import React from 'react';
@@ -62,11 +59,22 @@ function safeText(s?: string) {
 
 export default async function GroupDetailPage({ params }: PageProps) {
   const { promoId, groupId } = await params;
-  const promo = parsePromoId(promoId);
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/promotions/parse?promoId=${promoId}`,
+    { cache: 'no-store' } // important si données dynamiques
+  );
 
-  if (!promo) {
+  if (!response.ok) {
     notFound();
   }
+
+  const data = await response.json();
+
+  if (!data.success || !data.promotion) {
+    notFound();
+  }
+
+  const promo = data.promotion;
 
   // Trouver l'audit pour ce groupe
   const audit = await db.query.audits.findFirst({

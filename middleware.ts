@@ -48,8 +48,8 @@ export async function middleware(req: NextRequest) {
     const cookieNames = cookieHeader
       ? cookieHeader.split(';').map((c) => c.split('=')[0].trim()).filter(Boolean)
       : [];
-    console.log('🧾 Middleware - cookies names for', url, ':', cookieNames);
-    console.log('🌐 Middleware - host header for', url, ':', req.headers.get('host'));
+    /*console.log('🧾 Middleware - cookies names for', url, ':', cookieNames);
+    console.log('🌐 Middleware - host header for', url, ':', req.headers.get('host'));*/
   } catch (e) {
     // Ignore logging failure
   }
@@ -89,12 +89,12 @@ export async function middleware(req: NextRequest) {
     const stackRoleCookie = cookies.get('stack-role');
     const shouldRefreshRole = !stackRoleCookie || stackRoleCookie.value === 'user';
 
-    console.log('🔍 Middleware - Stack Auth détectée:', {
+    /*console.log('🔍 Middleware - Stack Auth détectée:', {
       accessToken: !!accessToken,
       refreshToken: !!refreshCookie,
       stackRole: stackRoleCookie?.value || 'absent',
       shouldRefresh: shouldRefreshRole
-    });
+    });*/
 
     // Si le cookie stack-role est absent ou "user", récupérer le rôle depuis Stack Auth
     if (shouldRefreshRole && accessToken) {
@@ -127,11 +127,11 @@ export async function middleware(req: NextRequest) {
 
           response.cookies.set('role', role, { path: '/' });
 
-          if (stackRoleCookie && stackRoleCookie.value !== role) {
+          /*if (stackRoleCookie && stackRoleCookie.value !== role) {
             console.log(`🔄 Middleware - Cookie stack-role mis à jour: ${stackRoleCookie.value} → ${role} pour ${url}`);
           } else {
             console.log(`✅ Middleware - Cookie stack-role créé: ${role} pour ${url}`);
-          }
+          }*/
 
           return response;
         }
@@ -145,13 +145,15 @@ export async function middleware(req: NextRequest) {
       const role = stackRoleCookie.value;
       const response = NextResponse.next();
       response.cookies.set('role', role, { path: '/' });
-      console.log(`✅ Middleware - Stack Auth OK pour ${url} - Rôle: ${role}`);
+      /*console.log(`✅ Middleware - Stack Auth OK pour ${url} - Rôle: ${role}`);*/
       return response;
     }
 
     // Pas de stack-role et pas d'access token pour le créer
     // Laisser le Server Component gérer l'authentification complète
+/*
     console.log(`⚠️  Middleware - Pas d'access token pour ${url}, délégation au Server Component`);
+*/
     return NextResponse.next();
   }
 
@@ -165,8 +167,8 @@ export async function middleware(req: NextRequest) {
   });
 
   // Debug: afficher le token pour faciliter le diagnostic en production
-  console.log('🔐 Middleware - getToken result for', url, ':', token ? { hasToken: true, groups: token.groups } : { hasToken: false });
-
+  /*console.log('🔐 Middleware - getToken result for', url, ':', token ? { hasToken: true, groups: token.groups } : { hasToken: false });
+*/
   if (token) {
     // Si l'utilisateur est dans le groupe "authentik Admins", rôle = admin
     let role = 'user';
@@ -179,12 +181,12 @@ export async function middleware(req: NextRequest) {
 
     const response = NextResponse.next();
     response.cookies.set('role', role, { path: '/' }); // Expose le rôle pour Server Components
-    console.log(
+    /*console.log(
       '✅ Middleware - Auth NextAuth/Authentik trouvée pour:',
       url,
       'Rôle:',
       role
-    );
+    );*/
     return response;
   }
 

@@ -8,8 +8,6 @@ import {
   TooltipContent
 } from '@/components/ui/tooltip';
 import {
-  parsePromoId,
-  getAllPromotions,
   eventIdToString
 } from '@/lib/config/promotions';
 import {
@@ -32,14 +30,47 @@ const TRACKS = ['Golang', 'Javascript', 'Rust', 'Java'] as const;
 export default async function PromoGroupsIndexPage(props: any) {
   const { params } = props as { params: { promoId: string } };
   const { promoId } = params;
-  const promo = parsePromoId(promoId);
-  if (!promo) notFound();
 
-  // compute prev/next promos from config order
-  const allPromos = getAllPromotions();
+  const [promoRes, allPromosRes] = await Promise.all([
+    fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/promotions/parse?promoId=${promoId}`,
+      { cache: 'no-store' }
+    ),
+    fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/promotions`, {
+      cache: 'no-store'
+    })
+  ]);
+
+  // Gestion erreurs promo
+  if (!promoRes.ok) {
+    notFound();
+  }
+
+  const promoData = await promoRes.json();
+
+  if (!promoData.success || !promoData.promotion) {
+    notFound();
+  }
+
+  const promo = promoData.promotion;
+
+  // Gestion erreurs all promos
+  if (!allPromosRes.ok) {
+    throw new Error('Impossible de récupérer les promotions');
+  }
+
+  const allPromosData = await allPromosRes.json();
+
+  if (!allPromosData.success) {
+    throw new Error('Erreur API promotions');
+  }
+
+  const allPromos = allPromosData.promotions;
+
   const promoIndex = allPromos.findIndex(
-    (p) => p.eventId === Number(promo.eventId)
+    (p: { eventId: number }) => p.eventId === Number(promo.eventId)
   );
+
   const prevPromo = promoIndex > 0 ? allPromos[promoIndex - 1] : undefined;
   const nextPromo =
     promoIndex >= 0 && promoIndex < allPromos.length - 1
@@ -63,7 +94,7 @@ export default async function PromoGroupsIndexPage(props: any) {
   const allGroups: any[] = [];
 
   for (const track of TRACKS) {
-    const projectNames = getProjectNamesByTrack(track as any);
+    const projectNames = await getProjectNamesByTrack(track as any);
     const audits = auditsByTrack[track as any] || [];
     const auditsByGroupId = new Map(audits.map((a: any) => [a.groupId, a]));
 

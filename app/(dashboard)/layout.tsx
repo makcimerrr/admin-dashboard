@@ -46,7 +46,7 @@ export default async function DashboardLayout({
         'reader'
     };
 
-    console.log('✅ Dashboard - Stack Auth utilisateur:', user.email, '- Rôle:', user.role);
+    /*console.log('✅ Dashboard - Stack Auth utilisateur:', user.email, '- Rôle:', user.role);*/
   } else {
     // ===============================
     // 2. Essayer NextAuth / Authentik

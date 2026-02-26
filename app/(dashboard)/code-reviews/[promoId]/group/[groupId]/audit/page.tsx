@@ -23,7 +23,6 @@ import { audits, auditResults } from '@/lib/db/schema/audits';
 import { eq } from 'drizzle-orm';
 import GlobalWarningsEditor from '@/components/code-reviews/global-warnings-editor';
 import AuditEditForm from '@/components/code-reviews/audit-edit-form';
-import { parsePromoId } from '@/lib/config/promotions';
 
 interface PageProps {
   params: Promise<{ promoId: string; groupId: string }>;
@@ -31,9 +30,22 @@ interface PageProps {
 
 export default async function AuditEditPage({ params }: PageProps) {
   const { promoId, groupId } = await params;
-  const promo = parsePromoId(promoId);
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/promotions/parse?promoId=${promoId}`,
+    { cache: 'no-store' } // important si données dynamiques
+  );
 
-  if (!promo) notFound();
+  if (!response.ok) {
+    notFound();
+  }
+
+  const data = await response.json();
+
+  if (!data.success || !data.promotion) {
+    notFound();
+  }
+
+  const promo = data.promotion;
 
   const audit = await db.query.audits.findFirst({
     where: eq(audits.groupId, groupId),
