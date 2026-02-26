@@ -19,6 +19,7 @@ import {
     Save,
     AlertTriangle,
     Loader2,
+    Crown,
 } from 'lucide-react';
 
 interface GroupMember {
@@ -36,6 +37,7 @@ interface GroupData {
     members: GroupMember[];
     promoId: string;
     promoName: string;
+    captainLogin?: string;
 }
 
 interface MemberResult {
@@ -319,6 +321,9 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                                 <User className="h-4 w-4" />
                                             )}
                                             <span className={`font-medium ${result.absent ? 'text-orange-600' : ''}`}>{result.login}</span>
+                                            {groupData?.captainLogin && result.login === groupData.captainLogin && (
+                                                <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                            )}
                                             {member.firstName && (
                                                 <span className="text-sm text-muted-foreground">
                                                     ({member.firstName})
