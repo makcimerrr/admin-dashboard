@@ -414,8 +414,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    await fetch('/api/timeline_project');
-
     const archivedPromos = await getArchivedPromotions();
     const archivedPromoNames = new Set(archivedPromos.map((p) => p.name));
 
