@@ -42,7 +42,8 @@ import {
   User,
   BarChart3,
   Flag,
-  MoreHorizontal
+  MoreHorizontal,
+  Crown
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -79,6 +80,7 @@ interface GroupWithAuditStatus {
   auditorName?: string;
   auditDate?: string;
   activeMembers: number;
+  captainLogin?: string;
   hasWarnings?: boolean;
   warningsCount?: number;
   validatedCount?: number;
@@ -505,24 +507,30 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
-                        {group.members.slice(0, 3).map((member, memberIdx) => (
-                          <TooltipProvider key={`${group.groupId}-${member.login}-${memberIdx}`}>
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <span
-                                  className={`text-xs px-1.5 py-0.5 rounded bg-muted ${
-                                    member.isDropout ? 'line-through opacity-50' : ''
-                                  }`}
-                                >
-                                  {member.login}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {member.isDropout ? 'En perdition' : `${member.firstName || ''} ${member.lastName || ''}`}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ))}
+                        {group.members.slice(0, 3).map((member, memberIdx) => {
+                          const isCaptain = !!group.captainLogin && member.login === group.captainLogin;
+                          return (
+                            <TooltipProvider key={`${group.groupId}-${member.login}-${memberIdx}`}>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <span
+                                    className={`inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded bg-muted ${
+                                      member.isDropout ? 'line-through opacity-50' : ''
+                                    }`}
+                                  >
+                                    {isCaptain && <Crown className="h-2.5 w-2.5 text-amber-500 flex-shrink-0" />}
+                                    {member.login}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {member.isDropout
+                                    ? 'En perdition'
+                                    : `${member.firstName || ''} ${member.lastName || ''}${isCaptain ? ' · capitaine' : ''}`.trim()}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })}
                         {group.members.length > 3 && (
                           <span className="text-xs text-muted-foreground">+{group.members.length - 3}</span>
                         )}
