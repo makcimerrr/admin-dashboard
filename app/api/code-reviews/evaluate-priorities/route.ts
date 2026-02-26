@@ -6,6 +6,7 @@ import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { parsePromoId } from '@/lib/config/promotions';
 import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
 import type { Track } from '@/lib/db/schema/audits';
+import { notFound } from 'next/navigation';
 
 /**
  * GET /api/code-reviews/evaluate-priorities
@@ -27,7 +28,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'promoId requis' }, { status: 400 });
     }
 
-    const promo = parsePromoId(promoId);
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/promotions/parse?promoId=${promoId}`,
+      { cache: 'no-store' } // important si données dynamiques
+    );
+
+    if (!response.ok) {
+      notFound();
+    }
+
+    const data = await response.json();
+
+    if (!data.success || !data.promotion) {
+      notFound();
+    }
+
+    const promo = data.promotion;
     if (!promo) {
       return NextResponse.json({ error: 'Promotion non trouvée' }, { status: 404 });
     }
@@ -52,7 +68,7 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     for (const track of tracks) {
-      const projectNames = getProjectNamesByTrack(track);
+      const projectNames = await getProjectNamesByTrack(track);
 
       // Récupérer les audits existants pour ce tronc
       const audits = await getAuditsByPromoAndTrack(String(promo.eventId), track);

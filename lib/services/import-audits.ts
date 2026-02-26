@@ -291,7 +291,7 @@ export async function importAuditsFromCsv(rows: CsvAuditRow[]): Promise<ImportRe
             }
 
             const projectName = normalizeProjectName(row.Projet);
-            const track = getTrackByProjectName(projectName);
+            const track = await getTrackByProjectName(projectName);
             if (!track) {
                 result.skipped++;
                 result.details.unmatched.push({
