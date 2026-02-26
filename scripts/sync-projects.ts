@@ -4,7 +4,10 @@ import { config } from 'dotenv';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { projects } from '../lib/db/schema/projects';
-import projectsJson from '../config/projects.json';
+// NOTE: This script was used to migrate projects from JSON to DB.
+// Projects are now managed directly in the DB. This script is kept for reference only.
+// The projects.json file no longer exists.
+const projectsJson: Record<string, any[]> = {};
 import { eq } from 'drizzle-orm';
 
 // Charger les variables d'environnement

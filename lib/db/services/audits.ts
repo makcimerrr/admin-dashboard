@@ -11,7 +11,7 @@ import {
   type Priority
 } from '@/lib/db/schema/audits';
 import { GroupWithAuditStatus } from '../../../app/api/code-reviews/groups/route';
-import promoConfig from '../../../config/promoConfig.json';
+import { getAllPromotions } from '@/lib/config/promotions';
 
 async function fetchGroupsForCodeReview(promoId: string) {
   const res = await fetch(`/api/code-reviews/groups?promoId=${promoId}`);
@@ -146,6 +146,7 @@ export interface UrgentReviewData {
  * Récupère les derniers code reviews pour le dashboard (version enrichie)
  */
 export async function getRecentCodeReviews(limit: number = 5): Promise<RecentReviewData[]> {
+  const promoConfig = await getAllPromotions();
   const auditsList = await db.query.audits.findMany({
     orderBy: [desc(audits.createdAt)],
     limit,
@@ -155,7 +156,7 @@ export async function getRecentCodeReviews(limit: number = 5): Promise<RecentRev
   });
 
   return auditsList.map((audit) => {
-    const promo = (promoConfig as any[]).find(
+    const promo = promoConfig.find(
       (p) => String(p.eventId) === String(audit.promoId)
     );
     const promotionName = promo?.key ?? `Promotion ${audit.promoId}`;
@@ -218,6 +219,7 @@ export async function getUrgentCodeReviews(
   limit: number = 10
 ): Promise<UrgentReviewData[]> {
   const urgentItems: UrgentReviewData[] = [];
+  const promoConfig = await getAllPromotions();
 
   // Récupérer tous les audits et filtrer côté JavaScript pour éviter les erreurs SQL
   const allAudits = await db.query.audits.findMany({
@@ -227,7 +229,7 @@ export async function getUrgentCodeReviews(
   });
 
   for (const audit of allAudits) {
-    const promo = (promoConfig as any[]).find((p) => String(p.eventId) === String(audit.promoId));
+    const promo = promoConfig.find((p) => String(p.eventId) === String(audit.promoId));
     const validatedCount = audit.results.filter((r) => r.validated).length;
     const totalMembers = audit.results.length;
     const validationRate = totalMembers > 0 ? Math.round((validatedCount / totalMembers) * 100) : 100;
@@ -710,6 +712,7 @@ export interface StudentAuditData {
 export async function getAuditsByStudentLogin(
   studentLogin: string
 ): Promise<StudentAuditData[]> {
+  const promoConfig = await getAllPromotions();
   // Récupérer tous les audit_results pour cet étudiant
   const studentResults = await db.query.auditResults.findMany({
     where: eq(auditResults.studentLogin, studentLogin),
@@ -721,7 +724,7 @@ export async function getAuditsByStudentLogin(
 
   return studentResults.map((result) => {
     const audit = result.audit;
-    const promo = (promoConfig as any[]).find(
+    const promo = promoConfig.find(
       (p) => String(p.eventId) === String(audit.promoId)
     );
 

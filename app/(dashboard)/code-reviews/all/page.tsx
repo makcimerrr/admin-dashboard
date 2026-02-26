@@ -70,7 +70,6 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow, format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import projectConfig from '../../../../config/projects.json';
 import {
   StatCardSkeleton,
   AuditsTableSkeleton,
@@ -293,6 +292,7 @@ function MembersList({
 export default function AllAuditsPage() {
   const [audits, setAudits] = useState<AuditData[]>([]);
   const [pendingGroups, setPendingGroups] = useState<PendingGroup[]>([]);
+  const [projectConfig, setProjectConfig] = useState<Record<string, { name: string; id: number; project_time_week: number }[]>>({});
   const [pendingStats, setPendingStats] = useState({
     total: 0,
     urgent: 0,
@@ -322,6 +322,9 @@ export default function AllAuditsPage() {
   useEffect(() => {
     fetchAllAudits();
     fetchPendingAudits();
+    fetch('/api/projects').then(r => r.json()).then(data => {
+      setProjectConfig(data);
+    }).catch(() => {});
   }, []);
 
   const fetchAllAudits = async () => {

@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 import { addPromotion, deletePromotion } from '@/lib/db/services/promotions';
-
-const promoFilePath = path.join(process.cwd(), 'config', 'promoConfig.json');
-
-function getExistingPromos() {
-  return JSON.parse(fs.readFileSync(promoFilePath, 'utf8'));
-}
+import { getAllPromotions, dbRowToPromoConfig } from '@/lib/config/promotions';
+import { upsertPromoConfig, deletePromoConfig, getPromoConfigByKey } from '@/lib/db/services/promoConfig';
 
 function isDateValid(date: string): boolean {
   return !isNaN(Date.parse(date));
@@ -21,10 +15,7 @@ function isDateInRange(date: string, start: string, end: string): boolean {
 
 export async function GET(req: Request) {
   try {
-    // Retrieve existing promotions
-    const promos = getExistingPromos();
-
-    // Send the promotions as a response
+    const promos = await getAllPromotions();
     return NextResponse.json({ promos }, { status: 200 });
   } catch (error) {
     console.error('Erreur lors de la récupération des promos :', error);
@@ -52,7 +43,6 @@ export async function POST(req: Request) {
       } = {},
     } = newPromo;
 
-    // Validation des champs obligatoires
     if (!key || !eventId || !title || !start || !end) {
       return NextResponse.json(
         { error: 'Les champs obligatoires (clé, ID, titre, début et fin) doivent être remplis.' },
@@ -74,39 +64,37 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validation des dates de piscine si elles sont renseignées
     const errorMessages: string[] = [];
 
-    if (piscineJsStart !== '' && !isDateInRange(piscineJsStart, start, end)) {
+    if (piscineJsStart !== '' && piscineJsStart !== 'NaN' && !isDateInRange(piscineJsStart, start, end)) {
       errorMessages.push('La date de début de la piscine JS doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineJsEnd !== '' && !isDateInRange(piscineJsEnd, start, end)) {
+    if (piscineJsEnd !== '' && piscineJsEnd !== 'NaN' && !isDateInRange(piscineJsEnd, start, end)) {
       errorMessages.push('La date de fin de la piscine JS doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineRustJavaStart !== '' && !isDateInRange(piscineRustJavaStart, start, end)) {
+    if (piscineRustJavaStart !== '' && piscineRustJavaStart !== 'NaN' && !isDateInRange(piscineRustJavaStart, start, end)) {
       errorMessages.push('La date de début de la piscine Rust/Java doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineRustJavaEnd !== '' && !isDateInRange(piscineRustJavaEnd, start, end)) {
+    if (piscineRustJavaEnd !== '' && piscineRustJavaEnd !== 'NaN' && !isDateInRange(piscineRustJavaEnd, start, end)) {
       errorMessages.push('La date de fin de la piscine Rust/Java doit être comprise entre le début et la fin de la promotion.');
     }
 
-    if (piscineJsStart !== '' && piscineJsEnd !== 'NaN' && new Date(piscineJsStart) >= new Date(piscineJsEnd)) {
+    if (piscineJsStart !== 'NaN' && piscineJsEnd !== 'NaN' && new Date(piscineJsStart) >= new Date(piscineJsEnd)) {
       errorMessages.push('La date de début de la piscine JS doit être avant la date de fin.');
     }
 
-    if (piscineRustJavaStart !== '' && piscineRustJavaEnd !== 'NaN' && new Date(piscineRustJavaStart) >= new Date(piscineRustJavaEnd)) {
+    if (piscineRustJavaStart !== 'NaN' && piscineRustJavaEnd !== 'NaN' && new Date(piscineRustJavaStart) >= new Date(piscineRustJavaEnd)) {
       errorMessages.push('La date de début de la piscine Rust/Java doit être avant la date de fin.');
     }
 
-    // Vérification de l'ordre des piscines
     if (
-      piscineJsStart !== '' &&
-      piscineJsEnd !== '' &&
-      piscineRustJavaStart !== '' &&
-      piscineRustJavaEnd !== ''
+      piscineJsStart !== 'NaN' &&
+      piscineJsEnd !== 'NaN' &&
+      piscineRustJavaStart !== 'NaN' &&
+      piscineRustJavaEnd !== 'NaN'
     ) {
       if (new Date(piscineJsEnd) >= new Date(piscineRustJavaStart)) {
         errorMessages.push('La piscine JS doit se terminer avant le début de la piscine Rust/Java.');
@@ -120,9 +108,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // Ajout de la promotion après validation dans la base de données
-    const dbResult = await addPromotion(eventId, key);
+    // Check for conflicts in promoConfig DB
+    const existing = await getPromoConfigByKey(key);
+    if (existing.length > 0) {
+      return NextResponse.json(
+        { error: `Une promotion avec le même key existe déjà.` },
+        { status: 400 }
+      );
+    }
 
+    // Add to promotions table
+    const dbResult = await addPromotion(String(eventId), key);
     if (dbResult.includes('existe déjà')) {
       return NextResponse.json(
         { error: `Une promotion avec cet ID ou ce titre existe déjà dans la base de données.` },
@@ -130,44 +126,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // Ajout de la promotion après validation
-    const promoToAdd = {
+    // Add to promoConfig table
+    await upsertPromoConfig({
       key,
       eventId: Number(eventId),
       title,
-      dates: {
-        start,
-        'piscine-js-start': piscineJsStart || 'NaN',
-        'piscine-js-end': piscineJsEnd || 'NaN',
-        'piscine-rust-java-start': piscineRustJavaStart || 'NaN',
-        'piscine-rust-java-end': piscineRustJavaEnd || 'NaN',
-        end,
-      },
-    };
-
-    const promos = getExistingPromos();
-
-    // Vérification des conflits
-    const existingPromo = promos.find(
-      (promo: { key: string; eventId: number; title: string }) =>
-        promo.key === key || promo.eventId === Number(eventId) || promo.title === title
-    );
-
-    if (existingPromo) {
-      const conflictField = existingPromo.key === key
-        ? 'key'
-        : existingPromo.eventId === Number(eventId)
-          ? 'eventId'
-          : 'title';
-
-      return NextResponse.json(
-        { error: `Une promotion avec le même ${conflictField} existe déjà.` },
-        { status: 400 }
-      );
-    }
-
-    promos.push(promoToAdd);
-    fs.writeFileSync(promoFilePath, JSON.stringify(promos, null, 2));
+      start,
+      end,
+      piscineJsStart: piscineJsStart !== 'NaN' ? piscineJsStart : null,
+      piscineJsEnd: piscineJsEnd !== 'NaN' ? piscineJsEnd : null,
+      piscineRustStart: piscineRustJavaStart !== 'NaN' ? piscineRustJavaStart : null,
+      piscineRustEnd: piscineRustJavaEnd !== 'NaN' ? piscineRustJavaEnd : null,
+    });
 
     return NextResponse.json(
       { message: 'Promotion ajoutée avec succès.' },
@@ -193,12 +163,8 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const promos = getExistingPromos();
-    const promoIndex = promos.findIndex(
-      (promo: { key: string }) => promo.key === key
-    );
-
-    if (promoIndex === -1) {
+    const existing = await getPromoConfigByKey(key);
+    if (existing.length === 0) {
       return NextResponse.json(
         { error: 'Aucune promotion trouvée avec cette clé.' },
         { status: 404 }
@@ -206,7 +172,6 @@ export async function DELETE(req: Request) {
     }
 
     const dbResult = await deletePromotion(key);
-
     if (dbResult.includes('n\'existe pas')) {
       return NextResponse.json(
         { error: 'La promotion n\'existe pas dans la base de données.' },
@@ -214,8 +179,7 @@ export async function DELETE(req: Request) {
       );
     }
 
-    promos.splice(promoIndex, 1);
-    fs.writeFileSync(promoFilePath, JSON.stringify(promos, null, 2));
+    await deletePromoConfig(key);
 
     return NextResponse.json(
       { message: 'Promotion supprimée avec succès.' },

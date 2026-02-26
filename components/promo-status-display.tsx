@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import promoStatus from '../config/promoStatus.json';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -578,10 +577,31 @@ function AllPromosView({
 
 // Main component
 const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
-  const statusData = promoStatus as Record<string, any>;
+  const [statusData, setStatusData] = useState<Record<string, any>>({});
   const [progressStats, setProgressStats] = useState<ProgressStats | null>(null);
   const [allProgressStats, setAllProgressStats] = useState<Record<string, ProgressStats>>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const loadStatusData = async () => {
+      try {
+        const res = await fetch('/api/promos/status');
+        const data = await res.json();
+        if (data.success) {
+          const map: Record<string, any> = {};
+          for (const p of data.promos) {
+            let project = p.currentProject;
+            if (project) {
+              try { project = JSON.parse(project); } catch { /* keep as string */ }
+            }
+            map[p.promoKey] = project;
+          }
+          setStatusData(map);
+        }
+      } catch { /* ignore */ }
+    };
+    loadStatusData();
+  }, []);
 
   useEffect(() => {
     const fetchProgressStats = async () => {
@@ -649,7 +669,7 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
     };
 
     fetchProgressStats();
-  }, [selectedPromo]);
+  }, [selectedPromo, statusData]);
 
   return (
     <div>

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import promos from '../../../../config/promoConfig.json';
-import promoStatus from '../../../../config/promoStatus.json';
+import { getAllPromotions } from '@/lib/config/promotions';
+import { getAllPromoStatus } from '@/lib/db/services/promoStatus';
 
 export async function GET(
   req: Request,
@@ -9,7 +9,8 @@ export async function GET(
   try {
     const { promoId } = await context.params;
 
-    const promo = (promos as any[]).find((p) => String(p.eventId) === promoId);
+    const promotions = await getAllPromotions();
+    const promo = promotions.find((p) => String(p.eventId) === promoId);
 
     if (!promo) {
       return NextResponse.json(
@@ -18,8 +19,18 @@ export async function GET(
       );
     }
 
-    // Get current project status from promoStatus.json
-    const currentProject = (promoStatus as any)[promo.key] || null;
+    const allStatus = await getAllPromoStatus();
+    const statusEntry = allStatus.find((s) => s.promoKey === promo.key);
+    let currentProject: any = statusEntry?.currentProject ?? null;
+
+    // Parse JSON if it's a multi-track object stored as string
+    if (currentProject) {
+      try {
+        currentProject = JSON.parse(currentProject);
+      } catch {
+        // Not JSON, keep as string
+      }
+    }
 
     return NextResponse.json({
       success: true,

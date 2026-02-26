@@ -4,7 +4,7 @@ import { getAuditsByPromoAndTrack } from '@/lib/db/services/audits';
 import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
-import promoConfig from '../../../../config/promoConfig.json';
+import { getAllPromotions } from '@/lib/config/promotions';
 import type { Track } from '@/lib/db/schema/audits';
 
 const TRACKS: Track[] = ['Golang', 'Javascript', 'Rust', 'Java'];
@@ -35,10 +35,11 @@ export async function GET(request: Request) {
     const promoIdFilter = searchParams.get('promoId');
 
     const allPendingGroups: PendingGroup[] = [];
+    const promoConfig = await getAllPromotions();
 
     const promos = promoIdFilter
-      ? (promoConfig as any[]).filter(p => String(p.eventId) === promoIdFilter)
-      : (promoConfig as any[]).filter(p => p.active !== false);
+      ? promoConfig.filter(p => String(p.eventId) === promoIdFilter)
+      : promoConfig;
 
     // Récupérer les dropouts une seule fois
     const dropoutLogins = await getDropoutLogins();
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
         }> = new Map();
 
         for (const track of TRACKS) {
-          const projectNames = getProjectNamesByTrack(track);
+          const projectNames = await getProjectNamesByTrack(track);
           const audits = auditsByTrack[track];
           const auditsByGroupId = new Map(audits.map(a => [a.groupId, a]));
 

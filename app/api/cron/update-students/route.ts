@@ -4,24 +4,10 @@ import { db } from '@/lib/db/config';
 import { updates } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getArchivedPromotions } from '@/lib/db/services/promotions';
-import promotions from '../../../../config/promoConfig.json';
-import promoStatus from '../../../../config/promoStatus.json';
-import allProjects from '../../../../config/projects.json';
-
-/**
- * API Route pour la mise à jour des étudiants via cron
- *
- * GET /api/cron/update-students
- *   - Met à jour tous les étudiants de toutes les promotions
- *   - Peut être appelé par un cron job externe (Vercel, Railway, etc.)
- *
- * Query params:
- *   - secret: Clé secrète pour authentifier le cron (optionnel en dev)
- *   - promoId: ID de la promotion à mettre à jour (optionnel, défaut: toutes)
- *
- * Headers:
- *   - Authorization: Bearer <CRON_SECRET> (alternative au query param)
- */
+import { getAllPromotions } from '@/lib/config/promotions';
+import { getAllProjects } from '@/lib/config/projects';
+import { getAllPromoStatus } from '@/lib/db/services/promoStatus';
+import type { ProjectsConfig } from '@/lib/types/code-reviews';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -31,27 +17,15 @@ interface Project {
   project_time_week: number;
 }
 
-interface AllProjects {
-  Golang: Project[];
-  Javascript: Project[];
-  Rust: Project[];
-  Java: Project[];
-}
-
 interface UserProject {
   projectName: string;
   projectStatus: string;
   groupId: number;
 }
 
-const allProjectsTyped = allProjects as AllProjects;
-
-// Trouver l'index global d'un projet
-function findProjectIndex(projectName: string): number {
+function findProjectIndex(allProjectsTyped: ProjectsConfig, projectName: string): number {
   let globalIndex = 0;
-  for (const track of Object.keys(allProjectsTyped) as Array<
-    keyof AllProjects
-  >) {
+  for (const track of Object.keys(allProjectsTyped) as Array<keyof ProjectsConfig>) {
     for (const project of allProjectsTyped[track]) {
       if (project.name.toLowerCase() === projectName.toLowerCase()) {
         return globalIndex;
@@ -62,11 +36,8 @@ function findProjectIndex(projectName: string): number {
   return -1;
 }
 
-// Trouver la track d'un projet
-function findProjectTrack(projectName: string): string | null {
-  for (const track of Object.keys(allProjectsTyped) as Array<
-    keyof AllProjects
-  >) {
+function findProjectTrack(allProjectsTyped: ProjectsConfig, projectName: string): string | null {
+  for (const track of Object.keys(allProjectsTyped) as Array<keyof ProjectsConfig>) {
     for (const project of allProjectsTyped[track]) {
       if (project.name.toLowerCase() === projectName.toLowerCase()) {
         return track;
@@ -76,16 +47,13 @@ function findProjectTrack(projectName: string): string | null {
   return null;
 }
 
-// Trouver les projets actifs par track
-function findActiveProjectsByTrack(userProjects: UserProject[]) {
+function findActiveProjectsByTrack(allProjectsTyped: ProjectsConfig, userProjects: UserProject[]) {
   const commonProjects: {
     [key: string]: { name: string | null; status: string | null };
   } = {};
   const lastProjectsFinished: { [key: string]: boolean } = {};
 
-  for (const track of Object.keys(allProjectsTyped) as Array<
-    keyof AllProjects
-  >) {
+  for (const track of Object.keys(allProjectsTyped) as Array<keyof ProjectsConfig>) {
     const trackProjects = allProjectsTyped[track];
     let studentActiveProject: { name: string | null; status: string | null } = {
       name: null,
@@ -141,10 +109,12 @@ function findActiveProjectsByTrack(userProjects: UserProject[]) {
   return { commonProjects, lastProjectsFinished };
 }
 
-// Trouver le dernier projet actif parmi tous les troncs
-function findLastActiveProject(commonProjects: {
-  [key: string]: { name: string | null; status: string | null };
-}): { name: string | null; status: string | null } {
+function findLastActiveProject(
+  allProjectsTyped: ProjectsConfig,
+  commonProjects: {
+    [key: string]: { name: string | null; status: string | null };
+  }
+): { name: string | null; status: string | null } {
   let lastProject: {
     name: string | null;
     status: string | null;
@@ -161,7 +131,7 @@ function findLastActiveProject(commonProjects: {
       continue;
     }
 
-    const projectIndex = findProjectIndex(project.name);
+    const projectIndex = findProjectIndex(allProjectsTyped, project.name);
     if (projectIndex > lastProject.index) {
       lastProject = {
         name: project.name,
@@ -174,8 +144,9 @@ function findLastActiveProject(commonProjects: {
   return { name: lastProject.name, status: lastProject.status };
 }
 
-// Calculer le niveau de retard
 function calculateDelayLevel(
+  allProjectsTyped: ProjectsConfig,
+  promoStatusMap: Record<string, string | { rust?: string; java?: string }>,
   promotionTitle: string,
   commonProjects: {
     [key: string]: { name: string | null; status: string | null };
@@ -184,8 +155,7 @@ function calculateDelayLevel(
 ): string {
   let delayLevel = 'bien';
 
-  const currentPromoProject =
-    promoStatus[promotionTitle as keyof typeof promoStatus];
+  const currentPromoProject = promoStatusMap[promotionTitle];
   if (!currentPromoProject) return delayLevel;
 
   let isMultiTrack = false;
@@ -247,8 +217,8 @@ function calculateDelayLevel(
       if (studentProject.toLowerCase() === promoProject.toLowerCase()) {
         delayLevel = 'bien';
       } else {
-        const promoIndex = findProjectIndex(promoProject);
-        const studentIndex = findProjectIndex(studentProject);
+        const promoIndex = findProjectIndex(allProjectsTyped, promoProject);
+        const studentIndex = findProjectIndex(allProjectsTyped, studentProject);
 
         if (studentIndex === -1) {
           delayLevel = 'en retard';
@@ -264,7 +234,7 @@ function calculateDelayLevel(
       delayLevel = 'en retard';
     }
   } else if (typeof currentPromoProject === 'string') {
-    const promoProjectTrack = findProjectTrack(currentPromoProject);
+    const promoProjectTrack = findProjectTrack(allProjectsTyped, currentPromoProject);
 
     if (promoProjectTrack) {
       const studentProjectInTrack = commonProjects[promoProjectTrack]?.name;
@@ -275,9 +245,9 @@ function calculateDelayLevel(
       ) {
         delayLevel = 'bien';
       } else {
-        const promoIndex = findProjectIndex(currentPromoProject);
+        const promoIndex = findProjectIndex(allProjectsTyped, currentPromoProject);
         const studentIndex = studentProjectInTrack
-          ? findProjectIndex(studentProjectInTrack)
+          ? findProjectIndex(allProjectsTyped, studentProjectInTrack)
           : -1;
 
         if (studentIndex === -1) {
@@ -296,9 +266,11 @@ function calculateDelayLevel(
   return delayLevel;
 }
 
-// Mettre à jour les étudiants d'une promotion
 async function updatePromoStudents(
-  eventId: string
+  eventId: string,
+  promotions: Awaited<ReturnType<typeof getAllPromotions>>,
+  allProjectsTyped: ProjectsConfig,
+  promoStatusMap: Record<string, string | { rust?: string; java?: string }>
 ): Promise<{ updated: number; errors: string[] }> {
   const promotion = promotions.find((p) => String(p.eventId) === eventId);
   if (!promotion) {
@@ -323,7 +295,6 @@ async function updatePromoStudents(
 
     const data = await response.json();
 
-    // Grouper par utilisateur
     const userProjects: { [login: string]: UserProject[] } = {};
     for (const entry of data.progress) {
       const login = entry.user.login;
@@ -337,15 +308,13 @@ async function updatePromoStudents(
       });
     }
 
-    // Mettre à jour chaque étudiant
     for (const login of Object.keys(userProjects)) {
       try {
         const { commonProjects, lastProjectsFinished } =
-          findActiveProjectsByTrack(userProjects[login]);
+          findActiveProjectsByTrack(allProjectsTyped, userProjects[login]);
 
-        // Gérer Rust/Java choice
-        const firstRustProject = allProjectsTyped.Rust[0]?.name;
-        const firstJavaProject = allProjectsTyped.Java[0]?.name;
+        const firstRustProject = allProjectsTyped.Rust?.[0]?.name;
+        const firstJavaProject = allProjectsTyped.Java?.[0]?.name;
 
         const isRustActive =
           commonProjects['Rust']?.name !== firstRustProject ||
@@ -364,8 +333,10 @@ async function updatePromoStudents(
         }
 
         const { name: actualProjectName, status: actualProjectStatus } =
-          findLastActiveProject(commonProjects);
+          findLastActiveProject(allProjectsTyped, commonProjects);
         const delayLevel = calculateDelayLevel(
+          allProjectsTyped,
+          promoStatusMap,
           promotionTitle,
           commonProjects,
           lastProjectsFinished
@@ -400,7 +371,6 @@ async function updatePromoStudents(
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
-  // Vérifier l'authentification (en production)
   if (process.env.NODE_ENV === 'production' && CRON_SECRET) {
     const authHeader = request.headers.get('authorization');
     const querySecret = request.nextUrl.searchParams.get('secret');
@@ -411,11 +381,28 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Validate promoId against known promotions to avoid using user-controlled values in requests
   const rawPromoId = request.nextUrl.searchParams.get('promoId');
+
+  // Load all config from DB
+  const [promotions, allProjectsConfig, allStatus] = await Promise.all([
+    getAllPromotions(),
+    getAllProjects(),
+    getAllPromoStatus(),
+  ]);
+
+  // Build promoStatus map
+  const promoStatusMap: Record<string, string | { rust?: string; java?: string }> = {};
+  for (const s of allStatus) {
+    if (!s.currentProject) continue;
+    try {
+      promoStatusMap[s.promoKey] = JSON.parse(s.currentProject);
+    } catch {
+      promoStatusMap[s.promoKey] = s.currentProject;
+    }
+  }
+
   let promoId: string | null = null;
   if (rawPromoId) {
-    // Normalize and canonicalize using the trusted promotions list
     const matchedPromo = promotions.find(
       (p) => String(p.eventId) === rawPromoId
     );
@@ -425,22 +412,17 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    // Use the canonical eventId from the trusted source instead of the raw input
     promoId = String(matchedPromo.eventId);
   }
 
   try {
-    // D'abord, mettre à jour le timeline
     await fetch('/api/timeline_project');
 
-    // Récupérer les promos archivées pour les exclure
     const archivedPromos = await getArchivedPromotions();
     const archivedPromoNames = new Set(archivedPromos.map((p) => p.name));
 
-    // Déterminer les promos à mettre à jour (exclure les archivées)
     let promoIds: string[];
     if (promoId) {
-      // Si une promo spécifique est demandée, vérifier qu'elle n'est pas archivée
       const promo = promotions.find((p) => String(p.eventId) === promoId);
       if (promo && archivedPromoNames.has(promo.key)) {
         return NextResponse.json(
@@ -453,24 +435,20 @@ export async function GET(request: NextRequest) {
       }
       promoIds = [promoId];
     } else {
-      // Filtrer les promos archivées
       promoIds = promotions
         .filter((p) => !archivedPromoNames.has(p.key))
         .map((p) => String(p.eventId));
     }
 
-    const results: { promoId: string; updated: number; errors: string[] }[] =
-      [];
+    const results: { promoId: string; updated: number; errors: string[] }[] = [];
 
     for (const id of promoIds) {
-      const result = await updatePromoStudents(id);
+      const result = await updatePromoStudents(id, promotions, allProjectsConfig, promoStatusMap);
       results.push({ promoId: id, ...result });
     }
 
-    // Enregistrer la mise à jour
     const eventIdForLog = promoId || 'all';
 
-    // Vérifier si un enregistrement existe déjà
     const existing = await db
       .select()
       .from(updates)
@@ -518,7 +496,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST pour compatibilité avec certains systèmes de cron
 export async function POST(request: NextRequest) {
   return GET(request);
 }

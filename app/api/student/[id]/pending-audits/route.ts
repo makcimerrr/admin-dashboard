@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { fetchPromotionProgressions, buildProjectGroups } from '@/lib/services/zone01';
 import { getAuditedStudentsByPromoAndTrack } from '@/lib/db/services/audits';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
-import promoConfig from 'config/promoConfig.json';
+import { getAllPromotions } from '@/lib/config/promotions';
 import type { Track } from '@/lib/db/schema/audits';
 
 /**
@@ -28,6 +28,8 @@ export async function GET(
       );
     }
 
+    const promoConfig = await getAllPromotions();
+
     // Récupérer l'étudiant
     const student = await db.query.students.findFirst({
       where: eq(students.id, studentIdNum)
@@ -41,7 +43,7 @@ export async function GET(
     }
 
     // Trouver la promo de l'étudiant
-    const promo = (promoConfig as any[]).find(p => p.key === student.promoName);
+    const promo = promoConfig.find(p => p.key === student.promoName);
     if (!promo) {
       return NextResponse.json({ success: true, pendingAudits: [] });
     }
@@ -73,7 +75,7 @@ export async function GET(
 
     // Pour chaque track, construire les groupes "finished" et vérifier si l'étudiant y est
     for (const track of TRACKS) {
-      const projectNames = getProjectNamesByTrack(track);
+      const projectNames = await getProjectNamesByTrack(track);
 
       for (const projectName of projectNames) {
         // Construire tous les groupes pour ce projet

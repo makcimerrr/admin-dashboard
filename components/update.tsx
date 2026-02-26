@@ -4,9 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 import LastUpdate from '@/components/last-update';
-import promotions from '../config/promoConfig.json';
-import promoStatus from '../config/promoStatus.json';
-import allProjects from '../config/projects.json' assert { type: 'json' };
 
 interface UpdateProps {
   eventId: string;
@@ -33,9 +30,8 @@ interface AllProjects {
   Java: Project[];
 }
 
-const allProjectsTyped = allProjects as AllProjects;
-
 const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
+  const [allProjectsTyped, setAllProjectsTyped] = useState<AllProjects | null>(null);
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingDots, setLoadingDots] = useState<string>('.');
@@ -45,6 +41,12 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [updates, setUpdates] = useState<
     { last_update: string; event_id: string }[]
   >([]);
+
+  useEffect(() => {
+    fetch('/api/projects').then(r => r.json()).then(data => {
+      setAllProjectsTyped(data as AllProjects);
+    }).catch(() => {});
+  }, []);
 
   const projectsList: any[] = [];
 
@@ -158,7 +160,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       }
 
       // Trouver l'index global du projet
-      const projectIndex = findProjectIndex(allProjects, project.name);
+      const projectIndex = findProjectIndex(allProjectsTyped, project.name);
 
       // Si ce projet est plus avancé que le dernier trouvé, le garder
       if (projectIndex > lastProject.index) {
@@ -275,7 +277,11 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     return { commonProjects, lastProjectsFinished };
   };
 
-  const fetchPromotionProgress = async (eventId: string) => {
+  const fetchPromotionProgress = async (
+    eventId: string,
+    promotions: { eventId: number; key: string }[],
+    promoStatus: Record<string, any>
+  ) => {
     console.log('Début de fetchPromotionProgress pour eventId:', eventId);
     setLoading(true);
     let currentStudentCount = 0;
@@ -289,9 +295,10 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
     const promotionTitle = promotion.key;
     if (!promotionTitle || !(promotionTitle in promoStatus)) return;
+    if (!allProjectsTyped) return;
 
     // Projet lié à la promotion
-    let promoProject = promoStatus[promotionTitle as keyof typeof promoStatus];
+    let promoProject = promoStatus[promotionTitle];
     if (typeof promoProject === 'object' && promoProject !== null) {
       promoProject = (promoProject as { rust?: string }).rust || '';
     }
@@ -368,7 +375,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
         try {
           // Récupérer le projet de la promo (peut être un string ou un objet avec rust/java)
-          let currentPromoProject = promoStatus[promotionTitle as keyof typeof promoStatus];
+          let currentPromoProject = promoStatus[promotionTitle];
           let isMultiTrack = false;
           let promoRustProject = null;
           let promoJavaProject = null;
@@ -426,8 +433,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
                 delayLevel = 'bien';
               } else {
                 // Comparer les indices dans cette track spécifique
-                const promoIndex = findProjectIndex(allProjects, promoProject);
-                const studentIndex = findProjectIndex(allProjects, studentProject);
+                const promoIndex = findProjectIndex(allProjectsTyped, promoProject);
+                const studentIndex = findProjectIndex(allProjectsTyped, studentProject);
 
                 if (studentIndex === -1) {
                   delayLevel = 'en retard';
@@ -445,7 +452,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
             }
           } else if (typeof currentPromoProject === 'string') {
             // Single track : identifier à quelle track appartient le projet de la promo
-            const promoProjectTrack = findProjectTrack(allProjects, currentPromoProject);
+            const promoProjectTrack = findProjectTrack(allProjectsTyped, currentPromoProject);
 
             if (promoProjectTrack) {
               // Récupérer le projet de l'étudiant dans cette track
@@ -456,8 +463,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
                 delayLevel = 'bien';
               } else {
                 // Sinon, comparer les indices dans cette track
-                const promoIndex = findProjectIndex(allProjects, currentPromoProject);
-                const studentIndex = studentProjectInTrack ? findProjectIndex(allProjects, studentProjectInTrack) : -1;
+                const promoIndex = findProjectIndex(allProjectsTyped, currentPromoProject);
+                const studentIndex = studentProjectInTrack ? findProjectIndex(allProjectsTyped, studentProjectInTrack) : -1;
 
                 if (studentIndex === -1) {
                   delayLevel = 'en retard';
@@ -526,7 +533,22 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
         return;
       }
 
-      await fetchProjets(); // Récupère les projets
+      await fetchProjets(); // Récupère les projets (projectsList)
+
+      // Charger promotions et promoStatus depuis l'API
+      const [promotionsRes, promoStatusRes] = await Promise.all([
+        fetch('/api/promotions').then(r => r.json()),
+        fetch('/api/promos/status').then(r => r.json()),
+      ]);
+      const promotions = promotionsRes.success ? promotionsRes.promotions : [];
+      const promoStatusMap: Record<string, any> = {};
+      if (promoStatusRes.success) {
+        for (const p of promoStatusRes.promos) {
+          let project = p.currentProject;
+          if (project) { try { project = JSON.parse(project); } catch { /* keep string */ } }
+          promoStatusMap[p.promoKey] = project;
+        }
+      }
 
       let promoIds = [eventId]; // Utilisation de eventId par défaut
 
@@ -537,7 +559,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
       const results = await Promise.allSettled(
         promoIds.map((promoId) =>
-          fetchPromotionProgress(promoId).catch((error) => {
+          fetchPromotionProgress(promoId, promotions, promoStatusMap).catch((error) => {
             console.error(
               `Erreur détectée dans handleUpdate pour la promotion ${promoId}:`,
               error

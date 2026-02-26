@@ -65,7 +65,6 @@ import {
   ClipboardList,
   Upload,
 } from "lucide-react";
-import promos from "config/promoConfig.json";
 
 interface Alternant {
   id: number;
@@ -145,6 +144,7 @@ export default function AlternantsPage() {
   const [alternants, setAlternants] = useState<Alternant[]>([]);
   const [stats, setStats] = useState<AlternantStats | null>(null);
   const [companies, setCompanies] = useState<string[]>([]);
+  const [promos, setPromos] = useState<{ key: string; title: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPromo, setSelectedPromo] = useState<string>("all");
@@ -162,19 +162,22 @@ export default function AlternantsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [alternantsRes, statsRes, companiesRes] = await Promise.all([
+      const [alternantsRes, statsRes, companiesRes, promosRes] = await Promise.all([
         fetch("/api/alternants"),
         fetch("/api/alternants?stats=true"),
         fetch("/api/alternants?companies=true"),
+        fetch("/api/promotions"),
       ]);
 
       const alternantsData = await alternantsRes.json();
       const statsData = await statsRes.json();
       const companiesData = await companiesRes.json();
+      const promosData = await promosRes.json();
 
       if (alternantsData.success) setAlternants(alternantsData.alternants);
       if (statsData.success) setStats(statsData.stats);
       if (companiesData.success) setCompanies(companiesData.companies);
+      if (promosData.success) setPromos(promosData.promotions);
 
       // If preselected student, open their detail
       if (preselectedStudentId && alternantsData.success) {

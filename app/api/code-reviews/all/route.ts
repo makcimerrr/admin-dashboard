@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { audits } from '@/lib/db/schema/audits';
 import { desc } from 'drizzle-orm';
-import promoConfig from '../../../../config/promoConfig.json';
+import { getAllPromotions } from '@/lib/config/promotions';
 
 /**
  * Helper to safely get warnings array from JSONB field
@@ -30,6 +30,7 @@ function getWarningsArray(warnings: unknown): string[] {
  */
 export async function GET() {
   try {
+    const promoConfig = await getAllPromotions();
     const allAudits = await db.query.audits.findMany({
       orderBy: [desc(audits.createdAt)],
       with: {
@@ -38,7 +39,7 @@ export async function GET() {
     });
 
     const formattedAudits = allAudits.map((audit) => {
-      const promo = (promoConfig as any[]).find(
+      const promo = promoConfig.find(
         (p) => String(p.eventId) === String(audit.promoId)
       );
       const promoName = promo?.key ?? `Promo ${audit.promoId}`;

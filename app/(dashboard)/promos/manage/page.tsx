@@ -64,7 +64,6 @@ import {
   UserMinus,
   UserX,
 } from "lucide-react";
-import promoConfig from "config/promoConfig.json";
 
 interface ArchivedPromo {
   promoId: string;
@@ -109,23 +108,26 @@ export default function PromosManagePage() {
   const [archivedPromos, setArchivedPromos] = useState<ArchivedPromo[]>([]);
   const [transferredStudents, setTransferredStudents] = useState<TransferredStudent[]>([]);
   const [dropoutStudents, setDropoutStudents] = useState<DropoutStudent[]>([]);
+  const [promoConfig, setPromoConfig] = useState<{ key: string; title: string; eventId: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [promosRes, archivedRes, transfersRes, dropoutsRes] = await Promise.all([
+      const [promosRes, archivedRes, transfersRes, dropoutsRes, configRes] = await Promise.all([
         fetch("/api/promotions/archive"),
         fetch("/api/promotions/archive?archived=true"),
         fetch("/api/students/transfer"),
         fetch("/api/students/dropouts"),
+        fetch("/api/promotions"),
       ]);
 
       const promosData = await promosRes.json();
       const archivedData = await archivedRes.json();
       const transfersData = await transfersRes.json();
       const dropoutsData = await dropoutsRes.json();
+      const configData = await configRes.json();
 
       if (promosData.success) {
         setActivePromos(promosData.promotions.filter((p: ArchivedPromo) => !p.isArchived));
@@ -138,6 +140,9 @@ export default function PromosManagePage() {
       }
       if (dropoutsData.success) {
         setDropoutStudents(dropoutsData.dropouts);
+      }
+      if (configData.success) {
+        setPromoConfig(configData.promotions);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -431,7 +436,7 @@ export default function PromosManagePage() {
           {/* Transfers Tab */}
           <TabsContent value="transfers" className="space-y-4 mt-6">
             <div className="flex justify-end">
-              <TransferStudentDialog onSuccess={fetchData} />
+              <TransferStudentDialog onSuccess={fetchData} promoConfig={promoConfig} />
             </div>
             <Card>
               <CardHeader>
@@ -688,7 +693,7 @@ function ArchivePromoDialog({
   );
 }
 
-function TransferStudentDialog({ onSuccess }: { onSuccess: () => void }) {
+function TransferStudentDialog({ onSuccess, promoConfig }: { onSuccess: () => void; promoConfig: { key: string; title: string }[] }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({

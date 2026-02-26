@@ -23,7 +23,7 @@ export interface CodeReviewContext {
     groupId?: string;
 }
 
-// ============== PROJETS (depuis config/projects.json) ==============
+// ============== PROJETS (depuis la DB via lib/config/projects.ts) ==============
 
 /**
  * Définition d'un projet depuis la config

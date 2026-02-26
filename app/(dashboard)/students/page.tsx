@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getStudents } from '@/lib/db/services/students';
 import { StudentsTable } from '../students-table';
-import promos from 'config/promoConfig.json' assert { type: 'json' };
+import { getAllPromotions } from '@/lib/config/promotions';
 import TrackStatsDisplay from '@/components/track-stats-display';
 import { Users, GraduationCap } from 'lucide-react';
 import { StudentsHeader } from './_components/students-header';
@@ -47,6 +47,7 @@ function StatsLoadingSkeleton() {
 }
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
+  const promos = await getAllPromotions();
   const resolvedParams = await searchParams;
   const {
     q = '',

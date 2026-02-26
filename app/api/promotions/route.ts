@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import promos from '../../../config/promoConfig.json';
+import { getAllPromotions } from '@/lib/config/promotions';
 
 export async function GET() {
   try {
+    const promotions = await getAllPromotions();
     return NextResponse.json({
       success: true,
-      promotions: promos
+      promotions
     });
   } catch (err: any) {
     console.error('API ERROR:', err);

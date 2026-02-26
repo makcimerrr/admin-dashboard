@@ -1,24 +1,14 @@
-import path from 'path';
-import fs from 'fs';
+import { getAllPromoStatus } from './db/services/promoStatus';
 
 export async function getPromoStatus() {
-  const isVercel = process.env.VERCEL === '1';
-
-  let jsonFilePath;
-
-  if (isVercel) {
-    jsonFilePath = path.join('/vercel/path0/public', 'config', 'promoStatus.json');
-  } else {
-    const __dirname = path.dirname(new URL(import.meta.url).pathname);
-    const rootDir = path.join(__dirname, '../');
-    jsonFilePath = path.join(rootDir, 'config', 'promoStatus.json');
+  const rows = await getAllPromoStatus();
+  const result: Record<string, any> = {};
+  for (const row of rows) {
+    let project = row.currentProject;
+    if (project) {
+      try { project = JSON.parse(project); } catch { /* keep as string */ }
+    }
+    result[row.promoKey] = project;
   }
-
-  try {
-    const fileContent = await fs.promises.readFile(jsonFilePath, 'utf-8');
-    return JSON.parse(fileContent);
-  } catch (error) {
-    console.error('Error reading promoStatus.json:', error);
-    throw new Error(`File not found at ${jsonFilePath}`); // Renvoyer l'erreur avec plus d'infos
-  }
+  return result;
 }

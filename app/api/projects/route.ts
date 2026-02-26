@@ -1,22 +1,21 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-const projectsFilePath = path.join(process.cwd(), 'config/projects.json');
-
-// Charger les données initiales
-let projects = JSON.parse(fs.readFileSync(projectsFilePath, 'utf-8'));
+import { db } from '@/lib/db/config';
+import { projects } from '@/lib/db/schema/projects';
+import { getAllProjects, addProject, deleteProject } from '@/lib/db/services/projects';
+import { dbProjectsToConfig } from '@/lib/config/projects';
+import { eq, asc } from 'drizzle-orm';
 
 /**
- * GET - Retourne les projets
+ * GET - Retourne les projets groupés par catégorie
  */
 export async function GET() {
-  return NextResponse.json(projects);
+  const rows = await getAllProjects();
+  const grouped = dbProjectsToConfig(rows);
+  return NextResponse.json(grouped);
 }
 
 /**
  * POST - Ajoute un nouveau projet
- * @param {Request} req - Requête POST avec un corps contenant {name, project_time_week, tech}
  */
 export async function POST(req: Request) {
   const { name, project_time_week, tech } = await req.json();
@@ -25,56 +24,63 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid project data.' }, { status: 400 });
   }
 
-  const nextId = Math.max(...Object.values(projects).flat().map((p: any) => p.id)) + 1;
-  const newProject = { id: nextId, name, project_time_week };
+  // Determine next sort_index for this category
+  const existing = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.category, tech))
+    .orderBy(asc(projects.sort_index));
 
-  if (!projects[tech]) projects[tech] = [];
-  projects[tech].push(newProject);
+  const nextSortIndex = existing.length;
 
-  // Sauvegarder les changements
-  fs.writeFileSync(projectsFilePath, JSON.stringify(projects, null, 2));
+  await addProject({
+    name,
+    projectTimeWeek: project_time_week,
+    category: tech,
+    sort_index: nextSortIndex,
+  });
 
-  return NextResponse.json({ message: 'Project added.', projects });
+  const rows = await getAllProjects();
+  const grouped = dbProjectsToConfig(rows);
+  return NextResponse.json({ message: 'Project added.', projects: grouped });
 }
 
 /**
- * DELETE - Supprime un projet
- * @param {Request} req - Requête DELETE avec un corps contenant {tech, id}
+ * DELETE - Supprime un projet par id
  */
 export async function DELETE(req: Request) {
   const { tech, id } = await req.json();
 
-  if (!projects[tech]) {
-    return NextResponse.json({ error: 'Tech not found.' }, { status: 400 });
+  if (!id) {
+    return NextResponse.json({ error: 'Project id required.' }, { status: 400 });
   }
 
-  projects[tech] = projects[tech].filter((p: any) => p.id !== id);
+  await deleteProject(id);
 
-  if (projects[tech].length === 0) delete projects[tech];
-
-  // Sauvegarder les changements
-  fs.writeFileSync(projectsFilePath, JSON.stringify(projects, null, 2));
-
-  return NextResponse.json({ message: 'Project deleted.', projects });
+  const rows = await getAllProjects();
+  const grouped = dbProjectsToConfig(rows);
+  return NextResponse.json({ message: 'Project deleted.', projects: grouped });
 }
 
 /**
  * PATCH - Réorganise les projets d'une technologie
- * @param {Request} req - Requête PATCH avec un corps contenant {tech, reorderedProjects}
  */
 export async function PATCH(req: Request) {
-  const { tech, reorderedProjects } = await req.json();
+  const { tech, reorderedProjects }: { tech: string; reorderedProjects: number[] } = await req.json();
 
-  if (!projects[tech]) {
-    return NextResponse.json({ error: 'Tech not found.' }, { status: 400 });
+  if (!tech || !reorderedProjects) {
+    return NextResponse.json({ error: 'Tech and reorderedProjects required.' }, { status: 400 });
   }
 
-  projects[tech].sort(
-    (a: any, b: any) => reorderedProjects.indexOf(a.id) - reorderedProjects.indexOf(b.id)
-  );
+  // Update sort_index for each project
+  for (let i = 0; i < reorderedProjects.length; i++) {
+    await db
+      .update(projects)
+      .set({ sort_index: i })
+      .where(eq(projects.id, reorderedProjects[i]));
+  }
 
-  // Sauvegarder les changements
-  fs.writeFileSync(projectsFilePath, JSON.stringify(projects, null, 2));
-
-  return NextResponse.json({ message: 'Projects reordered.', projects });
+  const rows = await getAllProjects();
+  const grouped = dbProjectsToConfig(rows);
+  return NextResponse.json({ message: 'Projects reordered.', projects: grouped });
 }

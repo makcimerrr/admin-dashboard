@@ -26,7 +26,6 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import promoStatusJson from "config/promoStatus.json";
 import AlertsPanel from "@/components/alerts-panel";
 
 type PromoStatus = {
@@ -55,24 +54,40 @@ type PromoStats = {
   };
 };
 
+function tryParseJSON(value: string | null | undefined): any {
+  if (!value) return value;
+  try { return JSON.parse(value); } catch { return value; }
+}
+
 export default function PromosPage() {
   const [promos, setPromos] = useState<PromoStatus[]>([]);
   const [promoStats, setPromoStats] = useState<Record<string, PromoStats>>({});
+  const [promoConfigMap, setPromoConfigMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch promo statuses
-        const statusResponse = await fetch("/api/promos/status");
+        const [statusResponse, configResponse] = await Promise.all([
+          fetch("/api/promos/status"),
+          fetch("/api/promotions"),
+        ]);
         const statusData = await statusResponse.json();
+        const configData = await configResponse.json();
+
+        if (configData.success) {
+          const map: Record<string, number> = {};
+          for (const p of configData.promotions) map[p.key] = p.eventId;
+          setPromoConfigMap(map);
+        }
+
         if (statusData.success) {
           setPromos(statusData.promos);
 
           // Fetch stats for each promo
           const statsPromises = statusData.promos.map(async (promo: PromoStatus) => {
-            const expectedProject = (promoStatusJson as any)[promo.promoKey];
-            if (!expectedProject || expectedProject === "Fin") return null;
+            const expectedProject = tryParseJSON(promo.currentProject);
+            if (!expectedProject || (typeof expectedProject === 'string' && expectedProject.toLowerCase() === "fin")) return null;
 
             try {
               const projectParam =
@@ -113,11 +128,9 @@ export default function PromosPage() {
     fetchData();
   }, []);
 
-  // Trier les promos par eventId (en utilisant promoConfig.json)
+  // Trier les promos par eventId
   const sortedPromos = [...promos].sort((a, b) => {
-    const promoA = require('config/promoConfig.json').find((p: any) => p.key === a.promoKey);
-    const promoB = require('config/promoConfig.json').find((p: any) => p.key === b.promoKey);
-    return (promoA?.eventId || 0) - (promoB?.eventId || 0);
+    return (promoConfigMap[a.promoKey] || 0) - (promoConfigMap[b.promoKey] || 0);
   });
 
   const okPromos = sortedPromos.filter((p) => p.status === "OK");
@@ -279,7 +292,7 @@ export default function PromosPage() {
 }
 
 function PromoCard({ promo, stats }: { promo: PromoStatus; stats?: PromoStats }) {
-  const expectedProject = (promoStatusJson as any)[promo.promoKey];
+  const expectedProject = tryParseJSON(promo.currentProject);
   const isMultiTrack = typeof expectedProject === "object" && expectedProject !== null;
   const isFinished = typeof expectedProject === "string" && expectedProject.toLowerCase() === "fin";
 

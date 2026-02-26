@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PieChart from '@/components/pie-chart-student';
 import BarChartStacked from '@/components/bar-chart-student-stacked';
 import TrackComparisonChart from '@/components/charts/track-comparison-chart';
 import DelayDistributionChart from '@/components/charts/delay-distribution-chart';
-import promos from 'config/promoConfig.json' assert { type: 'json' };
 import { BarChart3, TrendingUp, Users, Calendar, Activity, Target } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,6 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function AnalyticsPage() {
   const [selectedPromo, setSelectedPromo] = useState<string>('all');
+  const [promos, setPromos] = useState<{ key: string; title: string; eventId: number }[]>([]);
+
+  useEffect(() => {
+    fetch('/api/promotions').then(r => r.json()).then(data => {
+      if (data.success) setPromos(data.promotions);
+    }).catch(() => {});
+  }, []);
 
   const filteredPromos = selectedPromo === 'all'
     ? promos

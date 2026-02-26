@@ -2,7 +2,7 @@ import { getTrackStatsByPromo } from '@/lib/db/services/track-stats';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2, Clock } from 'lucide-react';
-import promos from 'config/promoConfig.json' assert { type: 'json' };
+import { getAllPromotions } from '@/lib/config/promotions';
 
 interface TrackStatsDisplayProps {
   selectedPromo: string | null;
@@ -10,6 +10,7 @@ interface TrackStatsDisplayProps {
 
 export default async function TrackStatsDisplay({ selectedPromo }: TrackStatsDisplayProps) {
   const stats = await getTrackStatsByPromo(selectedPromo === 'all' ? null : selectedPromo);
+  const promos = await getAllPromotions();
 
   // Déterminer quels troncs afficher selon la promo
   const getVisibleTracks = () => {

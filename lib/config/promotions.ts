@@ -1,8 +1,8 @@
 /**
- * Utilitaire pour accéder à la configuration des promotions
+ * Utilitaire pour accéder à la configuration des promotions depuis la DB
  */
 
-import promoConfigData from '../../config/promoConfig.json';
+import { getAllPromoConfig, getPromoConfigByKey } from '../db/services/promoConfig';
 
 export interface PromoConfig {
     key: string;
@@ -18,53 +18,51 @@ export interface PromoConfig {
     };
 }
 
-const promoConfigs: PromoConfig[] = promoConfigData as PromoConfig[];
-
-/**
- * Récupère toutes les promotions
- */
-export function getAllPromotions(): PromoConfig[] {
-    return promoConfigs;
+export function dbRowToPromoConfig(row: any): PromoConfig {
+    return {
+        key: row.key,
+        eventId: row.eventId,
+        title: row.title,
+        dates: {
+            start: row.start,
+            'piscine-js-start': row.piscineJsStart ?? 'NaN',
+            'piscine-js-end': row.piscineJsEnd ?? 'NaN',
+            'piscine-rust-java-start': row.piscineRustStart ?? 'NaN',
+            'piscine-rust-java-end': row.piscineRustEnd ?? 'NaN',
+            end: row.end,
+        },
+    };
 }
 
-/**
- * Récupère les promotions actives (non terminées)
- */
-export function getActivePromotions(): PromoConfig[] {
+export async function getAllPromotions(): Promise<PromoConfig[]> {
+    const rows = await getAllPromoConfig();
+    return rows.map(dbRowToPromoConfig);
+}
+
+export async function getActivePromotions(): Promise<PromoConfig[]> {
+    const all = await getAllPromotions();
     const now = new Date();
-    return promoConfigs.filter(p => new Date(p.dates.end) > now);
+    return all.filter(p => new Date(p.dates.end) > now);
 }
 
-/**
- * Récupère une promotion par son eventId
- */
-export function getPromotionByEventId(eventId: number): PromoConfig | undefined {
-    return promoConfigs.find(p => p.eventId === eventId);
+export async function getPromotionByEventId(eventId: number): Promise<PromoConfig | undefined> {
+    const all = await getAllPromotions();
+    return all.find(p => p.eventId === eventId);
 }
 
-/**
- * Récupère une promotion par sa clé
- */
-export function getPromotionByKey(key: string): PromoConfig | undefined {
-    return promoConfigs.find(p => p.key === key);
+export async function getPromotionByKey(key: string): Promise<PromoConfig | undefined> {
+    const rows = await getPromoConfigByKey(key);
+    return rows[0] ? dbRowToPromoConfig(rows[0]) : undefined;
 }
 
-/**
- * Convertit un eventId en string pour les URLs
- */
 export function eventIdToString(eventId: number): string {
     return String(eventId);
 }
 
-/**
- * Parse un promoId depuis une URL (peut être eventId ou key)
- */
-export function parsePromoId(promoId: string): PromoConfig | undefined {
-    // Essayer d'abord comme eventId
+export async function parsePromoId(promoId: string): Promise<PromoConfig | undefined> {
     const eventId = parseInt(promoId, 10);
     if (!isNaN(eventId)) {
         return getPromotionByEventId(eventId);
     }
-    // Sinon comme key
     return getPromotionByKey(promoId);
 }

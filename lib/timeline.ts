@@ -1,28 +1,14 @@
-import fs from 'fs';
-import path from 'path';
+import { upsertPromoStatus } from './db/services/promoStatus';
 
-// Fonction pour mettre à jour le fichier JSON avec le projet et la promotion
-export async function updateEnv(projectName: string, promotionKey: string) {
-  // Obtenir le répertoire courant du fichier
-  const __dirname = path.dirname(new URL(import.meta.url).pathname);
-  const rootDir = path.join(__dirname, '../'); // En remontant jusqu'à la racine du projet
-  const jsonFilePath = path.join(rootDir, 'config', 'promoStatus.json'); // Chemin vers config/promoStatus.json
-
+// Fonction pour mettre à jour le statut de la promotion avec le projet actuel
+export async function updateEnv(projectName: string, promotionKey: string, promotionTitle?: string) {
   try {
-    // Vérifier si le fichier existe déjà, sinon le créer avec un objet vide
-    if (!fs.existsSync(jsonFilePath)) {
-      fs.writeFileSync(jsonFilePath, JSON.stringify({}, null, 2), 'utf8');
-    }
-
-    // Lire le contenu actuel du fichier JSON
-    let data = fs.readFileSync(jsonFilePath, 'utf8');
-    let jsonData = JSON.parse(data);
-
-    // Mettre à jour la promotion avec le nom du projet
-    jsonData[promotionKey] = projectName;
-
-    // Sauvegarder le fichier JSON mis à jour
-    fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData, null, 2), 'utf8');
+    await upsertPromoStatus({
+      promoKey: promotionKey,
+      status: 'active',
+      promotionName: promotionTitle ?? promotionKey,
+      currentProject: projectName,
+    });
     return {
       success: true,
       message: `La variable ${promotionKey} a été mise à jour avec le projet: ${projectName}`
@@ -32,27 +18,19 @@ export async function updateEnv(projectName: string, promotionKey: string) {
   }
 }
 
-// Fonction pour mettre à jour le fichier JSON avec plusieurs tracks (rust/java)
+// Fonction pour mettre à jour le statut avec plusieurs tracks (rust/java)
 export async function updateEnvMultiTrack(
   tracks: { rust?: string; java?: string },
-  promotionKey: string
+  promotionKey: string,
+  promotionTitle?: string
 ) {
-  const __dirname = path.dirname(new URL(import.meta.url).pathname);
-  const rootDir = path.join(__dirname, '../');
-  const jsonFilePath = path.join(rootDir, 'config', 'promoStatus.json');
-
   try {
-    if (!fs.existsSync(jsonFilePath)) {
-      fs.writeFileSync(jsonFilePath, JSON.stringify({}, null, 2), 'utf8');
-    }
-
-    let data = fs.readFileSync(jsonFilePath, 'utf8');
-    let jsonData = JSON.parse(data);
-
-    // Mettre à jour la promotion avec les tracks
-    jsonData[promotionKey] = tracks;
-
-    fs.writeFileSync(jsonFilePath, JSON.stringify(jsonData, null, 2), 'utf8');
+    await upsertPromoStatus({
+      promoKey: promotionKey,
+      status: 'active',
+      promotionName: promotionTitle ?? promotionKey,
+      currentProject: JSON.stringify(tracks),
+    });
     return {
       success: true,
       message: `La variable ${promotionKey} a été mise à jour avec les tracks: ${JSON.stringify(tracks)}`
@@ -122,6 +100,25 @@ export async function displayAgenda(
   let EndDateEstimated: string = '';
   let currentProject: string = 'Aucun';
   let progress: number = 0;
+
+  // Helper local pour écrire en DB sans répéter les champs promo
+  const doUpdateStatus = async (projectName: string) => {
+    await upsertPromoStatus({
+      promoKey: promotion.key,
+      status: 'active',
+      promotionName: promotion.title,
+      currentProject: projectName,
+    });
+  };
+
+  const doUpdateMultiTrack = async (tracks: { rust?: string; java?: string }) => {
+    await upsertPromoStatus({
+      promoKey: promotion.key,
+      status: 'active',
+      promotionName: promotion.title,
+      currentProject: JSON.stringify(tracks),
+    });
+  };
 
   function getWeekdays(startDate: Date, endDate: Date): Date[] {
     const weekdays: Date[] = [];
@@ -209,11 +206,6 @@ export async function displayAgenda(
       }
     }
 
-    /*if (promotion.key == "P2 2023"){
-                      console.log(`startDate : ${startDate}, endDate : ${endDate}, currentDate : ${currentDate}, project : ${name} `)
-                      console.log(compareDates(startDate, endDate, current_date))
-                    }*/
-
     if (compareDates(startDate, endDate, current_date)) {
       const totalDays =
         (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000) + 1;
@@ -225,11 +217,11 @@ export async function displayAgenda(
       console.log(
         `Current project: ${name}, Progress: ${progress.toFixed(2)}% for Promo ${promotion.key}`
       );
-      await updateEnv(name, promotion.key);
+      await doUpdateStatus(name);
 
       if (isLastProject && progress >= 99.9) {
         console.log(`Current project: Spécialité for Promo ${promotion.key}`);
-        await updateEnv('Spécialité', promotion.key);
+        await doUpdateStatus('Spécialité');
         currentProject = 'Spécialité';
       }
     }
@@ -264,7 +256,7 @@ export async function displayAgenda(
         console.log(
           `Current project: ${nextProject.name}, Progress: 0% for Promo ${promotion.key}`
         );
-        await updateEnv(nextProject.name, promotion.key);
+        await doUpdateStatus(nextProject.name);
       }
     }
 
@@ -285,13 +277,11 @@ export async function displayAgenda(
     }
   }
 
-  // Traitement de la piscine Rust/Java (les étudiants choisissent l'un ou l'autre)
   if (promotion.dates['piscine-rust-java-start'] !== 'NaN') {
     const piscineRustJavaStart = new Date(promotion.dates['piscine-rust-java-start']);
     const piscineRustJavaEnd = new Date(promotion.dates['piscine-rust-java-end']);
 
     if (compareDates(piscineRustJavaStart, piscineRustJavaEnd, current_date)) {
-      // Pendant la piscine, on affiche le premier projet de chaque track
       const tracks: { rust?: string; java?: string } = {};
 
       if (allProjects.Rust.length > 0) {
@@ -307,20 +297,18 @@ export async function displayAgenda(
         console.log(
           `Current projects - Rust: ${tracks.rust || 'N/A'}, Java: ${tracks.java || 'N/A'}, Progress: 0% for Promo ${promotion.key}`
         );
-        await updateEnvMultiTrack(tracks, promotion.key);
+        await doUpdateMultiTrack(tracks);
       }
     }
 
     startDate = new Date(piscineRustJavaEnd);
     startDate.setDate(piscineRustJavaEnd.getDate() + 1);
 
-    // Traiter les projets Rust et Java en parallèle
     let rustStartDate = new Date(startDate);
     let javaStartDate = new Date(startDate);
     let rustEndDate = new Date(startDate);
     let javaEndDate = new Date(startDate);
 
-    // Calculer les dates de fin pour chaque track
     for (let i = 0; i < allProjects.Rust.length; i++) {
       const project = allProjects.Rust[i];
       rustEndDate = await processProject(
@@ -328,7 +316,7 @@ export async function displayAgenda(
         rustStartDate,
         project.project_time_week,
         holidays,
-        new Date('1900-01-01'), // Date dans le passé pour ne pas matcher avec current_date
+        new Date('1900-01-01'),
         false
       );
       rustStartDate = new Date(rustEndDate);
@@ -341,13 +329,12 @@ export async function displayAgenda(
         javaStartDate,
         project.project_time_week,
         holidays,
-        new Date('1900-01-01'), // Date dans le passé pour ne pas matcher avec current_date
+        new Date('1900-01-01'),
         false
       );
       javaStartDate = new Date(javaEndDate);
     }
 
-    // Maintenant vérifier sur quel projet actuel on est
     rustStartDate = new Date(startDate);
     javaStartDate = new Date(startDate);
     let currentTracks: { rust?: string; java?: string } = {};
@@ -355,7 +342,6 @@ export async function displayAgenda(
 
     for (let i = 0; i < allProjects.Rust.length; i++) {
       const project = allProjects.Rust[i];
-      const isLastProject = i === allProjects.Rust.length - 1;
       const projectEndDate = await processProject(
         project.name,
         rustStartDate,
@@ -374,7 +360,6 @@ export async function displayAgenda(
 
     for (let i = 0; i < allProjects.Java.length; i++) {
       const project = allProjects.Java[i];
-      const isLastProject = i === allProjects.Java.length - 1;
       const projectEndDate = await processProject(
         project.name,
         javaStartDate,
@@ -404,10 +389,9 @@ export async function displayAgenda(
       console.log(
         `Current projects - Rust: ${currentTracks.rust || 'N/A'}, Java: ${currentTracks.java || 'N/A'}, Progress: ${progress.toFixed(2)}% for Promo ${promotion.key}`
       );
-      await updateEnvMultiTrack(currentTracks, promotion.key);
+      await doUpdateMultiTrack(currentTracks);
     }
 
-    // Utiliser la date de fin la plus éloignée
     startDate = rustEndDate > javaEndDate ? rustEndDate : javaEndDate;
   }
 
@@ -416,9 +400,8 @@ export async function displayAgenda(
     currentProject = 'Fin';
     progress = 100;
     console.log(`Current project: Fin for Promo ${promotion.key}`);
-    await updateEnv('Fin', promotion.key);
+    await doUpdateStatus('Fin');
   } else {
-    // Vérifie si la current_date est après la fin du dernier projet mais avant la fin de la promo
     if (current_date > startDate && current_date < promoEndDate) {
       const totalDays =
         (promoEndDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000) +
@@ -431,7 +414,7 @@ export async function displayAgenda(
       console.log(
         `Current project: Spécialité, Progress: ${progress.toFixed(2)}% for Promo ${promotion.key}`
       );
-      await updateEnv('Spécialité', promotion.key);
+      await doUpdateStatus('Spécialité');
     }
   }
 

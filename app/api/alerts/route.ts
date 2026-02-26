@@ -4,7 +4,7 @@ import { students, studentProjects, studentSpecialtyProgress } from '@/lib/db/sc
 import { audits, auditResults } from '@/lib/db/schema/audits';
 import { eq, and, or, sql, desc } from 'drizzle-orm';
 import type { Alert } from '@/lib/types/alerts';
-import promoConfig from '../../../config/promoConfig.json';
+import { getAllPromotions } from '@/lib/config/promotions';
 
 /**
  * Helper to safely get warnings array from JSONB field
@@ -33,6 +33,7 @@ export async function GET(request: Request) {
     const promoFilter = url.searchParams.get('promo');
 
     const alerts: Alert[] = [];
+    const promoConfig = await getAllPromotions();
 
     // Exclure les étudiants en perdition de toutes les requêtes
     const notDropoutCondition = eq(students.isDropout, false);
@@ -212,7 +213,7 @@ export async function GET(request: Request) {
     recentAudits.forEach((audit) => {
       if (processedAuditIds.has(audit.id)) return;
 
-      const promo = (promoConfig as any[]).find(p => String(p.eventId) === audit.promoId);
+      const promo = promoConfig.find(p => String(p.eventId) === audit.promoId);
       const promoName = promo?.key ?? `Promo ${audit.promoId}`;
 
       // Calculer warnings de manière sécurisée (gère arrays, JSON strings, null)

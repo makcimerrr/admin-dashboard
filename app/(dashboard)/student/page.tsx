@@ -34,7 +34,6 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { StudentAudits } from '@/components/student-audits';
 import { StudentPendingAudits } from '@/components/student-pending-audits';
-import promoConfigData from '../../../config/promoConfig.json'
 
 type Student = {
   id: number;
@@ -134,6 +133,7 @@ export default function StudentPage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [externalData, setExternalData] = useState<ExternalUserData | null>(null);
+  const [studentPromoConfig, setStudentPromoConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingExternal, setLoadingExternal] = useState(false);
   const [loadingAlternant, setLoadingAlternant] = useState(false);
@@ -154,6 +154,12 @@ export default function StudentPage() {
             setProjects(data.projects);
             // Charger automatiquement les données externes
             fetchExternalDataInternal(data.student.login);
+            // Charger la config de la promo de l'étudiant
+            fetch('/api/promotions').then(r => r.json()).then(cfg => {
+              if (cfg.success) {
+                setStudentPromoConfig(cfg.promotions.find((p: any) => p.key === data.student.promoName) ?? null);
+              }
+            }).catch(() => {});
           }
         } else {
           toast.error('Étudiant introuvable');
@@ -295,7 +301,6 @@ export default function StudentPage() {
   }
 
   // Récupérer la config de la promo pour vérifier les dates de début des troncs
-  const studentPromoConfig = (promoConfigData as any[]).find(p => p.key === student.promoName);
   const today = new Date();
 
   // Vérifier si le tronc Javascript a commencé
