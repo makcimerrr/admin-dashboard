@@ -35,13 +35,11 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [totalStudents, setTotalStudents] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingDots, setLoadingDots] = useState<string>('.');
-  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null); // State pour la dernière mise à jour
   const [allUpdate, setAllUpdate] = useState<string | null>(null);
-  const [isAuto, setIsAuto] = useState<boolean>(false);
-  const [allIsAuto, setAllIsAuto] = useState<boolean>(false);
 
   const [updates, setUpdates] = useState<
-    { last_update: string; event_id: string; is_auto: boolean }[]
+    { last_update: string; event_id: string }[]
   >([]);
 
   useEffect(() => {
@@ -602,7 +600,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       await fetch('/api/last_update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, message: updateMessage, isAuto: false })
+        body: JSON.stringify({ eventId, message: updateMessage })
       });
 
       toast.success('La mise à jour a été effectuée avec succès !');
@@ -632,18 +630,14 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       );
 
       if (filteredUpdate) {
-        setLastUpdate(filteredUpdate.last_update);
-        setIsAuto(filteredUpdate.is_auto ?? false);
+        setLastUpdate(filteredUpdate.last_update); // Met à jour la dernière mise à jour trouvée
       }
 
       const allUpdate = data.find(
         (update: { event_id: string }) => update.event_id === 'all'
       );
 
-      if (allUpdate) {
-        setAllUpdate(allUpdate.last_update);
-        setAllIsAuto(allUpdate.is_auto ?? false);
-      }
+      setAllUpdate(allUpdate.last_update);
     } catch (error) {
       toast.error('Impossible de récupérer les données de mise à jour.');
     }
@@ -680,8 +674,6 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           lastUpdate={lastUpdate}
           eventId={eventId}
           allUpdate={allUpdate}
-          isAuto={isAuto}
-          allIsAuto={allIsAuto}
         />
       </div>
       <style jsx>{`
