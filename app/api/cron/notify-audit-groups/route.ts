@@ -9,7 +9,18 @@ import { sendDiscordDM } from '@/lib/services/discord';
 const CRON_SECRET = process.env.CRON_SECRET;
 
 function buildAuditMessage(captainLogin: string, projectName: string, promoName: string): string {
-  return `Bonjour ${captainLogin} !\n\nVotre groupe vient de terminer **${projectName}** et est en attente de code-review.\n\nMerci de réserver un créneau avec le staff dès que possible.\nPromo : ${promoName} — Projet : ${projectName}`;
+  return [
+    `Hey ${captainLogin} ! 👋`,
+    ``,
+    `Bonne nouvelle : ton groupe vient de terminer **${projectName}** (${promoName}) et est maintenant en attente de code-review avec le staff ! 🎉`,
+    ``,
+    `En tant que **capitaine**, c'est à toi de réserver le créneau pour toute ton équipe :`,
+    `📅 https://calendar.app.google/2MoLxboyXGECFUjT6`,
+    ``,
+    `N'oublie pas de prévenir tes coéquipiers une fois le rendez-vous fixé.`,
+    ``,
+    `Bonne chance pour la review, on vous attend ! 💪`,
+  ].join('\n');
 }
 
 export async function GET(request: NextRequest) {

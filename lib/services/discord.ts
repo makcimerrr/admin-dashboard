@@ -7,14 +7,17 @@ export async function sendDiscordDM(discordUserId: string, content: string): Pro
     return false;
   }
 
+  const headers = {
+    Authorization: `Bot ${token}`,
+    'Content-Type': 'application/json',
+    'User-Agent': 'DiscordBot (https://discord.com/api/v10, 1.0)',
+  };
+
   try {
     // 1. Create DM channel
     const dmChannelRes = await fetch(`${DISCORD_API}/users/@me/channels`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bot ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ recipient_id: discordUserId }),
     });
 
@@ -28,10 +31,7 @@ export async function sendDiscordDM(discordUserId: string, content: string): Pro
     // 2. Send message
     const messageRes = await fetch(`${DISCORD_API}/channels/${dmChannel.id}/messages`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bot ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ content }),
     });
 
