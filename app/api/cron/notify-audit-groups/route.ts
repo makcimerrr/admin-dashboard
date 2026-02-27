@@ -6,6 +6,8 @@ import { upsertGroupStatus, getPendingAuditNotifications, markAuditNotified } fr
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
 
+export const maxDuration = 60;
+
 const CRON_SECRET = process.env.CRON_SECRET;
 
 function buildAuditMessage(captainLogin: string, projectName: string, promoName: string): string {
