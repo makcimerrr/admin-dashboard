@@ -43,45 +43,49 @@ export async function GET(request: NextRequest) {
     const archivedNames = new Set(archivedPromos.map((p) => p.name));
     const activePromos = promotions.filter((p) => !archivedNames.has(p.key));
 
-    // Step 1: Fetch progressions and upsert group statuses
-    for (const promo of activePromos) {
-      try {
-        const progressions = await fetchPromotionProgressions(String(promo.eventId));
+    // Step 1: Fetch progressions for all promos in parallel
+    await Promise.allSettled(
+      activePromos.map(async (promo) => {
+        try {
+          const progressions = await fetchPromotionProgressions(String(promo.eventId));
 
-        // Deduplicate groups by (groupId, projectName)
-        const groupMap = new Map<
-          string,
-          { groupId: string; projectName: string; status: string; captainLogin?: string }
-        >();
+          // Deduplicate groups by (groupId, projectName)
+          const groupMap = new Map<
+            string,
+            { groupId: string; projectName: string; status: string; captainLogin?: string }
+          >();
 
-        for (const entry of progressions) {
-          if (entry.group.status === 'without group') continue;
+          for (const entry of progressions) {
+            if (entry.group.status === 'without group') continue;
 
-          const key = `${entry.group.id}:${entry.object.name}`;
-          if (!groupMap.has(key)) {
-            groupMap.set(key, {
-              groupId: String(entry.group.id),
-              projectName: entry.object.name,
-              status: entry.group.status,
-              // Use API-provided captainLogin if available, else first member seen
-              captainLogin: entry.group.captainLogin ?? entry.user.login,
-            });
+            const key = `${entry.group.id}:${entry.object.name}`;
+            if (!groupMap.has(key)) {
+              groupMap.set(key, {
+                groupId: String(entry.group.id),
+                projectName: entry.object.name,
+                status: entry.group.status,
+                captainLogin: entry.group.captainLogin ?? entry.user.login,
+              });
+            }
           }
-        }
 
-        for (const group of groupMap.values()) {
-          await upsertGroupStatus(
-            group.groupId,
-            String(promo.eventId),
-            group.projectName,
-            group.status,
-            group.captainLogin
+          // Upsert all groups for this promo in parallel
+          await Promise.allSettled(
+            [...groupMap.values()].map((group) =>
+              upsertGroupStatus(
+                group.groupId,
+                String(promo.eventId),
+                group.projectName,
+                group.status,
+                group.captainLogin
+              )
+            )
           );
+        } catch (err) {
+          console.error(`Error fetching progressions for promo ${promo.eventId}:`, err);
         }
-      } catch (err) {
-        console.error(`Error fetching progressions for promo ${promo.eventId}:`, err);
-      }
-    }
+      })
+    );
 
     // Step 2: Notify pending audit groups
     const pending = await getPendingAuditNotifications();
