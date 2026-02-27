@@ -9,10 +9,6 @@
         "schedule": "0 8 * * *"
       },
       {
-        "path": "/api/cron/update-students",
-        "schedule": "0 20 * * *"
-      },
-      {
         "path": "/api/cron/notify-audit-groups",
         "schedule": "0 9 * * *"
       }

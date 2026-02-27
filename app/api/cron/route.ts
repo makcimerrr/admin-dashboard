@@ -8,7 +8,8 @@ export async function GET(req: Request) {
 
   try {
     // Récupère les données de l’API timeline
-    const res = await fetch('http://localhost:3000/api/timeline_project');
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    const res = await fetch(`${baseUrl}/api/timeline_project`);
     if (!res.ok) {
       console.error('Erreur fetch timeline_project :', res.status, await res.text());
     }
