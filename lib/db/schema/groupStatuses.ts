@@ -10,6 +10,10 @@ export const groupStatuses = pgTable(
     status: varchar('status', { length: 30 }).notNull(),
     captainLogin: varchar('captain_login', { length: 100 }),
     notifiedAuditAt: timestamp('notified_audit_at'),
+    slotDate: timestamp('slot_date'),
+    slotBookedAt: timestamp('slot_booked_at'),
+    slotEventId: varchar('slot_event_id', { length: 200 }),
+    slotAttendeeEmail: varchar('slot_attendee_email', { length: 200 }),
     lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
   },
   (table) => ({

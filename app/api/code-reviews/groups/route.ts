@@ -120,8 +120,8 @@ export async function GET(request: NextRequest) {
         const projectGroups = buildProjectGroups(progressions, projectName);
 
         for (const group of projectGroups) {
-          // Ne garder que les groupes finished
-          if (group.status !== 'finished') continue;
+          // Ne garder que les groupes finished ou en attente d'audit
+          if (group.status !== 'finished' && group.status !== 'audit') continue;
 
           const audit = auditsByGroupId.get(group.groupId);
           const isAudited = !!audit;

@@ -194,7 +194,7 @@ export interface AuditFilters {
  * (uniquement si status === 'finished')
  */
 export function canAuditGroup(status: Zone01GroupStatus): boolean {
-    return status === 'finished';
+    return status === 'finished' || status === 'audit';
 }
 
 /**

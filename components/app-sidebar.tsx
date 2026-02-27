@@ -74,7 +74,10 @@ const data = {
     {
       title: 'Code Reviews',
       url: '/code-reviews',
-      icon: ClipboardCheckIcon
+      icon: ClipboardCheckIcon,
+      items: [
+        { title: 'Suivi notifications', url: '/code-reviews/suivi' }
+      ]
     },
     {
       title: 'Planning',
