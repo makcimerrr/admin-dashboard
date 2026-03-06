@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+
+export const maxDuration = 60;
 import { getActivePromotions } from '@/lib/config/promotions';
 import { getProjectNamesByTrack, getAllTracks } from '@/lib/config/projects';
 import {

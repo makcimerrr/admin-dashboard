@@ -22,6 +22,8 @@ import { GroupsTable } from '@/components/code-reviews/groups-table';
 import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
 import type { Track } from '@/lib/db/schema/audits';
 
+export const maxDuration = 60;
+
 interface PageProps {
   params: Promise<{ promoId: string }>;
 }
@@ -48,13 +50,18 @@ async function PromoContent({ promoId }: { promoId: string }) {
   const promo = data.promotion;
 
   // ✅ Récupération des données en parallèle
-  const [progressions, dropoutLogins, ...auditsPerTrack] = await Promise.all([
+  const [progressions, dropoutLogins, projectNamesPerTrack, ...auditsPerTrack] = await Promise.all([
     fetchPromotionProgressions(String(promo.eventId)),
     getDropoutLogins(),
+    Promise.all(TRACKS.map((track) => getProjectNamesByTrack(track))),
     ...TRACKS.map((track) =>
       getAuditsByPromoAndTrack(String(promo.eventId), track)
     )
   ]);
+
+  const projectNamesByTrack = Object.fromEntries(
+    TRACKS.map((track, i) => [track, (projectNamesPerTrack as string[][])[i]])
+  ) as Record<Track, string[]>;
 
   // Construire les audits par track
   const auditsByTrack = Object.fromEntries(
@@ -87,7 +94,7 @@ async function PromoContent({ promoId }: { promoId: string }) {
   }[] = [];
 
   for (const track of TRACKS) {
-    const projectNames = await getProjectNamesByTrack(track);
+    const projectNames = projectNamesByTrack[track];
     const audits = auditsByTrack[track];
     const auditsByGroupId = new Map(audits.map((a) => [a.groupId, a]));
 

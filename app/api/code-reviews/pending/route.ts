@@ -7,6 +7,8 @@ import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
 import { getAllPromotions } from '@/lib/config/promotions';
 import type { Track } from '@/lib/db/schema/audits';
 
+export const maxDuration = 60;
+
 const TRACKS: Track[] = ['Golang', 'Javascript', 'Rust', 'Java'];
 
 interface PendingGroup {
@@ -35,7 +37,13 @@ export async function GET(request: Request) {
     const promoIdFilter = searchParams.get('promoId');
 
     const allPendingGroups: PendingGroup[] = [];
-    const promoConfig = await getAllPromotions();
+    const [promoConfig, projectNamesPerTrack] = await Promise.all([
+      getAllPromotions(),
+      Promise.all(TRACKS.map((track) => getProjectNamesByTrack(track))),
+    ]);
+    const projectNamesByTrack = Object.fromEntries(
+      TRACKS.map((track, i) => [track, projectNamesPerTrack[i]])
+    ) as Record<Track, string[]>;
 
     const promos = promoIdFilter
       ? promoConfig.filter(p => String(p.eventId) === promoIdFilter)
@@ -78,7 +86,7 @@ export async function GET(request: Request) {
         }> = new Map();
 
         for (const track of TRACKS) {
-          const projectNames = await getProjectNamesByTrack(track);
+          const projectNames = projectNamesByTrack[track];
           const audits = auditsByTrack[track];
           const auditsByGroupId = new Map(audits.map(a => [a.groupId, a]));
 
