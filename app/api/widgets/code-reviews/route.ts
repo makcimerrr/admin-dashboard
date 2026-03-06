@@ -14,7 +14,6 @@ import {
 import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { calculateProgress } from '@/lib/types/code-reviews';
 import type { Track } from '@/lib/db/schema/audits';
-import { notFound } from 'next/navigation';
 
 /**
  * Filtre les progressions Zone01 pour exclure les étudiants en perdition
@@ -58,16 +57,16 @@ export async function GET() {
     );
 
     if (!response.ok) {
-      notFound();
+      return NextResponse.json({ promos: [], totalPending: 0, recentAuditsCount: 0 });
     }
 
     const data = await response.json();
 
-    if (!data.success || !data.promotion) {
-      notFound();
+    if (!data.success || !data.promotions?.length) {
+      return NextResponse.json({ promos: [], totalPending: 0, recentAuditsCount: 0 });
     }
 
-    const activePromos = data.promotion;
+    const activePromos = data.promotions;
     const tracks = await getAllTracks();
 
     // Récupérer les logins des étudiants en perdition une seule fois
