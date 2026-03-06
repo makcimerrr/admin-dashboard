@@ -651,6 +651,21 @@ export default function AllAuditsPage() {
     return result;
   }, [filteredPendingGroups, sortField, sortDirection]);
 
+  // Stats recalculées depuis filteredPendingGroups (reflète les filtres actifs)
+  const filteredPendingStats = useMemo(() => {
+    const total = filteredPendingGroups.length;
+    const urgent = filteredPendingGroups.filter((g) => g.priority === 'urgent').length;
+    const warning = filteredPendingGroups.filter((g) => g.priority === 'warning').length;
+    const normal = filteredPendingGroups.filter((g) => g.priority === 'normal').length;
+    const avgScore =
+      total > 0
+        ? Math.round(
+            filteredPendingGroups.reduce((sum, g) => sum + g.priorityScore, 0) / total
+          )
+        : 0;
+    return { total, urgent, warning, normal, avgScore };
+  }, [filteredPendingGroups]);
+
   // Stats des audits complétés
   const completedStats = useMemo(() => {
     const total = filteredAndSortedAudits.length;
@@ -680,14 +695,15 @@ export default function AllAuditsPage() {
             }, 0) / total
           )
         : 0;
-    const totalStudents = filteredAndSortedAudits.reduce(
-      (sum, a) => sum + a.totalMembers,
-      0
+    const uniqueLogins = new Set(filteredAndSortedAudits.flatMap((a) => a.members));
+    const totalStudents = uniqueLogins.size;
+    const validatedLogins = new Set(
+      filteredAndSortedAudits.flatMap((a) =>
+        a.memberDetails.filter((m) => m.validated).map((m) => m.login)
+      )
     );
-    const validatedStudents = filteredAndSortedAudits.reduce(
-      (sum, a) => sum + a.validatedCount,
-      0
-    );
+    const validatedStudents = validatedLogins.size;
+    const totalResults = totalStudents; // alias pour la soustraction Non validés
 
     return {
       total,
@@ -697,6 +713,7 @@ export default function AllAuditsPage() {
       avgValidation,
       totalWarnings,
       totalStudents,
+      totalResults,
       validatedStudents
     };
   }, [filteredAndSortedAudits]);
@@ -799,7 +816,7 @@ export default function AllAuditsPage() {
       </div>
 
       {/* Alertes globales */}
-      {(completedStats.totalWarnings > 0 || pendingStats.urgent > 0) && (
+      {(completedStats.totalWarnings > 0 || filteredPendingStats.urgent > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {completedStats.totalWarnings > 0 && (
             <Card className="border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
@@ -831,7 +848,7 @@ export default function AllAuditsPage() {
               </CardContent>
             </Card>
           )}
-          {pendingStats.urgent > 0 && (
+          {filteredPendingStats.urgent > 0 && (
             <Card className="border-red-300 bg-gradient-to-r from-red-50 to-rose-50">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -843,7 +860,7 @@ export default function AllAuditsPage() {
                       Audits urgents en attente
                     </h3>
                     <p className="text-sm text-red-700">
-                      {pendingStats.urgent} groupe(s) marqués comme urgents (score ≥ 50)
+                      {filteredPendingStats.urgent} groupe(s) marqués comme urgents (score ≥ 50)
                     </p>
                     <Button
                       variant="link"
@@ -883,7 +900,7 @@ export default function AllAuditsPage() {
             </div>
           ) : (
             <p className="text-2xl font-bold mt-1 text-blue-700">
-              {pendingStats.total}
+              {filteredPendingStats.total}
             </p>
           )}
         </Card>
@@ -893,7 +910,7 @@ export default function AllAuditsPage() {
             <AlertTriangle className="h-4 w-4 text-rose-600" />
           </div>
           <p className="text-2xl font-bold mt-1 text-rose-700">
-            {completedStats.urgent + pendingStats.urgent}
+            {completedStats.urgent + filteredPendingStats.urgent}
           </p>
         </Card>
         <Card className="p-3 border-amber-200 bg-amber-50">
@@ -920,7 +937,7 @@ export default function AllAuditsPage() {
             <UserX className="h-4 w-4 text-red-600" />
           </div>
           <p className="text-2xl font-bold mt-1 text-red-700">
-            {completedStats.totalStudents - completedStats.validatedStudents}
+            {completedStats.totalResults - completedStats.validatedStudents}
           </p>
         </Card>
         <Card className="p-3">
@@ -1097,7 +1114,7 @@ export default function AllAuditsPage() {
               En attente
               {loadingPending ? (
                 <div className="ml-1 h-4 w-8 rounded bg-gray-200 animate-pulse" aria-hidden />
-              ) : pendingStats.urgent > 0 ? (
+              ) : filteredPendingStats.urgent > 0 ? (
                 <Badge variant="destructive" className="ml-1">
                   {filteredAndSortedPendingGroups.length}
                 </Badge>
