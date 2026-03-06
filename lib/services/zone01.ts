@@ -183,12 +183,14 @@ export function buildProjectGroups(
             groupsMap.set(groupId, group);
         }
 
-        group.members.push({
-            login: prog.user.login,
-            firstName: prog.user.firstName,
-            lastName: prog.user.lastName,
-            grade: prog.grade ?? null,
-        });
+        if (!group.members.some((m) => m.login === prog.user.login)) {
+            group.members.push({
+                login: prog.user.login,
+                firstName: prog.user.firstName,
+                lastName: prog.user.lastName,
+                grade: prog.grade ?? null,
+            });
+        }
     }
 
     return Array.from(groupsMap.values());
