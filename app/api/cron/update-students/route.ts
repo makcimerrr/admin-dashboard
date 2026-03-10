@@ -440,7 +440,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const rawPromoId = request.nextUrl.searchParams.get('promoId');
+  // Récupération du paramètre eventId
+  const rawEventId = request.nextUrl.searchParams.get('eventId');
 
   const [promotions, allProjectsConfig, allStatus] = await Promise.all([
     getAllPromotions(),
@@ -461,82 +462,60 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  let promoId: string | null = null;
-  if (rawPromoId) {
+  let eventId: string | null = null;
+  if (rawEventId) {
     const matchedPromo = promotions.find(
-      (p) => String(p.eventId) === rawPromoId
+      (p) => String(p.eventId) === rawEventId
     );
     if (!matchedPromo) {
       return NextResponse.json(
-        { success: false, error: `Invalid promoId: ${rawPromoId}` },
+        { success: false, error: `Invalid eventId: ${rawEventId}` },
         { status: 400 }
       );
     }
-    promoId = String(matchedPromo.eventId);
+    eventId = String(matchedPromo.eventId);
+  } else {
+    return NextResponse.json(
+      { success: false, error: 'eventId requis dans la requête' },
+      { status: 400 }
+    );
   }
 
   try {
     const archivedPromos = await getArchivedPromotions();
     const archivedPromoNames = new Set(archivedPromos.map((p) => p.name));
 
-    let promoIds: string[];
-
-    if (promoId) {
-      const promo = promotions.find((p) => String(p.eventId) === promoId);
-      if (promo && archivedPromoNames.has(promo.key)) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `La promotion ${promo.key} est archivée et ne peut pas être mise à jour`
-          },
-          { status: 400 }
-        );
-      }
-      promoIds = [promoId];
-    } else {
-      promoIds = promotions
-        .filter((p) => !archivedPromoNames.has(p.key))
-        .map((p) => String(p.eventId));
+    const promo = promotions.find((p) => String(p.eventId) === eventId);
+    if (promo && archivedPromoNames.has(promo.key)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `La promotion ${promo.key} est archivée et ne peut pas être mise à jour`
+        },
+        { status: 400 }
+      );
     }
 
-    const results: { promoId: string; updated: number; errors: string[] }[] =
-      [];
+    // Traitement d'une seule promo
+    const result = await updatePromoStudents(
+      eventId,
+      promotions,
+      allProjectsConfig,
+      promoStatusMap,
+      projectIndexMap,
+      projectTrackMap
+    );
 
-    // Limite de concurrence sur les promos (ex: 1 promo à la fois pour éviter le timeout)
-    await processWithLimit(promoIds, 1, async (id) => {
-      const result = await updatePromoStudents(
-        id,
-        promotions,
-        allProjectsConfig,
-        promoStatusMap,
-        projectIndexMap,
-        projectTrackMap
-      );
-      results.push({ promoId: id, ...result });
-    });
+    await updateLastUpdate(eventId, true);
 
-    const eventIdForLog = promoId || 'all';
-    await updateLastUpdate(eventIdForLog, true);
-
-    const totalUpdated = results.reduce((sum, r) => sum + r.updated, 0);
-    const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
     const duration = Date.now() - startTime;
-    const skippedArchived =
-      promotions.length -
-      promoIds.length -
-      (promoId ? promotions.length - 1 : 0);
 
     return NextResponse.json({
       success: true,
       duration: `${duration}ms`,
-      summary: {
-        totalPromos: promoIds.length,
-        totalStudentsUpdated: totalUpdated,
-        totalErrors,
-        archivedPromosSkipped: skippedArchived,
-        archivedPromoNames: Array.from(archivedPromoNames)
-      },
-      results
+      promoId: eventId,
+      studentsUpdated: result.updated,
+      errors: result.errors
     });
   } catch (error) {
     console.error('Cron update error:', error);
