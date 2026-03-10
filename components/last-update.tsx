@@ -33,7 +33,7 @@ const AutoBadge = () => (
   </span>
 );
 
-const LastUpdate = ({ lastUpdate, eventId, allUpdate, isAuto, allIsAuto }: LastUpdateProps) => {
+const LastUpdate = ({ lastUpdate, eventId, allUpdate, isAuto, allIsAuto, outOfDeltaPromos }: LastUpdateProps & { outOfDeltaPromos?: { promo: string; date: string }[] }) => {
   const [timeAgo, setTimeAgo] = useState<string | null>(null);
   const [timeAgoAll, setTimeAgoAll] = useState<string | null>(null);
 
@@ -89,7 +89,24 @@ const LastUpdate = ({ lastUpdate, eventId, allUpdate, isAuto, allIsAuto }: LastU
         </>
       ) : (
         <>
-          {updateType === 'allUpdate' ? (
+          {outOfDeltaPromos && outOfDeltaPromos.length > 0 ? (
+            <div>
+              <p>
+                Dernière mise à jour de toutes les promotions le {timeAgo} mais les promos&nbsp;
+                {outOfDeltaPromos.map((p, idx) => (
+                  <span key={p.promo}>
+                    {p.promo} (le {getTimeAgo(p.date)}){idx < outOfDeltaPromos.length - 1 ? ', ' : ''}
+                  </span>
+                ))}
+                ont été mises à jour à des dates différentes.
+              </p>
+            </div>
+          ) : lastUpdate ? (
+            <p className="flex items-center flex-wrap gap-1">
+              Dernière mise à jour pour toutes les promotions : {timeAgo}
+              {isAuto && <AutoBadge />}
+            </p>
+          ) : allUpdate ? (
             <p className="flex items-center flex-wrap gap-1">
               Dernière mise à jour pour toutes les promos : {timeAgoAll}
               {allIsAuto && <AutoBadge />}

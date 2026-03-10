@@ -39,6 +39,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [allUpdate, setAllUpdate] = useState<string | null>(null);
   const [isAuto, setIsAuto] = useState<boolean>(false);
   const [allIsAuto, setAllIsAuto] = useState<boolean>(false);
+  const [outOfDeltaPromos, setOutOfDeltaPromos] = useState<{ promo: string; date: string }[]>([]);
 
   const [updates, setUpdates] = useState<
     { last_update: string; event_id: string }[]
@@ -642,6 +643,46 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
 
       setAllUpdate(allUpdateEntry?.last_update ?? null);
       setAllIsAuto(allUpdateEntry?.is_auto ?? false);
+
+      // Nouvelle logique : vérifier une par une
+      if (eventId === 'all') {
+        const promoUpdates = data.filter((update: { event_id: string; last_update: string; is_auto?: boolean }) => update.event_id !== 'all');
+        if (promoUpdates.length > 0) {
+          const maxUpdate = promoUpdates.reduce(
+            (max: { last_update: string; event_id: string }, curr: { last_update: string; event_id: string }) => {
+              return new Date(curr.last_update) > new Date(max.last_update) ? curr : max;
+            }
+          );
+          const maxDate = new Date(maxUpdate.last_update);
+          const tolerance = 60; // secondes
+          const outOfDelta: { promo: string; date: string }[] = [];
+          promoUpdates.forEach((u: { event_id: string; last_update: string; is_auto?: boolean }) => {
+            const diff = Math.abs((maxDate.getTime() - new Date(u.last_update).getTime()) / 1000);
+            if (diff > tolerance) {
+              outOfDelta.push({ promo: u.event_id, date: u.last_update });
+            }
+          });
+          setOutOfDeltaPromos(outOfDelta);
+          if (outOfDelta.length === 0) {
+            setLastUpdate(maxUpdate.last_update);
+            setIsAuto(maxUpdate.is_auto ?? false);
+          } else if (allUpdateEntry) {
+            setLastUpdate(allUpdateEntry.last_update);
+            setIsAuto(allUpdateEntry.is_auto ?? false);
+          } else {
+            setLastUpdate(null);
+            setIsAuto(false);
+          }
+        } else if (allUpdateEntry) {
+          setLastUpdate(allUpdateEntry.last_update);
+          setIsAuto(allUpdateEntry.is_auto ?? false);
+          setOutOfDeltaPromos([]);
+        } else {
+          setLastUpdate(null);
+          setIsAuto(false);
+          setOutOfDeltaPromos([]);
+        }
+      }
     } catch (error) {
       toast.error('Impossible de récupérer les données de mise à jour.');
     }
@@ -680,6 +721,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           allUpdate={allUpdate}
           isAuto={isAuto}
           allIsAuto={allIsAuto}
+          outOfDeltaPromos={outOfDeltaPromos}
         />
       </div>
       <style jsx>{`
