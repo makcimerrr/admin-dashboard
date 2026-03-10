@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateStudentProject } from '@/lib/db/services/students';
+import { bulkUpdateStudentProjects } from '@/lib/db/services/students';
 import { getArchivedPromotions } from '@/lib/db/services/promotions';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getAllProjects } from '@/lib/config/projects';
@@ -8,7 +8,7 @@ import { updateLastUpdate } from '@/lib/db/services/updates';
 import type { ProjectsConfig } from '@/lib/types/code-reviews';
 
 export const runtime = 'nodejs';
-export const maxDuration = 10;
+export const maxDuration = 60;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -26,12 +26,23 @@ interface LastProjectsFinished {
   [key: string]: boolean;
 }
 
+interface BulkUpdatePayload {
+  login: string;
+  projectName: string;
+  projectStatus: string;
+  delayLevel: string;
+  lastProjectsFinished: LastProjectsFinished;
+  commonProjects: CommonProjects;
+  promotionTitle: string;
+}
+
 type PromoStatusMap = Record<string, string | { rust?: string; java?: string }>;
+
+// ─── Index / Track Maps ───────────────────────────────────────────────────────
 
 function buildProjectIndexMap(allProjectsTyped: ProjectsConfig) {
   const map = new Map<string, number>();
   let index = 0;
-
   for (const track of Object.keys(allProjectsTyped) as Array<
     keyof ProjectsConfig
   >) {
@@ -40,7 +51,6 @@ function buildProjectIndexMap(allProjectsTyped: ProjectsConfig) {
       index++;
     }
   }
-
   return map;
 }
 
@@ -57,18 +67,20 @@ function buildProjectTrackMap(allProjectsTyped: ProjectsConfig) {
 }
 
 function findProjectIndexFromMap(
-  projectIndexMap: Map<string, number>,
+  map: Map<string, number>,
   projectName: string
 ): number {
-  return projectIndexMap.get(projectName.toLowerCase()) ?? -1;
+  return map.get(projectName.toLowerCase()) ?? -1;
 }
 
 function findProjectTrackFromMap(
-  projectTrackMap: Map<string, string>,
+  map: Map<string, string>,
   projectName: string
 ): string | null {
-  return projectTrackMap.get(projectName.toLowerCase()) ?? null;
+  return map.get(projectName.toLowerCase()) ?? null;
 }
+
+// ─── Project Logic ────────────────────────────────────────────────────────────
 
 function findActiveProjectsByTrack(
   allProjectsTyped: ProjectsConfig,
@@ -86,10 +98,7 @@ function findActiveProjectsByTrack(
       status: null
     };
     let firstUnfinishedProject: { name: string | null; status: string | null } =
-      {
-        name: null,
-        status: 'without group'
-      };
+      { name: null, status: 'without group' };
     let lastFinishedProject: { name: string | null; status: string | null } = {
       name: null,
       status: 'finished'
@@ -176,7 +185,6 @@ function calculateDelayLevel(
   projectTrackMap: Map<string, string>
 ): string {
   let delayLevel = 'bien';
-
   const currentPromoProject = promoStatusMap[promotionTitle];
   if (!currentPromoProject) return delayLevel;
 
@@ -237,16 +245,13 @@ function calculateDelayLevel(
     }
 
     if (studentProject && promoProject) {
-      if (studentProject.toLowerCase() === promoProject.toLowerCase()) {
+      if (studentProject.toLowerCase() === promoProject.toLowerCase())
         return 'bien';
-      }
-
       const promoIndex = findProjectIndexFromMap(projectIndexMap, promoProject);
       const studentIndex = findProjectIndexFromMap(
         projectIndexMap,
         studentProject
       );
-
       if (studentIndex === -1) return 'en retard';
       if (studentIndex > promoIndex) return 'en avance';
       if (studentIndex < promoIndex) return 'en retard';
@@ -268,9 +273,8 @@ function calculateDelayLevel(
       if (
         studentProjectInTrack?.toLowerCase() ===
         currentPromoProject.toLowerCase()
-      ) {
+      )
         return 'bien';
-      }
 
       const promoIndex = findProjectIndexFromMap(
         projectIndexMap,
@@ -289,6 +293,8 @@ function calculateDelayLevel(
 
   return delayLevel;
 }
+
+// ─── Concurrency Helper ───────────────────────────────────────────────────────
 
 async function processWithLimit<T>(
   items: T[],
@@ -311,6 +317,8 @@ async function processWithLimit<T>(
   await Promise.all(workers);
 }
 
+// ─── Core Promo Processing ────────────────────────────────────────────────────
+
 async function updatePromoStudents(
   eventId: string,
   promotions: Awaited<ReturnType<typeof getAllPromotions>>,
@@ -326,12 +334,18 @@ async function updatePromoStudents(
 
   const promotionTitle = promotion.key;
   const errors: string[] = [];
-  let updated = 0;
+  const updates: BulkUpdatePayload[] = [];
 
   try {
+    // Fetch Zone01 avec timeout 5s pour ne pas bloquer le reste
+    const controller = new AbortController();
+    const fetchTimeout = setTimeout(() => controller.abort(), 5000);
+
     const response = await fetch(
-      `https://api-zone01-rouen.deno.dev/api/v1/promotions/${eventId}/students`
+      `https://api-zone01-rouen.deno.dev/api/v1/promotions/${eventId}/students`,
+      { signal: controller.signal }
     );
+    clearTimeout(fetchTimeout);
 
     if (!response.ok) {
       return {
@@ -355,11 +369,10 @@ async function updatePromoStudents(
 
     const firstRustProject = allProjectsTyped.Rust?.[0]?.name;
     const firstJavaProject = allProjectsTyped.Java?.[0]?.name;
-
     const logins = Object.keys(userProjects);
 
-    // Limite de concurrence pour les étudiants (ex: 5 en parallèle)
-    await processWithLimit(logins, 5, async (login) => {
+    // 20 workers : calcul CPU pur, pas d'I/O DB ici
+    await processWithLimit(logins, 20, async (login) => {
       try {
         const { commonProjects, lastProjectsFinished } =
           findActiveProjectsByTrack(allProjectsTyped, userProjects[login]);
@@ -397,35 +410,38 @@ async function updatePromoStudents(
           projectTrackMap
         );
 
-        await updateStudentProject(
+        updates.push({
           login,
-          actualProjectName ?? 'N/A',
-          actualProjectStatus ?? 'without group',
+          projectName: actualProjectName ?? 'N/A',
+          projectStatus: actualProjectStatus ?? 'without group',
           delayLevel,
           lastProjectsFinished,
           commonProjects,
           promotionTitle
-        );
-
-        updated++;
+        });
       } catch (err) {
         errors.push(
-          `Erreur pour ${login}: ${
-            err instanceof Error ? err.message : 'Erreur inconnue'
-          }`
+          `Erreur pour ${login}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`
         );
       }
     });
+
+    // 1 seule transaction Drizzle + Neon pour les 60 étudiants
+    await bulkUpdateStudentProjects(updates);
   } catch (err) {
-    errors.push(
-      `Erreur globale pour ${eventId}: ${
-        err instanceof Error ? err.message : 'Erreur inconnue'
-      }`
-    );
+    if (err instanceof Error && err.name === 'AbortError') {
+      errors.push(`Timeout API Zone01 pour eventId ${eventId}`);
+    } else {
+      errors.push(
+        `Erreur globale pour ${eventId}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`
+      );
+    }
   }
 
-  return { updated, errors };
+  return { updated: updates.length, errors };
 }
+
+// ─── Route Handler ────────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -440,7 +456,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Récupération du paramètre eventId
   const rawEventId = request.nextUrl.searchParams.get('eventId');
 
   const [promotions, allProjectsConfig, allStatus] = await Promise.all([
@@ -462,41 +477,37 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  let eventId: string | null = null;
-  if (rawEventId) {
-    const matchedPromo = promotions.find(
-      (p) => String(p.eventId) === rawEventId
-    );
-    if (!matchedPromo) {
-      return NextResponse.json(
-        { success: false, error: `Invalid eventId: ${rawEventId}` },
-        { status: 400 }
-      );
-    }
-    eventId = String(matchedPromo.eventId);
-  } else {
+  if (!rawEventId) {
     return NextResponse.json(
       { success: false, error: 'eventId requis dans la requête' },
       { status: 400 }
     );
   }
 
+  const matchedPromo = promotions.find((p) => String(p.eventId) === rawEventId);
+  if (!matchedPromo) {
+    return NextResponse.json(
+      { success: false, error: `Invalid eventId: ${rawEventId}` },
+      { status: 400 }
+    );
+  }
+
+  const eventId = String(matchedPromo.eventId);
+
   try {
     const archivedPromos = await getArchivedPromotions();
     const archivedPromoNames = new Set(archivedPromos.map((p) => p.name));
 
-    const promo = promotions.find((p) => String(p.eventId) === eventId);
-    if (promo && archivedPromoNames.has(promo.key)) {
+    if (archivedPromoNames.has(matchedPromo.key)) {
       return NextResponse.json(
         {
           success: false,
-          error: `La promotion ${promo.key} est archivée et ne peut pas être mise à jour`
+          error: `La promotion ${matchedPromo.key} est archivée et ne peut pas être mise à jour`
         },
         { status: 400 }
       );
     }
 
-    // Traitement d'une seule promo
     const result = await updatePromoStudents(
       eventId,
       promotions,
@@ -508,11 +519,9 @@ export async function GET(request: NextRequest) {
 
     await updateLastUpdate(eventId, true);
 
-    const duration = Date.now() - startTime;
-
     return NextResponse.json({
       success: true,
-      duration: `${duration}ms`,
+      duration: `${Date.now() - startTime}ms`,
       promoId: eventId,
       studentsUpdated: result.updated,
       errors: result.errors

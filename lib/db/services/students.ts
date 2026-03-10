@@ -906,3 +906,51 @@ export async function deleteStudentById(id: number) {
   console.log("Suppression de l'étudiant avec l'ID:", id);
   // await db.delete(students).where(eq(students.id, id));
 }
+
+type BulkUpdatePayload = {
+  login: string;
+  projectName: string;
+  projectStatus: string;
+  delayLevel: string;
+  lastProjectsFinished: Record<string, boolean>;
+  commonProjects: Record<
+    string,
+    { name: string | null; status: string | null }
+  >;
+  promotionTitle: string;
+};
+
+export async function bulkUpdateStudentProjects(updates: BulkUpdatePayload[]) {
+  if (updates.length === 0) return;
+
+  await db.transaction(async (tx) => {
+    await Promise.all(
+      updates.map((u) =>
+        tx
+          .insert(students)
+          .values({
+            login: u.login,
+            projectName: u.projectName,
+            projectStatus: u.projectStatus,
+            delayLevel: u.delayLevel,
+            lastProjectsFinished: u.lastProjectsFinished,
+            commonProjects: u.commonProjects,
+            promotionTitle: u.promotionTitle,
+            updatedAt: new Date()
+          })
+          .onConflictDoUpdate({
+            target: students.login,
+            set: {
+              projectName: u.projectName,
+              projectStatus: u.projectStatus,
+              delayLevel: u.delayLevel,
+              lastProjectsFinished: u.lastProjectsFinished,
+              commonProjects: u.commonProjects,
+              promotionTitle: u.promotionTitle,
+              updatedAt: new Date()
+            }
+          })
+      )
+    );
+  });
+}
