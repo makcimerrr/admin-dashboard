@@ -7,13 +7,10 @@ import { getAllPromoStatus } from '@/lib/db/services/promoStatus';
 import { updateLastUpdate } from '@/lib/db/services/updates';
 import type { ProjectsConfig } from '@/lib/types/code-reviews';
 
-const CRON_SECRET = process.env.CRON_SECRET;
+export const runtime = 'nodejs';
+export const maxDuration = 10;
 
-interface Project {
-  id: number;
-  name: string;
-  project_time_week: number;
-}
+const CRON_SECRET = process.env.CRON_SECRET;
 
 interface UserProject {
   projectName: string;
@@ -21,44 +18,78 @@ interface UserProject {
   groupId: number;
 }
 
-function findProjectIndex(allProjectsTyped: ProjectsConfig, projectName: string): number {
-  let globalIndex = 0;
-  for (const track of Object.keys(allProjectsTyped) as Array<keyof ProjectsConfig>) {
-    for (const project of allProjectsTyped[track]) {
-      if (project.name.toLowerCase() === projectName.toLowerCase()) {
-        return globalIndex;
-      }
-      globalIndex++;
-    }
-  }
-  return -1;
+interface CommonProjects {
+  [key: string]: { name: string | null; status: string | null };
 }
 
-function findProjectTrack(allProjectsTyped: ProjectsConfig, projectName: string): string | null {
-  for (const track of Object.keys(allProjectsTyped) as Array<keyof ProjectsConfig>) {
-    for (const project of allProjectsTyped[track]) {
-      if (project.name.toLowerCase() === projectName.toLowerCase()) {
-        return track;
-      }
-    }
-  }
-  return null;
+interface LastProjectsFinished {
+  [key: string]: boolean;
 }
 
-function findActiveProjectsByTrack(allProjectsTyped: ProjectsConfig, userProjects: UserProject[]) {
-  const commonProjects: {
-    [key: string]: { name: string | null; status: string | null };
-  } = {};
-  const lastProjectsFinished: { [key: string]: boolean } = {};
+type PromoStatusMap = Record<string, string | { rust?: string; java?: string }>;
 
-  for (const track of Object.keys(allProjectsTyped) as Array<keyof ProjectsConfig>) {
+function buildProjectIndexMap(allProjectsTyped: ProjectsConfig) {
+  const map = new Map<string, number>();
+  let index = 0;
+
+  for (const track of Object.keys(allProjectsTyped) as Array<
+    keyof ProjectsConfig
+  >) {
+    for (const project of allProjectsTyped[track]) {
+      map.set(project.name.toLowerCase(), index);
+      index++;
+    }
+  }
+
+  return map;
+}
+
+function buildProjectTrackMap(allProjectsTyped: ProjectsConfig) {
+  const map = new Map<string, string>();
+  for (const track of Object.keys(allProjectsTyped) as Array<
+    keyof ProjectsConfig
+  >) {
+    for (const project of allProjectsTyped[track]) {
+      map.set(project.name.toLowerCase(), track);
+    }
+  }
+  return map;
+}
+
+function findProjectIndexFromMap(
+  projectIndexMap: Map<string, number>,
+  projectName: string
+): number {
+  return projectIndexMap.get(projectName.toLowerCase()) ?? -1;
+}
+
+function findProjectTrackFromMap(
+  projectTrackMap: Map<string, string>,
+  projectName: string
+): string | null {
+  return projectTrackMap.get(projectName.toLowerCase()) ?? null;
+}
+
+function findActiveProjectsByTrack(
+  allProjectsTyped: ProjectsConfig,
+  userProjects: UserProject[]
+) {
+  const commonProjects: CommonProjects = {};
+  const lastProjectsFinished: LastProjectsFinished = {};
+
+  for (const track of Object.keys(allProjectsTyped) as Array<
+    keyof ProjectsConfig
+  >) {
     const trackProjects = allProjectsTyped[track];
     let studentActiveProject: { name: string | null; status: string | null } = {
       name: null,
       status: null
     };
     let firstUnfinishedProject: { name: string | null; status: string | null } =
-      { name: null, status: 'without group' };
+      {
+        name: null,
+        status: 'without group'
+      };
     let lastFinishedProject: { name: string | null; status: string | null } = {
       name: null,
       status: 'finished'
@@ -109,27 +140,20 @@ function findActiveProjectsByTrack(allProjectsTyped: ProjectsConfig, userProject
 
 function findLastActiveProject(
   allProjectsTyped: ProjectsConfig,
-  commonProjects: {
-    [key: string]: { name: string | null; status: string | null };
-  }
+  commonProjects: CommonProjects,
+  projectIndexMap: Map<string, number>
 ): { name: string | null; status: string | null } {
-  let lastProject: {
-    name: string | null;
-    status: string | null;
-    index: number;
-  } = {
-    name: null,
-    status: 'without group',
+  let lastProject = {
+    name: null as string | null,
+    status: 'without group' as string | null,
     index: -1
   };
 
   for (const track of ['Golang', 'Javascript', 'Rust', 'Java']) {
     const project = commonProjects[track];
-    if (!project || !project.name || project.status === 'not_chosen') {
-      continue;
-    }
+    if (!project || !project.name || project.status === 'not_chosen') continue;
 
-    const projectIndex = findProjectIndex(allProjectsTyped, project.name);
+    const projectIndex = findProjectIndexFromMap(projectIndexMap, project.name);
     if (projectIndex > lastProject.index) {
       lastProject = {
         name: project.name,
@@ -144,12 +168,12 @@ function findLastActiveProject(
 
 function calculateDelayLevel(
   allProjectsTyped: ProjectsConfig,
-  promoStatusMap: Record<string, string | { rust?: string; java?: string }>,
+  promoStatusMap: PromoStatusMap,
   promotionTitle: string,
-  commonProjects: {
-    [key: string]: { name: string | null; status: string | null };
-  },
-  lastProjectsFinished: { [key: string]: boolean }
+  commonProjects: CommonProjects,
+  lastProjectsFinished: LastProjectsFinished,
+  projectIndexMap: Map<string, number>,
+  projectTrackMap: Map<string, string>
 ): string {
   let delayLevel = 'bien';
 
@@ -162,8 +186,8 @@ function calculateDelayLevel(
 
   if (typeof currentPromoProject === 'object') {
     isMultiTrack = true;
-    promoRustProject = (currentPromoProject as { rust?: string }).rust ?? null;
-    promoJavaProject = (currentPromoProject as { java?: string }).java ?? null;
+    promoRustProject = currentPromoProject.rust ?? null;
+    promoJavaProject = currentPromoProject.java ?? null;
   }
 
   const allTracksCompleted =
@@ -175,21 +199,24 @@ function calculateDelayLevel(
     typeof currentPromoProject === 'string' &&
     currentPromoProject.toLowerCase() === 'fin'
   ) {
-    delayLevel = allTracksCompleted ? 'Validé' : 'Non Validé';
-  } else if (allTracksCompleted) {
-    delayLevel = 'spécialité';
-  } else if (
+    return allTracksCompleted ? 'Validé' : 'Non Validé';
+  }
+
+  if (allTracksCompleted) return 'spécialité';
+
+  if (
     typeof currentPromoProject === 'string' &&
     currentPromoProject.toLowerCase() === 'spécialité'
   ) {
-    delayLevel = 'spécialité';
-  } else if (isMultiTrack) {
+    return 'spécialité';
+  }
+
+  if (isMultiTrack) {
     const studentRustProject = commonProjects['Rust']?.name;
     const studentJavaProject = commonProjects['Java']?.name;
     const studentRustStatus = commonProjects['Rust']?.status;
     const studentJavaStatus = commonProjects['Java']?.status;
 
-    let studentTrack: 'Rust' | 'Java' | null = null;
     let studentProject: string | null = null;
     let promoProject: string | null = null;
 
@@ -198,7 +225,6 @@ function calculateDelayLevel(
       studentRustStatus !== 'without group' &&
       studentRustProject
     ) {
-      studentTrack = 'Rust';
       studentProject = studentRustProject;
       promoProject = promoRustProject;
     } else if (
@@ -206,33 +232,35 @@ function calculateDelayLevel(
       studentJavaStatus !== 'without group' &&
       studentJavaProject
     ) {
-      studentTrack = 'Java';
       studentProject = studentJavaProject;
       promoProject = promoJavaProject;
     }
 
-    if (studentTrack && studentProject && promoProject) {
+    if (studentProject && promoProject) {
       if (studentProject.toLowerCase() === promoProject.toLowerCase()) {
-        delayLevel = 'bien';
-      } else {
-        const promoIndex = findProjectIndex(allProjectsTyped, promoProject);
-        const studentIndex = findProjectIndex(allProjectsTyped, studentProject);
-
-        if (studentIndex === -1) {
-          delayLevel = 'en retard';
-        } else if (studentIndex > promoIndex) {
-          delayLevel = 'en avance';
-        } else if (studentIndex < promoIndex) {
-          delayLevel = 'en retard';
-        } else {
-          delayLevel = 'bien';
-        }
+        return 'bien';
       }
-    } else {
-      delayLevel = 'en retard';
+
+      const promoIndex = findProjectIndexFromMap(projectIndexMap, promoProject);
+      const studentIndex = findProjectIndexFromMap(
+        projectIndexMap,
+        studentProject
+      );
+
+      if (studentIndex === -1) return 'en retard';
+      if (studentIndex > promoIndex) return 'en avance';
+      if (studentIndex < promoIndex) return 'en retard';
+      return 'bien';
     }
-  } else if (typeof currentPromoProject === 'string') {
-    const promoProjectTrack = findProjectTrack(allProjectsTyped, currentPromoProject);
+
+    return 'en retard';
+  }
+
+  if (typeof currentPromoProject === 'string') {
+    const promoProjectTrack = findProjectTrackFromMap(
+      projectTrackMap,
+      currentPromoProject
+    );
 
     if (promoProjectTrack) {
       const studentProjectInTrack = commonProjects[promoProjectTrack]?.name;
@@ -241,34 +269,55 @@ function calculateDelayLevel(
         studentProjectInTrack?.toLowerCase() ===
         currentPromoProject.toLowerCase()
       ) {
-        delayLevel = 'bien';
-      } else {
-        const promoIndex = findProjectIndex(allProjectsTyped, currentPromoProject);
-        const studentIndex = studentProjectInTrack
-          ? findProjectIndex(allProjectsTyped, studentProjectInTrack)
-          : -1;
-
-        if (studentIndex === -1) {
-          delayLevel = 'en retard';
-        } else if (studentIndex > promoIndex) {
-          delayLevel = 'en avance';
-        } else if (studentIndex < promoIndex) {
-          delayLevel = 'en retard';
-        } else {
-          delayLevel = 'bien';
-        }
+        return 'bien';
       }
+
+      const promoIndex = findProjectIndexFromMap(
+        projectIndexMap,
+        currentPromoProject
+      );
+      const studentIndex = studentProjectInTrack
+        ? findProjectIndexFromMap(projectIndexMap, studentProjectInTrack)
+        : -1;
+
+      if (studentIndex === -1) return 'en retard';
+      if (studentIndex > promoIndex) return 'en avance';
+      if (studentIndex < promoIndex) return 'en retard';
+      return 'bien';
     }
   }
 
   return delayLevel;
 }
 
+async function processWithLimit<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T) => Promise<void>
+) {
+  const queue = [...items];
+  const workers: Promise<void>[] = [];
+
+  for (let i = 0; i < limit; i++) {
+    const run = async () => {
+      while (queue.length) {
+        const item = queue.shift()!;
+        await worker(item);
+      }
+    };
+    workers.push(run());
+  }
+
+  await Promise.all(workers);
+}
+
 async function updatePromoStudents(
   eventId: string,
   promotions: Awaited<ReturnType<typeof getAllPromotions>>,
   allProjectsTyped: ProjectsConfig,
-  promoStatusMap: Record<string, string | { rust?: string; java?: string }>
+  promoStatusMap: PromoStatusMap,
+  projectIndexMap: Map<string, number>,
+  projectTrackMap: Map<string, string>
 ): Promise<{ updated: number; errors: string[] }> {
   const promotion = promotions.find((p) => String(p.eventId) === eventId);
   if (!promotion) {
@@ -296,9 +345,7 @@ async function updatePromoStudents(
     const userProjects: { [login: string]: UserProject[] } = {};
     for (const entry of data.progress) {
       const login = entry.user.login;
-      if (!userProjects[login]) {
-        userProjects[login] = [];
-      }
+      if (!userProjects[login]) userProjects[login] = [];
       userProjects[login].push({
         projectName: entry.object.name,
         projectStatus: entry.group.status,
@@ -306,13 +353,16 @@ async function updatePromoStudents(
       });
     }
 
-    for (const login of Object.keys(userProjects)) {
+    const firstRustProject = allProjectsTyped.Rust?.[0]?.name;
+    const firstJavaProject = allProjectsTyped.Java?.[0]?.name;
+
+    const logins = Object.keys(userProjects);
+
+    // Limite de concurrence pour les étudiants (ex: 5 en parallèle)
+    await processWithLimit(logins, 5, async (login) => {
       try {
         const { commonProjects, lastProjectsFinished } =
           findActiveProjectsByTrack(allProjectsTyped, userProjects[login]);
-
-        const firstRustProject = allProjectsTyped.Rust?.[0]?.name;
-        const firstJavaProject = allProjectsTyped.Java?.[0]?.name;
 
         const isRustActive =
           commonProjects['Rust']?.name !== firstRustProject ||
@@ -331,13 +381,20 @@ async function updatePromoStudents(
         }
 
         const { name: actualProjectName, status: actualProjectStatus } =
-          findLastActiveProject(allProjectsTyped, commonProjects);
+          findLastActiveProject(
+            allProjectsTyped,
+            commonProjects,
+            projectIndexMap
+          );
+
         const delayLevel = calculateDelayLevel(
           allProjectsTyped,
           promoStatusMap,
           promotionTitle,
           commonProjects,
-          lastProjectsFinished
+          lastProjectsFinished,
+          projectIndexMap,
+          projectTrackMap
         );
 
         await updateStudentProject(
@@ -353,13 +410,17 @@ async function updatePromoStudents(
         updated++;
       } catch (err) {
         errors.push(
-          `Erreur pour ${login}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`
+          `Erreur pour ${login}: ${
+            err instanceof Error ? err.message : 'Erreur inconnue'
+          }`
         );
       }
-    }
+    });
   } catch (err) {
     errors.push(
-      `Erreur globale pour ${eventId}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`
+      `Erreur globale pour ${eventId}: ${
+        err instanceof Error ? err.message : 'Erreur inconnue'
+      }`
     );
   }
 
@@ -381,15 +442,16 @@ export async function GET(request: NextRequest) {
 
   const rawPromoId = request.nextUrl.searchParams.get('promoId');
 
-  // Load all config from DB
   const [promotions, allProjectsConfig, allStatus] = await Promise.all([
     getAllPromotions(),
     getAllProjects(),
-    getAllPromoStatus(),
+    getAllPromoStatus()
   ]);
 
-  // Build promoStatus map
-  const promoStatusMap: Record<string, string | { rust?: string; java?: string }> = {};
+  const projectIndexMap = buildProjectIndexMap(allProjectsConfig);
+  const projectTrackMap = buildProjectTrackMap(allProjectsConfig);
+
+  const promoStatusMap: PromoStatusMap = {};
   for (const s of allStatus) {
     if (!s.currentProject) continue;
     try {
@@ -418,6 +480,7 @@ export async function GET(request: NextRequest) {
     const archivedPromoNames = new Set(archivedPromos.map((p) => p.name));
 
     let promoIds: string[];
+
     if (promoId) {
       const promo = promotions.find((p) => String(p.eventId) === promoId);
       if (promo && archivedPromoNames.has(promo.key)) {
@@ -436,15 +499,23 @@ export async function GET(request: NextRequest) {
         .map((p) => String(p.eventId));
     }
 
-    const results: { promoId: string; updated: number; errors: string[] }[] = [];
+    const results: { promoId: string; updated: number; errors: string[] }[] =
+      [];
 
-    for (const id of promoIds) {
-      const result = await updatePromoStudents(id, promotions, allProjectsConfig, promoStatusMap);
+    // Limite de concurrence sur les promos (ex: 3 promos en parallèle)
+    await processWithLimit(promoIds, 3, async (id) => {
+      const result = await updatePromoStudents(
+        id,
+        promotions,
+        allProjectsConfig,
+        promoStatusMap,
+        projectIndexMap,
+        projectTrackMap
+      );
       results.push({ promoId: id, ...result });
-    }
+    });
 
     const eventIdForLog = promoId || 'all';
-
     await updateLastUpdate(eventIdForLog, true);
 
     const totalUpdated = results.reduce((sum, r) => sum + r.updated, 0);
