@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getArchivedPromotions } from '@/lib/db/services/promotions';
 import { fetchPromotionProgressions } from '@/lib/services/zone01';
-import { upsertGroupStatus, getPendingAuditNotifications, markAuditNotified } from '@/lib/db/services/groupStatuses';
+import {
+  upsertGroupStatus,
+  getPendingAuditNotifications,
+  markAuditNotified
+} from '@/lib/db/services/groupStatuses';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
 
@@ -10,7 +14,11 @@ export const maxDuration = 60;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
-function buildAuditMessage(captainLogin: string, projectName: string, promoName: string): string {
+function buildAuditMessage(
+  captainLogin: string,
+  projectName: string,
+  promoName: string
+): string {
   return [
     `Hey ${captainLogin} ! 👋`,
     ``,
@@ -21,7 +29,7 @@ function buildAuditMessage(captainLogin: string, projectName: string, promoName:
     ``,
     `N'oublie pas de prévenir tes coéquipiers une fois le rendez-vous fixé.`,
     ``,
-    `Bonne chance pour la review, on vous attend ! 💪`,
+    `Bonne chance pour la review, on vous attend ! 💪`
   ].join('\n');
 }
 
@@ -39,7 +47,7 @@ export async function GET(request: NextRequest) {
   try {
     const [promotions, archivedPromos] = await Promise.all([
       getAllPromotions(),
-      getArchivedPromotions(),
+      getArchivedPromotions()
     ]);
 
     const archivedNames = new Set(archivedPromos.map((p) => p.name));
@@ -49,12 +57,18 @@ export async function GET(request: NextRequest) {
     await Promise.allSettled(
       activePromos.map(async (promo) => {
         try {
-          const progressions = await fetchPromotionProgressions(String(promo.eventId));
+          const progressions = await fetchPromotionProgressions(
+            String(promo.eventId)
+          );
 
-          // Deduplicate groups by (groupId, projectName)
           const groupMap = new Map<
             string,
-            { groupId: string; projectName: string; status: string; captainLogin?: string }
+            {
+              groupId: string;
+              projectName: string;
+              status: string;
+              captainLogin?: string;
+            }
           >();
 
           for (const entry of progressions) {
@@ -66,12 +80,11 @@ export async function GET(request: NextRequest) {
                 groupId: String(entry.group.id),
                 projectName: entry.object.name,
                 status: entry.group.status,
-                captainLogin: entry.group.captainLogin ?? entry.user.login,
+                captainLogin: entry.group.captainLogin ?? entry.user.login
               });
             }
           }
 
-          // Upsert all groups for this promo in parallel
           await Promise.allSettled(
             [...groupMap.values()].map((group) =>
               upsertGroupStatus(
@@ -84,46 +97,64 @@ export async function GET(request: NextRequest) {
             )
           );
         } catch (err) {
-          console.error(`Error fetching progressions for promo ${promo.eventId}:`, err);
+          console.error(
+            `Error fetching progressions for promo ${promo.eventId}:`,
+            err
+          );
         }
       })
     );
 
-    // Step 2: Notify pending audit groups
+    // Step 2: Notify pending audit groups — fully parallelized
     const pending = await getPendingAuditNotifications();
 
     let notified = 0;
     let skippedNoDiscordId = 0;
     let errors = 0;
 
-    for (const group of pending) {
-      try {
-        const promo = promotions.find((p) => String(p.eventId) === group.promoId);
-        const promoName = promo?.title ?? promo?.key ?? group.promoId;
+    const results = await Promise.allSettled(
+      pending.map(async (group) => {
+        try {
+          const promo = promotions.find(
+            (p) => String(p.eventId) === group.promoId
+          );
+          const promoName = promo?.title ?? promo?.key ?? group.promoId;
 
-        if (group.captainLogin) {
+          if (!group.captainLogin) {
+            return { outcome: 'skipped' as const };
+          }
+
           const discordId = await getDiscordIdByLogin(group.captainLogin);
 
-          if (discordId) {
-            const message = buildAuditMessage(group.captainLogin, group.projectName, promoName);
-            const sent = await sendDiscordDM(discordId, message);
-            if (sent) {
-              notified++;
-            } else {
-              errors++;
-            }
-          } else {
-            skippedNoDiscordId++;
+          if (!discordId) {
+            return { outcome: 'skipped' as const };
           }
-        } else {
-          skippedNoDiscordId++;
+
+          const message = buildAuditMessage(
+            group.captainLogin,
+            group.projectName,
+            promoName
+          );
+          const sent = await sendDiscordDM(discordId, message);
+
+          return { outcome: sent ? ('notified' as const) : ('error' as const) };
+        } catch (err) {
+          console.error(`Notification error for group ${group.id}:`, err);
+          return { outcome: 'error' as const };
+        } finally {
+          // Always mark as notified to avoid infinite retry loops
+          await markAuditNotified(group.id);
         }
-      } catch (err) {
-        console.error(`Notification error for group ${group.id}:`, err);
+      })
+    );
+
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        if (result.value.outcome === 'notified') notified++;
+        else if (result.value.outcome === 'skipped') skippedNoDiscordId++;
+        else errors++;
+      } else {
         errors++;
-      } finally {
-        // Always mark as notified to avoid infinite retry loops
-        await markAuditNotified(group.id);
       }
     }
 
@@ -134,8 +165,8 @@ export async function GET(request: NextRequest) {
         pendingNotifications: pending.length,
         notified,
         skippedNoDiscordId,
-        errors,
-      },
+        errors
+      }
     });
   } catch (error) {
     console.error('Cron notify-audit-groups error:', error);
