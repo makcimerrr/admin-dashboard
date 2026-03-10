@@ -909,6 +909,10 @@ export async function deleteStudentById(id: number) {
 
 type BulkUpdatePayload = {
   login: string;
+  last_name: string;
+  first_name: string;
+  promoName: string;
+  availableAt: Date;
   projectName: string;
   projectStatus: string;
   delayLevel: string;
@@ -930,24 +934,20 @@ export async function bulkUpdateStudentProjects(updates: BulkUpdatePayload[]) {
           .insert(students)
           .values({
             login: u.login,
-            projectName: u.projectName,
-            projectStatus: u.projectStatus,
-            delayLevel: u.delayLevel,
-            lastProjectsFinished: u.lastProjectsFinished,
-            commonProjects: u.commonProjects,
-            promotionTitle: u.promotionTitle,
-            updatedAt: new Date()
+            last_name: u.last_name,
+            first_name: u.first_name,
+            promoName: u.promoName,
+            availableAt: u.availableAt
+            // ...autres propriétés nécessaires...
           })
           .onConflictDoUpdate({
             target: students.login,
             set: {
-              projectName: u.projectName,
-              projectStatus: u.projectStatus,
-              delayLevel: u.delayLevel,
-              lastProjectsFinished: u.lastProjectsFinished,
-              commonProjects: u.commonProjects,
-              promotionTitle: u.promotionTitle,
-              updatedAt: new Date()
+              last_name: u.last_name,
+              first_name: u.first_name,
+              promoName: u.promoName,
+              availableAt: u.availableAt
+              // Ne pas inclure projectName, projectStatus, delayLevel, etc.
             }
           })
       )

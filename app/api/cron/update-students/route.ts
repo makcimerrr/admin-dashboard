@@ -28,6 +28,10 @@ interface LastProjectsFinished {
 
 interface BulkUpdatePayload {
   login: string;
+  last_name: string;
+  first_name: string;
+  promoName: string;
+  availableAt: Date;
   projectName: string;
   projectStatus: string;
   delayLevel: string;
@@ -412,6 +416,10 @@ async function updatePromoStudents(
 
         updates.push({
           login,
+          last_name: data.progress.find((entry: any) => entry.user.login === login)?.user.lastName || 'Nom',
+          first_name: data.progress.find((entry: any) => entry.user.login === login)?.user.firstName || 'Prénom',
+          promoName: promotionTitle,
+          availableAt: new Date(),
           projectName: actualProjectName ?? 'N/A',
           projectStatus: actualProjectStatus ?? 'without group',
           delayLevel,
