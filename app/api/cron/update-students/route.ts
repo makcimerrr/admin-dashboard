@@ -502,8 +502,8 @@ export async function GET(request: NextRequest) {
     const results: { promoId: string; updated: number; errors: string[] }[] =
       [];
 
-    // Limite de concurrence sur les promos (ex: 3 promos en parallèle)
-    await processWithLimit(promoIds, 3, async (id) => {
+    // Limite de concurrence sur les promos (ex: 1 promo à la fois pour éviter le timeout)
+    await processWithLimit(promoIds, 1, async (id) => {
       const result = await updatePromoStudents(
         id,
         promotions,
