@@ -12,6 +12,7 @@ import { fetchPromotionProgressions, buildProjectGroups } from '@/lib/services/z
 import { canAuditGroup } from '@/lib/types/code-reviews';
 import { TRACKS, type Track } from '@/lib/db/schema/audits';
 import { z } from 'zod';
+import { archiveGroupStatus, getAllForSuivi } from '@/lib/db/services/groupStatuses';
 
 // Schéma de validation pour la création d'audit
 const createAuditSchema = z.object({
@@ -163,6 +164,14 @@ export async function POST(request: NextRequest) {
         };
 
         const audit = await createAudit(auditInput);
+
+        // Archivage automatique de la ligne de suivi
+        // On retrouve le groupStatusId correspondant
+        const suiviRows = await getAllForSuivi();
+        const targetRow = suiviRows.find(r => r.groupId === auditInput.groupId && r.promoId === auditInput.promoId && r.projectName === auditInput.projectName);
+        if (targetRow) {
+          await archiveGroupStatus(targetRow.id);
+        }
 
         // Invalider le cache de la page du tableau pour qu'elle se mette à jour
         revalidatePath(`/code-reviews/${data.promoId}`);

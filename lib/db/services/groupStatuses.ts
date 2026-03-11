@@ -4,6 +4,7 @@ import { eq, and, isNull, or, isNotNull, inArray } from 'drizzle-orm';
 import { discordUsers } from '../schema/discordUsers';
 import { audits } from '../schema/audits';
 import { getTrackByProjectName } from '@/lib/config/projects';
+import { buildProjectGroups, fetchPromotionProgressions } from '@/lib/services/zone01';
 
 export async function upsertGroupStatus(
   groupId: string,
@@ -171,4 +172,29 @@ export async function unlinkSlot(id: number): Promise<void> {
     .update(groupStatuses)
     .set({ slotDate: null, slotEventId: null, slotBookedAt: null, slotAttendeeEmail: null })
     .where(eq(groupStatuses.id, id));
+}
+
+export async function deleteGroupStatus(id: number): Promise<void> {
+  await db.delete(groupStatuses).where(eq(groupStatuses.id, id));
+}
+
+export async function archiveGroupStatus(id: number): Promise<void> {
+  await db.update(groupStatuses).set({ status: 'archived' }).where(eq(groupStatuses.id, id));
+}
+
+export async function cleanOrphanGroupStatuses(): Promise<number> {
+  // Récupérer toutes les lignes
+  const rows = await db.select().from(groupStatuses);
+  let deletedCount = 0;
+  for (const row of rows) {
+    // Vérifier si le groupe existe encore
+    const progressions = await fetchPromotionProgressions(row.promoId);
+    const groups = buildProjectGroups(progressions, row.projectName);
+    const exists = groups.some((g) => g.groupId === row.groupId);
+    if (!exists) {
+      await db.delete(groupStatuses).where(eq(groupStatuses.id, row.id));
+      deletedCount++;
+    }
+  }
+  return deletedCount;
 }

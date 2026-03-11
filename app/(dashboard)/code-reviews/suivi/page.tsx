@@ -20,6 +20,23 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   CheckCircle2,
   XCircle,
@@ -35,6 +52,7 @@ import {
   Clock,
   MessageSquareOff,
   ClipboardCheck,
+  MoreHorizontal,
 } from 'lucide-react';
 
 interface SuiviRow {
@@ -100,6 +118,7 @@ export default function SuiviPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
+  const [confirmDeleteRowState, setConfirmDeleteRowState] = useState<SuiviRow | null>(null);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetTargetId, setSheetTargetId] = useState<number | null>(null);
@@ -233,6 +252,7 @@ export default function SuiviPage() {
   const promoName = (id: string) => promos.get(id) ?? id;
 
   const filtered = rows.filter((r) => {
+    if (r.status === 'archived') return false;
     if (!search) return true;
     const q = search.toLowerCase();
     const pName = promoName(r.promoId).toLowerCase();
@@ -293,7 +313,7 @@ export default function SuiviPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                {['Projet', 'Capitaine', 'Statut Zone01', 'Notification Discord', 'Créneau agenda', 'Code review', ''].map((h) => (
+                {['Projet', 'Capitaine', 'Statut Zone01', 'Notification Discord', 'Créneau agenda', 'Code review', 'Actions'].map((h) => (
                   <TableHead key={h} className="font-semibold">{h}</TableHead>
                 ))}
               </TableRow>
@@ -325,7 +345,11 @@ export default function SuiviPage() {
                   </TableCell>
                   <TableCell className="py-3"><Skeleton className="h-7 w-36 rounded-md" /></TableCell>
                   <TableCell className="py-3"><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell className="py-3"><Skeleton className="h-7 w-7 rounded-md" /></TableCell>
+                  <TableCell className="py-3">
+                    <div className="opacity-30">
+                      <Skeleton className="h-7 w-7 rounded-md" />
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -347,12 +371,12 @@ export default function SuiviPage() {
                 <TableHead className="font-semibold">Notification Discord</TableHead>
                 <TableHead className="font-semibold">Créneau agenda</TableHead>
                 <TableHead className="font-semibold">Code review</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="font-semibold w-[60px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((row) => (
-                <TableRow key={row.id} className="align-top">
+                <TableRow key={row.id} className="align-top group hover:bg-muted/40 transition-colors">
 
                   {/* Projet */}
                   <TableCell className="py-3">
@@ -533,19 +557,46 @@ export default function SuiviPage() {
                     )}
                   </TableCell>
 
-                  {/* Sync */}
+                  {/* Actions */}
                   <TableCell className="py-3">
-                    <Button
-                      size="sm" variant="ghost"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
-                      disabled={loadingIds.has(row.id)}
-                      onClick={() => callResendDM(row, true)}
-                      title="Vérifier Discord et renvoyer la notification si possible"
-                    >
-                      {loadingIds.has(row.id)
-                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <RefreshCw className="h-3.5 w-3.5" />}
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => callResendDM(row, true)}
+                          disabled={loadingIds.has(row.id)}
+                        >
+                          {loadingIds.has(row.id)
+                            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            : <RefreshCw className="mr-2 h-4 w-4" />}
+                          Rafraîchir
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleArchiveRow(row)}
+                          disabled={loadingIds.has(row.id)}
+                        >
+                          {loadingIds.has(row.id)
+                            ? <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            : null}
+                          Archiver
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={(e) => { e.preventDefault(); setConfirmDeleteRowState(row); }}
+                          disabled={loadingIds.has(row.id)}
+                          className="text-destructive focus:text-destructive hover:bg-destructive/10"
+                        >
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
@@ -621,8 +672,69 @@ export default function SuiviPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      <AlertDialog open={!!confirmDeleteRowState} onOpenChange={() => setConfirmDeleteRowState(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette ligne ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est définitive. Le suivi du groupe sera supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (confirmDeleteRowState) handleDeleteRow(confirmDeleteRowState);
+                setConfirmDeleteRowState(null);
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
+
+  // --- Handlers pour suppression et archivage ---
+  async function handleDeleteRow(row: SuiviRow) {
+    setRowLoading(row.id, true);
+    try {
+      const res = await fetch('/api/code-reviews/suivi', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: row.id }),
+      });
+      const data = await res.json();
+      if (data.success) { toast.success('Ligne supprimée'); await fetchRows(); }
+      else toast.error(data.error ?? 'Erreur lors de la suppression');
+    } catch {
+      toast.error('Erreur réseau');
+    } finally {
+      setRowLoading(row.id, false);
+    }
+  }
+
+  async function handleArchiveRow(row: SuiviRow) {
+    setRowLoading(row.id, true);
+    try {
+      const res = await fetch('/api/code-reviews/suivi', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: row.id }),
+      });
+      const data = await res.json();
+      if (data.success) { toast.success('Ligne archivée'); await fetchRows(); }
+      else toast.error(data.error ?? 'Erreur lors de l\'archivage');
+    } catch {
+      toast.error('Erreur réseau');
+    } finally {
+      setRowLoading(row.id, false);
+    }
+  }
+  // --- Fin handlers ---
 }
 
 function FunnelCard({ label, count, color, step }: {
