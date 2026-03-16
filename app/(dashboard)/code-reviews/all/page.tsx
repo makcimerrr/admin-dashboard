@@ -66,7 +66,8 @@ import {
   ClipboardList,
   UserCheck,
   UserX,
-  MessageSquareWarning
+  MessageSquareWarning,
+  FileDown
 } from 'lucide-react';
 import { formatDistanceToNow, format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -303,6 +304,7 @@ export default function AllAuditsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingPending, setLoadingPending] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [activeTab, setActiveTab] = useState('completed');
 
   // Filtres
@@ -718,6 +720,25 @@ export default function AllAuditsPage() {
     };
   }, [filteredAndSortedAudits]);
 
+  async function handlePdfExport() {
+    setExportingPdf(true);
+    try {
+      const res = await fetch('/api/audits/export/pdf');
+      if (!res.ok) throw new Error('Erreur serveur');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audits-export-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Erreur lors de la génération du PDF');
+    } finally {
+      setExportingPdf(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
@@ -813,6 +834,20 @@ export default function AllAuditsPage() {
             </p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handlePdfExport}
+          disabled={exportingPdf}
+          className="gap-2"
+        >
+          {exportingPdf ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <FileDown className="h-4 w-4" />
+          )}
+          {exportingPdf ? 'Génération...' : 'Export PDF'}
+        </Button>
       </div>
 
       {/* Alertes globales */}
