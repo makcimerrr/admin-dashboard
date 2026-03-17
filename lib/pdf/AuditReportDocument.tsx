@@ -709,14 +709,22 @@ function TrackDetailPages({ promo, track }: { promo: PromoExport; track: TrackEx
 
 // ─── Main document ────────────────────────────────────────────────────────────
 
-export function AuditReportDocument({ data }: { data: FullExportData }) {
+export function AuditReportDocument({ data, includeCover = true }: { data: FullExportData; includeCover?: boolean }) {
+  const hasContent = includeCover || data.promos.length > 0;
   return (
     <Document
       title="Rapport des Audits — Zone01 Normandie"
       author="Zone01 Admin Dashboard"
       subject="Export des code-reviews avec résumés et feedbacks"
     >
-      <CoverPage data={data} />
+      {/* react-pdf requires at least one Page */}
+      {!hasContent && (
+        <Page size="A4" style={{ padding: 40 }}>
+          <Text style={{ fontSize: 12, color: '#64748b' }}>Aucune promo sélectionnée.</Text>
+        </Page>
+      )}
+
+      {includeCover && <CoverPage data={data} />}
 
       {data.promos.map((promo) => (
         <React.Fragment key={promo.promoId}>

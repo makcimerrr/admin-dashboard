@@ -40,6 +40,14 @@ import {
   CollapsibleTrigger
 } from '@/components/ui/collapsible';
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import {
   CheckCircle2,
   Clock,
   Search,
@@ -305,6 +313,9 @@ export default function AllAuditsPage() {
   const [loadingPending, setLoadingPending] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [pdfIncludeCover, setPdfIncludeCover] = useState(false);
+  const [pdfExcludedPromos, setPdfExcludedPromos] = useState<Set<string>>(new Set());
+  const [pdfPopoverOpen, setPdfPopoverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('completed');
 
   // Filtres
@@ -721,9 +732,13 @@ export default function AllAuditsPage() {
   }, [filteredAndSortedAudits]);
 
   async function handlePdfExport() {
+    setPdfPopoverOpen(false);
     setExportingPdf(true);
     try {
-      const res = await fetch('/api/audits/export/pdf');
+      const params = new URLSearchParams();
+      if (!pdfIncludeCover) params.set('cover', 'false');
+      if (pdfExcludedPromos.size > 0) params.set('exclude', [...pdfExcludedPromos].join(','));
+      const res = await fetch(`/api/audits/export/pdf?${params.toString()}`);
       if (!res.ok) throw new Error('Erreur serveur');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -834,20 +849,69 @@ export default function AllAuditsPage() {
             </p>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePdfExport}
-          disabled={exportingPdf}
-          className="gap-2"
-        >
-          {exportingPdf ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <FileDown className="h-4 w-4" />
-          )}
-          {exportingPdf ? 'Génération...' : 'Export PDF'}
-        </Button>
+        <Popover open={pdfPopoverOpen} onOpenChange={setPdfPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={exportingPdf}
+              className="gap-2"
+            >
+              {exportingPdf ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileDown className="h-4 w-4" />
+              )}
+              {exportingPdf ? 'Génération...' : 'Export PDF'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-4" align="end">
+            <p className="text-sm font-semibold mb-3">Options d&apos;export PDF</p>
+
+            {/* Cover page toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <Label htmlFor="pdf-cover" className="text-sm cursor-pointer">
+                Page de couverture
+              </Label>
+              <Switch
+                id="pdf-cover"
+                checked={pdfIncludeCover}
+                onCheckedChange={setPdfIncludeCover}
+              />
+            </div>
+
+            {/* Promo exclusion checkboxes */}
+            <p className="text-xs text-muted-foreground uppercase font-medium tracking-wide mb-2">
+              Promos à inclure
+            </p>
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1 mb-4">
+              {uniquePromos.map(([id, name]) => (
+                <div key={id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`pdf-promo-${id}`}
+                    checked={!pdfExcludedPromos.has(id)}
+                    onCheckedChange={(checked) => {
+                      setPdfExcludedPromos((prev) => {
+                        const next = new Set(prev);
+                        if (checked) next.delete(id);
+                        else next.add(id);
+                        return next;
+                      });
+                    }}
+                  />
+                  <Label htmlFor={`pdf-promo-${id}`} className="text-sm cursor-pointer">
+                    {name}
+                  </Label>
+                </div>
+              ))}
+            </div>
+
+            <Button size="sm" className="w-full gap-2" onClick={handlePdfExport}>
+              <FileDown className="h-4 w-4" />
+              Générer le PDF
+            </Button>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Alertes globales */}
