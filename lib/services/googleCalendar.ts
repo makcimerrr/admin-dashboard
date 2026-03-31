@@ -17,8 +17,10 @@ export function isCalendarConfigured(): boolean {
   );
 }
 
-export async function getUpcomingCalendarEvents(maxResults = 50): Promise<CalendarEvent[]> {
+export async function getUpcomingCalendarEvents(maxResults = 50, calendarId?: string): Promise<CalendarEvent[]> {
   if (!isCalendarConfigured()) return [];
+
+  const targetCalendarId = calendarId || process.env.GOOGLE_CALENDAR_ID!;
 
   try {
     const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY!.replace(/\\n/g, '\n');
@@ -32,7 +34,7 @@ export async function getUpcomingCalendarEvents(maxResults = 50): Promise<Calend
     const calendar = google.calendar({ version: 'v3', auth });
 
     const response = await calendar.events.list({
-      calendarId: process.env.GOOGLE_CALENDAR_ID,
+      calendarId: targetCalendarId,
       timeMin: new Date().toISOString(),
       maxResults,
       singleEvents: true,
@@ -53,7 +55,53 @@ export async function getUpcomingCalendarEvents(maxResults = 50): Promise<Calend
       htmlLink: event.htmlLink ?? '',
     }));
   } catch (error) {
-    console.error('Google Calendar error:', error);
+    console.error(`Google Calendar error (${targetCalendarId}):`, error);
     return [];
   }
+}
+
+export interface CalendarEventWithReviewer extends CalendarEvent {
+  reviewerName: string;
+  reviewerId: number;
+}
+
+export async function getUpcomingEventsFromAllReviewers(maxResultsPerCalendar = 30): Promise<CalendarEventWithReviewer[]> {
+  if (!isCalendarConfigured()) return [];
+
+  const { getAllReviewers } = await import('@/lib/db/services/reviewers');
+  const reviewers = await getAllReviewers();
+
+  // Collect all unique calendar IDs (reviewer calendars + default)
+  const calendarSources: { calendarId: string; reviewerName: string; reviewerId: number; eventPrefix: string | null }[] = [];
+
+  for (const reviewer of reviewers) {
+    if (reviewer.calendarId) {
+      calendarSources.push({
+        calendarId: reviewer.calendarId,
+        reviewerName: reviewer.name,
+        reviewerId: reviewer.id,
+        eventPrefix: reviewer.eventPrefix ?? null,
+      });
+    }
+  }
+
+  // Always include the default calendar if no reviewer calendars exist
+  if (calendarSources.length === 0) {
+    const defaultEvents = await getUpcomingCalendarEvents(maxResultsPerCalendar);
+    return defaultEvents.map(e => ({ ...e, reviewerName: 'Default', reviewerId: 0 }));
+  }
+
+  // Fetch all calendars in parallel, filter by event prefix
+  const results = await Promise.all(
+    calendarSources.map(async ({ calendarId, reviewerName, reviewerId, eventPrefix }) => {
+      const events = await getUpcomingCalendarEvents(maxResultsPerCalendar, calendarId);
+      const filtered = eventPrefix
+        ? events.filter(e => e.summary.toLowerCase().startsWith(eventPrefix.toLowerCase()))
+        : events;
+      return filtered.map(e => ({ ...e, reviewerName, reviewerId }));
+    })
+  );
+
+  // Flatten and sort by start time
+  return results.flat().sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
 }

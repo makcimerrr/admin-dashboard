@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { stackServerApp } from '@/lib/stack-server';
-import { getUpcomingCalendarEvents, isCalendarConfigured } from '@/lib/services/googleCalendar';
+import { getUpcomingEventsFromAllReviewers, getUpcomingCalendarEvents, isCalendarConfigured } from '@/lib/services/googleCalendar';
 
 export async function GET() {
   const user = await stackServerApp.getUser();
@@ -12,7 +12,8 @@ export async function GET() {
   }
 
   try {
-    const events = await getUpcomingCalendarEvents();
+    // Fetch from all reviewers' calendars, fallback to default
+    const events = await getUpcomingEventsFromAllReviewers();
     return NextResponse.json({ success: true, configured: true, events });
   } catch (error) {
     console.error('Error fetching calendar events:', error);
