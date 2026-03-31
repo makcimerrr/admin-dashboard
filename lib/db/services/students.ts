@@ -1,7 +1,5 @@
 import { db } from '../config';
 import {
-  delayStatus,
-  promotions,
   studentCurrentProjects,
   studentProjects,
   students,
@@ -347,155 +345,6 @@ export async function getStudents(
   const previousOffset =
     offset >= studentsPerPage ? offset - studentsPerPage : null;
 
-  // Mise à jour ou insertion dans delay_status pour chaque promo si promo est vide
-  // NOTE: This part seems to be doing heavy lifting on every request.
-  // Consider moving this to a background job or caching it if performance is an issue.
-  // For now, we keep it as is but optimize the queries inside if possible.
-
-  if (!promo) {
-    // Récupérer toutes les promotions
-    const allPromos = await db.select().from(promotions);
-
-    // Use Promise.all to run updates in parallel
-    await Promise.all(
-      allPromos.map(async (promo) => {
-        const promoId = promo.promoId;
-        // Filtre promo ET exclure les dropouts (isDropout = false ou NULL)
-        const promoAndActiveFilter = and(
-          eq(students.promoName, promo.name),
-          or(eq(students.isDropout, false), sql`${students.isDropout} IS NULL`)
-        );
-
-        // Obtenir les comptages groupés par `delay_level` (excluant les dropouts)
-        const delayCounts = await db
-          .select({
-            delay_level: studentProjects.delay_level,
-            count: count()
-          })
-          .from(students)
-          .leftJoin(
-            studentProjects,
-            eq(students.id, studentProjects.student_id)
-          )
-          .where(promoAndActiveFilter)
-          .groupBy(studentProjects.delay_level)
-          .execute();
-
-        // Construire les valeurs de comptage
-        const countsMap = delayCounts.reduce(
-          (acc, row) => {
-            if (row.delay_level === 'bien') acc.goodLateCount = row.count;
-            else if (row.delay_level === 'en retard') acc.lateCount = row.count;
-            else if (row.delay_level === 'en avance')
-              acc.advanceLateCount = row.count;
-            else if (row.delay_level === 'spécialité')
-              acc.specialityCount = row.count;
-            else if (row.delay_level === 'Validé')
-              acc.validatedCount = row.count;
-            else if (row.delay_level === 'Non Validé')
-              acc.notValidatedCount = row.count;
-            return acc;
-          },
-          {
-            goodLateCount: 0,
-            lateCount: 0,
-            advanceLateCount: 0,
-            specialityCount: 0,
-            validatedCount: 0,
-            notValidatedCount: 0
-          }
-        );
-
-        // Insérer ou mettre à jour les données dans delayStatus
-        // Check if entry exists first to decide between insert or update if needed,
-        // or just insert since there is no unique constraint on promoId in the schema shown (it has a serial id)
-        // However, usually we want one entry per promo. The schema shows 'id' as PK.
-        // Assuming we want to keep history or just update the latest.
-        // The original code was doing insert. Let's stick to insert for now but be aware it might fill up the table.
-
-        // Optimization: If we only need the latest status, we should probably update or delete old ones.
-        // But following the original logic:
-        await db.insert(delayStatus).values({
-          promoId,
-          lateCount: countsMap.lateCount,
-          goodLateCount: countsMap.goodLateCount,
-          advanceLateCount: countsMap.advanceLateCount,
-          specialityCount: countsMap.specialityCount,
-          validatedCount: countsMap.validatedCount,
-          notValidatedCount: countsMap.notValidatedCount,
-          lastUpdate: new Date()
-        });
-      })
-    );
-  } else {
-    // Nouvelle logique pour une promotion spécifique
-    // Filtre promo ET exclure les dropouts
-    const promoAndActiveFilter = and(
-      eq(students.promoName, promo),
-      or(eq(students.isDropout, false), sql`${students.isDropout} IS NULL`)
-    );
-
-    // Récupérer l'ID de la promo
-    const promoRecord = await db
-      .select({ promoId: promotions.promoId })
-      .from(promotions)
-      .where(eq(promotions.name, promo))
-      .limit(1)
-      .execute();
-
-    if (promoRecord.length === 0) {
-      console.error(`Promotion "${promo}" non trouvée.`);
-    } else {
-      const promoId = promoRecord[0].promoId;
-
-      const delayCounts = await db
-        .select({
-          delay_level: studentProjects.delay_level,
-          count: count()
-        })
-        .from(students)
-        .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
-        .where(promoAndActiveFilter)
-        .groupBy(studentProjects.delay_level)
-        .execute();
-
-      const countsMap = delayCounts.reduce(
-        (acc, row) => {
-          if (row.delay_level === 'bien') acc.goodLateCount = row.count;
-          else if (row.delay_level === 'en retard') acc.lateCount = row.count;
-          else if (row.delay_level === 'en avance')
-            acc.advanceLateCount = row.count;
-          else if (row.delay_level === 'spécialité')
-            acc.specialityCount = row.count;
-          else if (row.delay_level === 'Validé') acc.validatedCount = row.count;
-          else if (row.delay_level === 'Non Validé')
-            acc.notValidatedCount = row.count;
-          return acc;
-        },
-        {
-          goodLateCount: 0,
-          lateCount: 0,
-          advanceLateCount: 0,
-          specialityCount: 0,
-          validatedCount: 0,
-          notValidatedCount: 0
-        }
-      );
-
-      // Insérer les données dans delayStatus
-      await db.insert(delayStatus).values({
-        promoId,
-        lateCount: countsMap.lateCount,
-        goodLateCount: countsMap.goodLateCount,
-        advanceLateCount: countsMap.advanceLateCount,
-        specialityCount: countsMap.specialityCount,
-        validatedCount: countsMap.validatedCount,
-        notValidatedCount: countsMap.notValidatedCount,
-        lastUpdate: new Date()
-      });
-    }
-  }
-
   return {
     students: studentsResult,
     currentOffset: offset,
@@ -503,6 +352,31 @@ export async function getStudents(
     previousOffset,
     totalStudents: totalStudents
   };
+}
+
+export async function getStudentCounts(
+  promo: string
+): Promise<{ total: number; active: number; dropout: number }> {
+  const promoFilter = promo ? eq(students.promoName, promo) : undefined;
+
+  const [totalResult, activeResult] = await Promise.all([
+    db
+      .select({ count: count() })
+      .from(students)
+      .where(promoFilter),
+    db
+      .select({ count: count() })
+      .from(students)
+      .where(
+        promoFilter
+          ? and(promoFilter, sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`)
+          : sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`
+      )
+  ]);
+
+  const total = totalResult[0]?.count ?? 0;
+  const active = activeResult[0]?.count ?? 0;
+  return { total, active, dropout: total - active };
 }
 
 export async function createStudent(
@@ -927,9 +801,22 @@ type BulkUpdatePayload = {
 export async function bulkUpdateStudentProjects(updates: BulkUpdatePayload[]) {
   if (updates.length === 0) return;
 
+  // Récupérer les étudiants dropout pour les exclure
+  const existingStudents = await db
+    .select({ login: students.login, id: students.id, isDropout: students.isDropout })
+    .from(students);
+  const studentMap = new Map(existingStudents.map((s) => [s.login, s]));
+  const dropoutLogins = new Set(
+    existingStudents.filter((s) => s.isDropout).map((s) => s.login)
+  );
+
+  const filtered = updates.filter((u) => !dropoutLogins.has(u.login));
+  if (filtered.length === 0) return;
+
   await db.transaction(async (tx) => {
+    // 1. Upsert students table
     await Promise.all(
-      updates.map((u) =>
+      filtered.map((u) =>
         tx
           .insert(students)
           .values({
@@ -938,7 +825,6 @@ export async function bulkUpdateStudentProjects(updates: BulkUpdatePayload[]) {
             first_name: u.first_name,
             promoName: u.promoName,
             availableAt: u.availableAt
-            // ...autres propriétés nécessaires...
           })
           .onConflictDoUpdate({
             target: students.login,
@@ -947,10 +833,99 @@ export async function bulkUpdateStudentProjects(updates: BulkUpdatePayload[]) {
               first_name: u.first_name,
               promoName: u.promoName,
               availableAt: u.availableAt
-              // Ne pas inclure projectName, projectStatus, delayLevel, etc.
             }
           })
       )
+    );
+
+    // Récupérer les IDs des étudiants (y compris les nouveaux)
+    const allStudents = await tx
+      .select({ login: students.login, id: students.id })
+      .from(students);
+    const idMap = new Map(allStudents.map((s) => [s.login, s.id]));
+
+    // 2. Upsert studentProjects
+    await Promise.all(
+      filtered.map((u) => {
+        const studentId = idMap.get(u.login);
+        if (!studentId) return Promise.resolve();
+        return tx
+          .insert(studentProjects)
+          .values({
+            student_id: studentId,
+            project_name: u.projectName,
+            progress_status: u.projectStatus,
+            delay_level: u.delayLevel
+          })
+          .onConflictDoUpdate({
+            target: [studentProjects.student_id],
+            set: {
+              project_name: u.projectName,
+              progress_status: u.projectStatus,
+              delay_level: u.delayLevel
+            }
+          });
+      })
+    );
+
+    // 3. Upsert studentCurrentProjects
+    await Promise.all(
+      filtered.map((u) => {
+        const studentId = idMap.get(u.login);
+        if (!studentId) return Promise.resolve();
+        return tx
+          .insert(studentCurrentProjects)
+          .values({
+            student_id: studentId,
+            golang_project: u.commonProjects['Golang']?.name || null,
+            golang_project_status: u.commonProjects['Golang']?.status || null,
+            javascript_project: u.commonProjects['Javascript']?.name || null,
+            javascript_project_status: u.commonProjects['Javascript']?.status || null,
+            rust_project: u.commonProjects['Rust']?.name || null,
+            rust_project_status: u.commonProjects['Rust']?.status || null,
+            java_project: u.commonProjects['Java']?.name || null,
+            java_project_status: u.commonProjects['Java']?.status || null
+          })
+          .onConflictDoUpdate({
+            target: studentCurrentProjects.student_id,
+            set: {
+              golang_project: u.commonProjects['Golang']?.name || null,
+              golang_project_status: u.commonProjects['Golang']?.status || null,
+              javascript_project: u.commonProjects['Javascript']?.name || null,
+              javascript_project_status: u.commonProjects['Javascript']?.status || null,
+              rust_project: u.commonProjects['Rust']?.name || null,
+              rust_project_status: u.commonProjects['Rust']?.status || null,
+              java_project: u.commonProjects['Java']?.name || null,
+              java_project_status: u.commonProjects['Java']?.status || null
+            }
+          });
+      })
+    );
+
+    // 4. Upsert studentSpecialtyProgress
+    await Promise.all(
+      filtered.map((u) => {
+        const studentId = idMap.get(u.login);
+        if (!studentId) return Promise.resolve();
+        return tx
+          .insert(studentSpecialtyProgress)
+          .values({
+            student_id: studentId,
+            golang_completed: u.lastProjectsFinished['Golang'] ?? false,
+            javascript_completed: u.lastProjectsFinished['Javascript'] ?? false,
+            rust_completed: u.lastProjectsFinished['Rust'] ?? false,
+            java_completed: u.lastProjectsFinished['Java'] ?? false
+          })
+          .onConflictDoUpdate({
+            target: studentSpecialtyProgress.student_id,
+            set: {
+              golang_completed: u.lastProjectsFinished['Golang'] ?? false,
+              javascript_completed: u.lastProjectsFinished['Javascript'] ?? false,
+              rust_completed: u.lastProjectsFinished['Rust'] ?? false,
+              java_completed: u.lastProjectsFinished['Java'] ?? false
+            }
+          });
+      })
     );
   });
 }
