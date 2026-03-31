@@ -152,9 +152,8 @@ export default function StudentPage() {
           if (data.success) {
             setStudent(data.student);
             setProjects(data.projects);
-            // Charger automatiquement les données externes
+            // Charger données externes et config promo en parallèle
             fetchExternalDataInternal(data.student.login);
-            // Charger la config de la promo de l'étudiant
             fetch('/api/promotions').then(r => r.json()).then(cfg => {
               if (cfg.success) {
                 setStudentPromoConfig(cfg.promotions.find((p: any) => p.key === data.student.promoName) ?? null);

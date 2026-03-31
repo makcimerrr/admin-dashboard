@@ -20,20 +20,12 @@ interface HistoryEntry {
   date: string;
   entityId: string;
   details: any;
-}
-
-interface UserInfo {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  planningPermission: string;
-}
-
-interface EntityInfo {
-  id: string;
-  label: string;
-  extra?: string;
+  // Enriched fields from server
+  userName: string | null;
+  userRole: string | null;
+  userPlanningPermission: string | null;
+  entityLabel: string | null;
+  entityExtra: string | null;
 }
 
 export default function HistoryPage() {
@@ -43,8 +35,6 @@ export default function HistoryPage() {
   const [type, setType] = useState("");
   const [action, setAction] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [userMap, setUserMap] = useState<Record<string, UserInfo>>({});
-  const [entityMap, setEntityMap] = useState<Record<string, EntityInfo>>({});
 
   const planningPermission = stackUser
     ? ((stackUser.clientReadOnlyMetadata?.planningPermission ||
@@ -60,56 +50,7 @@ export default function HistoryPage() {
     if (userEmail) url += `&userId=${encodeURIComponent(userEmail)}`;
     fetch(url)
       .then((res) => res.json())
-      .then(async (data) => {
-        setHistory(data);
-        const userIds = Array.from(new Set(data.map((h: HistoryEntry) => h.userId).filter(Boolean)));
-        const userResults = await Promise.all(userIds.map(async (id) => {
-          try {
-            const res = await fetch(`/api/users/${id}`);
-            if (!res.ok) return null;
-            const user = await res.json();
-            return { id, ...user };
-          } catch { return null; }
-        }));
-        const userMapObj: Record<string, UserInfo> = {};
-        userResults.forEach(u => { if (u && u.id) userMapObj[u.id] = u; });
-        setUserMap(userMapObj);
-
-        const entityFetches = data.map(async (entry: HistoryEntry) => {
-          if (!entry.entityId) return null;
-          let label = entry.entityId;
-          let extra = "";
-          try {
-            if (entry.type === "employee") {
-              const res = await fetch(`/api/employees/${entry.entityId}`);
-              if (res.ok) { const emp = await res.json(); label = `${emp.name} (${emp.email})`; extra = emp.role; }
-            } else if (entry.type === "planning" || entry.type === "absence") {
-              const details = entry.details?.after || entry.details?.before || entry.details;
-              if (details?.employeeId) {
-                const empRes = await fetch(`/api/employees/${details.employeeId}`);
-                let empName = details.employeeId;
-                if (empRes.ok) { const emp = await empRes.json(); empName = emp.name; }
-                label = `Planning de ${empName} – ${details.day || "?"} (${details.weekKey || "?"})`;
-                extra = details.timeSlots ? `${details.timeSlots.length} créneau(x)` : "";
-              }
-            } else if (entry.type === "project") {
-              const res = await fetch(`/api/projects/${entry.entityId}`);
-              if (res.ok) { const proj = await res.json(); label = `Projet : ${proj.name}`; extra = proj.category; }
-            } else if (entry.type === "promo") {
-              const res = await fetch(`/api/promos/${entry.entityId}`);
-              if (res.ok) { const promo = await res.json(); label = `Promo : ${promo.name}`; }
-            } else if (entry.type === "student") {
-              const res = await fetch(`/api/students/${entry.entityId}`);
-              if (res.ok) { const stu = await res.json(); label = `Étudiant : ${stu.first_name} ${stu.last_name} (${stu.login})`; extra = stu.promos; }
-            }
-          } catch {}
-          return { id: entry.entityId, label, extra };
-        });
-        const entityResults = await Promise.all(entityFetches);
-        const entityMapObj: Record<string, EntityInfo> = {};
-        entityResults.forEach(e => { if (e && e.id) entityMapObj[e.id] = e; });
-        setEntityMap(entityMapObj);
-      })
+      .then((data) => setHistory(data))
       .finally(() => setLoading(false));
   }, [type, action, userEmail]);
 
@@ -118,27 +59,26 @@ export default function HistoryPage() {
   }
 
   function renderUserInfo(entry: HistoryEntry) {
-    const user = userMap[entry.userId];
-    if (!user) return <span className="italic text-muted-foreground">unknown</span>;
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="font-semibold">{user.name || user.email}</span>
-        <span className="text-[10px] text-muted-foreground">{user.email}</span>
+        <span className="font-semibold">{entry.userName || entry.userEmail}</span>
+        <span className="text-[10px] text-muted-foreground">{entry.userEmail}</span>
         <div className="flex gap-1 mt-0.5">
-          <Badge variant={user.role === 'admin' ? 'default' : 'outline'} className="text-[9px] px-1 py-0 h-4">{user.role}</Badge>
-          <Badge variant={user.planningPermission === 'editor' ? 'default' : 'outline'} className="text-[9px] px-1 py-0 h-4">{user.planningPermission}</Badge>
+          {entry.userRole && <Badge variant={entry.userRole === 'admin' ? 'default' : 'outline'} className="text-[9px] px-1 py-0 h-4">{entry.userRole}</Badge>}
+          {entry.userPlanningPermission && <Badge variant={entry.userPlanningPermission === 'editor' ? 'default' : 'outline'} className="text-[9px] px-1 py-0 h-4">{entry.userPlanningPermission}</Badge>}
         </div>
       </div>
     );
   }
 
   function renderEntityInfo(entry: HistoryEntry) {
-    const entity = entityMap[entry.entityId];
-    if (!entity) return <span className="italic text-muted-foreground text-[10px]">{entry.entityId?.slice(0, 8)}...</span>;
+    if (!entry.entityLabel) {
+      return <span className="italic text-muted-foreground text-[10px]">{entry.entityId?.slice(0, 8)}...</span>;
+    }
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="font-medium">{entity.label}</span>
-        {entity.extra && <span className="text-[10px] text-muted-foreground">{entity.extra}</span>}
+        <span className="font-medium">{entry.entityLabel}</span>
+        {entry.entityExtra && <span className="text-[10px] text-muted-foreground">{entry.entityExtra}</span>}
       </div>
     );
   }
