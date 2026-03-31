@@ -6,26 +6,18 @@ import {
   upsertGroupStatus,
   getPendingAuditNotifications,
   markAuditNotified,
-  getNotifiedCount
+  getNotifiedCount,
+  getOverdueGroups,
+  markReminderSent
 } from '@/lib/db/services/groupStatuses';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
+import { getTrackByProjectName } from '@/lib/config/projects';
+import { getReviewerForRoundRobin, type Reviewer } from '@/lib/db/services/reviewers';
 
 export const maxDuration = 60;
 
 const CRON_SECRET = process.env.CRON_SECRET;
-
-// Reviewers avec leur lien de planning — ajouter Cyril et Nassuif quand disponibles
-const REVIEWERS = [
-  { name: 'Maxime', planningUrl: 'https://calendar.app.google/2MoLxboyXGECFUjT6' },
-  { name: 'Vivien', planningUrl: 'https://calendar.app.google/eF8cYjKbHwrJ2X8T8' },
-  // { name: 'Cyril', planningUrl: '' },
-  // { name: 'Nassuif', planningUrl: '' },
-];
-
-function getReviewer(notifiedSoFar: number): (typeof REVIEWERS)[number] {
-  return REVIEWERS[notifiedSoFar % REVIEWERS.length];
-}
 
 function buildAuditMessage(
   captainLogin: string,
@@ -150,7 +142,13 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        const reviewer = getReviewer(assignmentIndex);
+        const track = await getTrackByProjectName(group.projectName);
+        const promoKey = promo?.key;
+        const reviewer = await getReviewerForRoundRobin(track, assignmentIndex, promoKey);
+        if (!reviewer) {
+          results.push({ outcome: 'skipped' });
+          continue;
+        }
         const message = buildAuditMessage(
           group.captainLogin,
           group.projectName,
@@ -175,6 +173,38 @@ export async function GET(request: NextRequest) {
       else errors++;
     }
 
+    // Step 3: Auto-remind overdue groups (>14 days without booking a slot)
+    const overdue = await getOverdueGroups();
+    let reminders = 0;
+
+    for (const group of overdue) {
+      try {
+        if (!group.captainLogin) continue;
+        const discordId = await getDiscordIdByLogin(group.captainLogin);
+        if (!discordId) continue;
+
+        const promo = promotions.find(p => String(p.eventId) === group.promoId);
+        const pName = promo?.title ?? promo?.key ?? group.promoId;
+        const days = Math.floor((Date.now() - new Date(group.notifiedAuditAt!).getTime()) / 86_400_000);
+
+        const reminderMessage = [
+          `Hey ${group.captainLogin} ! ⚠️`,
+          ``,
+          `Rappel : ton groupe attend une code-review pour **${group.projectName}** (${pName}) depuis **${days} jours**.`,
+          ``,
+          `Merci de réserver un créneau au plus vite, le délai est dépassé.`,
+          ``,
+          `Si tu as des difficultés, n'hésite pas à contacter le staff. 💪`
+        ].join('\n');
+
+        const sent = await sendDiscordDM(discordId, reminderMessage);
+        if (sent) reminders++;
+        await markReminderSent(group.id);
+      } catch (err) {
+        console.error(`Reminder error for group ${group.id}:`, err);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       summary: {
@@ -182,7 +212,9 @@ export async function GET(request: NextRequest) {
         pendingNotifications: pending.length,
         notified,
         skippedNoDiscordId,
-        errors
+        errors,
+        overdueReminders: reminders,
+        overdueTotal: overdue.length
       }
     });
   } catch (error) {

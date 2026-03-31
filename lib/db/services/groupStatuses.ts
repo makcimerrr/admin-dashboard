@@ -1,6 +1,6 @@
 import { db } from '../config';
 import { groupStatuses } from '../schema/groupStatuses';
-import { eq, and, isNull, or, isNotNull, inArray, count } from 'drizzle-orm';
+import { eq, and, isNull, or, isNotNull, inArray, count, sql } from 'drizzle-orm';
 import { discordUsers } from '../schema/discordUsers';
 import { audits } from '../schema/audits';
 import { getTrackByProjectName } from '@/lib/config/projects';
@@ -55,6 +55,29 @@ export async function getNotifiedCount(): Promise<number> {
     .from(groupStatuses)
     .where(isNotNull(groupStatuses.notifiedAuditAt));
   return result?.value ?? 0;
+}
+
+export async function getOverdueGroups(): Promise<(typeof groupStatuses.$inferSelect)[]> {
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 86_400_000);
+  return db
+    .select()
+    .from(groupStatuses)
+    .where(
+      and(
+        eq(groupStatuses.status, 'audit'),
+        isNotNull(groupStatuses.notifiedAuditAt),
+        isNull(groupStatuses.slotDate),
+        isNull(groupStatuses.reminderSentAt),
+        sql`${groupStatuses.notifiedAuditAt} <= ${fourteenDaysAgo}`
+      )
+    );
+}
+
+export async function markReminderSent(id: number): Promise<void> {
+  await db
+    .update(groupStatuses)
+    .set({ reminderSentAt: new Date() })
+    .where(eq(groupStatuses.id, id));
 }
 
 export interface SuiviRow {
