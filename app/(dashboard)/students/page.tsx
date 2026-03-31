@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getStudents } from '@/lib/db/services/students';
+import { getStudents, getStudentCounts } from '@/lib/db/services/students';
 import { StudentsTable } from '../students-table';
 import { getAllPromotions } from '@/lib/config/promotions';
 import TrackStatsDisplay from '@/components/track-stats-display';
@@ -8,6 +8,7 @@ import { Users, GraduationCap } from 'lucide-react';
 import { StudentsHeader } from './_components/students-header';
 import { QuickStats } from './_components/quick-stats';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 interface PromoDates {
   start: string;
@@ -69,27 +70,14 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   const selectedPromo = promos.find((p) => p.key === promo);
   const eventId: string = selectedPromo ? String(selectedPromo.eventId) : '';
 
-  // Fetch students data
-  const { students, newOffset, totalStudents, previousOffset, currentOffset } =
-    await getStudents(
-      search,
-      offsetNumber,
-      promo,
-      filter,
-      direction,
-      status,
-      delay_level,
-      track,
-      track_completed
-    );
+  // Fetch students data and counts in parallel
+  const [studentsData, counts] = await Promise.all([
+    getStudents(search, offsetNumber, promo, filter, direction, status, delay_level, track, track_completed),
+    getStudentCounts(promo)
+  ]);
 
-  // Fetch stats for all students (for header display)
-  const allStudentsData = await getStudents('', 0, promo, '', '', null, null, null, null, -1, 'all');
-  const activeStudentsData = await getStudents('', 0, promo, '', '', null, null, null, null, -1, 'active');
-
-  const totalAll = allStudentsData.totalStudents;
-  const totalActive = activeStudentsData.totalStudents;
-  const totalDropout = totalAll - totalActive;
+  const { students, newOffset, totalStudents, previousOffset, currentOffset } = studentsData;
+  const { total: totalAll, active: totalActive, dropout: totalDropout } = counts;
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
@@ -117,22 +105,22 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
           <TabsList className="w-full sm:w-auto overflow-x-auto flex-shrink-0">
             <TabsTrigger value="all" asChild>
-              <a
+              <Link
                 href={`/students?q=${search}&offset=${0}`}
                 className="gap-2 inline-flex items-center"
               >
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Toutes les promotions</span>
                 <span className="sm:hidden">Toutes</span>
-              </a>
+              </Link>
             </TabsTrigger>
             {promos.map(({ key, title }) => (
               <TabsTrigger key={key} value={key} asChild>
-                <a
+                <Link
                   href={`/students?q=${search}&offset=${0}&promo=${encodeURIComponent(key)}`}
                 >
                   {key}
-                </a>
+                </Link>
               </TabsTrigger>
             ))}
           </TabsList>

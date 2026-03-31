@@ -100,9 +100,9 @@ export default async function DashboardLayout({
   return (
     <SidebarProvider>
       <AppSidebar variant="inset" user={user} />
-      <SidebarInset>
+      <SidebarInset className="min-h-0 overflow-hidden">
         <SiteHeader />
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-h-0 overflow-auto">
           <div className="@container/main flex flex-1 flex-col gap-2">
             {children}
           </div>

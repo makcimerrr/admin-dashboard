@@ -1,6 +1,6 @@
 import { db } from '../config';
 import { students, studentSpecialtyProgress } from '../schema';
-import { eq, and, count } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 export interface TrackStats {
   track: string;
@@ -12,79 +12,48 @@ export interface TrackStats {
 
 export async function getTrackStatsByPromo(promoName: string | null): Promise<TrackStats[]> {
   try {
-    // Requête pour chaque tronc
-    const tracks = ['golang', 'javascript', 'rust', 'java'] as const;
-    const stats: TrackStats[] = [];
+    // Single query: count completed/in-progress for all 4 tracks at once
+    const conditions = [eq(students.isDropout, false)];
+    if (promoName) {
+      conditions.push(eq(students.promoName, promoName));
+    }
 
-    for (const track of tracks) {
-      // Obtenir la référence de colonne directement
-      let completedColumn;
-      switch (track) {
-        case 'golang':
-          completedColumn = studentSpecialtyProgress.golang_completed;
-          break;
-        case 'javascript':
-          completedColumn = studentSpecialtyProgress.javascript_completed;
-          break;
-        case 'rust':
-          completedColumn = studentSpecialtyProgress.rust_completed;
-          break;
-        case 'java':
-          completedColumn = studentSpecialtyProgress.java_completed;
-          break;
-      }
+    const result = await db
+      .select({
+        golang_completed_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.golang_completed} = true)`,
+        golang_in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.golang_completed} = false)`,
+        javascript_completed_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.javascript_completed} = true)`,
+        javascript_in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.javascript_completed} = false)`,
+        rust_completed_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.rust_completed} = true)`,
+        rust_in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.rust_completed} = false)`,
+        java_completed_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.java_completed} = true)`,
+        java_in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.java_completed} = false)`,
+      })
+      .from(students)
+      .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
+      .where(and(...conditions))
+      .execute();
 
-      // Construire la requête pour compter les étudiants avec le tronc terminé
-      // Exclure les étudiants en perdition
-      const completedConditions = [
-        eq(completedColumn, true),
-        eq(students.isDropout, false)
-      ];
-      if (promoName) {
-        completedConditions.push(eq(students.promoName, promoName));
-      }
+    const row = result[0];
+    if (!row) return [];
 
-      const completedQuery = db
-        .select({ count: count() })
-        .from(students)
-        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
-        .where(and(...completedConditions));
+    const tracks = [
+      { name: 'Golang', completed: Number(row.golang_completed_count), inProgress: Number(row.golang_in_progress_count) },
+      { name: 'Javascript', completed: Number(row.javascript_completed_count), inProgress: Number(row.javascript_in_progress_count) },
+      { name: 'Rust', completed: Number(row.rust_completed_count), inProgress: Number(row.rust_in_progress_count) },
+      { name: 'Java', completed: Number(row.java_completed_count), inProgress: Number(row.java_in_progress_count) },
+    ];
 
-      const completedResult = await completedQuery.execute();
-
-      // Construire la requête pour compter les étudiants avec le tronc en cours
-      // Exclure les étudiants en perdition
-      const inProgressConditions = [
-        eq(completedColumn, false),
-        eq(students.isDropout, false)
-      ];
-      if (promoName) {
-        inProgressConditions.push(eq(students.promoName, promoName));
-      }
-
-      const inProgressQuery = db
-        .select({ count: count() })
-        .from(students)
-        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
-        .where(and(...inProgressConditions));
-
-      const inProgressResult = await inProgressQuery.execute();
-
-      const completed = completedResult[0]?.count || 0;
-      const inProgress = inProgressResult[0]?.count || 0;
+    return tracks.map(({ name, completed, inProgress }) => {
       const total = completed + inProgress;
-      const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-      stats.push({
-        track: track.charAt(0).toUpperCase() + track.slice(1),
+      return {
+        track: name,
         completed,
         inProgress,
         total,
-        completionRate
-      });
-    }
-
-    return stats;
+        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+      };
+    });
   } catch (error) {
     console.error('Erreur lors de la récupération des statistiques des troncs:', error);
     throw error;
