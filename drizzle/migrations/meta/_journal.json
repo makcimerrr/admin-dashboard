@@ -36,6 +36,13 @@
       "when": 1768408867743,
       "tag": "0004_boring_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774958446636,
+      "tag": "0005_acoustic_johnny_blaze",
+      "breakpoints": true
     }
   ]
 }

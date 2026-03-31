@@ -2,10 +2,11 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, Briefcase, Plane, Settings2 } from 'lucide-react';
+import { Calendar, Briefcase, Plane, Settings2, Users } from 'lucide-react';
 import PromoManagement from './promo-management-new';
 import HolidayManagement from './holiday-management-new';
 import ProjectManagement from './project-management-new';
+import ReviewerManagement from './reviewer-management';
 
 export default function ConfigPage() {
   return (
@@ -25,7 +26,7 @@ export default function ConfigPage() {
 
       {/* Tabs Navigation */}
       <Tabs defaultValue="promos" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[700px]">
           <TabsTrigger value="promos" className="gap-2">
             <Calendar className="h-4 w-4" />
             <span className="hidden sm:inline">Promotions</span>
@@ -41,6 +42,11 @@ export default function ConfigPage() {
             <span className="hidden sm:inline">Projets</span>
             <span className="sm:hidden">Projets</span>
           </TabsTrigger>
+          <TabsTrigger value="reviewers" className="gap-2">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Reviewers</span>
+            <span className="sm:hidden">Reviews</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="promos" className="mt-6">
@@ -53,6 +59,10 @@ export default function ConfigPage() {
 
         <TabsContent value="projects" className="mt-6">
           <ProjectManagement />
+        </TabsContent>
+
+        <TabsContent value="reviewers" className="mt-6">
+          <ReviewerManagement />
         </TabsContent>
       </Tabs>
     </div>
