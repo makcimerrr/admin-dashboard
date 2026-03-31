@@ -1,6 +1,6 @@
 import { db } from '../config';
 import { groupStatuses } from '../schema/groupStatuses';
-import { eq, and, isNull, or, isNotNull, inArray } from 'drizzle-orm';
+import { eq, and, isNull, or, isNotNull, inArray, count } from 'drizzle-orm';
 import { discordUsers } from '../schema/discordUsers';
 import { audits } from '../schema/audits';
 import { getTrackByProjectName } from '@/lib/config/projects';
@@ -47,6 +47,14 @@ export async function markAuditNotified(id: number): Promise<void> {
     .update(groupStatuses)
     .set({ notifiedAuditAt: new Date() })
     .where(eq(groupStatuses.id, id));
+}
+
+export async function getNotifiedCount(): Promise<number> {
+  const [result] = await db
+    .select({ value: count() })
+    .from(groupStatuses)
+    .where(isNotNull(groupStatuses.notifiedAuditAt));
+  return result?.value ?? 0;
 }
 
 export interface SuiviRow {

@@ -5,7 +5,8 @@ import { fetchPromotionProgressions } from '@/lib/services/zone01';
 import {
   upsertGroupStatus,
   getPendingAuditNotifications,
-  markAuditNotified
+  markAuditNotified,
+  getNotifiedCount
 } from '@/lib/db/services/groupStatuses';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
@@ -14,18 +15,31 @@ export const maxDuration = 60;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
+// Reviewers avec leur lien de planning — ajouter Cyril et Nassuif quand disponibles
+const REVIEWERS = [
+  { name: 'Maxime', planningUrl: 'https://calendar.app.google/2MoLxboyXGECFUjT6' },
+  { name: 'Vivien', planningUrl: 'https://calendar.app.google/eF8cYjKbHwrJ2X8T8' },
+  // { name: 'Cyril', planningUrl: '' },
+  // { name: 'Nassuif', planningUrl: '' },
+];
+
+function getReviewer(notifiedSoFar: number): (typeof REVIEWERS)[number] {
+  return REVIEWERS[notifiedSoFar % REVIEWERS.length];
+}
+
 function buildAuditMessage(
   captainLogin: string,
   projectName: string,
-  promoName: string
+  promoName: string,
+  reviewer: { name: string; planningUrl: string }
 ): string {
   return [
     `Hey ${captainLogin} ! 👋`,
     ``,
     `Bonne nouvelle : ton groupe vient de terminer **${projectName}** (${promoName}) et est maintenant en attente de code-review avec le staff ! 🎉`,
     ``,
-    `En tant que **capitaine**, c'est à toi de réserver le créneau pour toute ton équipe :`,
-    `📅 https://calendar.app.google/2MoLxboyXGECFUjT6`,
+    `En tant que **capitaine**, c'est à toi de réserver le créneau pour toute ton équipe avec **${reviewer.name}** :`,
+    `📅 ${reviewer.planningUrl}`,
     ``,
     `N'oublie pas de prévenir tes coéquipiers une fois le rendez-vous fixé.`,
     ``,
@@ -105,57 +119,60 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Step 2: Notify pending audit groups — fully parallelized
+    // Step 2: Notify pending audit groups — round-robin reviewer assignment
     const pending = await getPendingAuditNotifications();
+    const alreadyNotified = await getNotifiedCount();
 
     let notified = 0;
     let skippedNoDiscordId = 0;
     let errors = 0;
 
-    const results = await Promise.allSettled(
-      pending.map(async (group) => {
-        try {
-          const promo = promotions.find(
-            (p) => String(p.eventId) === group.promoId
-          );
-          const promoName = promo?.title ?? promo?.key ?? group.promoId;
+    // Process sequentially to guarantee round-robin order
+    const results: { outcome: 'notified' | 'skipped' | 'error' }[] = [];
+    let assignmentIndex = alreadyNotified;
 
-          if (!group.captainLogin) {
-            return { outcome: 'skipped' as const };
-          }
+    for (const group of pending) {
+      try {
+        const promo = promotions.find(
+          (p) => String(p.eventId) === group.promoId
+        );
+        const promoName = promo?.title ?? promo?.key ?? group.promoId;
 
-          const discordId = await getDiscordIdByLogin(group.captainLogin);
-
-          if (!discordId) {
-            return { outcome: 'skipped' as const };
-          }
-
-          const message = buildAuditMessage(
-            group.captainLogin,
-            group.projectName,
-            promoName
-          );
-          const sent = await sendDiscordDM(discordId, message);
-
-          return { outcome: sent ? ('notified' as const) : ('error' as const) };
-        } catch (err) {
-          console.error(`Notification error for group ${group.id}:`, err);
-          return { outcome: 'error' as const };
-        } finally {
-          // Always mark as notified to avoid infinite retry loops
-          await markAuditNotified(group.id);
+        if (!group.captainLogin) {
+          results.push({ outcome: 'skipped' });
+          continue;
         }
-      })
-    );
+
+        const discordId = await getDiscordIdByLogin(group.captainLogin);
+
+        if (!discordId) {
+          results.push({ outcome: 'skipped' });
+          continue;
+        }
+
+        const reviewer = getReviewer(assignmentIndex);
+        const message = buildAuditMessage(
+          group.captainLogin,
+          group.projectName,
+          promoName,
+          reviewer
+        );
+        const sent = await sendDiscordDM(discordId, message);
+
+        if (sent) assignmentIndex++;
+        results.push({ outcome: sent ? 'notified' : 'error' });
+      } catch (err) {
+        console.error(`Notification error for group ${group.id}:`, err);
+        results.push({ outcome: 'error' });
+      } finally {
+        await markAuditNotified(group.id);
+      }
+    }
 
     for (const result of results) {
-      if (result.status === 'fulfilled') {
-        if (result.value.outcome === 'notified') notified++;
-        else if (result.value.outcome === 'skipped') skippedNoDiscordId++;
-        else errors++;
-      } else {
-        errors++;
-      }
+      if (result.outcome === 'notified') notified++;
+      else if (result.outcome === 'skipped') skippedNoDiscordId++;
+      else errors++;
     }
 
     return NextResponse.json({
