@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +55,7 @@ const TECH_COLORS: Record<string, string> = {
 
 export default function ProjectManagement() {
   const [projectsByTech, setProjectsByTech] = useState<ProjectsByTech>({});
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteProject, setDeleteProject] = useState<{ tech: string; id: number } | null>(null);
   const [newProject, setNewProject] = useState<Omit<Project, 'id'> & { tech: string }>({
@@ -67,12 +69,15 @@ export default function ProjectManagement() {
   }, []);
 
   const fetchProjects = async () => {
+    setLoading(true);
     try {
       const response = await fetch('/api/projects');
       const data = await response.json();
       setProjectsByTech(data);
     } catch (error) {
       toast.error('Erreur lors du chargement des projets.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -241,7 +246,11 @@ export default function ProjectManagement() {
       </div>
 
       {/* Liste des projets par technologie */}
-      {Object.keys(projectsByTech).length === 0 ? (
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-lg" />)}
+        </div>
+      ) : Object.keys(projectsByTech).length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Code2 className="h-12 w-12 text-muted-foreground mb-4" />

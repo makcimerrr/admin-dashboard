@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ interface Promo {
 
 export default function PromoManagement() {
   const [promos, setPromos] = useState<Promo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletePromo, setDeletePromo] = useState<string | null>(null);
   const [newPromo, setNewPromo] = useState<Promo>({
@@ -68,6 +70,7 @@ export default function PromoManagement() {
   }, []);
 
   const fetchPromos = async () => {
+    setLoading(true);
     try {
       const response = await fetch('/api/promos');
       if (!response.ok) throw new Error('Unable to fetch promotions');
@@ -76,6 +79,8 @@ export default function PromoManagement() {
     } catch (error) {
       console.error('Error fetching promotions:', error);
       toast.error('Impossible de récupérer les promotions.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -297,7 +302,11 @@ export default function PromoManagement() {
       </div>
 
       {/* Liste des promotions */}
-      {promos.length === 0 ? (
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-lg" />)}
+        </div>
+      ) : promos.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />

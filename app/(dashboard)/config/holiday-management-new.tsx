@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +44,7 @@ interface DateRange {
 
 export default function HolidayManagement() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteHoliday, setDeleteHoliday] = useState<string | null>(null);
   const [newHoliday, setNewHoliday] = useState<Holiday>({
@@ -56,6 +58,7 @@ export default function HolidayManagement() {
   }, []);
 
   const fetchHolidays = async () => {
+    setLoading(true);
     try {
       const response = await fetch('/api/holidays');
       const data = await response.json();
@@ -73,6 +76,8 @@ export default function HolidayManagement() {
     } catch (error) {
       console.error('Erreur lors de la récupération des vacances :', error);
       toast.error('Impossible de charger les vacances.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -214,7 +219,11 @@ export default function HolidayManagement() {
       </div>
 
       {/* Liste des vacances */}
-      {holidays.length === 0 ? (
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-lg" />)}
+        </div>
+      ) : holidays.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Plane className="h-12 w-12 text-muted-foreground mb-4" />
