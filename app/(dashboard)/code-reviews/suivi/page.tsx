@@ -64,10 +64,10 @@ function daysSinceNotified(row: SuiviRow): number {
 
 function categorize(row: SuiviRow): Category {
   if (row.auditId) return 'done';
-  if (row.slotDate) return 'pending'; // has slot booked, waiting for review
   const days = daysSinceNotified(row);
-  if (row.notifiedAuditAt && row.hasDiscordId && days >= 14) return 'overdue';
-  if (row.notifiedAuditAt && row.hasDiscordId && days >= 10) return 'warning';
+  // Overdue/warning regardless of whether slot is booked
+  if (days >= 14) return 'overdue';
+  if (days >= 10) return 'warning';
   return 'pending';
 }
 
@@ -409,13 +409,14 @@ export default function SuiviPage() {
                       {/* Délai */}
                       {showDelayColumn && (
                         <TableCell>
-                          {row.notifiedAuditAt && row.hasDiscordId ? (() => {
+                          {(() => {
                             const days = Math.floor(daysSinceNotified(row));
+                            if (days === 0) return <span className="text-muted-foreground/40">—</span>;
                             const left = 14 - days;
                             if (days >= 14) return <span className="text-red-600 dark:text-red-400 font-semibold text-[11px]">{days}j</span>;
                             if (days >= 10) return <span className="text-amber-600 dark:text-amber-400 text-[11px]">{days}j <span className="text-muted-foreground">({left}j rest.)</span></span>;
                             return <span className="text-muted-foreground text-[11px]">{days}j</span>;
-                          })() : <span className="text-muted-foreground/40">—</span>}
+                          })()}
                         </TableCell>
                       )}
 
@@ -451,7 +452,13 @@ export default function SuiviPage() {
                             <DropdownMenuItem onClick={() => callResendDM(row, true)} disabled={loadingIds.has(row.id)}>
                               <RefreshCw className="mr-2 h-3.5 w-3.5" />Renvoyer DM
                             </DropdownMenuItem>
-                            {!row.auditId && (
+                            {row.auditId ? (
+                              <DropdownMenuItem asChild>
+                                <a href={`/code-reviews/${row.promoId}/group/${row.groupId}`}>
+                                  <ExternalLink className="mr-2 h-3.5 w-3.5" />Consulter la review
+                                </a>
+                              </DropdownMenuItem>
+                            ) : (
                               <DropdownMenuItem asChild>
                                 <a href={row.track
                                   ? `/code-reviews/${row.promoId}/audit?groupId=${row.groupId}&project=${encodeURIComponent(row.projectName)}&track=${encodeURIComponent(row.track)}`
