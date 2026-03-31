@@ -156,14 +156,14 @@ export async function getAllForSuivi(): Promise<SuiviRow[]> {
           )
       : [];
 
-  // Build audit lookup: groupId:promoId:projectName -> audit
+  // Build audit lookup: groupId:promoId:projectName (lowercase) -> audit
   const auditMap = new Map<string, (typeof auditRows)[0]>();
   for (const a of auditRows) {
-    auditMap.set(`${a.groupId}:${a.promoId}:${a.projectName}`, a);
+    auditMap.set(`${a.groupId}:${a.promoId}:${a.projectName.toLowerCase()}`, a);
   }
 
   return rows.map((r) => {
-    const audit = auditMap.get(`${r.groupId}:${r.promoId}:${r.projectName}`);
+    const audit = auditMap.get(`${r.groupId}:${r.promoId}:${r.projectName.toLowerCase()}`);
     return {
       id: r.id,
       groupId: r.groupId,
