@@ -35,7 +35,7 @@ export function DatePickerDemo({ value, onChange, id, className }: DatePickerDem
   };
 
   return (
-    <Popover>
+    <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant={'outline'}
