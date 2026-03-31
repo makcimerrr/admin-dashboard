@@ -157,13 +157,14 @@ export async function GET(request: NextRequest) {
         );
         const sent = await sendDiscordDM(discordId, message);
 
-        if (sent) assignmentIndex++;
+        if (sent) {
+          assignmentIndex++;
+          await markAuditNotified(group.id);
+        }
         results.push({ outcome: sent ? 'notified' : 'error' });
       } catch (err) {
         console.error(`Notification error for group ${group.id}:`, err);
         results.push({ outcome: 'error' });
-      } finally {
-        await markAuditNotified(group.id);
       }
     }
 
