@@ -7,7 +7,7 @@ import { ChatSidebar } from '@/components/assistant/chat-sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { NovaLogo } from '@/components/assistant/nova-logo';
+import { BrainCircuit } from 'lucide-react';
 import {
   HelpCircle,
   MessageSquare,
@@ -121,7 +121,7 @@ export default function HelpPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <NovaLogo className="h-8 w-8" />
+              <BrainCircuit className="h-8 w-8 text-violet-600" />
               <h1 className="text-3xl font-bold">Aide & Documentation</h1>
               <Sparkles className="h-5 w-5 text-blue-500" />
             </div>

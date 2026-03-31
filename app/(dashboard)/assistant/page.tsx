@@ -94,9 +94,7 @@ export default function AssistantPage() {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Assistant message will be created when we receive the first chunk
     const assistantMessageId = (Date.now() + 1).toString();
-    let assistantMessageCreated = false;
 
     // Abort any previous request
     if (abortControllerRef.current) {
@@ -119,82 +117,35 @@ export default function AssistantPage() {
         signal: abortControllerRef.current.signal,
       });
 
-      // Check for new conversation ID in header
-      const newConversationId = response.headers.get('X-Conversation-Id');
-      if (newConversationId && !currentConversationId) {
-        const id = parseInt(newConversationId);
-        setCurrentConversationId(id);
-        router.push(`/assistant/${id}`);
-      }
-
       if (!response.ok) {
         throw new Error('Failed to send message');
       }
 
-      // Handle streaming response
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
+      const data = await response.json();
 
-      const decoder = new TextDecoder();
-      let fullContent = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        // Parse SSE format from AI SDK
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('0:')) {
-            // Text content
-            try {
-              const content = JSON.parse(line.slice(2));
-              fullContent += content;
-
-              // Create assistant message on first chunk
-              if (!assistantMessageCreated) {
-                assistantMessageCreated = true;
-                setMessages((prev) => [
-                  ...prev,
-                  { id: assistantMessageId, role: 'assistant', content: fullContent },
-                ]);
-              } else {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMessageId ? { ...m, content: fullContent } : m
-                  )
-                );
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
-        }
+      // Set conversation ID without navigating (avoids full page reload)
+      if (data.conversationId && !currentConversationId) {
+        setCurrentConversationId(data.conversationId);
+        window.history.replaceState(null, '', `/assistant/${data.conversationId}`);
       }
 
-      // Reload conversations after message is complete
+      // Add assistant message
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantMessageId, role: 'assistant', content: data.response },
+      ]);
+
+      // Reload conversations
       loadConversations();
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         return;
       }
       console.error('Error sending message:', error);
-      // Show error message
-      if (assistantMessageCreated) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMessageId
-              ? { ...m, content: "Désolé, une erreur s'est produite. Veuillez réessayer." }
-              : m
-          )
-        );
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { id: assistantMessageId, role: 'assistant', content: "Désolé, une erreur s'est produite. Veuillez réessayer." },
-        ]);
-      }
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantMessageId, role: 'assistant', content: "Désolé, une erreur s'est produite. Veuillez réessayer." },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -208,7 +159,7 @@ export default function AssistantPage() {
         onNewChat={handleNewChat}
         onDeleteConversation={handleDeleteConversation}
       />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 min-h-0">
         <ChatInterface
           messages={messages}
           isLoading={isLoading}

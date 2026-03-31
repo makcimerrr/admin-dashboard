@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronRight, MessageSquare, HelpCircle, Settings, Sparkles } from "lucide-react"
+import { ChevronRight, MessageSquare, HelpCircle, Settings, Sparkles, BrainCircuit } from "lucide-react"
 import {
   Collapsible,
   CollapsibleContent,
@@ -19,7 +19,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
-import { NovaLogo } from "./assistant/nova-logo"
 import { cn } from "@/lib/utils"
 
 export function NavAssistant() {
@@ -41,9 +40,9 @@ export function NavAssistant() {
                   isActive && "bg-accent"
                 )}
               >
-                <NovaLogo className="h-4 w-4" />
+                <BrainCircuit className="h-4 w-4 text-violet-600" />
                 <span className="font-medium">Nova</span>
-                <Sparkles className="ml-auto h-3 w-3 text-blue-500" />
+                <span className="ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">AI</span>
               </SidebarMenuButton>
             </CollapsibleTrigger>
             <CollapsibleContent>

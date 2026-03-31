@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { NovaLogo } from '@/components/assistant/nova-logo';
+import { BrainCircuit } from 'lucide-react';
 import {
   Settings as SettingsIcon,
   Database,
@@ -124,7 +124,7 @@ export default function SettingsPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <NovaLogo className="h-8 w-8" />
+              <BrainCircuit className="h-8 w-8 text-violet-600" />
               <h1 className="text-3xl font-bold">Paramètres Nova</h1>
               <Sparkles className="h-5 w-5 text-blue-500" />
             </div>
@@ -239,7 +239,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <NovaLogo className="h-5 w-5" />
+                <BrainCircuit className="h-5 w-5 text-violet-600" />
                 À propos de Nova
               </CardTitle>
             </CardHeader>

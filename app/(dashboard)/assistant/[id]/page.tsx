@@ -5,8 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import { ChatSidebar } from '@/components/assistant/chat-sidebar';
 import { ChatInterface } from '@/components/assistant/chat-interface';
-import { NovaLogo } from '@/components/assistant/nova-logo';
-import { Loader2 } from 'lucide-react';
+import { BrainCircuit, Loader2 } from 'lucide-react';
 
 type Message = {
   id: string;
@@ -131,9 +130,7 @@ export default function ConversationPage() {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Assistant message will be created when we receive the first chunk
     const assistantMessageId = (Date.now() + 1).toString();
-    let assistantMessageCreated = false;
 
     // Abort any previous request
     if (abortControllerRef.current) {
@@ -160,70 +157,25 @@ export default function ConversationPage() {
         throw new Error('Failed to send message');
       }
 
-      // Handle streaming response
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader available');
+      const data = await response.json();
 
-      const decoder = new TextDecoder();
-      let fullContent = '';
+      // Add assistant message
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantMessageId, role: 'assistant', content: data.response },
+      ]);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        // Parse SSE format from AI SDK
-        const lines = chunk.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('0:')) {
-            // Text content
-            try {
-              const content = JSON.parse(line.slice(2));
-              fullContent += content;
-
-              // Create assistant message on first chunk
-              if (!assistantMessageCreated) {
-                assistantMessageCreated = true;
-                setMessages((prev) => [
-                  ...prev,
-                  { id: assistantMessageId, role: 'assistant', content: fullContent },
-                ]);
-              } else {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMessageId ? { ...m, content: fullContent } : m
-                  )
-                );
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
-        }
-      }
-
-      // Reload conversations after message is complete
+      // Reload conversations
       loadConversations();
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         return;
       }
       console.error('Error sending message:', error);
-      // Show error message
-      if (assistantMessageCreated) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantMessageId
-              ? { ...m, content: "Désolé, une erreur s'est produite. Veuillez réessayer." }
-              : m
-          )
-        );
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { id: assistantMessageId, role: 'assistant', content: "Désolé, une erreur s'est produite. Veuillez réessayer." },
-        ]);
-      }
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantMessageId, role: 'assistant', content: "Désolé, une erreur s'est produite. Veuillez réessayer." },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -241,10 +193,12 @@ export default function ConversationPage() {
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-muted-foreground">
             <div className="flex items-center gap-3">
-              <NovaLogo className="h-8 w-8" />
+              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
+                <BrainCircuit className="h-4 w-4 text-white" />
+              </div>
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
-            <span className="text-sm">Nova charge la conversation...</span>
+            <span className="text-sm">Chargement de la conversation...</span>
           </div>
         </div>
       </div>
@@ -259,7 +213,7 @@ export default function ConversationPage() {
         onNewChat={handleNewChat}
         onDeleteConversation={handleDeleteConversation}
       />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 min-h-0">
         <ChatInterface
           messages={messages}
           isLoading={isLoading}
