@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Clock, Loader2, RotateCcw } from "lucide-react";
-import { PlanningPageHeader } from "@/components/planning/planning-page-header";
+import { PageHeader } from "@/components/page-header";
+import { PlanningNavTabs } from "@/components/planning/planning-nav-tabs";
 import { FilterToolbar } from "@/components/planning/filter-toolbar";
 
 interface HistoryEntry {
@@ -127,11 +128,12 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] p-2 md:p-3 gap-2 overflow-hidden">
-      <PlanningPageHeader
-        title="Historique"
-        subtitle="Suivi des modifications du planning"
+      <PageHeader
         icon={Clock}
-        permission={planningPermission}
+        title="Historique"
+        description="Suivi des modifications du planning"
+        tabs={<PlanningNavTabs permission={planningPermission} />}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       />
 
       <FilterToolbar>

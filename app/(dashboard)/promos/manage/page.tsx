@@ -64,6 +64,8 @@ import {
   UserMinus,
   UserX,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { PageSkeleton } from "@/components/page-skeleton";
 
 interface ArchivedPromo {
   promoId: string;
@@ -230,31 +232,19 @@ export default function PromosManagePage() {
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
-            <Settings2 className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight">
-              Gestion des Promotions
-            </h1>
-            <p className="text-muted-foreground">
-              Archivage, transferts, perditions et administration
-            </p>
-          </div>
-        </div>
+      <PageHeader
+        icon={FolderArchive}
+        title="Gestion des Promotions"
+        description="Archivage, transferts, perditions et administration"
+      >
         <Button variant="outline" onClick={fetchData} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
           Actualiser
         </Button>
-      </div>
+      </PageHeader>
 
       {loading ? (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <PageSkeleton variant="tabs" />
       ) : (
         <Tabs defaultValue="active" className="w-full">
           <TabsList className="grid w-full sm:w-auto grid-cols-4">

@@ -7,22 +7,16 @@ import PromoManagement from './promo-management-new';
 import HolidayManagement from './holiday-management-new';
 import ProjectManagement from './project-management-new';
 import ReviewerManagement from './reviewer-management';
+import { PageHeader } from '@/components/page-header';
 
 export default function ConfigPage() {
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
-          <Settings2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-xl md:text-3xl font-bold tracking-tight">Configuration</h1>
-          <p className="text-sm text-muted-foreground hidden sm:block">
-            Gérez les promotions, les vacances et les projets de votre plateforme
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={Settings2}
+        title="Configuration"
+        description="Gérez les promotions, les vacances et les projets de votre plateforme"
+      />
 
       {/* Tabs Navigation */}
       <Tabs defaultValue="promos" className="w-full">

@@ -24,6 +24,7 @@ import {
   ChevronRight,
   Info
 } from 'lucide-react';
+import { PageHeader } from '@/components/page-header';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -256,25 +257,14 @@ export default function CodeReviewsPage() {
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-2.5 bg-primary/10 rounded-lg">
-            <ClipboardCheck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold">Code Reviews</h1>
-            <p className="text-sm text-muted-foreground hidden sm:block">
-              Suivi des audits pédagogiques par promotion
-            </p>
-          </div>
-        </div>
+      <PageHeader icon={ClipboardCheck} title="Code Reviews" description="Suivi des audits pédagogiques par promotion">
         <Button asChild variant="outline" size="sm">
           <Link href="/code-reviews/all">
             <Eye className="h-4 w-4 mr-2" />
             Tous les audits
           </Link>
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Widgets */}
       <div className="grid gap-6 lg:grid-cols-2">

@@ -5,10 +5,12 @@ import { StudentsTable } from '../students-table';
 import { getAllPromotions } from '@/lib/config/promotions';
 import TrackStatsDisplay from '@/components/track-stats-display';
 import { Users, GraduationCap } from 'lucide-react';
-import { StudentsHeader } from './_components/students-header';
 import { QuickStats } from './_components/quick-stats';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { PageHeader } from '@/components/page-header';
+import ClientImport from '@/components/clien-import';
+import AddStudent from '@/components/add-student';
 
 interface PromoDates {
   start: string;
@@ -82,11 +84,10 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header with stats */}
-      <StudentsHeader
-        totalStudents={totalAll}
-        activeStudents={totalActive}
-        dropoutStudents={totalDropout}
-      />
+      <PageHeader icon={Users} title="Étudiants" description="Gestion des étudiants">
+        <ClientImport />
+        <AddStudent />
+      </PageHeader>
 
       {/* Quick Stats Cards */}
       <QuickStats

@@ -15,11 +15,13 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import {
-  Loader2, Search, GraduationCap, CheckCircle2, Users,
+  Search, GraduationCap, CheckCircle2, Users,
   TrendingUp, Activity, ArrowUpDown, ChevronDown, ChevronRight,
   Lock, Circle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/page-header';
+import { PageSkeleton } from '@/components/page-skeleton';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -246,32 +248,13 @@ export default function SpecialtiesPage() {
   // ── Loading state ─────────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="p-4 md:p-6 space-y-4">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-96" />
-      </div>
-    );
+    return <PageSkeleton variant="table" />;
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <GraduationCap className="h-6 w-6" />
-          Suivi des Spécialités
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Progression des étudiants par spécialité
-        </p>
-      </div>
+      <PageHeader icon={GraduationCap} title="Suivi des Spécialités" description="Progression des étudiants par spécialité" />
 
       {/* ── Filters ────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-3">

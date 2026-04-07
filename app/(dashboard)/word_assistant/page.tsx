@@ -8,6 +8,7 @@ import {
   CardTitle
 } from '@/components/ui/card';
 import { Calendar, FileText, Plus, ArrowRight } from 'lucide-react';
+import { PageHeader } from '@/components/page-header';
 import {
   getUpcomingHubEvents,
   getUpcomingHubTasks
@@ -135,14 +136,8 @@ export default async function HubDashboardPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold">Assistant - Gestion des événements</h1>
-          <p className="text-muted-foreground">
-            Planifiez et suivez vos événements
-          </p>
-        </div>
+    <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+      <PageHeader icon={FileText} title="Word Assistant" description="Documents et événements">
         <div className="flex gap-2">
           <Link href="/word_assistant/events/new">
             <Button>
@@ -157,7 +152,7 @@ export default async function HubDashboardPage() {
             </Button>
           </Link>
         </div>
-      </div>
+      </PageHeader>
 
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         <Card>

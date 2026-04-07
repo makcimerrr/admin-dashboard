@@ -11,7 +11,8 @@ import { useToast } from "@/components/hooks/use-toast";
 import { Users, Plus, Trash2, Edit, Loader2, Mail, Phone } from "lucide-react";
 import type { Employee } from "@/lib/db/schema/employees";
 import { useUser } from "@stackframe/stack";
-import { PlanningPageHeader } from '@/components/planning/planning-page-header';
+import { PageHeader } from '@/components/page-header';
+import { PlanningNavTabs } from '@/components/planning/planning-nav-tabs';
 
 const colors = [
   "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6",
@@ -133,11 +134,12 @@ export default function EmployeesPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] p-2 md:p-3 gap-2 overflow-hidden">
-      <PlanningPageHeader
-        title="Employés"
-        subtitle="Ajoutez et gérez les membres de votre équipe"
+      <PageHeader
         icon={Users}
-        permission={planningPermission}
+        title="Employés"
+        description="Ajoutez et gérez les membres de votre équipe"
+        tabs={<PlanningNavTabs permission={planningPermission} />}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       >
         <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
           {activeCount} actif{activeCount > 1 ? 's' : ''}
@@ -186,7 +188,7 @@ export default function EmployeesPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </PlanningPageHeader>
+      </PageHeader>
 
       <div className="flex-1 min-h-0 overflow-auto">
         {loading ? (

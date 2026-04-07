@@ -65,6 +65,8 @@ import {
   ClipboardList,
   Upload,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { PageSkeleton } from "@/components/page-skeleton";
 
 interface Alternant {
   id: number;
@@ -263,30 +265,20 @@ export default function AlternantsPage() {
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
-            <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Alternants</h1>
-            <p className="text-sm text-muted-foreground hidden sm:block">
-              Gestion et suivi des étudiants en alternance
-            </p>
-          </div>
-        </div>
+      <PageHeader
+        icon={Briefcase}
+        title="Alternants"
+        description="Gestion et suivi des étudiants en alternance"
+      >
         <AddAlternantDialog
           open={isAddDialogOpen}
           onOpenChange={setIsAddDialogOpen}
           onSuccess={fetchData}
         />
-      </div>
+      </PageHeader>
 
       {loading ? (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <PageSkeleton variant="table" />
       ) : (
         <>
           {/* Stats Cards */}

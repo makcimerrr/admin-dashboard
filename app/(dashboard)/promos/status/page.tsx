@@ -25,6 +25,8 @@ import {
   ArrowRight,
   BarChart3,
 } from "lucide-react";
+import { PageHeader } from "@/components/page-header";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AlertsPanel from "@/components/alerts-panel";
 
@@ -149,25 +151,14 @@ export default function PromosPage() {
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
-            <BarChart3 className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Statut des Promotions</h1>
-            <p className="text-muted-foreground">
-              Suivi en temps réel de l'avancement et de la santé de chaque promotion
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={BarChart3}
+        title="Statut des Promotions"
+        description="Suivi en temps réel de l'avancement et de la santé de chaque promotion"
+      />
 
       {loading ? (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <PageSkeleton variant="cards" />
       ) : (
         <>
           {/* Stats Overview */}

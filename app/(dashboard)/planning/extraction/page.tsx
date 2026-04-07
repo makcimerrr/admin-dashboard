@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { addDays, isAfter, parseISO } from 'date-fns';
 import { FileBarChart, Loader2 } from 'lucide-react';
 import { useUser } from "@stackframe/stack";
-import { PlanningPageHeader } from '@/components/planning/planning-page-header';
+import { PageHeader } from '@/components/page-header';
+import { PlanningNavTabs } from '@/components/planning/planning-nav-tabs';
 import { FilterToolbar } from '@/components/planning/filter-toolbar';
 import { EmployeeColorDot } from '@/components/planning/employee-color-dot';
 import { DataTable } from '@/components/planning/data-table';
@@ -248,11 +249,12 @@ export default function ExtractionPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] p-2 md:p-3 gap-2 overflow-hidden">
-      <PlanningPageHeader
-        title="Extraction"
-        subtitle="Extraction des heures et statistiques"
+      <PageHeader
         icon={FileBarChart}
-        permission={planningPermission}
+        title="Extraction"
+        description="Extraction des heures et statistiques"
+        tabs={<PlanningNavTabs permission={planningPermission} />}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       >
         <Button
           size="sm"
@@ -263,7 +265,7 @@ export default function ExtractionPage() {
           {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileBarChart className="h-3 w-3" />}
           Extraire
         </Button>
-      </PlanningPageHeader>
+      </PageHeader>
 
       <FilterToolbar>
         <DatePickerDemo value={start} onChange={setStart} className="h-8 w-[140px]" />

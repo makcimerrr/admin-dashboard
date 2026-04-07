@@ -25,6 +25,7 @@ import {
   Loader2, RefreshCw, AlertTriangle, Clock, MessageSquareOff, ClipboardCheck,
   MoreHorizontal, ShieldAlert, Timer, CircleDot,
 } from 'lucide-react';
+import { PageHeader } from '@/components/page-header';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -255,14 +256,9 @@ export default function SuiviPage() {
   // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Suivi des code-reviews</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Pipeline : notification Discord → créneau réservé → code review effectuée
-        </p>
-      </div>
+      <PageHeader icon={ClipboardCheck} title="Suivi Notifications" description="Suivi des notifications d'audit" />
 
       {/* Tab navigation as stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">

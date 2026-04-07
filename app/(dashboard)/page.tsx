@@ -19,27 +19,22 @@ import {
   Calendar,
   Bell,
 } from 'lucide-react';
+import { PageHeader } from '@/components/page-header';
 
 export default function DashboardPage() {
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
-            <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Tableau de Bord</h1>
-            <p className="text-sm text-muted-foreground hidden sm:block">
-              Bienvenue sur le dashboard administratif de Zone01 Normandie
-            </p>
-          </div>
-        </div>
-        <Badge variant="outline" className="text-sm px-3 py-1 hidden sm:inline-flex">
-          zone01normandie.org
-        </Badge>
-      </div>
+      <PageHeader
+        icon={BarChart3}
+        title="Tableau de Bord"
+        description="Vue d'ensemble de votre plateforme"
+        badge={
+          <Badge variant="outline" className="text-sm px-3 py-1 hidden sm:inline-flex">
+            zone01normandie.org
+          </Badge>
+        }
+      />
 
       {/* Quick Stats - Overview Widget */}
       <Suspense fallback={<Skeleton className="h-32 w-full" />}>

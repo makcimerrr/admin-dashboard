@@ -9,6 +9,8 @@ import { BarChart3, TrendingUp, Users, Calendar, Activity, Target } from 'lucide
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PageHeader } from '@/components/page-header';
+import { PageSkeleton } from '@/components/page-skeleton';
 
 export default function AnalyticsPage() {
   const [selectedPromo, setSelectedPromo] = useState<string>('all');
@@ -26,21 +28,11 @@ export default function AnalyticsPage() {
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
-            <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Analytics</h1>
-            <p className="text-sm text-muted-foreground hidden sm:block">
-              Suivez les métriques clés et les statistiques pour chaque promotion
-            </p>
-          </div>
-        </div>
-
-        {/* Filter */}
+      <PageHeader
+        icon={BarChart3}
+        title="Analytics"
+        description="Suivez les métriques clés et les statistiques pour chaque promotion"
+      >
         <Select value={selectedPromo} onValueChange={setSelectedPromo}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Toutes les promos" />
@@ -54,7 +46,7 @@ export default function AnalyticsPage() {
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </PageHeader>
 
       {/* Stats Overview Cards */}
       <div className="grid gap-4 md:grid-cols-3">

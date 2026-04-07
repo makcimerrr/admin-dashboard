@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIPreferences, type Density, type ThemeName } from '@/contexts/ui-preferences-context';
+import { PageHeader } from '@/components/page-header';
 
 const themeOptions = [
   { value: 'light', label: 'Clair', icon: Sun, description: 'Thème lumineux' },
@@ -149,17 +150,7 @@ export default function SettingsPage() {
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 sm:p-3 bg-primary/10 rounded-lg">
-          <Settings2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-xl md:text-3xl font-bold tracking-tight">Paramètres</h1>
-          <p className="text-sm text-muted-foreground hidden sm:block">
-            Gérez votre profil, apparence et notifications
-          </p>
-        </div>
-      </div>
+      <PageHeader icon={Settings2} title="Paramètres" description="Préférences utilisateur" />
 
       {/* Tabs */}
       <Tabs defaultValue={defaultTab} className="w-full">

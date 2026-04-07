@@ -1,5 +1,4 @@
 // Students page components exports
-export { StudentsHeader } from './students-header';
 export { StudentsToolbar } from './students-toolbar';
 export { FilterChips, type FilterChip } from './filter-chips';
 export { QuickStats } from './quick-stats';
