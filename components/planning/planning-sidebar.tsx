@@ -31,51 +31,7 @@ import {
 } from '@/lib/db/utils';
 import { useToast } from '@/components/hooks/use-toast';
 
-// Templates
-const weekTemplates = [
-  {
-    key: 'classic',
-    label: 'Classique bureau',
-    description: 'Lundi - Vendredi, 9h-17h',
-    days: {
-      lundi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      mardi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      mercredi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      jeudi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      vendredi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      samedi: [] as { start: string; end: string; isWorking: boolean; type: TimeSlot['type'] }[],
-      dimanche: [] as { start: string; end: string; isWorking: boolean; type: TimeSlot['type'] }[],
-    },
-  },
-  {
-    key: 'alternance',
-    label: 'Alternance',
-    description: 'L-M, J-V, 9h-17h',
-    days: {
-      lundi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      mardi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      mercredi: [] as { start: string; end: string; isWorking: boolean; type: TimeSlot['type'] }[],
-      jeudi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      vendredi: [{ start: '09:00', end: '17:00', isWorking: true, type: 'work' as const }],
-      samedi: [] as { start: string; end: string; isWorking: boolean; type: TimeSlot['type'] }[],
-      dimanche: [] as { start: string; end: string; isWorking: boolean; type: TimeSlot['type'] }[],
-    },
-  },
-  {
-    key: '4jours',
-    label: '4 jours',
-    description: 'L-J, 8h-18h',
-    days: {
-      lundi: [{ start: '08:00', end: '18:00', isWorking: true, type: 'work' as const }],
-      mardi: [{ start: '08:00', end: '18:00', isWorking: true, type: 'work' as const }],
-      mercredi: [{ start: '08:00', end: '18:00', isWorking: true, type: 'work' as const }],
-      jeudi: [{ start: '08:00', end: '18:00', isWorking: true, type: 'work' as const }],
-      vendredi: [] as { start: string; end: string; isWorking: boolean; type: TimeSlot['type'] }[],
-      samedi: [] as { start: string; end: string; isWorking: boolean; type: TimeSlot['type'] }[],
-      dimanche: [] as { start: string; end: string; isWorking: boolean; type: TimeSlot['type'] }[],
-    },
-  },
-];
+// Roulement de 3 semaines hardcodé côté API (basé sur S15→S16→S17)
 
 interface PlanningSidebarProps {
   isOpen: boolean;
@@ -91,19 +47,6 @@ interface PlanningSidebarProps {
   setSchedules: React.Dispatch<React.SetStateAction<Record<string, TimeSlot[]>>>;
 }
 
-function getMultiWeekOptions(range = 4) {
-  const options = [];
-  for (let i = -range; i <= range; i++) {
-    const weekDates = getWeekDates(i);
-    const weekNum = getWeekNumber(weekDates[0]);
-    options.push({
-      value: i,
-      label: `S${weekNum} (${formatDate(weekDates[0])} - ${formatDate(weekDates[6])})`,
-      weekKey: getWeekKey(i),
-    });
-  }
-  return options;
-}
 
 function SidebarSection({
   title,
@@ -209,11 +152,11 @@ export function PlanningSidebar({
 }: PlanningSidebarProps) {
   const { toast } = useToast();
 
-  // Template state
-  const [selectedTemplate, setSelectedTemplate] = useState('');
-  const [selectedEmployeesForTemplate, setSelectedEmployeesForTemplate] = useState<string[]>([]);
-  const [selectedWeeks, setSelectedWeeks] = useState<number[]>([currentWeekOffset]);
-  const weekOptions = getMultiWeekOptions();
+  // Rotation state
+  const [rotationStartDate, setRotationStartDate] = useState<Date | null>(null);
+  const [rotationEndDate, setRotationEndDate] = useState<Date | null>(null);
+  const [selectedEmployeesForRotation, setSelectedEmployeesForRotation] = useState<string[]>([]);
+  const [rotationLoading, setRotationLoading] = useState(false);
 
   // Copy state
   const [copyFromWeek, setCopyFromWeek] = useState(currentWeekOffset - 1);
@@ -241,26 +184,37 @@ export function PlanningSidebar({
     return options;
   };
 
-  // Template apply
-  const applyTemplate = async () => {
-    if (!selectedTemplate) return toast({ title: 'Erreur', description: 'Sélectionnez un modèle.', variant: 'destructive' });
-    if (selectedEmployeesForTemplate.length === 0) return toast({ title: 'Erreur', description: 'Sélectionnez au moins un employé.', variant: 'destructive' });
-    if (selectedWeeks.length === 0) return toast({ title: 'Erreur', description: 'Sélectionnez au moins une semaine.', variant: 'destructive' });
+  // Rotation apply
+  const applyRotation = async () => {
+    if (!rotationStartDate || !rotationEndDate) return toast({ title: 'Erreur', description: 'Sélectionnez une date de début et de fin.', variant: 'destructive' });
+    if (selectedEmployeesForRotation.length === 0) return toast({ title: 'Erreur', description: 'Sélectionnez au moins un employé.', variant: 'destructive' });
+    if (rotationEndDate < rotationStartDate) return toast({ title: 'Erreur', description: 'La date de fin doit être après la date de début.', variant: 'destructive' });
 
-    const template = weekTemplates.find((t) => t.key === selectedTemplate);
-    if (!template) return;
+    setRotationLoading(true);
+    try {
+      const response = await fetch('/api/schedules/apply-rotation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDate: rotationStartDate.toISOString().slice(0, 10),
+          endDate: rotationEndDate.toISOString().slice(0, 10),
+          employeeIds: selectedEmployeesForRotation,
+        }),
+      });
 
-    for (const weekOffset of selectedWeeks) {
-      const weekKey = getWeekKey(weekOffset);
-      for (const employeeId of selectedEmployeesForTemplate) {
-        for (const day of daysOfWeek) {
-          const slots = (template.days[day as keyof typeof template.days] || []).map((s) => ({ ...s, type: s.type as TimeSlot['type'] }));
-          await updateLocalSchedule(employeeId, day, slots, weekKey);
-        }
-      }
+      if (!response.ok) throw new Error('Failed');
+      const data = await response.json();
+
+      await reloadSchedules();
+      toast({ title: `Roulement appliqué sur ${data.weeksApplied} semaines` });
+      setRotationStartDate(null);
+      setRotationEndDate(null);
+      setSelectedEmployeesForRotation([]);
+    } catch {
+      toast({ title: 'Erreur', description: 'Impossible d\'appliquer le roulement', variant: 'destructive' });
+    } finally {
+      setRotationLoading(false);
     }
-    toast({ title: 'Modèle appliqué sur les semaines sélectionnées.' });
-    setSelectedEmployeesForTemplate([]);
   };
 
   // Copy
@@ -365,40 +319,65 @@ export function PlanningSidebar({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {/* Templates */}
-          <SidebarSection title="Semaine type" icon={LayoutTemplate} defaultOpen>
+          {/* Roulement 3 semaines */}
+          <SidebarSection title="Roulement 3 semaines" icon={LayoutTemplate} defaultOpen>
             <div className="space-y-3">
-              {/* Template cards */}
-              <div className="grid gap-2">
-                {weekTemplates.map((t) => (
-                  <button
-                    key={t.key}
-                    type="button"
-                    onClick={() => setSelectedTemplate(t.key)}
-                    className={cn(
-                      'flex items-center gap-3 p-3 rounded-lg border text-left transition-all',
-                      selectedTemplate === t.key
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                        : 'border-border hover:border-muted-foreground/30 hover:bg-muted/50'
-                    )}
-                  >
-                    <div className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold',
-                      selectedTemplate === t.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                    )}>
-                      {t.key === 'classic' ? '5j' : t.key === 'alternance' ? '4j' : '4j'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium">{t.label}</div>
-                      <div className="text-[11px] text-muted-foreground">{t.description}</div>
-                    </div>
-                    {selectedTemplate === t.key && (
-                      <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                        <Check className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                    )}
-                  </button>
-                ))}
+              {/* Info template */}
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-primary/20 bg-primary/5">
+                <div className="p-1.5 rounded-md bg-primary/10">
+                  <LayoutTemplate className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold">Template : S15 → S16 → S17</div>
+                  <div className="text-[10px] text-muted-foreground">Copie cyclique du roulement de référence</div>
+                </div>
+              </div>
+
+              {/* Date pickers */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground">Date de début</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full justify-start text-xs mt-1 h-8">
+                        <CalendarIcon className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                        <span className="truncate">
+                          {rotationStartDate ? format(rotationStartDate, 'dd/MM/yy', { locale: fr }) : 'Choisir...'}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={rotationStartDate || undefined}
+                        onSelect={(date) => setRotationStartDate(date || null)}
+                        locale={fr}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label className="text-[11px] font-medium text-muted-foreground">Date de fin</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="w-full justify-start text-xs mt-1 h-8">
+                        <CalendarIcon className="h-3 w-3 mr-1.5 flex-shrink-0" />
+                        <span className="truncate">
+                          {rotationEndDate ? format(rotationEndDate, 'dd/MM/yy', { locale: fr }) : 'Choisir...'}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={rotationEndDate || undefined}
+                        onSelect={(date) => setRotationEndDate(date || null)}
+                        locale={fr}
+                        disabled={(date) => rotationStartDate ? date < rotationStartDate : false}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
 
               <div>
@@ -406,49 +385,23 @@ export function PlanningSidebar({
                 <div className="mt-1.5">
                   <EmployeeCheckboxList
                     employees={employees}
-                    selected={selectedEmployeesForTemplate}
-                    onChange={setSelectedEmployeesForTemplate}
+                    selected={selectedEmployeesForRotation}
+                    onChange={setSelectedEmployeesForRotation}
                   />
-                </div>
-              </div>
-
-              <div>
-                <Label className="text-xs font-medium text-muted-foreground">Semaines cibles</Label>
-                <div className="mt-1.5 space-y-1 max-h-32 overflow-y-auto rounded-lg border p-2 bg-muted/20">
-                  {weekOptions.map((opt) => {
-                    const checked = selectedWeeks.includes(opt.value);
-                    return (
-                      <label
-                        key={opt.value}
-                        className={cn(
-                          'flex items-center gap-2 px-2 py-1 rounded text-xs cursor-pointer transition-colors',
-                          checked ? 'bg-primary/10 font-medium' : 'hover:bg-muted/50 text-muted-foreground'
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedWeeks((l) => [...l, opt.value]);
-                            else setSelectedWeeks((l) => l.filter((v) => v !== opt.value));
-                          }}
-                          className="rounded accent-primary"
-                        />
-                        {opt.label}
-                      </label>
-                    );
-                  })}
                 </div>
               </div>
 
               <Button
                 size="sm"
-                onClick={applyTemplate}
-                disabled={!selectedTemplate || selectedEmployeesForTemplate.length === 0 || selectedWeeks.length === 0}
+                onClick={applyRotation}
+                disabled={rotationLoading || !rotationStartDate || !rotationEndDate || selectedEmployeesForRotation.length === 0}
                 className="w-full"
               >
-                <LayoutTemplate className="h-3.5 w-3.5 mr-1.5" />
-                Appliquer le modèle
+                {rotationLoading ? (
+                  <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Application en cours...</>
+                ) : (
+                  <><LayoutTemplate className="h-3.5 w-3.5 mr-1.5" /> Appliquer le roulement</>
+                )}
               </Button>
             </div>
           </SidebarSection>

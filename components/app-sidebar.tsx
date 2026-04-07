@@ -103,6 +103,11 @@ const data = {
       ]
     },
     {
+      title: 'Spécialités',
+      url: '/specialties',
+      icon: BriefcaseIcon
+    },
+    {
       title: 'Config',
       url: '/config',
       icon: FolderIcon
