@@ -118,7 +118,7 @@ export default function PromosManagePage() {
     setLoading(true);
     try {
       const [promosRes, archivedRes, transfersRes, dropoutsRes, configRes] = await Promise.all([
-        fetch("/api/promotions/archive"),
+        fetch("/api/promotions/archive?all=true"),
         fetch("/api/promotions/archive?archived=true"),
         fetch("/api/students/transfer"),
         fetch("/api/students/dropouts"),

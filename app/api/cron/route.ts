@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { upsertPromoStatus } from '@/lib/db/services/promoStatus';
+import { upsertPromoStatus, deletePromoStatus } from '@/lib/db/services/promoStatus';
 
 export async function GET(req: Request) {
   if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
       return new Response('Invalid promos format', { status: 500 });
     }
 
-    for (const promo of promos) {
+    for (const promo of promos.filter((p: any) => p.promotion?.name)) {
         let currentProject = promo.currentProjects;
 
         if (typeof currentProject === 'object' && currentProject !== null) {
@@ -41,6 +41,9 @@ export async function GET(req: Request) {
         lastUpdated: new Date()
       });
     }
+
+    // Nettoyage de l'entrée "unknown" si elle existe
+    await deletePromoStatus('unknown');
 
     console.log('✅ Cron exécuté et DB mise à jour !');
     return NextResponse.json({ success: true, updated: promos.length });
