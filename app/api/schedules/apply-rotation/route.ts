@@ -210,35 +210,41 @@ export async function POST(request: NextRequest) {
     let copiedCount = 0
     const errors: { weekKey: string; employeeId: string; error: string }[] = []
 
-    for (let i = 0; i < targetWeekKeys.length; i++) {
-      const targetWeek = targetWeekKeys[i]
-      const template = ROTATION_TEMPLATES[i % ROTATION_TEMPLATES.length]
+    // Process all weeks in parallel, and within each week all employee×day upserts in parallel
+    await Promise.all(
+      targetWeekKeys.map(async (targetWeek, i) => {
+        const template = ROTATION_TEMPLATES[i % ROTATION_TEMPLATES.length]
 
-      for (const employeeId of targetEmployeeIds) {
-        const employeeName = idToName.get(employeeId)
-        if (!employeeName || !template[employeeName]) continue
+        await Promise.all(
+          targetEmployeeIds.map(async (employeeId) => {
+            const employeeName = idToName.get(employeeId)
+            if (!employeeName || !template[employeeName]) return
 
-        try {
-          const employeeTemplate = template[employeeName]
-          for (const day of days) {
-            const slots = employeeTemplate[day] || []
-            await upsertSchedule({
-              employeeId,
-              weekKey: targetWeek,
-              day,
-              timeSlots: slots,
-            })
-          }
-          copiedCount++
-        } catch (error) {
-          errors.push({
-            weekKey: targetWeek,
-            employeeId,
-            error: error instanceof Error ? error.message : "Erreur inconnue",
+            try {
+              const employeeTemplate = template[employeeName]
+              await Promise.all(
+                days.map((day) => {
+                  const slots = employeeTemplate[day] || []
+                  return upsertSchedule({
+                    employeeId,
+                    weekKey: targetWeek,
+                    day,
+                    timeSlots: slots,
+                  })
+                })
+              )
+              copiedCount++
+            } catch (error) {
+              errors.push({
+                weekKey: targetWeek,
+                employeeId,
+                error: error instanceof Error ? error.message : "Erreur inconnue",
+              })
+            }
           })
-        }
-      }
-    }
+        )
+      })
+    )
 
     return NextResponse.json({
       message: `Roulement appliqué : ${targetWeekKeys.length} semaines remplies pour ${targetEmployeeIds.length} employés`,
