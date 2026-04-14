@@ -60,6 +60,12 @@ export async function POST(request: NextRequest) {
     const sent = await sendDiscordDM(discordId, message);
     if (!sent) return NextResponse.json({ error: "Échec de l'envoi du DM Discord" }, { status: 500 });
 
+    // Log manual reminder timestamp
+    await db
+      .update(groupStatuses)
+      .set({ manualReminderAt: new Date() })
+      .where(eq(groupStatuses.id, Number(groupStatusId)));
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error resending DM:', error);

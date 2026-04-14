@@ -98,6 +98,7 @@ export interface SuiviRow {
   auditId: number | null;
   auditCreatedAt: Date | null;
   auditorName: string | null;
+  manualReminderAt: Date | null;
 }
 
 export async function getAllForSuivi(): Promise<SuiviRow[]> {
@@ -182,6 +183,7 @@ export async function getAllForSuivi(): Promise<SuiviRow[]> {
       auditId: audit?.id ?? null,
       auditCreatedAt: audit?.createdAt ?? null,
       auditorName: audit?.auditorName ?? null,
+      manualReminderAt: r.manualReminderAt,
     };
   });
 }

@@ -75,7 +75,7 @@ const navGroups: NavGroup[] = [
     label: 'Pédagogie',
     items: [
       { title: 'Code Reviews', url: '/code-reviews', icon: ClipboardCheckIcon },
-      { title: 'Suivi notifications', url: '/code-reviews/suivi', icon: BellIcon },
+      { title: 'Suivi', url: '/code-reviews/suivi', icon: BellIcon },
     ],
   },
   {

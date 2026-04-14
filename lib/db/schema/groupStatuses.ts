@@ -15,6 +15,7 @@ export const groupStatuses = pgTable(
     slotEventId: varchar('slot_event_id', { length: 200 }),
     slotAttendeeEmail: varchar('slot_attendee_email', { length: 200 }),
     reminderSentAt: timestamp('reminder_sent_at'),
+    manualReminderAt: timestamp('manual_reminder_at'),
     lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
   },
   (table) => ({
