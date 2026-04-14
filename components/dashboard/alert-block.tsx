@@ -3,21 +3,28 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CalendarCheck, ClipboardCheck, Clock, HelpCircle } from 'lucide-react';
 import type { Alert, AlertCategory } from '@/lib/types/alerts';
-import type { LucideIcon } from 'lucide-react';
+
+const CATEGORY_CONFIG: Record<AlertCategory, { icon: typeof Clock; iconColor: string; emptyText: string }> = {
+  emargement: { icon: CalendarCheck, iconColor: 'text-violet-600', emptyText: "Aucune alerte d'émargement" },
+  'code-reviews': { icon: ClipboardCheck, iconColor: 'text-blue-600', emptyText: 'Aucune alerte code review' },
+  retards: { icon: Clock, iconColor: 'text-red-600', emptyText: 'Aucun retard signalé' },
+  other: { icon: HelpCircle, iconColor: 'text-muted-foreground', emptyText: 'Aucune alerte' },
+};
 
 interface AlertBlockProps {
   title: string;
-  icon: LucideIcon;
   category: AlertCategory;
-  iconColor?: string;
-  emptyText?: string;
   maxAlerts?: number;
 }
 
-export function AlertBlock({ title, icon: Icon, category, iconColor = 'text-muted-foreground', emptyText = 'Aucune alerte', maxAlerts = 5 }: AlertBlockProps) {
+export function AlertBlock({ title, category, maxAlerts = 5 }: AlertBlockProps) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const config = CATEGORY_CONFIG[category] ?? CATEGORY_CONFIG.other;
+  const Icon = config.icon;
 
   useEffect(() => {
     fetch('/api/alerts')
@@ -44,7 +51,7 @@ export function AlertBlock({ title, icon: Icon, category, iconColor = 'text-mute
     <Card className="border">
       <CardHeader className="pb-2 pt-4 px-4">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Icon className={`h-4 w-4 ${iconColor}`} />
+          <Icon className={`h-4 w-4 ${config.iconColor}`} />
           {title}
           {alerts.length > 0 && (
             <span className="ml-auto text-xs font-normal text-muted-foreground">
@@ -55,7 +62,7 @@ export function AlertBlock({ title, icon: Icon, category, iconColor = 'text-mute
       </CardHeader>
       <CardContent className="px-4 pb-4">
         {alerts.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-3 text-center">{emptyText}</p>
+          <p className="text-xs text-muted-foreground py-3 text-center">{config.emptyText}</p>
         ) : (
           <div className="space-y-1.5">
             {alerts.map(alert => (

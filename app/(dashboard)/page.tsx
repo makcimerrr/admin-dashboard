@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import OverviewWidget from '@/components/widgets/overview-widget';
@@ -7,12 +6,7 @@ import RecentActivityWidget from '@/components/widgets/recent-activity-widget';
 import CodeReviewsWidget from '@/components/widgets/code-reviews-widget';
 import { MyTasksWidgetServer } from '@/components/hub/MyTasksWidgetServer';
 import { AlertBlock } from '@/components/dashboard/alert-block';
-import {
-  BarChart3,
-  ClipboardCheck,
-  Clock,
-  CalendarCheck,
-} from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 
 export default function DashboardPage() {
@@ -49,27 +43,9 @@ export default function DashboardPage() {
 
       {/* 3 Alert Blocks */}
       <div className="grid gap-4 md:grid-cols-3">
-        <AlertBlock
-          title="Emargement"
-          icon={CalendarCheck}
-          category="emargement"
-          iconColor="text-violet-600"
-          emptyText="Aucune alerte d'émargement"
-        />
-        <AlertBlock
-          title="Code Reviews"
-          icon={ClipboardCheck}
-          category="code-reviews"
-          iconColor="text-blue-600"
-          emptyText="Aucune alerte code review"
-        />
-        <AlertBlock
-          title="Retards"
-          icon={Clock}
-          category="retards"
-          iconColor="text-red-600"
-          emptyText="Aucun retard signalé"
-        />
+        <AlertBlock title="Emargement" category="emargement" />
+        <AlertBlock title="Code Reviews" category="code-reviews" />
+        <AlertBlock title="Retards" category="retards" />
       </div>
 
       {/* Recent Activity */}
