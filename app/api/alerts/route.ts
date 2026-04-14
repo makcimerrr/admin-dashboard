@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { students, studentProjects, studentSpecialtyProgress } from '@/lib/db/schema';
 import { audits, auditResults } from '@/lib/db/schema/audits';
-import { eq, and, or, sql, desc } from 'drizzle-orm';
+import { eq, and, or, sql, desc, notInArray } from 'drizzle-orm';
 import type { Alert } from '@/lib/types/alerts';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { getArchivedPromotions } from '@/lib/db/services/promotions';
 
 /**
  * Helper to safely get warnings array from JSONB field
@@ -33,10 +34,17 @@ export async function GET(request: Request) {
     const promoFilter = url.searchParams.get('promo');
 
     const alerts: Alert[] = [];
-    const promoConfig = await getAllPromotions();
+    const [promoConfig, archivedPromos] = await Promise.all([
+      getAllPromotions(),
+      getArchivedPromotions(),
+    ]);
+    const archivedPromoNames = archivedPromos.map(p => p.name);
 
-    // Exclure les étudiants en perdition de toutes les requêtes
+    // Exclure les étudiants en perdition et les promos archivées de toutes les requêtes
     const notDropoutCondition = eq(students.isDropout, false);
+    const notArchivedCondition = archivedPromoNames.length > 0
+      ? notInArray(students.promoName, archivedPromoNames)
+      : sql`true`;
 
     // Exécuter toutes les requêtes en parallèle
     const [lateStudents, withoutGroupStudents, notValidatedStudents, incompleteTracksStudents, recentAudits] = await Promise.all([
@@ -54,6 +62,7 @@ export async function GET(request: Request) {
         .where(
           and(
             notDropoutCondition,
+            notArchivedCondition,
             eq(studentProjects.delay_level, 'en retard'),
             promoFilter ? eq(students.promoName, promoFilter) : sql`true`
           )
@@ -73,6 +82,7 @@ export async function GET(request: Request) {
         .where(
           and(
             notDropoutCondition,
+            notArchivedCondition,
             eq(studentProjects.progress_status, 'without group'),
             promoFilter ? eq(students.promoName, promoFilter) : sql`true`
           )
@@ -92,6 +102,7 @@ export async function GET(request: Request) {
         .where(
           and(
             notDropoutCondition,
+            notArchivedCondition,
             eq(studentProjects.delay_level, 'Non Validé'),
             promoFilter ? eq(students.promoName, promoFilter) : sql`true`
           )
@@ -115,6 +126,7 @@ export async function GET(request: Request) {
         .where(
           and(
             notDropoutCondition,
+            notArchivedCondition,
             or(
               eq(studentSpecialtyProgress.golang_completed, false),
               eq(studentSpecialtyProgress.javascript_completed, false)
@@ -208,10 +220,13 @@ export async function GET(request: Request) {
     });
 
     // Traitement des audits - filtrage côté JavaScript pour éviter les erreurs SQL
+    const archivedPromoIds = new Set(archivedPromos.map(p => String(p.promoId)));
     const processedAuditIds = new Set<number>();
 
     recentAudits.forEach((audit) => {
       if (processedAuditIds.has(audit.id)) return;
+      // Skip audits from archived promos
+      if (archivedPromoIds.has(audit.promoId)) return;
 
       const promo = promoConfig.find(p => String(p.eventId) === audit.promoId);
       const promoName = promo?.key ?? `Promo ${audit.promoId}`;
