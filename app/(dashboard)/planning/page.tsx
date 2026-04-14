@@ -72,9 +72,11 @@ export default function PlanningPage() {
   const currentWeekDates = useMemo(() => getWeekDates(currentWeekOffset), [currentWeekOffset]);
   const currentWeekKey = useMemo(() => getWeekKey(currentWeekOffset), [currentWeekOffset]);
 
-  // Hackaton state
+  // Hackaton & Piscine state
   const [hackatonWeeks, setHackatonWeeks] = useState<Record<string, boolean>>({});
+  const [piscineWeeks, setPiscineWeeks] = useState<Record<string, boolean>>({});
   const isHackaton = !!hackatonWeeks[currentWeekKey];
+  const isPiscine = !!piscineWeeks[currentWeekKey];
   const weekNumber = useMemo(() => getWeekNumber(currentWeekDates[0]), [currentWeekDates]);
 
   // Load employees
@@ -121,13 +123,21 @@ export default function PlanningPage() {
 
   useEffect(() => { loadSchedules(); }, [loadSchedules]);
 
-  // Load hackaton state
+  // Load hackaton & piscine state
   useEffect(() => {
     fetch(`/api/hackaton-week?weekKey=${currentWeekKey}`)
       .then((r) => r.json())
       .then((d) => {
         if (typeof d.isHackaton === 'boolean') {
           setHackatonWeeks((w) => ({ ...w, [currentWeekKey]: d.isHackaton }));
+        }
+      })
+      .catch(() => {});
+    fetch(`/api/piscine-week?weekKey=${currentWeekKey}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d.isPiscine === 'boolean') {
+          setPiscineWeeks((w) => ({ ...w, [currentWeekKey]: d.isPiscine }));
         }
       })
       .catch(() => {});
@@ -148,6 +158,16 @@ export default function PlanningPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ weekKey: currentWeekKey, isHackaton: checked }),
+    });
+  };
+
+  // Toggle piscine
+  const handleTogglePiscine = (checked: boolean) => {
+    setPiscineWeeks((w) => ({ ...w, [currentWeekKey]: checked }));
+    fetch('/api/piscine-week', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weekKey: currentWeekKey, isPiscine: checked }),
     });
   };
 
@@ -248,7 +268,7 @@ export default function PlanningPage() {
           employeeId,
           weekKey: currentWeekKey,
           day,
-          timeSlots: [{ start: '10:00', end: '20:00', isWorking: true, type: 'work' }],
+          timeSlots: [{ start: '10:00', end: '18:00', isWorking: true, type: 'work' }],
         }),
       });
     }
@@ -285,15 +305,26 @@ export default function PlanningPage() {
         />
 
         {isEditor && (
-          <label className="flex items-center gap-1.5 cursor-pointer text-xs">
-            <input
-              type="checkbox"
-              checked={isHackaton}
-              onChange={(e) => handleToggleHackaton(e.target.checked)}
-              className="accent-pink-600 w-4 h-4"
-            />
-            <span className="font-semibold text-pink-600">Hackaton</span>
-          </label>
+          <>
+            <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+              <input
+                type="checkbox"
+                checked={isHackaton}
+                onChange={(e) => handleToggleHackaton(e.target.checked)}
+                className="accent-pink-600 w-4 h-4"
+              />
+              <span className="font-semibold text-pink-600">Hackaton</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+              <input
+                type="checkbox"
+                checked={isPiscine}
+                onChange={(e) => handleTogglePiscine(e.target.checked)}
+                className="accent-cyan-600 w-4 h-4"
+              />
+              <span className="font-semibold text-cyan-600">Piscine</span>
+            </label>
+          </>
         )}
 
         {/* View switcher */}

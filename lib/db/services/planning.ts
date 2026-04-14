@@ -330,3 +330,20 @@ export async function setHackatonWeek(weekKey: string, isHackaton: boolean) {
       .values({ weekKey, isHackaton, updatedAt: new Date() });
   }
 }
+
+export async function getPiscineWeek(weekKey: string) {
+  const result = await db.select().from(hackatonWeeks).where(eq(hackatonWeeks.weekKey, weekKey)).limit(1);
+  return result[0] || null;
+}
+
+export async function setPiscineWeek(weekKey: string, isPiscine: boolean) {
+  const existing = await getPiscineWeek(weekKey);
+  if (existing) {
+    await db.update(hackatonWeeks)
+      .set({ isPiscine, updatedAt: new Date() })
+      .where(eq(hackatonWeeks.weekKey, weekKey));
+  } else {
+    await db.insert(hackatonWeeks)
+      .values({ weekKey, isHackaton: false, isPiscine, updatedAt: new Date() });
+  }
+}

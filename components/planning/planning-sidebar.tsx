@@ -156,6 +156,7 @@ export function PlanningSidebar({
   const [rotationStartDate, setRotationStartDate] = useState<Date | null>(null);
   const [rotationEndDate, setRotationEndDate] = useState<Date | null>(null);
   const [selectedEmployeesForRotation, setSelectedEmployeesForRotation] = useState<string[]>([]);
+  const [rotationMode, setRotationMode] = useState<'standard' | 'piscine'>('standard');
   const [rotationLoading, setRotationLoading] = useState(false);
 
   // Copy state
@@ -199,6 +200,7 @@ export function PlanningSidebar({
           startDate: rotationStartDate.toISOString().slice(0, 10),
           endDate: rotationEndDate.toISOString().slice(0, 10),
           employeeIds: selectedEmployeesForRotation,
+          mode: rotationMode,
         }),
       });
 
@@ -210,6 +212,7 @@ export function PlanningSidebar({
       setRotationStartDate(null);
       setRotationEndDate(null);
       setSelectedEmployeesForRotation([]);
+      setRotationMode('standard');
     } catch {
       toast({ title: 'Erreur', description: 'Impossible d\'appliquer le roulement', variant: 'destructive' });
     } finally {
@@ -322,14 +325,36 @@ export function PlanningSidebar({
           {/* Roulement 3 semaines */}
           <SidebarSection title="Roulement 3 semaines" icon={LayoutTemplate} defaultOpen>
             <div className="space-y-3">
-              {/* Info template */}
-              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-primary/20 bg-primary/5">
-                <div className="p-1.5 rounded-md bg-primary/10">
-                  <LayoutTemplate className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold">Template : S15 → S16 → S17</div>
-                  <div className="text-[10px] text-muted-foreground">Copie cyclique du roulement de référence</div>
+              {/* Mode selector */}
+              <div>
+                <Label className="text-[11px] font-medium text-muted-foreground">Template</Label>
+                <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setRotationMode('standard')}
+                    className={cn(
+                      'flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-xs transition-all',
+                      rotationMode === 'standard'
+                        ? 'border-primary/30 bg-primary/5 font-semibold'
+                        : 'border-border hover:border-muted-foreground/30 text-muted-foreground'
+                    )}
+                  >
+                    <span className="text-sm">Standard</span>
+                    <span className="text-[10px] text-muted-foreground">09h-17h</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRotationMode('piscine')}
+                    className={cn(
+                      'flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-xs transition-all',
+                      rotationMode === 'piscine'
+                        ? 'border-cyan-500/30 bg-cyan-500/5 font-semibold text-cyan-700'
+                        : 'border-border hover:border-muted-foreground/30 text-muted-foreground'
+                    )}
+                  >
+                    <span className="text-sm">Piscine</span>
+                    <span className="text-[10px] text-muted-foreground">08h-17h</span>
+                  </button>
                 </div>
               </div>
 

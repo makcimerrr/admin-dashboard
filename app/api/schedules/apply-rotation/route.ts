@@ -5,162 +5,95 @@ import { getWeekNumber } from "@/lib/db/utils"
 
 type SlotDef = { start: string; end: string; isWorking: boolean; type: "work" }[]
 
-// Roulement de 3 semaines hardcodé (basé sur S15, S16, S17)
-// Structure : [semaine1, semaine2, semaine3] → employeeName → day → slots
-const ROTATION_TEMPLATES: Record<string, Record<string, SlotDef>>[] = [
-  // ── Semaine 1 (type S15) ──
-  {
-    "Bastien Lagrue": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
+// Helper : génère un slot de travail
+const w = (start: string, end: string): SlotDef => [{ start, end, isWorking: true, type: "work" }]
+const off: SlotDef = []
+
+function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<string, SlotDef>>[] {
+  // En mode piscine, les créneaux 09:00 deviennent 08:00
+  const h9 = mode === "piscine" ? "08:00" : "09:00"
+
+  return [
+    // ── Semaine 1 (type S15) ──
+    {
+      "Bastien Lagrue": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
+        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+      },
+      "Maxime Dubois": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w("13:00", "21:00"),
+        jeudi: off, vendredi: off, samedi: w("10:00", "18:00"), dimanche: off,
+      },
+      "Cyril Ramananjaona": {
+        lundi: w(h9, "17:00"), mardi: off, mercredi: w(h9, "17:00"),
+        jeudi: w(h9, "17:00"), vendredi: w("13:00", "21:00"), samedi: off, dimanche: off,
+      },
+      "Vivien Frebourg": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
+        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+      },
+      "Permanence Externe": {
+        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w(h9, "17:00"),
+        jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
+      },
     },
-    "Maxime Dubois": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "13:00", end: "21:00", isWorking: true, type: "work" }],
-      jeudi:    [],
-      vendredi: [],
-      samedi:   [{ start: "10:00", end: "18:00", isWorking: true, type: "work" }],
-      dimanche: [],
+    // ── Semaine 2 (type S16) ──
+    {
+      "Bastien Lagrue": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
+        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+      },
+      "Maxime Dubois": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w("13:00", "21:00"),
+        jeudi: off, vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+      },
+      "Cyril Ramananjaona": {
+        lundi: w(h9, "17:00"), mardi: off, mercredi: w(h9, "17:00"),
+        jeudi: w(h9, "17:00"), vendredi: w("13:00", "21:00"), samedi: off, dimanche: off,
+      },
+      "Vivien Frebourg": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: off,
+        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: w("10:00", "18:00"), dimanche: off,
+      },
+      "Permanence Externe": {
+        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w(h9, "17:00"),
+        jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
+      },
     },
-    "Cyril Ramananjaona": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "13:00", end: "21:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
+    // ── Semaine 3 (type S17) ──
+    {
+      "Bastien Lagrue": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
+        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+      },
+      "Maxime Dubois": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w("13:00", "21:00"),
+        jeudi: off, vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+      },
+      "Cyril Ramananjaona": {
+        lundi: w(h9, "17:00"), mardi: off, mercredi: off,
+        jeudi: w(h9, "17:00"), vendredi: w("13:00", "21:00"), samedi: w("10:00", "18:00"), dimanche: off,
+      },
+      "Vivien Frebourg": {
+        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
+        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+      },
+      "Permanence Externe": {
+        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w(h9, "17:00"),
+        jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
+      },
     },
-    "Vivien Frebourg": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
-    },
-    "Permanence Externe": {
-      lundi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      vendredi: [],
-      samedi:   [],
-      dimanche: [],
-    },
-  },
-  // ── Semaine 2 (type S16) ──
-  {
-    "Bastien Lagrue": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
-    },
-    "Maxime Dubois": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "13:00", end: "21:00", isWorking: true, type: "work" }],
-      jeudi:    [],
-      vendredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
-    },
-    "Cyril Ramananjaona": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "13:00", end: "21:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
-    },
-    "Vivien Frebourg": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      samedi:   [{ start: "10:00", end: "18:00", isWorking: true, type: "work" }],
-      dimanche: [],
-    },
-    "Permanence Externe": {
-      lundi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      vendredi: [],
-      samedi:   [],
-      dimanche: [],
-    },
-  },
-  // ── Semaine 3 (type S17) ──
-  {
-    "Bastien Lagrue": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
-    },
-    "Maxime Dubois": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "13:00", end: "21:00", isWorking: true, type: "work" }],
-      jeudi:    [],
-      vendredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
-    },
-    "Cyril Ramananjaona": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [],
-      mercredi: [],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "13:00", end: "21:00", isWorking: true, type: "work" }],
-      samedi:   [{ start: "10:00", end: "18:00", isWorking: true, type: "work" }],
-      dimanche: [],
-    },
-    "Vivien Frebourg": {
-      lundi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      vendredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      samedi:   [],
-      dimanche: [],
-    },
-    "Permanence Externe": {
-      lundi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      mardi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      mercredi: [{ start: "09:00", end: "17:00", isWorking: true, type: "work" }],
-      jeudi:    [{ start: "16:00", end: "21:00", isWorking: true, type: "work" }],
-      vendredi: [],
-      samedi:   [],
-      dimanche: [],
-    },
-  },
-]
+  ]
+}
 
 /**
- * Applique le roulement de 3 semaines (hardcodé) sur une plage de dates.
+ * Applique le roulement de 3 semaines sur une plage de dates.
  * Le cycle se répète : semaine 1 → semaine 2 → semaine 3 → semaine 1 → ...
+ * Mode "standard" (défaut) ou "piscine" (08:00 au lieu de 09:00).
  */
 export async function POST(request: NextRequest) {
   try {
-    const { startDate, endDate, employeeIds } = await request.json()
+    const { startDate, endDate, employeeIds, mode = "standard" } = await request.json()
 
     if (!startDate || !endDate) {
       return NextResponse.json(
@@ -209,11 +142,12 @@ export async function POST(request: NextRequest) {
     const days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
     let copiedCount = 0
     const errors: { weekKey: string; employeeId: string; error: string }[] = []
+    const templates = buildTemplates(mode === "piscine" ? "piscine" : "standard")
 
     // Process all weeks in parallel, and within each week all employee×day upserts in parallel
     await Promise.all(
       targetWeekKeys.map(async (targetWeek, i) => {
-        const template = ROTATION_TEMPLATES[i % ROTATION_TEMPLATES.length]
+        const template = templates[i % templates.length]
 
         await Promise.all(
           targetEmployeeIds.map(async (employeeId) => {
