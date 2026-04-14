@@ -1,5 +1,4 @@
 import { Analytics } from '@vercel/analytics/react';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SiteHeader } from '@/components/site-header';
 import { stackServerApp } from '@/lib/stack-server';
@@ -98,9 +97,9 @@ export default async function DashboardLayout({
   // 5. Layout principal
   // ===============================
   return (
-    <SidebarProvider>
-      <AppSidebar variant="inset" user={user} />
-      <SidebarInset className="min-h-0 overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
+      <AppSidebar user={user} />
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <SiteHeader />
         <div className="flex flex-1 flex-col min-h-0 overflow-auto">
           <div className="@container/main flex flex-1 flex-col gap-2">
@@ -108,7 +107,7 @@ export default async function DashboardLayout({
           </div>
         </div>
         <Analytics />
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </div>
   );
 }
