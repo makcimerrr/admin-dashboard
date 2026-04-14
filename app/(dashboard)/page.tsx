@@ -66,7 +66,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full">
-              <Link href="/promos/status">
+              <Link href="/promos/manage">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Statut des promotions
                 <ArrowRight className="h-4 w-4 ml-auto" />
@@ -98,7 +98,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full border-orange-200 hover:bg-orange-50 dark:border-orange-900 dark:hover:bg-orange-950/30">
-              <Link href="/reports">
+              <Link href="/code-reviews">
                 <Bell className="h-4 w-4 mr-2 text-orange-600" />
                 Voir les alertes
                 <ArrowRight className="h-4 w-4 ml-auto" />
@@ -177,7 +177,7 @@ export default function DashboardPage() {
               particulière.
             </p>
             <Button asChild variant="link" className="px-0">
-              <Link href="/promos/status">
+              <Link href="/promos/manage">
                 Voir le statut des promotions
                 <ArrowRight className="h-3 w-3 ml-1" />
               </Link>

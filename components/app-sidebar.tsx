@@ -12,8 +12,6 @@ import {
   CalendarIcon,
   CalendarX2Icon,
   ClipboardCheckIcon,
-  ClipboardListIcon,
-  DatabaseIcon,
   FileBarChartIcon,
   FileIcon,
   FolderArchiveIcon,
@@ -83,10 +81,8 @@ const navGroups: NavGroup[] = [
   {
     label: 'Suivi Promos',
     items: [
-      { title: 'Data Library', url: '/promos/status', icon: DatabaseIcon },
       { title: 'Gestion Promos', url: '/promos/manage', icon: FolderArchiveIcon },
       { title: 'Analytics', url: '/analytics', icon: BarChartIcon },
-      { title: 'Rapports', url: '/reports', icon: ClipboardListIcon },
     ],
   },
   {

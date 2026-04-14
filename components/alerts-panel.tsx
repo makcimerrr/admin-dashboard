@@ -278,7 +278,7 @@ export default function AlertsPanel({
               ))}
               {alerts.length > (maxAlerts || 0) && (
                 <Button asChild variant="link" className="w-full text-xs">
-                  <Link href="/reports">
+                  <Link href="/code-reviews">
                     Voir toutes les alertes ({alerts.length - (maxAlerts || 0)}{' '}
                     de plus)
                     <ChevronRight className="h-3 w-3 ml-1" />
@@ -408,7 +408,7 @@ export default function AlertsPanel({
                               'Voir'
                             )
                               ? '/students'
-                              : '/promos/status';
+                              : '/code-reviews';
                           }}
                         >
                           {alert.action}
