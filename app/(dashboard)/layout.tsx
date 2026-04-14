@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SiteHeader } from '@/components/site-header';
+import { AssistantBubble } from '@/components/assistant/assistant-bubble';
 import { stackServerApp } from '@/lib/stack-server';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
@@ -108,6 +109,7 @@ export default async function DashboardLayout({
         </div>
         <Analytics />
       </div>
+      <AssistantBubble userId={user.email} />
     </div>
   );
 }

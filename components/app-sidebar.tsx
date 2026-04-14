@@ -93,7 +93,6 @@ const navSections: NavSection[] = [
     items: [
       { title: '01 Deck', url: '/01deck', icon: LayoutGridIcon },
       { title: 'Word Assistant', url: '/word_assistant', icon: FileIcon },
-      { title: 'Assistant IA', url: '/assistant', icon: BotIcon },
     ],
   },
 ]
