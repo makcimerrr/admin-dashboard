@@ -14,6 +14,7 @@ import {
   LayoutDashboardIcon,
   LayoutGridIcon,
   SettingsIcon,
+  SquareStackIcon,
   UserCheckIcon,
   UsersIcon,
 } from 'lucide-react';
@@ -83,6 +84,13 @@ export const NAV_APPS: NavApp[] = [
       { title: '01 Deck', url: '/01deck', icon: LayoutGridIcon },
       { title: 'Word Assistant', url: '/word_assistant', icon: FileIcon },
     ],
+  },
+  {
+    key: '01deck-app',
+    label: '01 Deck',
+    icon: SquareStackIcon,
+    url: 'https://01deck.zone01rouennormandie.org/',
+    external: true,
   },
   {
     key: 'intra',
