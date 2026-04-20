@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SiteHeader } from '@/components/site-header';
+import { AppTabs } from '@/components/app-tabs';
 import { AssistantBubble } from '@/components/assistant/assistant-bubble';
 import { stackServerApp } from '@/lib/stack-server';
 import { redirect } from 'next/navigation';
@@ -102,6 +103,7 @@ export default async function DashboardLayout({
       <AppSidebar user={user} />
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <SiteHeader />
+        <AppTabs />
         <div className="flex flex-1 flex-col min-h-0 overflow-auto">
           <div className="@container/main flex flex-1 flex-col gap-2">
             {children}
