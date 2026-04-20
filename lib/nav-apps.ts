@@ -9,10 +9,12 @@ import {
   FileIcon,
   FolderArchiveIcon,
   FolderIcon,
+  GlobeIcon,
   GraduationCapIcon,
   LayoutDashboardIcon,
   LayoutGridIcon,
   SettingsIcon,
+  UserCheckIcon,
   UsersIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -33,6 +35,8 @@ export interface NavApp {
   items?: NavItem[];
   /** For direct-link apps without sub-nav */
   url?: string;
+  /** If true, url is external (opens in new tab) */
+  external?: boolean;
 }
 
 /** Main apps in the launcher-style sidebar */
@@ -80,6 +84,20 @@ export const NAV_APPS: NavApp[] = [
       { title: 'Word Assistant', url: '/word_assistant', icon: FileIcon },
     ],
   },
+  {
+    key: 'intra',
+    label: 'Intra',
+    icon: GlobeIcon,
+    url: 'https://intra.zone01rouennormandie.org/',
+    external: true,
+  },
+  {
+    key: 'emargement',
+    label: 'Émargement',
+    icon: UserCheckIcon,
+    url: 'https://emargement.zone01rouennormandie.org/',
+    external: true,
+  },
 ];
 
 /** Bottom nav (config, settings) — always direct links */
@@ -96,8 +114,9 @@ export function pathMatches(pathname: string, url: string): boolean {
 
 /** Find the app whose items best match the current pathname */
 export function findActiveApp(pathname: string): NavApp | null {
-  // For direct-URL apps (no sub-items), match by url
+  // For direct-URL internal apps (no sub-items), match by url
   for (const app of NAV_APPS) {
+    if (app.external) continue;
     if (app.url && pathMatches(pathname, app.url)) {
       // Only the dashboard "/" is a direct app currently; avoid swallowing deeper routes
       if (app.url === '/' && pathname !== '/') continue;

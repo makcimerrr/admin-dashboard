@@ -74,24 +74,29 @@ export function AppSidebar({ user }: { user?: User | null }) {
             const Icon = app.icon
             const active = isAppActive(app)
             const href = app.url ?? app.defaultUrl ?? '#'
+            const className = cn(
+              "flex items-center justify-center w-10 h-10 rounded-lg transition-all",
+              active
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )
 
             return (
               <Tooltip key={app.key}>
                 <TooltipTrigger asChild>
-                  <Link
-                    href={href}
-                    className={cn(
-                      "flex items-center justify-center w-10 h-10 rounded-lg transition-all",
-                      active
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </Link>
+                  {app.external ? (
+                    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+                      <Icon className="h-5 w-5" />
+                    </a>
+                  ) : (
+                    <Link href={href} className={className}>
+                      <Icon className="h-5 w-5" />
+                    </Link>
+                  )}
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
                   {app.label}
+                  {app.external && <span className="ml-1 opacity-60">↗</span>}
                 </TooltipContent>
               </Tooltip>
             )
