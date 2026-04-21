@@ -17,6 +17,10 @@ const MOCK_DECK = {
   ],
 };
 
+// Uses theme chart colors 3 & 4
+const DECK_COLOR = 'var(--chart-3)';
+const DECK_COLOR_2 = 'var(--chart-4)';
+
 export function DeckWidget() {
   const xpRatio = Math.round((MOCK_DECK.xp / MOCK_DECK.nextLevelXp) * 100);
   const cardsRatio = Math.round((MOCK_DECK.cardsUnlocked / MOCK_DECK.cardsTotal) * 100);
@@ -25,7 +29,7 @@ export function DeckWidget() {
     <Card className="border overflow-hidden h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3 px-4 shrink-0">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <SquareStack className="h-4 w-4 text-fuchsia-600" />
+          <SquareStack className="h-4 w-4" style={{ color: DECK_COLOR }} />
           01 Deck
         </CardTitle>
         <a
@@ -41,12 +45,27 @@ export function DeckWidget() {
 
       <CardContent className="flex-1 min-h-0 flex flex-col gap-3 px-4 pb-3">
         {/* Level + XP bar */}
-        <div className="rounded-lg border bg-gradient-to-br from-fuchsia-500/5 via-transparent to-transparent p-3">
+        <div
+          className="rounded-lg border p-3"
+          style={{
+            backgroundImage: `linear-gradient(135deg, color-mix(in srgb, ${DECK_COLOR} 6%, transparent), transparent 60%)`,
+          }}
+        >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2.5">
-              <div className="relative flex items-center justify-center h-10 w-10 rounded-full bg-fuchsia-500/10 text-fuchsia-600 border-2 border-fuchsia-500/30">
+              <div
+                className="relative flex items-center justify-center h-10 w-10 rounded-full border-2"
+                style={{
+                  color: DECK_COLOR,
+                  backgroundColor: `color-mix(in srgb, ${DECK_COLOR} 12%, transparent)`,
+                  borderColor: `color-mix(in srgb, ${DECK_COLOR} 30%, transparent)`,
+                }}
+              >
                 <Sparkles className="h-4 w-4" />
-                <span className="absolute -bottom-1 -right-1 flex items-center justify-center h-4 w-4 rounded-full bg-fuchsia-600 text-white text-[9px] font-bold shadow-sm">
+                <span
+                  className="absolute -bottom-1 -right-1 flex items-center justify-center h-4 w-4 rounded-full text-white text-[9px] font-bold shadow-sm"
+                  style={{ backgroundColor: DECK_COLOR }}
+                >
                   {MOCK_DECK.level}
                 </span>
               </div>
@@ -55,7 +74,7 @@ export function DeckWidget() {
                 <p className="text-xs font-semibold leading-tight">Apprenti du Deck</p>
               </div>
             </div>
-            <Badge className="text-[9px] h-4 px-1.5 bg-orange-500/15 text-orange-700 hover:bg-orange-500/20 gap-0.5">
+            <Badge className="text-[9px] h-4 px-1.5 bg-orange-500/15 text-orange-700 dark:text-orange-400 hover:bg-orange-500/20 gap-0.5">
               <Flame className="h-2.5 w-2.5" />
               {MOCK_DECK.streak}j
             </Badge>
@@ -69,8 +88,11 @@ export function DeckWidget() {
             </div>
             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-fuchsia-500 to-pink-500 transition-all duration-700"
-                style={{ width: `${xpRatio}%` }}
+                className="h-full transition-all duration-700"
+                style={{
+                  width: `${xpRatio}%`,
+                  backgroundImage: `linear-gradient(to right, ${DECK_COLOR}, ${DECK_COLOR_2})`,
+                }}
               />
             </div>
           </div>
@@ -85,7 +107,7 @@ export function DeckWidget() {
               <span className="text-[10px] text-muted-foreground">/ {MOCK_DECK.cardsTotal}</span>
             </div>
             <div className="h-1 mt-1 rounded-full bg-muted overflow-hidden">
-              <div className="h-full bg-cyan-500" style={{ width: `${cardsRatio}%` }} />
+              <div className="h-full" style={{ width: `${cardsRatio}%`, backgroundColor: DECK_COLOR_2 }} />
             </div>
           </div>
           <div className="rounded-lg border p-2">
@@ -112,7 +134,7 @@ export function DeckWidget() {
                   </span>
                   <span className="text-[11px] font-medium truncate">{a.name}</span>
                 </div>
-                <span className="text-[9px] font-mono text-fuchsia-600 shrink-0">{a.reward}</span>
+                <span className="text-[9px] font-mono shrink-0" style={{ color: DECK_COLOR }}>{a.reward}</span>
               </div>
             ))}
           </div>

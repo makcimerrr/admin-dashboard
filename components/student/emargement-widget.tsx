@@ -35,7 +35,7 @@ function PeriodBlock({
   done,
   remaining,
   ratio,
-  accent,
+  color,
   badges,
 }: {
   label: string;
@@ -43,13 +43,9 @@ function PeriodBlock({
   done: number;
   remaining: number;
   ratio: number;
-  accent: 'violet' | 'blue';
+  color: string;
   badges?: React.ReactNode;
 }) {
-  const accentClasses = {
-    violet: { progress: 'text-violet-500', track: 'text-violet-500/10' },
-    blue: { progress: 'text-blue-500', track: 'text-blue-500/10' },
-  };
   return (
     <div className="flex items-center gap-4 flex-1 min-w-0">
       <Donut
@@ -58,8 +54,7 @@ function PeriodBlock({
         sublabel="Ratio"
         size={110}
         stroke={12}
-        progressClassName={accentClasses[accent].progress}
-        trackClassName={accentClasses[accent].track}
+        color={color}
       />
       <div className="flex-1 min-w-0 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -77,7 +72,7 @@ function PeriodBlock({
           </div>
           <div className="flex justify-between border-t pt-0.5">
             <span className="text-muted-foreground">Reste dû</span>
-            <span className="font-semibold font-mono text-amber-600">{formatHM(remaining)}</span>
+            <span className="font-semibold font-mono text-amber-600 dark:text-amber-400">{formatHM(remaining)}</span>
           </div>
         </div>
       </div>
@@ -95,7 +90,7 @@ export function EmargementWidget() {
     <Card className="border h-full flex flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3 px-4 shrink-0">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Clock className="h-4 w-4 text-violet-600" />
+          <Clock className="h-4 w-4" style={{ color: 'var(--chart-1)' }} />
           Émargement
         </CardTitle>
         <a
@@ -110,18 +105,16 @@ export function EmargementWidget() {
       </CardHeader>
 
       <CardContent className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-4 px-4 pb-3 items-center">
-        {/* Week */}
         <PeriodBlock
           label={MOCK_WEEK.label}
           target={MOCK_WEEK.targetHours}
           done={MOCK_WEEK.doneHours}
           remaining={weekRemaining}
           ratio={weekRatio}
-          accent="violet"
+          color="var(--chart-1)"
           badges={<Badge variant="secondary" className="text-[9px] h-4 px-1.5">Hebdo</Badge>}
         />
 
-        {/* Month */}
         <div className="lg:border-l lg:pl-4">
           <PeriodBlock
             label={MOCK_MONTH.label}
@@ -129,17 +122,16 @@ export function EmargementWidget() {
             done={MOCK_MONTH.doneHours}
             remaining={monthRemaining}
             ratio={monthRatio}
-            accent="blue"
+            color="var(--chart-2)"
             badges={
               <>
-                <Badge className="text-[9px] h-4 px-1.5 bg-blue-500/15 text-blue-700 hover:bg-blue-500/20">{MOCK_MONTH.workingDays}j</Badge>
+                <Badge variant="secondary" className="text-[9px] h-4 px-1.5">{MOCK_MONTH.workingDays}j</Badge>
                 <Badge variant="secondary" className="text-[9px] h-4 px-1.5">Mensuel</Badge>
               </>
             }
           />
         </div>
 
-        {/* Recent logs inline */}
         <div className="hidden lg:block lg:border-l lg:pl-4 w-56 self-stretch">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
             <CalendarDays className="h-3 w-3" />
@@ -150,9 +142,9 @@ export function EmargementWidget() {
               <div key={log.date} className="flex items-center justify-between text-[10px] font-mono">
                 <span className="text-muted-foreground w-10">{log.date}</span>
                 <span>
-                  <span className="text-emerald-600">{log.in}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">{log.in}</span>
                   <span className="text-muted-foreground/40 mx-1">→</span>
-                  <span className="text-red-500">{log.out}</span>
+                  <span className="text-destructive">{log.out}</span>
                 </span>
                 <span className="font-semibold w-10 text-right">{log.total}</span>
               </div>

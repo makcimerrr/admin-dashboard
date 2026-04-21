@@ -8,8 +8,10 @@ interface DonutProps {
   size?: number;
   stroke?: number;
   className?: string;
-  trackClassName?: string;
-  progressClassName?: string;
+  /** CSS color for the progress arc (e.g. 'var(--chart-1)') */
+  color?: string;
+  /** Opacity 0..1 for the track (same color as progress, dimmed) */
+  trackOpacity?: number;
 }
 
 export function Donut({
@@ -19,8 +21,8 @@ export function Donut({
   size = 140,
   stroke = 14,
   className,
-  trackClassName = 'text-muted/40',
-  progressClassName = 'text-primary',
+  color = 'hsl(var(--primary))',
+  trackOpacity = 0.12,
 }: DonutProps) {
   const clamped = Math.max(0, Math.min(100, value));
   const radius = (size - stroke) / 2;
@@ -36,8 +38,8 @@ export function Donut({
           r={radius}
           fill="none"
           strokeWidth={stroke}
-          stroke="currentColor"
-          className={trackClassName}
+          stroke={color}
+          strokeOpacity={trackOpacity}
         />
         <circle
           cx={size / 2}
@@ -45,11 +47,11 @@ export function Donut({
           r={radius}
           fill="none"
           strokeWidth={stroke}
-          stroke="currentColor"
+          stroke={color}
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className={cn('transition-[stroke-dashoffset] duration-700', progressClassName)}
+          className="transition-[stroke-dashoffset] duration-700"
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">

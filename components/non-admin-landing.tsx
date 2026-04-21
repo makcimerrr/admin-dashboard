@@ -25,7 +25,14 @@ export function NonAdminLanding({ userName }: NonAdminLandingProps) {
             Récap de ta progression cette semaine.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-700 text-[10px] font-medium">
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-medium"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--chart-3) 10%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--chart-3) 20%, transparent)',
+            color: 'var(--chart-3)',
+          }}
+        >
           <Sparkles className="h-3 w-3" />
           Données mockées
         </div>
