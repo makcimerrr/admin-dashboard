@@ -60,7 +60,6 @@ export async function middleware(req: NextRequest) {
   const publicRoutes = [
     '/login', // Page de connexion
     '/register', // Page d'inscription
-    '/non-admin', // Page d'accès refusé
     '/handler', // Stack Auth handlers
     '/hub' // Hub public
   ];
