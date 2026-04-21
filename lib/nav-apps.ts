@@ -38,6 +38,19 @@ export interface NavApp {
   url?: string;
   /** If true, url is external (opens in new tab) */
   external?: boolean;
+  /** If true, only Admin / Super Admin can see this app */
+  adminOnly?: boolean;
+}
+
+export type UserRole = 'Admin' | 'Super Admin' | string;
+
+export function isAdminRole(role: string | undefined): boolean {
+  return role === 'Admin' || role === 'Super Admin';
+}
+
+export function filterAppsByRole(apps: NavApp[], role: string | undefined): NavApp[] {
+  if (isAdminRole(role)) return apps;
+  return apps.filter((a) => !a.adminOnly);
 }
 
 /** Main apps in the launcher-style sidebar */
@@ -47,12 +60,14 @@ export const NAV_APPS: NavApp[] = [
     label: 'Tableau de bord',
     icon: LayoutDashboardIcon,
     url: '/',
+    adminOnly: true,
   },
   {
     key: 'pedagogie',
     label: 'Pédagogie',
     icon: GraduationCapIcon,
     defaultUrl: '/students',
+    adminOnly: true,
     items: [
       { title: 'Étudiants', url: '/students', icon: UsersIcon },
       { title: 'Alternants', url: '/alternants', icon: BriefcaseIcon },
@@ -68,6 +83,7 @@ export const NAV_APPS: NavApp[] = [
     label: 'Planning',
     icon: CalendarIcon,
     defaultUrl: '/planning',
+    adminOnly: true,
     items: [
       { title: 'Planning', url: '/planning', icon: CalendarIcon },
       { title: 'Absences', url: '/planning/absences', icon: CalendarX2Icon },
@@ -80,6 +96,7 @@ export const NAV_APPS: NavApp[] = [
     label: 'Outils',
     icon: LayoutGridIcon,
     defaultUrl: '/01deck',
+    adminOnly: true,
     items: [
       { title: '01 Deck', url: '/01deck', icon: LayoutGridIcon },
       { title: 'Word Assistant', url: '/word_assistant', icon: FileIcon },
@@ -110,7 +127,7 @@ export const NAV_APPS: NavApp[] = [
 
 /** Bottom nav (config, settings) — always direct links */
 export const NAV_BOTTOM: NavApp[] = [
-  { key: 'config', label: 'Configuration', icon: FolderIcon, url: '/config' },
+  { key: 'config', label: 'Configuration', icon: FolderIcon, url: '/config', adminOnly: true },
   { key: 'settings', label: 'Paramètres', icon: SettingsIcon, url: '/settings' },
 ];
 

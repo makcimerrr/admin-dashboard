@@ -6,10 +6,44 @@ import RecentActivityWidget from '@/components/widgets/recent-activity-widget';
 import CodeReviewsWidget from '@/components/widgets/code-reviews-widget';
 import { MyTasksWidgetServer } from '@/components/hub/MyTasksWidgetServer';
 import { AlertBlock } from '@/components/dashboard/alert-block';
+import { NonAdminLanding } from '@/components/non-admin-landing';
 import { BarChart3 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
+import { stackServerApp } from '@/lib/stack-server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth-options';
+import { isAdminRole } from '@/lib/nav-apps';
 
-export default function DashboardPage() {
+async function getCurrentUser() {
+  const stackUser = await stackServerApp.getUser();
+  if (stackUser) {
+    return {
+      name: stackUser.displayName ?? stackUser.primaryEmail ?? '',
+      role:
+        stackUser.serverMetadata?.role ||
+        stackUser.clientReadOnlyMetadata?.role ||
+        stackUser.clientMetadata?.role ||
+        'user',
+    };
+  }
+  const session = await getServerSession(authOptions);
+  if (session?.user?.email) {
+    const groups: string[] = (session.user.groups || []) as string[];
+    return {
+      name: session.user.name ?? session.user.email ?? '',
+      role: groups.includes('authentik Admins') ? 'Admin' : 'user',
+    };
+  }
+  return null;
+}
+
+export default async function DashboardPage() {
+  const user = await getCurrentUser();
+
+  if (!isAdminRole(user?.role)) {
+    return <NonAdminLanding userName={user?.name} role={user?.role} />;
+  }
+
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}

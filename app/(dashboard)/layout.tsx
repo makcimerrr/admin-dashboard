@@ -88,16 +88,10 @@ export default async function DashboardLayout({
   }
 
   // ===============================
-  // 4. Protection des routes selon le rôle
+  // 4. Layout principal
   // ===============================
-  if (user.role !== 'Admin' && user.role !== 'Super Admin') {
-    console.log('⛔ Accès refusé - Redirection vers /non-admin');
-    redirect('/non-admin');
-  }
-
-  // ===============================
-  // 5. Layout principal
-  // ===============================
+  // Non-admins see the same shell but only with apps they have access to
+  // (filtered in AppSidebar via filterAppsByRole)
   return (
     <div className="flex h-screen overflow-hidden">
       <AppSidebar user={user} />
@@ -111,7 +105,9 @@ export default async function DashboardLayout({
         </div>
         <Analytics />
       </div>
-      <AssistantBubble userId={user.email} />
+      {(user.role === 'Admin' || user.role === 'Super Admin') && (
+        <AssistantBubble userId={user.email} />
+      )}
     </div>
   );
 }

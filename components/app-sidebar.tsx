@@ -19,7 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { NAV_APPS, NAV_BOTTOM, findActiveApp, pathMatches, type NavApp } from "@/lib/nav-apps"
+import { NAV_APPS, NAV_BOTTOM, findActiveApp, pathMatches, filterAppsByRole, type NavApp } from "@/lib/nav-apps"
 
 // ─── Theme config ───────────────────────────────────────────────────────────
 
@@ -51,6 +51,8 @@ export function AppSidebar({ user }: { user?: User | null }) {
   const [themePickerOpen, setThemePickerOpen] = React.useState(false)
   const isDark = theme === 'dark'
 
+  const mainApps = filterAppsByRole(NAV_APPS, user?.role)
+  const bottomApps = filterAppsByRole(NAV_BOTTOM, user?.role)
   const activeApp = findActiveApp(pathname)
 
   const isAppActive = (app: NavApp) => {
@@ -70,7 +72,7 @@ export function AppSidebar({ user }: { user?: User | null }) {
 
         {/* Main app icons */}
         <div className="flex-1 flex flex-col items-center py-2 gap-1">
-          {NAV_APPS.map((app) => {
+          {mainApps.map((app) => {
             const Icon = app.icon
             const active = isAppActive(app)
             const href = app.url ?? app.defaultUrl ?? '#'
@@ -158,7 +160,7 @@ export function AppSidebar({ user }: { user?: User | null }) {
             )}
           </div>
 
-          {NAV_BOTTOM.map((app) => {
+          {bottomApps.map((app) => {
             const Icon = app.icon
             const active = app.url ? pathMatches(pathname, app.url) : false
             return (
