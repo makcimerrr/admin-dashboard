@@ -60,7 +60,6 @@ export const NAV_APPS: NavApp[] = [
     label: 'Tableau de bord',
     icon: LayoutDashboardIcon,
     url: '/',
-    adminOnly: true,
   },
   {
     key: 'pedagogie',

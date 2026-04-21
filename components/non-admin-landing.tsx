@@ -14,30 +14,34 @@ export function NonAdminLanding({ userName }: NonAdminLandingProps) {
   const firstName = userName?.split(' ')[0];
 
   return (
-    <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
-      {/* Welcome header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="h-full flex flex-col gap-3 p-3 md:p-4 overflow-hidden">
+      {/* Welcome header (compact) */}
+      <div className="flex items-center justify-between flex-wrap gap-2 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-lg font-bold flex items-center gap-2">
             Bonjour{firstName ? `, ${firstName}` : ''} 👋
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Voici un récap de ta progression cette semaine.
+          <p className="text-xs text-muted-foreground">
+            Récap de ta progression cette semaine.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-700 text-xs font-medium">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-700 text-[10px] font-medium">
           <Sparkles className="h-3 w-3" />
-          Données mockées · Intégration à venir
+          Données mockées
         </div>
       </div>
 
-      {/* Row 1: Émargement (wide) */}
-      <EmargementWidget />
-
-      {/* Row 2: 01 Deck + Intra */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <DeckWidget />
-        <IntraWidget />
+      {/* Grid: 3 widgets en row, emargement plus large */}
+      <div className="flex-1 min-h-0 grid gap-3 grid-cols-1 md:grid-cols-12">
+        <div className="md:col-span-5 min-h-0">
+          <EmargementWidget />
+        </div>
+        <div className="md:col-span-4 min-h-0">
+          <IntraWidget />
+        </div>
+        <div className="md:col-span-3 min-h-0">
+          <DeckWidget />
+        </div>
       </div>
     </div>
   );
