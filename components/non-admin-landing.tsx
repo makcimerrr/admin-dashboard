@@ -31,16 +31,18 @@ export function NonAdminLanding({ userName }: NonAdminLandingProps) {
         </div>
       </div>
 
-      {/* Grid: 3 widgets en row, emargement plus large */}
-      <div className="flex-1 min-h-0 grid gap-3 grid-cols-1 md:grid-cols-12">
-        <div className="md:col-span-5 min-h-0">
+      {/* Layout: Emargement top full-width, then Deck | Intra below */}
+      <div className="flex-1 min-h-0 grid gap-3 grid-rows-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="min-h-0">
           <EmargementWidget />
         </div>
-        <div className="md:col-span-4 min-h-0">
-          <IntraWidget />
-        </div>
-        <div className="md:col-span-3 min-h-0">
-          <DeckWidget />
+        <div className="min-h-0 grid gap-3 md:grid-cols-2">
+          <div className="min-h-0">
+            <DeckWidget />
+          </div>
+          <div className="min-h-0">
+            <IntraWidget />
+          </div>
         </div>
       </div>
     </div>
