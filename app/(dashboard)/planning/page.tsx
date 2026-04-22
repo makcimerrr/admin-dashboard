@@ -13,6 +13,7 @@ import { WeekSelector } from '@/components/planning/week-selector';
 import { PlanningToolbar, type PaintMode, type SlotType } from '@/components/planning/planning-toolbar';
 import { PlanningGrid } from '@/components/planning/planning-grid';
 import { PlanningSidebar } from '@/components/planning/planning-sidebar';
+import { MobileDayView } from '@/components/planning/mobile-day-view';
 import {
   getWeekDates,
   getWeekNumber,
@@ -62,8 +63,9 @@ export default function PlanningPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'person' | 'table'>('grid');
 
-  // Force person view on mobile (grid drag is not viable on touch)
-  const effectiveViewMode = isMobile && viewMode === 'grid' ? 'person' : viewMode;
+  // Mobile gets its own dedicated read-only view (no edit, horizontal day-by-day)
+  // On desktop, grid/person/table work normally.
+  const effectiveViewMode = isMobile ? 'mobile' : viewMode;
 
   // Holidays
   const [holidays, setHolidays] = useState<Record<string, string>>({});
@@ -304,7 +306,7 @@ export default function PlanningPage() {
           weekNumber={weekNumber}
         />
 
-        {isEditor && (
+        {isEditor && !isMobile && (
           <>
             <label className="flex items-center gap-1.5 cursor-pointer text-xs">
               <input
@@ -327,9 +329,9 @@ export default function PlanningPage() {
           </>
         )}
 
-        {/* View switcher */}
-        <div className="inline-flex rounded-md bg-muted p-0.5">
-          {!isMobile && (
+        {/* View switcher — desktop only */}
+        {!isMobile && (
+          <div className="inline-flex rounded-md bg-muted p-0.5">
             <Button
               variant={effectiveViewMode === 'grid' ? 'default' : 'ghost'}
               size="sm"
@@ -339,26 +341,26 @@ export default function PlanningPage() {
               <Grid className="h-3 w-3 mr-1" />
               Grille
             </Button>
-          )}
-          <Button
-            variant={effectiveViewMode === 'person' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('person')}
-            className="h-7 px-2 text-xs"
-          >
-            <Users className="h-3 w-3 mr-1" />
-            Personne
-          </Button>
-          <Button
-            variant={effectiveViewMode === 'table' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            className="h-7 px-2 text-xs"
-          >
-            <List className="h-3 w-3 mr-1" />
-            Tableau
-          </Button>
-        </div>
+            <Button
+              variant={effectiveViewMode === 'person' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('person')}
+              className="h-7 px-2 text-xs"
+            >
+              <Users className="h-3 w-3 mr-1" />
+              Personne
+            </Button>
+            <Button
+              variant={effectiveViewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-7 px-2 text-xs"
+            >
+              <List className="h-3 w-3 mr-1" />
+              Tableau
+            </Button>
+          </div>
+        )}
       </PageHeader>
 
       {/* Toolbar (only in grid view on desktop) */}
@@ -385,6 +387,14 @@ export default function PlanningPage() {
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
+        ) : effectiveViewMode === 'mobile' ? (
+          <MobileDayView
+            employees={employees}
+            daysOfWeek={daysOfWeek}
+            currentWeekDates={currentWeekDates}
+            getEmployeeScheduleForDay={getEmployeeScheduleForDay}
+            slotTypeConfig={slotTypeConfig}
+          />
         ) : effectiveViewMode === 'grid' ? (
           <PlanningGrid
             employees={employees}
