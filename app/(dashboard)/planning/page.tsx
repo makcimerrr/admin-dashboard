@@ -8,11 +8,11 @@ import { useToast } from '@/components/hooks/use-toast';
 import { useUser } from '@stackframe/stack';
 import { useIsMobile } from '@/components/hooks/use-mobile';
 import { PageHeader } from '@/components/page-header';
-import { PlanningNavTabs } from '@/components/planning/planning-nav-tabs';
 import { WeekSelector } from '@/components/planning/week-selector';
 import { PlanningToolbar, type PaintMode, type SlotType } from '@/components/planning/planning-toolbar';
 import { PlanningGrid } from '@/components/planning/planning-grid';
 import { PlanningSidebar } from '@/components/planning/planning-sidebar';
+import { MobileDayView } from '@/components/planning/mobile-day-view';
 import {
   getWeekDates,
   getWeekNumber,
@@ -62,8 +62,15 @@ export default function PlanningPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'person' | 'table'>('grid');
 
-  // Force person view on mobile (grid drag is not viable on touch)
-  const effectiveViewMode = isMobile && viewMode === 'grid' ? 'person' : viewMode;
+  // Defer mobile-dependent rendering until after mount to avoid hydration
+  // mismatches (SSR always renders as desktop; the mobile view would otherwise
+  // swap in mid-commit and can break Suspense boundaries).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  // Mobile gets its own dedicated read-only view (no edit, horizontal day-by-day)
+  // On desktop, grid/person/table work normally.
+  const effectiveViewMode = mounted && isMobile ? 'mobile' : viewMode;
 
   // Holidays
   const [holidays, setHolidays] = useState<Record<string, string>>({});
@@ -79,11 +86,15 @@ export default function PlanningPage() {
   const isPiscine = !!piscineWeeks[currentWeekKey];
   const weekNumber = useMemo(() => getWeekNumber(currentWeekDates[0]), [currentWeekDates]);
 
-  // Load employees
+  // Load employees — sorted alphabetically so the order is stable across
+  // sessions, weeks, days and viewports (desktop grid/person/table + mobile).
   useEffect(() => {
     fetch('/api/employees')
       .then((res) => res.ok ? res.json() : [])
-      .then((data) => setEmployees(data.map((e: Employee) => ({ ...e, schedule: {} }))))
+      .then((data: Employee[]) => {
+        const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+        setEmployees(sorted.map((e) => ({ ...e, schedule: {} })));
+      })
       .catch(() => toast({ title: 'Erreur', description: 'Impossible de charger les employés', variant: 'destructive' }));
   }, []);
 
@@ -290,7 +301,6 @@ export default function PlanningPage() {
         icon={LayoutTemplate}
         title="Planning"
         description={isEditor ? 'Cliquez sur un crayon puis peignez la grille' : 'Consultation'}
-        tabs={<PlanningNavTabs permission={planningPermission} />}
         badge={
           <Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>
             {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
@@ -304,7 +314,7 @@ export default function PlanningPage() {
           weekNumber={weekNumber}
         />
 
-        {isEditor && (
+        {isEditor && !isMobile && (
           <>
             <label className="flex items-center gap-1.5 cursor-pointer text-xs">
               <input
@@ -327,9 +337,9 @@ export default function PlanningPage() {
           </>
         )}
 
-        {/* View switcher */}
-        <div className="inline-flex rounded-md bg-muted p-0.5">
-          {!isMobile && (
+        {/* View switcher — desktop only */}
+        {!isMobile && (
+          <div className="inline-flex rounded-md bg-muted p-0.5">
             <Button
               variant={effectiveViewMode === 'grid' ? 'default' : 'ghost'}
               size="sm"
@@ -339,26 +349,26 @@ export default function PlanningPage() {
               <Grid className="h-3 w-3 mr-1" />
               Grille
             </Button>
-          )}
-          <Button
-            variant={effectiveViewMode === 'person' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('person')}
-            className="h-7 px-2 text-xs"
-          >
-            <Users className="h-3 w-3 mr-1" />
-            Personne
-          </Button>
-          <Button
-            variant={effectiveViewMode === 'table' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            className="h-7 px-2 text-xs"
-          >
-            <List className="h-3 w-3 mr-1" />
-            Tableau
-          </Button>
-        </div>
+            <Button
+              variant={effectiveViewMode === 'person' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('person')}
+              className="h-7 px-2 text-xs"
+            >
+              <Users className="h-3 w-3 mr-1" />
+              Personne
+            </Button>
+            <Button
+              variant={effectiveViewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('table')}
+              className="h-7 px-2 text-xs"
+            >
+              <List className="h-3 w-3 mr-1" />
+              Tableau
+            </Button>
+          </div>
+        )}
       </PageHeader>
 
       {/* Toolbar (only in grid view on desktop) */}
@@ -385,6 +395,14 @@ export default function PlanningPage() {
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
+        ) : effectiveViewMode === 'mobile' ? (
+          <MobileDayView
+            employees={employees}
+            daysOfWeek={daysOfWeek}
+            currentWeekDates={currentWeekDates}
+            getEmployeeScheduleForDay={getEmployeeScheduleForDay}
+            slotTypeConfig={slotTypeConfig}
+          />
         ) : effectiveViewMode === 'grid' ? (
           <PlanningGrid
             employees={employees}

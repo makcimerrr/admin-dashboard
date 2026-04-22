@@ -9,7 +9,6 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Clock, Loader2, RotateCcw } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { PlanningNavTabs } from "@/components/planning/planning-nav-tabs";
 import { FilterToolbar } from "@/components/planning/filter-toolbar";
 
 interface HistoryEntry {
@@ -132,7 +131,6 @@ export default function HistoryPage() {
         icon={Clock}
         title="Historique"
         description="Suivi des modifications du planning"
-        tabs={<PlanningNavTabs permission={planningPermission} />}
         badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       />
 

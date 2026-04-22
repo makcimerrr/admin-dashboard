@@ -1,7 +1,9 @@
 import { Analytics } from '@vercel/analytics/react';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SiteHeader } from '@/components/site-header';
+import { AppTabs } from '@/components/app-tabs';
+import { BottomNav } from '@/components/bottom-nav';
+import { AssistantBubble } from '@/components/assistant/assistant-bubble';
 import { stackServerApp } from '@/lib/stack-server';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
@@ -87,28 +89,27 @@ export default async function DashboardLayout({
   }
 
   // ===============================
-  // 4. Protection des routes selon le rôle
+  // 4. Layout principal
   // ===============================
-  if (user.role !== 'Admin' && user.role !== 'Super Admin') {
-    console.log('⛔ Accès refusé - Redirection vers /non-admin');
-    redirect('/non-admin');
-  }
-
-  // ===============================
-  // 5. Layout principal
-  // ===============================
+  // Non-admins see the same shell but only with apps they have access to
+  // (filtered in AppSidebar via filterAppsByRole)
   return (
-    <SidebarProvider>
-      <AppSidebar variant="inset" user={user} />
-      <SidebarInset className="min-h-0 overflow-hidden">
+    <div className="flex h-screen overflow-hidden">
+      <AppSidebar user={user} />
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <SiteHeader />
-        <div className="flex flex-1 flex-col min-h-0 overflow-auto">
+        <AppTabs />
+        <div className="flex flex-1 flex-col min-h-0 overflow-auto pb-14 md:pb-0">
           <div className="@container/main flex flex-1 flex-col gap-2">
             {children}
           </div>
         </div>
         <Analytics />
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+      <BottomNav user={user} />
+      {(user.role === 'Admin' || user.role === 'Super Admin') && (
+        <AssistantBubble userId={user.email} />
+      )}
+    </div>
   );
 }

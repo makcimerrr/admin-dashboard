@@ -60,7 +60,6 @@ export async function middleware(req: NextRequest) {
   const publicRoutes = [
     '/login', // Page de connexion
     '/register', // Page d'inscription
-    '/non-admin', // Page d'accès refusé
     '/handler', // Stack Auth handlers
     '/hub' // Hub public
   ];
@@ -68,6 +67,35 @@ export async function middleware(req: NextRequest) {
   if (publicRoutes.some((route) => url.startsWith(route))) {
     return NextResponse.next();
   }
+
+  // ========================================
+  // 1.5 ROUTES ADMIN-ONLY
+  // ========================================
+  // Routes accessible only to Admin / Super Admin users. Non-admins are
+  // redirected to /. Keep in sync with adminOnly flags in lib/nav-apps.ts
+  const adminOnlyPrefixes = [
+    '/students',
+    '/alternants',
+    '/specialties',
+    '/code-reviews',
+    '/promos',
+    '/analytics',
+    '/planning',
+    '/employees',
+    '/history',
+    '/01deck',
+    '/word_assistant',
+    '/config',
+    '/assistant',
+  ];
+  const isAdminPath = adminOnlyPrefixes.some((p) => url === p || url.startsWith(p + '/'));
+
+  const enforceAdminGuard = (role: string) => {
+    if (isAdminPath && role !== 'Admin' && role !== 'Super Admin' && role !== 'admin') {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+    return null;
+  };
 
   // ========================================
   // 2. VERIFICATION STACK AUTH
@@ -114,6 +142,9 @@ export async function middleware(req: NextRequest) {
                       user.client_metadata?.role ||
                       'user';
 
+          const blocked = enforceAdminGuard(role);
+          if (blocked) return blocked;
+
           const response = NextResponse.next();
 
           // Créer/mettre à jour le cookie stack-role
@@ -143,6 +174,8 @@ export async function middleware(req: NextRequest) {
     // Cookie stack-role présent, utiliser sa valeur
     if (stackRoleCookie) {
       const role = stackRoleCookie.value;
+      const blocked = enforceAdminGuard(role);
+      if (blocked) return blocked;
       const response = NextResponse.next();
       response.cookies.set('role', role, { path: '/' });
       /*console.log(`✅ Middleware - Stack Auth OK pour ${url} - Rôle: ${role}`);*/
@@ -178,6 +211,9 @@ export async function middleware(req: NextRequest) {
     ) {
       role = 'admin';
     }
+
+    const blocked = enforceAdminGuard(role);
+    if (blocked) return blocked;
 
     const response = NextResponse.next();
     response.cookies.set('role', role, { path: '/' }); // Expose le rôle pour Server Components

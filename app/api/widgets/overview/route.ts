@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { students, studentProjects, promotions } from '@/lib/db/schema';
-import { count, sql, eq, and } from 'drizzle-orm';
+import { count, sql, eq, and, or, isNull } from 'drizzle-orm';
 
 export async function GET() {
   try {
@@ -12,13 +12,20 @@ export async function GET() {
       lateStudentsResult,
       validatedResult
     ] = await Promise.all([
-      // Total étudiants (exclure les perditions)
+      // Total étudiants actifs (exclure perditions + promos archivées)
       db.select({ count: count() })
         .from(students)
-        .where(eq(students.isDropout, false))
+        .innerJoin(promotions, eq(students.promoName, promotions.name))
+        .where(and(
+          eq(students.isDropout, false),
+          or(eq(promotions.isArchived, false), isNull(promotions.isArchived))
+        ))
         .execute(),
-      // Total promotions
-      db.select({ count: count() }).from(promotions).execute(),
+      // Total promotions actives
+      db.select({ count: count() })
+        .from(promotions)
+        .where(or(eq(promotions.isArchived, false), isNull(promotions.isArchived)))
+        .execute(),
       // Étudiants en bonne progression (bien) - exclure les perditions
       db.select({ count: count() })
         .from(studentProjects)
