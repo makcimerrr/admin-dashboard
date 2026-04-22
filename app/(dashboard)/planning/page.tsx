@@ -86,11 +86,15 @@ export default function PlanningPage() {
   const isPiscine = !!piscineWeeks[currentWeekKey];
   const weekNumber = useMemo(() => getWeekNumber(currentWeekDates[0]), [currentWeekDates]);
 
-  // Load employees
+  // Load employees — sorted alphabetically so the order is stable across
+  // sessions, weeks, days and viewports (desktop grid/person/table + mobile).
   useEffect(() => {
     fetch('/api/employees')
       .then((res) => res.ok ? res.json() : [])
-      .then((data) => setEmployees(data.map((e: Employee) => ({ ...e, schedule: {} }))))
+      .then((data: Employee[]) => {
+        const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+        setEmployees(sorted.map((e) => ({ ...e, schedule: {} })));
+      })
       .catch(() => toast({ title: 'Erreur', description: 'Impossible de charger les employés', variant: 'destructive' }));
   }, []);
 

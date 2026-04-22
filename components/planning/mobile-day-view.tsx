@@ -93,20 +93,9 @@ export function MobileDayView({
     touchEndX.current = null;
   };
 
-  // Only show employees with slots this day, working first
-  const sortedEmployees = useMemo(() => {
-    return [...employees].sort((a, b) => {
-      const aSlots = getEmployeeScheduleForDay(a.id, day);
-      const bSlots = getEmployeeScheduleForDay(b.id, day);
-      const aWorks = aSlots.some((s) => s.type === 'work');
-      const bWorks = bSlots.some((s) => s.type === 'work');
-      if (aWorks && !bWorks) return -1;
-      if (!aWorks && bWorks) return 1;
-      if (aSlots.length > 0 && bSlots.length === 0) return -1;
-      if (aSlots.length === 0 && bSlots.length > 0) return 1;
-      return a.name.localeCompare(b.name);
-    });
-  }, [employees, day, getEmployeeScheduleForDay]);
+  // Preserve the global employee order (sorted at load time). Do not
+  // re-order by who works today so the list stays the same across days.
+  const sortedEmployees = employees;
 
   const activeCount = employees.filter((e) =>
     getEmployeeScheduleForDay(e.id, day).some((s) => s.type === 'work')
