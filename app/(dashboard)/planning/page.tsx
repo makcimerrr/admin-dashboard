@@ -62,9 +62,15 @@ export default function PlanningPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'person' | 'table'>('grid');
 
+  // Defer mobile-dependent rendering until after mount to avoid hydration
+  // mismatches (SSR always renders as desktop; the mobile view would otherwise
+  // swap in mid-commit and can break Suspense boundaries).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   // Mobile gets its own dedicated read-only view (no edit, horizontal day-by-day)
   // On desktop, grid/person/table work normally.
-  const effectiveViewMode = isMobile ? 'mobile' : viewMode;
+  const effectiveViewMode = mounted && isMobile ? 'mobile' : viewMode;
 
   // Holidays
   const [holidays, setHolidays] = useState<Record<string, string>>({});
