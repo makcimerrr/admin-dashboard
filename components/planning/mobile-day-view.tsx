@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronLeft, ChevronRight, Clock, Coffee } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Coffee } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Employee } from '@/lib/db/schema/employees';
 import type { TimeSlot } from '@/lib/db/schema/schedules';
@@ -19,6 +18,11 @@ interface MobileDayViewProps {
   slotTypeConfig: Record<string, { label: string; bgColor: string; borderColor: string; textColor: string }>;
 }
 
+// Hour range displayed on the timeline
+const START_HOUR = 8;
+const END_HOUR = 22;
+const HOUR_COUNT = END_HOUR - START_HOUR;
+
 function isToday(date: Date): boolean {
   const now = new Date();
   return date.getDate() === now.getDate() &&
@@ -26,13 +30,22 @@ function isToday(date: Date): boolean {
     date.getFullYear() === now.getFullYear();
 }
 
+function timeToHours(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h + m / 60;
+}
+
 function computeDayHours(slots: TimeSlot[]): number {
   return slots.reduce((total, slot) => {
     if (slot.type !== 'work') return total;
-    const [sh, sm] = slot.start.split(':').map(Number);
-    const [eh, em] = slot.end.split(':').map(Number);
-    return total + (eh * 60 + em - sh * 60 - sm) / 60;
+    return total + (timeToHours(slot.end) - timeToHours(slot.start));
   }, 0);
+}
+
+/** Convert hour (e.g. 13.5) to percentage position on the timeline */
+function hourToPct(h: number): number {
+  const clamped = Math.max(START_HOUR, Math.min(END_HOUR, h));
+  return ((clamped - START_HOUR) / HOUR_COUNT) * 100;
 }
 
 export function MobileDayView({
@@ -42,15 +55,13 @@ export function MobileDayView({
   getEmployeeScheduleForDay,
   slotTypeConfig,
 }: MobileDayViewProps) {
-  // Default to today if the current week contains it, else Monday
-  const defaultDay = (() => {
+  const defaultDay = useMemo(() => {
     const todayIdx = currentWeekDates.findIndex(isToday);
     return todayIdx >= 0 ? todayIdx : 0;
-  })();
+  }, [currentWeekDates]);
 
   const [dayIdx, setDayIdx] = useState(defaultDay);
 
-  // Reset to default day when the week changes
   useEffect(() => {
     setDayIdx(defaultDay);
   }, [defaultDay]);
@@ -64,7 +75,7 @@ export function MobileDayView({
   // Swipe handling
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
-  const SWIPE_THRESHOLD = 50;
+  const SWIPE_THRESHOLD = 60;
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.targetTouches[0].clientX;
@@ -82,30 +93,38 @@ export function MobileDayView({
     touchEndX.current = null;
   };
 
-  // Sort: employees working this day first, then off
-  const sortedEmployees = [...employees].sort((a, b) => {
-    const aSlots = getEmployeeScheduleForDay(a.id, day);
-    const bSlots = getEmployeeScheduleForDay(b.id, day);
-    const aWorks = aSlots.some((s) => s.type === 'work');
-    const bWorks = bSlots.some((s) => s.type === 'work');
-    if (aWorks && !bWorks) return -1;
-    if (!aWorks && bWorks) return 1;
-    if (aSlots.length > 0 && bSlots.length === 0) return -1;
-    if (aSlots.length === 0 && bSlots.length > 0) return 1;
-    return a.name.localeCompare(b.name);
-  });
+  // Only show employees with slots this day, working first
+  const sortedEmployees = useMemo(() => {
+    return [...employees].sort((a, b) => {
+      const aSlots = getEmployeeScheduleForDay(a.id, day);
+      const bSlots = getEmployeeScheduleForDay(b.id, day);
+      const aWorks = aSlots.some((s) => s.type === 'work');
+      const bWorks = bSlots.some((s) => s.type === 'work');
+      if (aWorks && !bWorks) return -1;
+      if (!aWorks && bWorks) return 1;
+      if (aSlots.length > 0 && bSlots.length === 0) return -1;
+      if (aSlots.length === 0 && bSlots.length > 0) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [employees, day, getEmployeeScheduleForDay]);
+
+  const activeCount = employees.filter((e) =>
+    getEmployeeScheduleForDay(e.id, day).some((s) => s.type === 'work')
+  ).length;
 
   const today = isToday(date);
 
+  // Hour markers every 2 hours
+  const hourMarkers = Array.from({ length: HOUR_COUNT / 2 + 1 }, (_, i) => START_HOUR + i * 2);
+
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Horizontal day navigator */}
+      {/* Day navigator */}
       <div className="flex-shrink-0 flex items-center justify-between gap-1 px-2 py-2 border-b bg-background">
         <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={goPrev} disabled={dayIdx === 0}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        {/* Days pills (horizontal scroll on very small) */}
         <div className="flex-1 min-w-0 overflow-x-auto scrollbar-none">
           <div className="flex items-center justify-center gap-1 px-1">
             {daysOfWeek.map((d, i) => {
@@ -150,15 +169,29 @@ export function MobileDayView({
           </div>
           <span className="text-[11px] text-muted-foreground">{formatDate(date)}</span>
         </div>
-        <span className="text-[10px] text-muted-foreground">
-          {sortedEmployees.filter((e) => getEmployeeScheduleForDay(e.id, day).some((s) => s.type === 'work')).length} actif(s)
-        </span>
+        <span className="text-[10px] text-muted-foreground">{activeCount} actif(s)</span>
       </div>
 
-      {/* Swipeable content area */}
+      {/* Hour ruler (sticky) */}
+      <div className="flex-shrink-0 flex border-b bg-background">
+        <div className="w-20 shrink-0 border-r" />
+        <div className="flex-1 relative h-6">
+          {hourMarkers.map((h) => (
+            <div
+              key={h}
+              className="absolute top-0 bottom-0 flex items-center"
+              style={{ left: `${hourToPct(h)}%`, transform: 'translateX(-50%)' }}
+            >
+              <span className="text-[9px] text-muted-foreground tabular-nums">{h}h</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Employee timelines */}
       <ScrollArea className="flex-1 min-h-0">
         <div
-          className="p-3 space-y-2"
+          className="divide-y"
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -171,64 +204,76 @@ export function MobileDayView({
               const filtered = (day === 'samedi' || day === 'dimanche') ? slots.filter((s) => s.type !== 'vacation') : slots;
               const hours = computeDayHours(filtered);
               const color = emp.color || '#8884d8';
+              const initials = emp.name.split(' ').map((n) => n[0]).join('').slice(0, 2);
 
               return (
-                <div
-                  key={emp.id}
-                  className="rounded-lg border bg-background p-2.5 border-l-4"
-                  style={{ borderLeftColor: color }}
-                >
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={`https://avatar.vercel.sh/${emp.id}.png`} alt={emp.name} />
-                      <AvatarFallback className="text-[10px] font-bold" style={{ backgroundColor: `${color}22`, color }}>
-                        {emp.name.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-xs leading-tight truncate">{emp.name}</div>
-                      <div className="text-[10px] text-muted-foreground truncate">{emp.role}</div>
+                <div key={emp.id} className="flex items-center">
+                  {/* Name column */}
+                  <div className="w-20 shrink-0 px-2 py-2 border-r flex flex-col gap-0.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div
+                        className="h-4 w-4 rounded-full shrink-0 flex items-center justify-center text-[8px] font-bold text-white"
+                        style={{ backgroundColor: color }}
+                      >
+                        {initials}
+                      </div>
+                      <span className="text-[11px] font-semibold truncate">{emp.name.split(' ')[0]}</span>
                     </div>
-                    {hours > 0 && (
-                      <Badge variant="outline" className="text-[9px] h-5 px-1.5 font-bold" style={{ borderColor: color, color }}>
-                        <Clock className="h-2.5 w-2.5 mr-0.5" />
-                        {hours}h
-                      </Badge>
+                    {hours > 0 ? (
+                      <span className="text-[9px] text-muted-foreground tabular-nums pl-5">{hours}h</span>
+                    ) : (
+                      <span className="text-[9px] text-muted-foreground/60 pl-5 flex items-center gap-0.5">
+                        <Coffee className="h-2.5 w-2.5" />
+                        Repos
+                      </span>
                     )}
                   </div>
 
-                  {filtered.length === 0 ? (
-                    <div className="flex items-center gap-1.5 mt-2 text-[11px] text-muted-foreground italic">
-                      <Coffee className="h-3 w-3" />
-                      Repos
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {filtered.map((slot, idx) => {
-                        const config = slotTypeConfig[slot.type];
-                        return (
-                          <span
-                            key={idx}
-                            className={cn(
-                              'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border',
-                              config?.bgColor,
-                              config?.textColor,
-                              config?.borderColor,
-                            )}
-                          >
-                            {slot.type === 'work' ? (
-                              <>
-                                <Clock className="h-2.5 w-2.5" />
-                                {slot.start} – {slot.end}
-                              </>
-                            ) : (
-                              config?.label
-                            )}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {/* Timeline column */}
+                  <div className="flex-1 relative h-11">
+                    {/* Hour grid lines (every 2h) */}
+                    {hourMarkers.map((h) => (
+                      <div
+                        key={h}
+                        className="absolute top-0 bottom-0 border-l border-border/30"
+                        style={{ left: `${hourToPct(h)}%` }}
+                      />
+                    ))}
+
+                    {/* Slot bars */}
+                    {filtered.map((slot, idx) => {
+                      const startH = timeToHours(slot.start);
+                      const endH = timeToHours(slot.end);
+                      const left = hourToPct(startH);
+                      const width = hourToPct(endH) - left;
+                      const isWork = slot.type === 'work';
+                      const config = slotTypeConfig[slot.type];
+
+                      return (
+                        <div
+                          key={idx}
+                          className={cn(
+                            'absolute top-1.5 bottom-1.5 rounded flex items-center justify-center px-1 text-[9px] font-semibold overflow-hidden border',
+                            !isWork && config?.bgColor,
+                            !isWork && config?.textColor,
+                            !isWork && config?.borderColor,
+                          )}
+                          style={{
+                            left: `${left}%`,
+                            width: `${width}%`,
+                            ...(isWork ? {
+                              backgroundColor: `${color}E6`,
+                              borderColor: color,
+                              color: '#fff',
+                            } : {}),
+                          }}
+                          title={`${isWork ? 'Travail' : config?.label ?? slot.type} ${slot.start}–${slot.end}`}
+                        >
+                          <span className="truncate">{slot.start}–{slot.end}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })

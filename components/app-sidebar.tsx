@@ -62,7 +62,7 @@ export function AppSidebar({ user }: { user?: User | null }) {
 
   return (
     <TooltipProvider delayDuration={0}>
-      <div className="flex flex-col w-14 bg-sidebar border-r shrink-0">
+      <div className="hidden md:flex flex-col w-14 bg-sidebar border-r shrink-0">
         {/* Logo */}
         <div className="flex items-center justify-center h-12 border-b">
           <a href="https://zone01rouennormandie.org/" className="text-primary hover:opacity-80 transition-opacity">

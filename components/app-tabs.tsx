@@ -15,11 +15,11 @@ export function AppTabs() {
   const activeItem = findActiveItem(app, pathname);
 
   return (
-    <nav className="flex items-center gap-1 border-b px-4 lg:px-6 h-11 overflow-x-auto">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mr-3 shrink-0">
+    <nav className="flex items-center gap-1 border-b px-3 lg:px-6 h-11 overflow-x-auto scrollbar-none">
+      <span className="hidden md:inline text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mr-3 shrink-0">
         {app.label}
       </span>
-      <div className="flex items-center gap-0.5 h-full">
+      <div className="flex items-center gap-0.5 h-full shrink-0">
         {app.items.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem?.url === item.url;
