@@ -19,12 +19,12 @@ export function AssistantBubble({ userId }: AssistantBubbleProps) {
         <AssistantOverlay userId={userId} onClose={() => setIsOpen(false)} />
       )}
 
-      {/* FAB */}
+      {/* FAB — hidden on mobile to avoid overlapping the bottom nav */}
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
         className={cn(
-          "fixed bottom-5 right-5 z-50 flex items-center justify-center w-12 h-12 rounded-full shadow-lg transition-all hover:scale-105",
+          "hidden md:flex fixed bottom-5 right-5 z-50 items-center justify-center w-12 h-12 rounded-full shadow-lg transition-all hover:scale-105",
           isOpen
             ? "bg-muted text-muted-foreground hover:bg-muted/80"
             : "bg-primary text-primary-foreground hover:bg-primary/90"

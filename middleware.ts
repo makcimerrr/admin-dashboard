@@ -82,6 +82,7 @@ export async function middleware(req: NextRequest) {
     '/analytics',
     '/planning',
     '/employees',
+    '/history',
     '/01deck',
     '/word_assistant',
     '/config',

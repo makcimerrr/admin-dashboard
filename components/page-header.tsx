@@ -5,6 +5,7 @@ interface PageHeaderProps {
   title: string;
   description?: string;
   badge?: React.ReactNode;
+  /** @deprecated AppTabs in the layout now handles section navigation globally. */
   tabs?: React.ReactNode;
   children?: React.ReactNode;
 }
@@ -20,18 +21,22 @@ export function PageHeader({
   return (
     <div className="flex flex-col gap-2 flex-shrink-0">
       {tabs && (
-        <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="hidden md:flex items-center justify-between gap-2 flex-wrap">
           {tabs}
           {badge}
         </div>
       )}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 sm:p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
-            <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="p-1.5 sm:p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg sm:rounded-xl shrink-0">
+            <Icon className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
           </div>
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight">{title}</h1>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold tracking-tight truncate">{title}</h1>
+              {/* Badge inline with title on mobile when no tabs prop (the typical case now) */}
+              {!tabs && badge && <div className="md:hidden">{badge}</div>}
+            </div>
             {description && (
               <p className="text-sm text-muted-foreground hidden sm:block">{description}</p>
             )}
@@ -39,7 +44,8 @@ export function PageHeader({
         </div>
         {(children || (!tabs && badge)) && (
           <div className="flex items-center gap-2 flex-wrap">
-            {!tabs && badge}
+            {/* Badge on desktop when no tabs — keeps it top-right next to children */}
+            {!tabs && badge && <div className="hidden md:block">{badge}</div>}
             {children}
           </div>
         )}

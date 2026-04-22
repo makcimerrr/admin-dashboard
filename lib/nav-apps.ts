@@ -8,6 +8,7 @@ import {
   FileBarChartIcon,
   FileIcon,
   FolderArchiveIcon,
+  ClockIcon,
   FolderIcon,
   GlobeIcon,
   GraduationCapIcon,
@@ -88,6 +89,7 @@ export const NAV_APPS: NavApp[] = [
       { title: 'Absences', url: '/planning/absences', icon: CalendarX2Icon },
       { title: 'Extraction', url: '/planning/extraction', icon: FileBarChartIcon },
       { title: 'Employés', url: '/employees', icon: UsersIcon },
+      { title: 'Historique', url: '/history', icon: ClockIcon },
     ],
   },
   {

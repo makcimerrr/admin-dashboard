@@ -34,7 +34,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast as sonnerToast } from 'sonner';
 import { useUser } from "@stackframe/stack";
 import { PageHeader } from '@/components/page-header';
-import { PlanningNavTabs } from '@/components/planning/planning-nav-tabs';
 import { FilterToolbar } from '@/components/planning/filter-toolbar';
 import { EmployeeColorDot } from '@/components/planning/employee-color-dot';
 
@@ -390,7 +389,6 @@ export default function AbsencesPage() {
         icon={Calendar}
         title="Absences"
         description="Ajoutez et gérez les absences de votre équipe"
-        tabs={<PlanningNavTabs permission={planningPermission} />}
         badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       >
         {grouped.length > 0 && (

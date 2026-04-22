@@ -8,7 +8,6 @@ import { useToast } from '@/components/hooks/use-toast';
 import { useUser } from '@stackframe/stack';
 import { useIsMobile } from '@/components/hooks/use-mobile';
 import { PageHeader } from '@/components/page-header';
-import { PlanningNavTabs } from '@/components/planning/planning-nav-tabs';
 import { WeekSelector } from '@/components/planning/week-selector';
 import { PlanningToolbar, type PaintMode, type SlotType } from '@/components/planning/planning-toolbar';
 import { PlanningGrid } from '@/components/planning/planning-grid';
@@ -292,7 +291,6 @@ export default function PlanningPage() {
         icon={LayoutTemplate}
         title="Planning"
         description={isEditor ? 'Cliquez sur un crayon puis peignez la grille' : 'Consultation'}
-        tabs={<PlanningNavTabs permission={planningPermission} />}
         badge={
           <Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>
             {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
