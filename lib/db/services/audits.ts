@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema/audits';
 import { GroupWithAuditStatus } from '../../../app/api/code-reviews/groups/route';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { getArchivedPromoNames } from '@/lib/db/filters';
 
 async function fetchGroupsForCodeReview(promoId: string) {
   const res = await fetch(`/api/code-reviews/groups?promoId=${promoId}`);
@@ -146,14 +147,25 @@ export interface UrgentReviewData {
  * Récupère les derniers code reviews pour le dashboard (version enrichie)
  */
 export async function getRecentCodeReviews(limit: number = 5): Promise<RecentReviewData[]> {
-  const promoConfig = await getAllPromotions();
-  const auditsList = await db.query.audits.findMany({
+  const [promoConfig, archivedNames] = await Promise.all([
+    getAllPromotions(),
+    getArchivedPromoNames(),
+  ]);
+  const archivedPromoIds = new Set(
+    promoConfig.filter((p) => archivedNames.has(p.key)).map((p) => String(p.eventId)),
+  );
+
+  // Fetch more than `limit` to compensate for filtering, then trim
+  const rawAudits = await db.query.audits.findMany({
     orderBy: [desc(audits.createdAt)],
-    limit,
+    limit: limit * 3,
     with: {
       results: true
     }
   });
+  const auditsList = rawAudits
+    .filter((a) => !archivedPromoIds.has(String(a.promoId)))
+    .slice(0, limit);
 
   return auditsList.map((audit) => {
     const promo = promoConfig.find(

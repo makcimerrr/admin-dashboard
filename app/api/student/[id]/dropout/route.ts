@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { students, DROPOUT_REASONS } from '@/lib/db/schema/students';
 import { eq } from 'drizzle-orm';
+import { CACHE_TAGS, invalidate } from '@/lib/cache';
 
 // GET - Récupérer le status dropout d'un étudiant
 export async function GET(
@@ -109,6 +110,8 @@ export async function POST(
       })
       .where(eq(students.id, studentId));
 
+    invalidate(CACHE_TAGS.widgetsOverview, CACHE_TAGS.codeReviewsStats);
+
     return NextResponse.json({
       success: true,
       message: 'Étudiant marqué comme en perdition'
@@ -198,6 +201,8 @@ export async function DELETE(
         // previousPromo reste pour l'historique
       })
       .where(eq(students.id, studentId));
+
+    invalidate(CACHE_TAGS.widgetsOverview, CACHE_TAGS.codeReviewsStats);
 
     return NextResponse.json({
       success: true,

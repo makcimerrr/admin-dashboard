@@ -1,6 +1,7 @@
 import { db } from '../config';
-import { students, studentSpecialtyProgress } from '../schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { students, studentSpecialtyProgress, promotions } from '../schema';
+import { eq, sql } from 'drizzle-orm';
+import { countableStudentsWhere } from '../filters';
 
 export interface TrackStats {
   track: string;
@@ -12,11 +13,7 @@ export interface TrackStats {
 
 export async function getTrackStatsByPromo(promoName: string | null): Promise<TrackStats[]> {
   try {
-    // Single query: count completed/in-progress for all 4 tracks at once
-    const conditions = [eq(students.isDropout, false)];
-    if (promoName) {
-      conditions.push(eq(students.promoName, promoName));
-    }
+    const promoFilter = promoName ? [eq(students.promoName, promoName)] : [];
 
     const result = await db
       .select({
@@ -31,7 +28,8 @@ export async function getTrackStatsByPromo(promoName: string | null): Promise<Tr
       })
       .from(students)
       .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
-      .where(and(...conditions))
+      .innerJoin(promotions, eq(students.promoName, promotions.name))
+      .where(countableStudentsWhere(...promoFilter))
       .execute();
 
     const row = result[0];

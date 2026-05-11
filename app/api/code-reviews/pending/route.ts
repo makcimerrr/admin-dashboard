@@ -5,6 +5,7 @@ import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { getArchivedPromoNames } from '@/lib/db/filters';
 import type { Track } from '@/lib/db/schema/audits';
 
 export const maxDuration = 60;
@@ -37,17 +38,20 @@ export async function GET(request: Request) {
     const promoIdFilter = searchParams.get('promoId');
 
     const allPendingGroups: PendingGroup[] = [];
-    const [promoConfig, projectNamesPerTrack] = await Promise.all([
+    const [promoConfig, projectNamesPerTrack, archivedNames] = await Promise.all([
       getAllPromotions(),
       Promise.all(TRACKS.map((track) => getProjectNamesByTrack(track))),
+      getArchivedPromoNames(),
     ]);
     const projectNamesByTrack = Object.fromEntries(
       TRACKS.map((track, i) => [track, projectNamesPerTrack[i]])
     ) as Record<Track, string[]>;
 
+    // Skip archived promotions (they shouldn't appear in audit queues)
+    const activePromos = promoConfig.filter((p) => !archivedNames.has(p.key));
     const promos = promoIdFilter
-      ? promoConfig.filter(p => String(p.eventId) === promoIdFilter)
-      : promoConfig;
+      ? activePromos.filter(p => String(p.eventId) === promoIdFilter)
+      : activePromos;
 
     // Récupérer les dropouts une seule fois
     const dropoutLogins = await getDropoutLogins();

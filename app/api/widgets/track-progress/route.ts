@@ -1,48 +1,36 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
-import { students, studentSpecialtyProgress } from '@/lib/db/schema';
-import { eq, count, and } from 'drizzle-orm';
+import { students, studentSpecialtyProgress, promotions } from '@/lib/db/schema';
+import { eq, count } from 'drizzle-orm';
+import { countableStudentsWhere } from '@/lib/db/filters';
 
 export async function GET() {
   try {
     const tracks = ['golang', 'javascript', 'rust', 'java'] as const;
+    const cols = {
+      golang: studentSpecialtyProgress.golang_completed,
+      javascript: studentSpecialtyProgress.javascript_completed,
+      rust: studentSpecialtyProgress.rust_completed,
+      java: studentSpecialtyProgress.java_completed,
+    };
 
-    // Récupérer le total d'étudiants une seule fois (exclure les perditions)
+    // Total (active students in active promos)
     const totalQuery = await db
       .select({ count: count() })
       .from(students)
-      .where(eq(students.isDropout, false))
+      .innerJoin(promotions, eq(students.promoName, promotions.name))
+      .where(countableStudentsWhere())
       .execute();
     const total = totalQuery[0]?.count || 0;
 
-    // Exécuter toutes les requêtes de comptage en parallèle
     const results = await Promise.all(
       tracks.map(async (track) => {
-        let completedColumn;
-        switch (track) {
-          case 'golang':
-            completedColumn = studentSpecialtyProgress.golang_completed;
-            break;
-          case 'javascript':
-            completedColumn = studentSpecialtyProgress.javascript_completed;
-            break;
-          case 'rust':
-            completedColumn = studentSpecialtyProgress.rust_completed;
-            break;
-          case 'java':
-            completedColumn = studentSpecialtyProgress.java_completed;
-            break;
-        }
-
-        // Exclure les perditions
         const completedQuery = await db
           .select({ count: count() })
           .from(students)
           .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
-          .where(and(
-            eq(completedColumn, true),
-            eq(students.isDropout, false)
-          ))
+          .innerJoin(promotions, eq(students.promoName, promotions.name))
+          .where(countableStudentsWhere(eq(cols[track], true)))
           .execute();
 
         const completed = completedQuery[0]?.count || 0;
@@ -57,10 +45,7 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json({
-      success: true,
-      tracks: results,
-    });
+    return NextResponse.json({ success: true, tracks: results });
   } catch (error) {
     console.error('Error fetching track progress:', error);
     return NextResponse.json(

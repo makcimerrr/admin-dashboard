@@ -3,6 +3,7 @@ import { db } from '@/lib/db/config';
 import { audits } from '@/lib/db/schema/audits';
 import { desc } from 'drizzle-orm';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { getArchivedPromoNames } from '@/lib/db/filters';
 
 /**
  * Helper to safely get warnings array from JSONB field
@@ -30,13 +31,22 @@ function getWarningsArray(warnings: unknown): string[] {
  */
 export async function GET() {
   try {
-    const promoConfig = await getAllPromotions();
-    const allAudits = await db.query.audits.findMany({
+    const [promoConfig, archivedNames] = await Promise.all([
+      getAllPromotions(),
+      getArchivedPromoNames(),
+    ]);
+    // Build a set of archived promo IDs (the audit table joins via eventId)
+    const archivedPromoIds = new Set(
+      promoConfig.filter((p) => archivedNames.has(p.key)).map((p) => String(p.eventId)),
+    );
+
+    const rawAudits = await db.query.audits.findMany({
       orderBy: [desc(audits.createdAt)],
       with: {
         results: true
       }
     });
+    const allAudits = rawAudits.filter((a) => !archivedPromoIds.has(String(a.promoId)));
 
     const formattedAudits = allAudits.map((audit) => {
       const promo = promoConfig.find(

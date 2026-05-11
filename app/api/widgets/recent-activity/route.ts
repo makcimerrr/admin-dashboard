@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
-import { students, studentProjects } from '@/lib/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { students, studentProjects, promotions } from '@/lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
+import { countableStudentsWhere } from '@/lib/db/filters';
 
 export async function GET() {
   try {
-    // Récupérer les 10 derniers étudiants mis à jour (exclure les perditions)
     const recentActivities = await db
       .select({
         studentId: students.id,
@@ -18,7 +18,8 @@ export async function GET() {
       })
       .from(students)
       .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
-      .where(eq(students.isDropout, false))
+      .innerJoin(promotions, eq(students.promoName, promotions.name))
+      .where(countableStudentsWhere())
       .orderBy(desc(students.availableAt))
       .limit(10)
       .execute();

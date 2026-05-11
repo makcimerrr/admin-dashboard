@@ -1,75 +1,54 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
-import { students, studentSpecialtyProgress } from '@/lib/db/schema';
-import { eq, count, and } from 'drizzle-orm';
+import { students, studentSpecialtyProgress, promotions } from '@/lib/db/schema';
+import { eq, count } from 'drizzle-orm';
+import { countableStudentsWhere } from '@/lib/db/filters';
 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const promoKey = url.searchParams.get('promo');
+    const promoFilter = promoKey && promoKey !== 'all' ? [eq(students.promoName, promoKey)] : [];
 
     const tracks = ['golang', 'javascript', 'rust', 'java'] as const;
-    const trackData = [];
+    const cols = {
+      golang: studentSpecialtyProgress.golang_completed,
+      javascript: studentSpecialtyProgress.javascript_completed,
+      rust: studentSpecialtyProgress.rust_completed,
+      java: studentSpecialtyProgress.java_completed,
+    };
 
-    for (const track of tracks) {
-      let completedColumn;
-      switch (track) {
-        case 'golang':
-          completedColumn = studentSpecialtyProgress.golang_completed;
-          break;
-        case 'javascript':
-          completedColumn = studentSpecialtyProgress.javascript_completed;
-          break;
-        case 'rust':
-          completedColumn = studentSpecialtyProgress.rust_completed;
-          break;
-        case 'java':
-          completedColumn = studentSpecialtyProgress.java_completed;
-          break;
-      }
+    // One total query (countable students for the promo filter)
+    const totalQuery = await db
+      .select({ count: count() })
+      .from(students)
+      .innerJoin(promotions, eq(students.promoName, promotions.name))
+      .where(countableStudentsWhere(...promoFilter))
+      .execute();
+    const total = totalQuery[0]?.count || 0;
 
-      // Build base query - exclure les perditions
-      const baseConditions = [
-        eq(completedColumn, true),
-        eq(students.isDropout, false)
-      ];
+    // One query per track for completed count
+    const trackData = await Promise.all(
+      tracks.map(async (track) => {
+        const completedQuery = await db
+          .select({ count: count() })
+          .from(students)
+          .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
+          .innerJoin(promotions, eq(students.promoName, promotions.name))
+          .where(countableStudentsWhere(eq(cols[track], true), ...promoFilter))
+          .execute();
 
-      if (promoKey && promoKey !== 'all') {
-        baseConditions.push(eq(students.promoName, promoKey));
-      }
+        const completed = completedQuery[0]?.count || 0;
+        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-      const completedQuery = await db
-        .select({ count: count() })
-        .from(students)
-        .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
-        .where(and(...baseConditions))
-        .execute();
-
-      const completed = completedQuery[0]?.count || 0;
-
-      // Get total students for the promo (exclure les perditions)
-      const totalConditions = [eq(students.isDropout, false)];
-      if (promoKey && promoKey !== 'all') {
-        totalConditions.push(eq(students.promoName, promoKey));
-      }
-
-      const totalResult = await db
-        .select({ count: count() })
-        .from(students)
-        .where(and(...totalConditions))
-        .execute();
-
-      const total = totalResult[0]?.count || 0;
-
-      const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-      trackData.push({
-        track: track.charAt(0).toUpperCase() + track.slice(1),
-        completed,
-        total,
-        percentage,
-      });
-    }
+        return {
+          track: track.charAt(0).toUpperCase() + track.slice(1),
+          completed,
+          total,
+          percentage,
+        };
+      }),
+    );
 
     return NextResponse.json({ success: true, tracks: trackData });
   } catch (error) {
