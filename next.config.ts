@@ -3,7 +3,6 @@ import createMDX from '@next/mdx'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
   // Configure `pageExtensions` to include markdown and MDX files
   pageExtensions: ['js', 'jsx', 'md', 'mdx', 'ts', 'tsx'],
   images: {
@@ -23,7 +22,6 @@ const nextConfig = {
     ]
   },
   experimental: {
-    appDir: true,
     mdxRs: true,
   },
 }
