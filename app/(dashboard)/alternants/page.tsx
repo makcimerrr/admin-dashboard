@@ -67,6 +67,8 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PageSkeleton } from "@/components/page-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingCard } from "@/components/ui/loading-card";
 
 interface Alternant {
   id: number;
@@ -524,9 +526,7 @@ export default function AlternantsPage() {
               </SheetHeader>
 
               {loadingDetail ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
+                <LoadingCard height="md" />
               ) : (
                 <Tabs defaultValue="contracts" className="mt-6">
                   <TabsList className="grid w-full grid-cols-2">
@@ -551,10 +551,7 @@ export default function AlternantsPage() {
                     </div>
 
                     {contracts.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Aucun contrat enregistré</p>
-                      </div>
+                      <EmptyState icon={ClipboardList} title="Aucun contrat enregistré" />
                     ) : (
                       <div className="space-y-3">
                         {contracts.map((contract) => (
@@ -612,10 +609,7 @@ export default function AlternantsPage() {
                     </div>
 
                     {documents.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Aucun document enregistré</p>
-                      </div>
+                      <EmptyState icon={FileText} title="Aucun document enregistré" />
                     ) : (
                       <div className="space-y-3">
                         {documents.map((doc) => (

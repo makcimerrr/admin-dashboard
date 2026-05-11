@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Clock, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import Link from 'next/link';
 
 type Activity = {
@@ -93,9 +94,7 @@ export default function RecentActivityWidget() {
       <CardContent>
         <div className="space-y-4">
           {activities.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Aucune activité récente
-            </p>
+            <EmptyState icon={Clock} title="Aucune activité récente" size="compact" />
           ) : (
             activities.map((activity) => (
               <Link

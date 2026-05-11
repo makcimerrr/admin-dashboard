@@ -4,9 +4,9 @@ import { getStudents, getStudentCounts } from '@/lib/db/services/students';
 import { StudentsTable } from '../students-table';
 import { getAllPromotions } from '@/lib/config/promotions';
 import TrackStatsDisplay from '@/components/track-stats-display';
-import { Users, GraduationCap } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { QuickStats } from './_components/quick-stats';
-import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingCard } from '@/components/ui/loading-card';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
 import ClientImport from '@/components/client-import';
@@ -30,23 +30,6 @@ interface Promo {
 
 interface StudentsPageProps {
   searchParams: Promise<Record<string, string | undefined>>;
-}
-
-// Loading skeleton for stats
-function StatsLoadingSkeleton() {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="p-3 border rounded-lg">
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-6 w-6 rounded" />
-          </div>
-          <Skeleton className="h-8 w-16 mt-2" />
-        </div>
-      ))}
-    </div>
-  );
 }
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
@@ -97,7 +80,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
       />
 
       {/* Track Statistics */}
-      <Suspense fallback={<StatsLoadingSkeleton />}>
+      <Suspense fallback={<LoadingCard count={4} columns={4} height="sm" />}>
         <TrackStatsDisplay selectedPromo={promo || 'all'} />
       </Suspense>
 

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
     ClipboardCheck,
     ArrowRight,
@@ -139,9 +140,7 @@ export default function CodeReviewsWidget() {
             </CardHeader>
             <CardContent className="space-y-4">
                 {data.promos.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                        Aucune promotion active
-                    </p>
+                    <EmptyState icon={ClipboardCheck} title="Aucune promotion active" size="compact" />
                 ) : (
                     data.promos.map((promo) => (
                         <div key={promo.promoId} className="space-y-2">

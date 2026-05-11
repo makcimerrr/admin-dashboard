@@ -66,6 +66,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PageSkeleton } from "@/components/page-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface ArchivedPromo {
   promoId: string;
@@ -338,10 +339,7 @@ export default function PromosManagePage() {
               </CardHeader>
               <CardContent>
                 {archivedPromos.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FolderArchive className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucune promotion archivée</p>
-                  </div>
+                  <EmptyState icon={FolderArchive} title="Aucune promotion archivée" />
                 ) : (
                   <Table>
                     <TableHeader>
@@ -438,10 +436,7 @@ export default function PromosManagePage() {
               </CardHeader>
               <CardContent>
                 {transferredStudents.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <ArrowRightLeft className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun transfert enregistré</p>
-                  </div>
+                  <EmptyState icon={ArrowRightLeft} title="Aucun transfert enregistré" />
                 ) : (
                   <Table>
                     <TableHeader>
@@ -499,10 +494,7 @@ export default function PromosManagePage() {
               </CardHeader>
               <CardContent>
                 {dropoutStudents.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <UserMinus className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun étudiant en perdition</p>
-                  </div>
+                  <EmptyState icon={UserMinus} title="Aucun étudiant en perdition" />
                 ) : (
                   <Table>
                     <TableHeader>

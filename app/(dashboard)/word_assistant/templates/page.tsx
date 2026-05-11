@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/card";
 import { Plus, Calendar, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingCard } from "@/components/ui/loading-card";
 
 interface Template {
   id: string;
@@ -80,19 +81,7 @@ export default function TemplatesPage() {
       </div>
 
       {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2 mt-2" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <LoadingCard count={3} columns={3} height="md" />
       ) : templates.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {templates.map((template) => (
@@ -138,21 +127,21 @@ export default function TemplatesPage() {
           ))}
         </div>
       ) : (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">
-              Aucun modèle pour le moment
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              Créez votre premier modèle d'événement pour commencer
-            </p>
-            <Link href="/word_assistant/templates/new">
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Créer un Modèle
-              </Button>
-            </Link>
+        <Card>
+          <CardContent className="py-6">
+            <EmptyState
+              icon={Calendar}
+              title="Aucun modèle pour le moment"
+              description="Créez votre premier modèle d'événement pour commencer"
+              action={
+                <Link href="/word_assistant/templates/new">
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Créer un modèle
+                  </Button>
+                </Link>
+              }
+            />
           </CardContent>
         </Card>
       )}

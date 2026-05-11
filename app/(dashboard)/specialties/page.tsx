@@ -12,7 +12,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingCard } from '@/components/ui/loading-card';
 import { Progress } from '@/components/ui/progress';
 import {
   Search, GraduationCap, CheckCircle2, Users,
@@ -356,17 +357,20 @@ export default function SpecialtiesPage() {
       <Card>
         <CardContent className="p-0">
           {loadingStudents ? (
-            <div className="p-6 space-y-3">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
+            <div className="p-6">
+              <LoadingCard height="lg" />
             </div>
           ) : filteredStudents.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              {students.length === 0
-                ? 'Aucun étudiant trouvé pour cette spécialité.'
-                : 'Aucun résultat pour les filtres sélectionnés.'}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={students.length === 0 ? 'Aucun étudiant trouvé' : 'Aucun résultat'}
+              description={
+                students.length === 0
+                  ? 'Aucun étudiant pour cette spécialité.'
+                  : 'Aucun résultat pour les filtres sélectionnés.'
+              }
+              size="compact"
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>

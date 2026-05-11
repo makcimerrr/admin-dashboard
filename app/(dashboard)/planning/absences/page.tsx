@@ -19,8 +19,10 @@ import {
   Edit,
   Plus,
   Calendar,
+  CalendarX2,
   RotateCcw
 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Dialog,
   DialogContent,
@@ -526,7 +528,11 @@ export default function AbsencesPage() {
             </thead>
             <tbody>
               {grouped.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Aucune absence trouvée.</td></tr>
+                <tr>
+                  <td colSpan={6}>
+                    <EmptyState icon={CalendarX2} title="Aucune absence trouvée" />
+                  </td>
+                </tr>
               ) : grouped.map((group) => {
                 const daysCount = countDays(group.start, group.end);
                 const weeksCount = countWeeks(group.start, group.end);

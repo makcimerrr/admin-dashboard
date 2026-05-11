@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/components/hooks/use-toast";
-import { Users, Plus, Trash2, Edit, Loader2, Mail, Phone } from "lucide-react";
+import { Users, Plus, Trash2, Edit, Mail, Phone } from "lucide-react";
 import type { Employee } from "@/lib/db/schema/employees";
 import { useUser } from "@stackframe/stack";
 import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingCard } from '@/components/ui/loading-card';
 
 const colors = [
   "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6",
@@ -190,18 +192,22 @@ export default function EmployeesPage() {
 
       <div className="flex-1 min-h-0 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
+          <LoadingCard count={4} columns={4} height="md" />
         ) : employees.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <Users className="h-10 w-10 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Aucun employé pour le moment</p>
-            <Button size="sm" onClick={() => setShowAddDialog(true)} disabled={planningPermission !== 'editor'}>
-              <Plus className="h-3 w-3 mr-1" />
-              Ajouter le premier employé
-            </Button>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="Aucun employé pour le moment"
+            action={
+              <Button
+                size="sm"
+                onClick={() => setShowAddDialog(true)}
+                disabled={planningPermission !== 'editor'}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Ajouter le premier employé
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-1">
             {employees.map((employee) => (
