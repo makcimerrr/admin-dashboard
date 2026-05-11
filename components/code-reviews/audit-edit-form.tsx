@@ -93,8 +93,9 @@ export default function AuditEditForm({
       toast({ title: "Audit enregistré", description: "Les modifications ont été sauvegardées." });
       // redirect client-side
       window.location.href = `/code-reviews/${promoId}/group/${groupId}`;
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error?.message ?? "Erreur inconnue" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast({ title: 'Erreur', description: message });
     } finally {
       setSaving(false);
     }

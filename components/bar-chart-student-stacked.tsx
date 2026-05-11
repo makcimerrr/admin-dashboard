@@ -88,18 +88,17 @@ export default function Component({ title, eventID, keyPromo }: BarChartProps) {
       const data = await res.json();
 
       // Formater les mois dans les données récupérées
-      const formattedData = data.map((item: any) => ({
+      type RawPoint = { month: string; avgGoodLateCount: number; avgLateCount: number };
+      const formattedData = (data as RawPoint[]).map((item) => ({
         ...item,
         month: formatMonth(item.month),
         bien: formatNumber(item.avgGoodLateCount),
         en_retard: formatNumber(item.avgLateCount)
       }));
 
-      console.log(formattedData);
-
       setChartData(formattedData);
-    } catch (err: any) {
-      setError(err.message || 'Erreur inconnue');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setTimeout(() => {
         setLoading(false);

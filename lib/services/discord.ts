@@ -1,11 +1,13 @@
 import { fetchWithRetry } from './http';
+import { makeLog } from '@/lib/log';
 
 const DISCORD_API = 'https://discord.com/api/v10';
+const log = makeLog('discord');
 
 export async function sendDiscordDM(discordUserId: string, content: string): Promise<boolean> {
   const token = process.env.DISCORD_BOT_TOKEN;
   if (!token) {
-    console.error('[discord] DISCORD_BOT_TOKEN is not set');
+    log.error('DISCORD_BOT_TOKEN is not set');
     return false;
   }
 
@@ -16,7 +18,6 @@ export async function sendDiscordDM(discordUserId: string, content: string): Pro
   };
 
   try {
-    // 1. Open or get the DM channel for that user
     const dmChannelRes = await fetchWithRetry(`${DISCORD_API}/users/@me/channels`, {
       method: 'POST',
       headers,
@@ -27,15 +28,12 @@ export async function sendDiscordDM(discordUserId: string, content: string): Pro
     });
 
     if (!dmChannelRes.ok) {
-      console.error(
-        `[discord] DM channel creation failed: ${dmChannelRes.status} ${await dmChannelRes.text()}`,
-      );
+      log.error('DM channel creation failed', dmChannelRes.status, await dmChannelRes.text());
       return false;
     }
 
     const dmChannel = await dmChannelRes.json();
 
-    // 2. Send message
     const messageRes = await fetchWithRetry(`${DISCORD_API}/channels/${dmChannel.id}/messages`, {
       method: 'POST',
       headers,
@@ -46,15 +44,13 @@ export async function sendDiscordDM(discordUserId: string, content: string): Pro
     });
 
     if (!messageRes.ok) {
-      console.error(
-        `[discord] message send failed: ${messageRes.status} ${await messageRes.text()}`,
-      );
+      log.error('Message send failed', messageRes.status, await messageRes.text());
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('[discord] DM error:', error);
+    log.error('DM error', error);
     return false;
   }
 }

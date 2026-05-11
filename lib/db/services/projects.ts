@@ -2,11 +2,13 @@ import { db } from '../config';
 import { projects } from '../schema/projects';
 import { eq } from 'drizzle-orm';
 
+type NewProject = typeof projects.$inferInsert;
+
 export async function getAllProjects() {
   return db.select().from(projects);
 }
 
-export async function addProject(data: any) {
+export async function addProject(data: NewProject) {
   await db.insert(projects).values(data);
 }
 

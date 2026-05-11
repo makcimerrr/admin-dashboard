@@ -1,11 +1,13 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { ReactNode } from "react"
 
 interface Column<T> {
   key: keyof T
   header: string
+  // Generic table render: value's type is inferred at call site via the
+  // column's key. Using `any` here is idiomatic for table helpers — see
+  // shadcn/ui, ant-design Table, etc.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   render?: (value: any, item: T) => ReactNode
   className?: string
 }
@@ -17,6 +19,7 @@ interface DataTableProps<T> {
   className?: string
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function DataTable<T extends Record<string, any>>({
   data,
   columns,
@@ -47,9 +50,9 @@ export function DataTable<T extends Record<string, any>>({
               <TableRow key={index}>
                 {columns.map((column) => (
                   <TableCell key={String(column.key)} className={column.className}>
-                    {column.render 
+                    {column.render
                       ? column.render(item[column.key], item)
-                      : item[column.key]
+                      : (item[column.key] as ReactNode)
                     }
                   </TableCell>
                 ))}

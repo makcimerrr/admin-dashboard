@@ -1,12 +1,14 @@
 import "server-only";
+import { makeLog } from "@/lib/log";
+
+const log = makeLog('stack-auth:metadata');
 
 /**
- * Vérifie et crée les métadonnées utilisateur si elles n'existent pas
- * Solution de secours si le webhook ne s'est pas déclenché
+ * Vérifie et crée les métadonnées utilisateur si elles n'existent pas.
+ * Solution de secours si le webhook ne s'est pas déclenché.
  */
 export async function ensureUserMetadata(userId: string): Promise<void> {
   try {
-    // Récupérer l'utilisateur
     const response = await fetch(
       `https://api.stack-auth.com/api/v1/users/${userId}`,
       {
@@ -19,21 +21,19 @@ export async function ensureUserMetadata(userId: string): Promise<void> {
     );
 
     if (!response.ok) {
-      console.error('❌ Erreur lors de la récupération de l\'utilisateur:', await response.text());
+      log.error('Failed to fetch user', await response.text());
       return;
     }
 
     const user = await response.json();
 
-    // Vérifier si les métadonnées existent déjà
     if (user.server_metadata?.role && user.client_read_only_metadata?.planningPermission) {
-      console.log('✅ Métadonnées déjà définies pour:', userId);
+      log.debug('Metadata already set', userId);
       return;
     }
 
-    console.log('⚠️  Métadonnées manquantes, création automatique pour:', userId);
+    log.info('Creating default metadata', userId);
 
-    // Créer les métadonnées par défaut
     const updateResponse = await fetch(
       `https://api.stack-auth.com/api/v1/users/${userId}`,
       {
@@ -56,11 +56,11 @@ export async function ensureUserMetadata(userId: string): Promise<void> {
     );
 
     if (updateResponse.ok) {
-      console.log('✅ Métadonnées créées automatiquement pour:', userId);
+      log.info('Default metadata created', userId);
     } else {
-      console.error('❌ Erreur lors de la création des métadonnées:', await updateResponse.text());
+      log.error('Failed to create metadata', await updateResponse.text());
     }
   } catch (error) {
-    console.error('❌ Erreur dans ensureUserMetadata:', error);
+    log.error('Unexpected error', error);
   }
 }

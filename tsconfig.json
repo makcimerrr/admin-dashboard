@@ -28,5 +28,5 @@
     ]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "hub-01"]
+  "exclude": ["node_modules", "hub-01", "vitest.config.ts"]
 }
