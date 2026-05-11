@@ -42,18 +42,6 @@ function shouldUseSecureCookies() {
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.pathname;
 
-  // Debug: lister les noms de cookies présents dans l'en-tête Cookie (ne pas afficher les valeurs)
-  try {
-    const cookieHeader = req.headers.get('cookie');
-    const cookieNames = cookieHeader
-      ? cookieHeader.split(';').map((c) => c.split('=')[0].trim()).filter(Boolean)
-      : [];
-    /*console.log('🧾 Middleware - cookies names for', url, ':', cookieNames);
-    console.log('🌐 Middleware - host header for', url, ':', req.headers.get('host'));*/
-  } catch (e) {
-    // Ignore logging failure
-  }
-
   // ========================================
   // 1. ROUTES PUBLIQUES (pas d'auth requise)
   // ========================================
@@ -117,13 +105,6 @@ export async function middleware(req: NextRequest) {
     const stackRoleCookie = cookies.get('stack-role');
     const shouldRefreshRole = !stackRoleCookie || stackRoleCookie.value === 'user';
 
-    /*console.log('🔍 Middleware - Stack Auth détectée:', {
-      accessToken: !!accessToken,
-      refreshToken: !!refreshCookie,
-      stackRole: stackRoleCookie?.value || 'absent',
-      shouldRefresh: shouldRefreshRole
-    });*/
-
     // Si le cookie stack-role est absent ou "user", récupérer le rôle depuis Stack Auth
     if (shouldRefreshRole && accessToken) {
       try {
@@ -178,15 +159,10 @@ export async function middleware(req: NextRequest) {
       if (blocked) return blocked;
       const response = NextResponse.next();
       response.cookies.set('role', role, { path: '/' });
-      /*console.log(`✅ Middleware - Stack Auth OK pour ${url} - Rôle: ${role}`);*/
       return response;
     }
 
-    // Pas de stack-role et pas d'access token pour le créer
-    // Laisser le Server Component gérer l'authentification complète
-/*
-    console.log(`⚠️  Middleware - Pas d'access token pour ${url}, délégation au Server Component`);
-*/
+    // Pas de stack-role et pas d'access token → délégation au Server Component
     return NextResponse.next();
   }
 
@@ -199,9 +175,6 @@ export async function middleware(req: NextRequest) {
     secureCookie: shouldUseSecureCookies(),
   });
 
-  // Debug: afficher le token pour faciliter le diagnostic en production
-  /*console.log('🔐 Middleware - getToken result for', url, ':', token ? { hasToken: true, groups: token.groups } : { hasToken: false });
-*/
   if (token) {
     // Si l'utilisateur est dans le groupe "authentik Admins", rôle = admin
     let role = 'user';
@@ -217,12 +190,6 @@ export async function middleware(req: NextRequest) {
 
     const response = NextResponse.next();
     response.cookies.set('role', role, { path: '/' }); // Expose le rôle pour Server Components
-    /*console.log(
-      '✅ Middleware - Auth NextAuth/Authentik trouvée pour:',
-      url,
-      'Rôle:',
-      role
-    );*/
     return response;
   }
 

@@ -1,20 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { getPiscineWeek, setPiscineWeek } from '@/lib/db/services/planning';
+import { apiError, apiSuccess, withAuth, withErrorHandler } from '@/lib/api';
 
-export async function GET(req: NextRequest) {
-  const weekKey = req.nextUrl.searchParams.get('weekKey');
-  if (!weekKey) {
-    return NextResponse.json({ error: 'Missing weekKey' }, { status: 400 });
-  }
-  const result = await getPiscineWeek(weekKey);
-  return NextResponse.json({ weekKey, isPiscine: !!(result && result.isPiscine) });
-}
+export const GET = withErrorHandler(
+  withAuth(async (req: NextRequest) => {
+    const weekKey = req.nextUrl.searchParams.get('weekKey');
+    if (!weekKey) return apiError('BAD_REQUEST', 'weekKey requis');
+    const result = await getPiscineWeek(weekKey);
+    return apiSuccess({ weekKey, isPiscine: !!(result && result.isPiscine) });
+  }),
+);
 
-export async function POST(req: NextRequest) {
-  const { weekKey, isPiscine } = await req.json();
-  if (!weekKey || typeof isPiscine !== 'boolean') {
-    return NextResponse.json({ error: 'Missing or invalid parameters' }, { status: 400 });
-  }
-  await setPiscineWeek(weekKey, isPiscine);
-  return NextResponse.json({ success: true });
-}
+export const POST = withErrorHandler(
+  withAuth(async (req: NextRequest) => {
+    const { weekKey, isPiscine } = await req.json();
+    if (!weekKey || typeof isPiscine !== 'boolean') {
+      return apiError('BAD_REQUEST', 'Paramètres invalides');
+    }
+    await setPiscineWeek(weekKey, isPiscine);
+    return apiSuccess({ weekKey, isPiscine });
+  }),
+);

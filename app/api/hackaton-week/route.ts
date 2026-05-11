@@ -1,20 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { getHackatonWeek, setHackatonWeek } from '@/lib/db/services/planning';
+import { apiError, apiSuccess, withAuth, withErrorHandler } from '@/lib/api';
 
-export async function GET(req: NextRequest) {
-  const weekKey = req.nextUrl.searchParams.get('weekKey');
-  if (!weekKey) {
-    return NextResponse.json({ error: 'Missing weekKey' }, { status: 400 });
-  }
-  const result = await getHackatonWeek(weekKey);
-  return NextResponse.json({ weekKey, isHackaton: !!(result && result.isHackaton) });
-}
+export const GET = withErrorHandler(
+  withAuth(async (req: NextRequest) => {
+    const weekKey = req.nextUrl.searchParams.get('weekKey');
+    if (!weekKey) return apiError('BAD_REQUEST', 'weekKey requis');
+    const result = await getHackatonWeek(weekKey);
+    return apiSuccess({ weekKey, isHackaton: !!(result && result.isHackaton) });
+  }),
+);
 
-export async function POST(req: NextRequest) {
-  const { weekKey, isHackaton } = await req.json();
-  if (!weekKey || typeof isHackaton !== 'boolean') {
-    return NextResponse.json({ error: 'Missing or invalid parameters' }, { status: 400 });
-  }
-  await setHackatonWeek(weekKey, isHackaton);
-  return NextResponse.json({ success: true });
-} 
+export const POST = withErrorHandler(
+  withAuth(async (req: NextRequest) => {
+    const { weekKey, isHackaton } = await req.json();
+    if (!weekKey || typeof isHackaton !== 'boolean') {
+      return apiError('BAD_REQUEST', 'Paramètres invalides');
+    }
+    await setHackatonWeek(weekKey, isHackaton);
+    return apiSuccess({ weekKey, isHackaton });
+  }),
+);

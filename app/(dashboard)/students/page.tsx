@@ -9,7 +9,7 @@ import { QuickStats } from './_components/quick-stats';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
-import ClientImport from '@/components/clien-import';
+import ClientImport from '@/components/client-import';
 import AddStudent from '@/components/add-student';
 
 interface PromoDates {

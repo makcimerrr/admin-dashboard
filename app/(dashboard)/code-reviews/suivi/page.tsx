@@ -108,8 +108,8 @@ export default function SuiviPage() {
         fetch('/api/promotions'),
       ]);
       const [suiviData, promosData] = await Promise.all([suiviRes.json(), promosRes.json()]);
-      if (suiviData.success) setRows(suiviData.rows);
-      if (promosData.success) {
+      if (suiviData?.success) setRows(suiviData.data.rows);
+      if (promosData?.success) {
         const map = new Map<string, string>();
         for (const p of promosData.promotions as PromoInfo[]) map.set(String(p.eventId), p.title || p.key);
         setPromos(map);
@@ -135,11 +135,14 @@ export default function SuiviPage() {
         body: JSON.stringify({ groupStatusId: row.id }),
       });
       const data = await res.json();
-      if (data.success) toast.success(`Relance envoyée à ${row.captainLogin}`);
-      else {
-        if (data.reason === 'no_discord') toast.info(`${row.captainLogin} n'a pas de Discord lié`);
-        else if (data.reason === 'no_captain') toast.info('Aucun capitaine renseigné');
-        else toast.error(data.error ?? 'Échec');
+      if (data?.success && data.data?.sent) {
+        toast.success(`Relance envoyée à ${row.captainLogin}`);
+      } else if (data?.success && data.data?.reason === 'no_discord') {
+        toast.info(`${row.captainLogin} n'a pas de Discord lié`);
+      } else if (data?.success && data.data?.reason === 'no_captain') {
+        toast.info('Aucun capitaine renseigné');
+      } else {
+        toast.error(data?.error?.message ?? 'Échec');
       }
       await fetchRows();
     } catch { toast.error('Erreur réseau'); }
@@ -154,8 +157,8 @@ export default function SuiviPage() {
         body: JSON.stringify({ id: row.id }),
       });
       const data = await res.json();
-      if (data.success) { toast.success('Supprimé'); await fetchRows(); }
-      else toast.error(data.error ?? 'Erreur');
+      if (data?.success) { toast.success('Supprimé'); await fetchRows(); }
+      else toast.error(data?.error?.message ?? 'Erreur');
     } catch { toast.error('Erreur réseau'); }
     finally { setRowLoading(row.id, false); }
   }
@@ -168,8 +171,8 @@ export default function SuiviPage() {
         body: JSON.stringify({ id: row.id }),
       });
       const data = await res.json();
-      if (data.success) { toast.success('Archivé'); await fetchRows(); }
-      else toast.error(data.error ?? 'Erreur');
+      if (data?.success) { toast.success('Archivé'); await fetchRows(); }
+      else toast.error(data?.error?.message ?? 'Erreur');
     } catch { toast.error('Erreur réseau'); }
     finally { setRowLoading(row.id, false); }
   }

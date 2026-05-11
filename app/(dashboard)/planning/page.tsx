@@ -139,16 +139,16 @@ export default function PlanningPage() {
     fetch(`/api/hackaton-week?weekKey=${currentWeekKey}`)
       .then((r) => r.json())
       .then((d) => {
-        if (typeof d.isHackaton === 'boolean') {
-          setHackatonWeeks((w) => ({ ...w, [currentWeekKey]: d.isHackaton }));
+        if (d?.success && typeof d.data?.isHackaton === 'boolean') {
+          setHackatonWeeks((w) => ({ ...w, [currentWeekKey]: d.data.isHackaton }));
         }
       })
       .catch(() => {});
     fetch(`/api/piscine-week?weekKey=${currentWeekKey}`)
       .then((r) => r.json())
       .then((d) => {
-        if (typeof d.isPiscine === 'boolean') {
-          setPiscineWeeks((w) => ({ ...w, [currentWeekKey]: d.isPiscine }));
+        if (d?.success && typeof d.data?.isPiscine === 'boolean') {
+          setPiscineWeeks((w) => ({ ...w, [currentWeekKey]: d.data.isPiscine }));
         }
       })
       .catch(() => {});

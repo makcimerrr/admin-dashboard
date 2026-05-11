@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { stackServerApp } from '@/lib/stack-server';
+import type { NextRequest } from 'next/server';
 import { db } from '@/lib/db/config';
 import { groupStatuses } from '@/lib/db/schema/groupStatuses';
 import { eq } from 'drizzle-orm';
@@ -9,16 +8,12 @@ import { getAllPromotions } from '@/lib/config/promotions';
 import { getTrackByProjectName } from '@/lib/config/projects';
 import { getReviewerForRoundRobin } from '@/lib/db/services/reviewers';
 import { getNotifiedCount } from '@/lib/db/services/groupStatuses';
+import { apiError, apiSuccess, withAuth, withErrorHandler } from '@/lib/api';
 
-export async function POST(request: NextRequest) {
-  const user = await stackServerApp.getUser();
-  if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-
-  try {
+export const POST = withErrorHandler(
+  withAuth(async (request: NextRequest) => {
     const { groupStatusId } = await request.json();
-    if (!groupStatusId) {
-      return NextResponse.json({ error: 'groupStatusId requis' }, { status: 400 });
-    }
+    if (!groupStatusId) return apiError('BAD_REQUEST', 'groupStatusId requis');
 
     const rows = await db
       .select()
@@ -27,18 +22,22 @@ export async function POST(request: NextRequest) {
       .limit(1);
 
     const row = rows[0];
-    if (!row) return NextResponse.json({ error: 'Groupe non trouvé' }, { status: 404 });
-    if (!row.captainLogin) return NextResponse.json({ success: false, reason: 'no_captain' });
+    if (!row) return apiError('NOT_FOUND', 'Groupe non trouvé');
 
+    // Soft failures (not HTTP errors — the caller can react with a toast)
+    if (!row.captainLogin) {
+      return apiSuccess({ sent: false, reason: 'no_captain' as const });
+    }
     const discordId = await getDiscordIdByLogin(row.captainLogin);
-    if (!discordId) return NextResponse.json({ success: false, reason: 'no_discord' });
+    if (!discordId) {
+      return apiSuccess({ sent: false, reason: 'no_discord' as const });
+    }
 
-    // Resolve promo name
+    // Build DM
     const promotions = await getAllPromotions();
     const promo = promotions.find((p) => String(p.eventId) === row.promoId);
     const promoName = promo?.title ?? promo?.key ?? row.promoId;
 
-    // Resolve reviewer for this project's track
     const track = await getTrackByProjectName(row.projectName);
     const notifiedCount = await getNotifiedCount();
     const reviewer = await getReviewerForRoundRobin(track, notifiedCount);
@@ -58,17 +57,13 @@ export async function POST(request: NextRequest) {
     ].join('\n');
 
     const sent = await sendDiscordDM(discordId, message);
-    if (!sent) return NextResponse.json({ error: "Échec de l'envoi du DM Discord" }, { status: 500 });
+    if (!sent) return apiError('INTERNAL_ERROR', "Échec de l'envoi du DM Discord");
 
-    // Log manual reminder timestamp
     await db
       .update(groupStatuses)
       .set({ manualReminderAt: new Date() })
       .where(eq(groupStatuses.id, Number(groupStatusId)));
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error resending DM:', error);
-    return NextResponse.json({ error: 'Erreur interne' }, { status: 500 });
-  }
-}
+    return apiSuccess({ sent: true });
+  }),
+);
