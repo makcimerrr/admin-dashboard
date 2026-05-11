@@ -1,7 +1,12 @@
 /**
- * Utilitaire pour accéder à la configuration des projets depuis la DB
+ * Utilitaire pour accéder à la configuration des projets depuis la DB.
+ * Les projets changent rarement → cache 1h. Toutes les fonctions
+ * dérivées (getProjectsByTrack, etc.) appellent le même cache mémoisé,
+ * donc plusieurs appels dans une même requête ne touchent la DB qu'une fois.
  */
 
+import { unstable_cache } from 'next/cache';
+import { CACHE_TAGS, CACHE_TTL } from '../cache';
 import type { Track } from '@/lib/db/schema/audits';
 import type { ProjectConfig, ProjectsConfig } from '@/lib/types/code-reviews';
 import { getAllProjects as getAllProjectsFromDB } from '../db/services/projects';
@@ -15,10 +20,14 @@ export function dbProjectsToConfig(rows: any[]): ProjectsConfig {
     return result as ProjectsConfig;
 }
 
-async function getProjectsConfig(): Promise<ProjectsConfig> {
-    const rows = await getAllProjectsFromDB();
-    return dbProjectsToConfig(rows);
-}
+const getProjectsConfig = unstable_cache(
+    async (): Promise<ProjectsConfig> => {
+        const rows = await getAllProjectsFromDB();
+        return dbProjectsToConfig(rows);
+    },
+    ['projects-config'],
+    { tags: [CACHE_TAGS.projects], revalidate: CACHE_TTL.long },
+);
 
 export async function getAllProjects(): Promise<ProjectsConfig> {
     return getProjectsConfig();

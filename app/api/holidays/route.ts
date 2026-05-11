@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllHolidays, addHoliday, deleteHoliday, getHolidaysByLabel } from '@/lib/db/services/holidays';
 import { dbHolidaysToConfig } from '@/lib/config/holidays';
+import { CACHE_TAGS, invalidate } from '@/lib/cache';
 
 export async function GET() {
   try {
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
     }
 
     await addHoliday(name, start, end);
+    invalidate(CACHE_TAGS.holidays);
 
     const rows = await getAllHolidays();
     const holidaysData = dbHolidaysToConfig(rows);
@@ -53,6 +55,7 @@ export async function DELETE(request: Request) {
     for (const holiday of existing) {
       await deleteHoliday(holiday.id);
     }
+    invalidate(CACHE_TAGS.holidays);
 
     const rows = await getAllHolidays();
     const holidaysData = dbHolidaysToConfig(rows);

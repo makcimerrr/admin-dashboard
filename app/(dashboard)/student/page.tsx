@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { fetchWithRetry } from '@/lib/services/http';
 import {
   ArrowLeft,
   Mail,
@@ -178,23 +179,22 @@ export default function StudentPage() {
   const fetchExternalDataInternal = async (login: string) => {
     setLoadingExternal(true);
     try {
+      const authHeaders = {
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`,
+      };
       const [giteaResponse, userFindResponse] = await Promise.all([
-        fetch(
-          `https://api-zone01-rouen.deno.dev/api/v1/gitea-info/${login}`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`,
-            },
-          }
-        ),
-        fetch(
-          `https://api-zone01-rouen.deno.dev/api/v1/user-info/${login}`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`,
-            },
-          }
-        ),
+        fetchWithRetry(`https://api-zone01-rouen.deno.dev/api/v1/gitea-info/${login}`, {
+          headers: authHeaders,
+          tag: 'gitea',
+          timeoutMs: 8_000,
+          retries: 1,
+        }),
+        fetchWithRetry(`https://api-zone01-rouen.deno.dev/api/v1/user-info/${login}`, {
+          headers: authHeaders,
+          tag: 'zone01-user',
+          timeoutMs: 8_000,
+          retries: 1,
+        }),
       ]);
 
       if (!giteaResponse.ok || !userFindResponse.ok) {

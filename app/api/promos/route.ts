@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { addPromotion, deletePromotion } from '@/lib/db/services/promotions';
 import { getAllPromotions, dbRowToPromoConfig } from '@/lib/config/promotions';
 import { upsertPromoConfig, deletePromoConfig, getPromoConfigByKey } from '@/lib/db/services/promoConfig';
+import { CACHE_TAGS, invalidate } from '@/lib/cache';
 
 function isDateValid(date: string): boolean {
   return !isNaN(Date.parse(date));
@@ -138,6 +139,7 @@ export async function POST(req: Request) {
       piscineRustStart: piscineRustJavaStart !== 'NaN' ? piscineRustJavaStart : null,
       piscineRustEnd: piscineRustJavaEnd !== 'NaN' ? piscineRustJavaEnd : null,
     });
+    invalidate(CACHE_TAGS.promotions, CACHE_TAGS.widgetsOverview);
 
     return NextResponse.json(
       { message: 'Promotion ajoutée avec succès.' },
@@ -180,6 +182,7 @@ export async function DELETE(req: Request) {
     }
 
     await deletePromoConfig(key);
+    invalidate(CACHE_TAGS.promotions, CACHE_TAGS.widgetsOverview);
 
     return NextResponse.json(
       { message: 'Promotion supprimée avec succès.' },

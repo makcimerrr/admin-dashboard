@@ -4,6 +4,7 @@ import { projects } from '@/lib/db/schema/projects';
 import { getAllProjects, addProject, deleteProject } from '@/lib/db/services/projects';
 import { dbProjectsToConfig } from '@/lib/config/projects';
 import { eq, asc } from 'drizzle-orm';
+import { CACHE_TAGS, invalidate } from '@/lib/cache';
 
 /**
  * GET - Retourne les projets groupés par catégorie
@@ -39,6 +40,7 @@ export async function POST(req: Request) {
     category: tech,
     sort_index: nextSortIndex,
   });
+  invalidate(CACHE_TAGS.projects);
 
   const rows = await getAllProjects();
   const grouped = dbProjectsToConfig(rows);
@@ -56,6 +58,7 @@ export async function DELETE(req: Request) {
   }
 
   await deleteProject(id);
+  invalidate(CACHE_TAGS.projects);
 
   const rows = await getAllProjects();
   const grouped = dbProjectsToConfig(rows);
@@ -79,6 +82,7 @@ export async function PATCH(req: Request) {
       .set({ sort_index: i })
       .where(eq(projects.id, reorderedProjects[i]));
   }
+  invalidate(CACHE_TAGS.projects);
 
   const rows = await getAllProjects();
   const grouped = dbProjectsToConfig(rows);

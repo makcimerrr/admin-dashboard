@@ -1,7 +1,11 @@
 /**
- * Utilitaire pour accéder à la configuration des promotions depuis la DB
+ * Utilitaire pour accéder à la configuration des promotions depuis la DB.
+ * Les promos ne changent pas souvent → mise en cache 1h, invalidée
+ * via `revalidateTag(CACHE_TAGS.promotions)` sur mutation.
  */
 
+import { unstable_cache } from 'next/cache';
+import { CACHE_TAGS, CACHE_TTL } from '../cache';
 import { getAllPromoConfig, getPromoConfigByKey } from '../db/services/promoConfig';
 
 export interface PromoConfig {
@@ -34,10 +38,14 @@ export function dbRowToPromoConfig(row: any): PromoConfig {
     };
 }
 
-export async function getAllPromotions(): Promise<PromoConfig[]> {
-    const rows = await getAllPromoConfig();
-    return rows.map(dbRowToPromoConfig);
-}
+export const getAllPromotions = unstable_cache(
+    async (): Promise<PromoConfig[]> => {
+        const rows = await getAllPromoConfig();
+        return rows.map(dbRowToPromoConfig);
+    },
+    ['all-promotions'],
+    { tags: [CACHE_TAGS.promotions], revalidate: CACHE_TTL.long },
+);
 
 export async function getActivePromotions(): Promise<PromoConfig[]> {
     const all = await getAllPromotions();

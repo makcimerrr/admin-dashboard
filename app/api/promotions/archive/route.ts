@@ -6,6 +6,7 @@ import {
     getAllPromotions,
     getArchivedPromotions
 } from '@/lib/db/services/promotions';
+import { CACHE_TAGS, invalidate } from '@/lib/cache';
 
 /**
  * GET /api/promotions/archive
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
         }
 
         const result = await archivePromotion(promoName, reason);
+        invalidate(CACHE_TAGS.promotions, CACHE_TAGS.widgetsOverview);
 
         return NextResponse.json({
             success: true,
@@ -106,6 +108,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         const result = await unarchivePromotion(promoName);
+        invalidate(CACHE_TAGS.promotions, CACHE_TAGS.widgetsOverview);
 
         return NextResponse.json({
             success: true,
