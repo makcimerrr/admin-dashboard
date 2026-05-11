@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,6 +106,18 @@ export default function SuiviPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkConfirmDelete, setBulkConfirmDelete] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Drag-to-select state. When the user mousedowns on a row's checkbox,
+  // we remember the target state (add or remove) and apply it to every
+  // row the cursor enters until mouseup.
+  const dragRef = useRef<{ active: boolean; targetState: boolean }>({ active: false, targetState: true });
+  const lastClickedIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const onMouseUp = () => { dragRef.current.active = false; };
+    window.addEventListener('mouseup', onMouseUp);
+    return () => window.removeEventListener('mouseup', onMouseUp);
+  }, []);
 
   const fetchRows = useCallback(async () => {
     try {
@@ -230,6 +242,57 @@ export default function SuiviPage() {
     });
   }
 
+  /** Set a row's selection state explicitly (used by drag). */
+  function setRowSelected(id: number, on: boolean) {
+    setSelectedIds(prev => {
+      const has = prev.has(id);
+      if (has === on) return prev;
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  /** mousedown on a row's checkbox cell — start a drag from this row. */
+  function handleRowMouseDown(e: React.MouseEvent, id: number, currentlySelected: boolean) {
+    // Shift+click → range selection from the last clicked row
+    if (e.shiftKey && lastClickedIdRef.current !== null) {
+      e.preventDefault();
+      const ids = visibleRows.map(r => r.id);
+      const fromIdx = ids.indexOf(lastClickedIdRef.current);
+      const toIdx = ids.indexOf(id);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        const [a, b] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+        const range = ids.slice(a, b + 1);
+        const targetState = !currentlySelected;
+        setSelectedIds(prev => {
+          const next = new Set(prev);
+          for (const rid of range) {
+            if (targetState) next.add(rid);
+            else next.delete(rid);
+          }
+          return next;
+        });
+      }
+      lastClickedIdRef.current = id;
+      return;
+    }
+
+    // Regular drag-to-select start
+    e.preventDefault(); // avoid text selection during drag
+    const targetState = !currentlySelected;
+    dragRef.current = { active: true, targetState };
+    setRowSelected(id, targetState);
+    lastClickedIdRef.current = id;
+  }
+
+  /** mouseenter on a row's checkbox cell during drag — propagate state. */
+  function handleRowMouseEnter(id: number) {
+    if (!dragRef.current.active) return;
+    setRowSelected(id, dragRef.current.targetState);
+  }
+
   function toggleAllVisible(allChecked: boolean) {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -341,12 +404,17 @@ export default function SuiviPage() {
         })}
       </div>
 
-      {/* Search */}
-      <Input
-        placeholder="Rechercher par projet, capitaine, promotion, track..."
-        value={search} onChange={e => setSearch(e.target.value)}
-        className="max-w-sm h-8 text-sm"
-      />
+      {/* Search + selection hint */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <Input
+          placeholder="Rechercher par projet, capitaine, promotion, track..."
+          value={search} onChange={e => setSearch(e.target.value)}
+          className="max-w-sm h-8 text-sm"
+        />
+        <p className="text-[10px] text-muted-foreground hidden sm:block">
+          Astuce : maintiens le clic et glisse pour sélectionner plusieurs lignes · Shift+clic pour une plage
+        </p>
+      </div>
 
       {loading ? (
         <LoadingCard height="lg" />
@@ -392,13 +460,27 @@ export default function SuiviPage() {
                     data-state={isSelected ? 'selected' : undefined}
                     className="group hover:bg-muted/20 data-[state=selected]:bg-primary/5 [&>td]:py-2 [&>td]:text-[12px]"
                   >
-                    {/* Selection checkbox */}
-                    <TableCell>
-                      <Checkbox
-                        aria-label={`Sélectionner ${row.projectName}`}
-                        checked={isSelected}
-                        onCheckedChange={() => toggleRowSelected(row.id)}
-                      />
+                    {/* Selection cell. The cell itself is the interactive
+                        element: mousedown starts a drag, mouseenter
+                        propagates while dragging, Space/Enter toggles via
+                        keyboard. The Checkbox inside is purely visual. */}
+                    <TableCell
+                      tabIndex={0}
+                      role="checkbox"
+                      aria-checked={isSelected}
+                      aria-label={`Sélectionner ${row.projectName}`}
+                      className="cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      onMouseDown={(e) => handleRowMouseDown(e, row.id, isSelected)}
+                      onMouseEnter={() => handleRowMouseEnter(row.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault();
+                          toggleRowSelected(row.id);
+                          lastClickedIdRef.current = row.id;
+                        }
+                      }}
+                    >
+                      <Checkbox checked={isSelected} tabIndex={-1} aria-hidden />
                     </TableCell>
                     {/* Status */}
                     {activeTab === 'all' && (
