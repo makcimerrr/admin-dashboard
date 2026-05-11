@@ -10,6 +10,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingCard } from '@/components/ui/loading-card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -18,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  CheckCircle2, Send, ExternalLink,
+  CheckCircle2, Send, ExternalLink, Archive, Trash2, X,
   Loader2, RefreshCw, AlertTriangle, ClipboardCheck,
   MoreHorizontal, ShieldAlert, CircleDot, ArrowUpDown, ArrowUp, ArrowDown,
 } from 'lucide-react';
@@ -102,6 +103,9 @@ export default function SuiviPage() {
   const [activeTab, setActiveTab] = useState<Category | 'all'>('all');
   const [sortKey, setSortKey] = useState<SortKey>('delay');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkConfirmDelete, setBulkConfirmDelete] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const fetchRows = useCallback(async () => {
     try {
@@ -177,6 +181,67 @@ export default function SuiviPage() {
       else toast.error(data?.error?.message ?? 'Erreur');
     } catch { toast.error('Erreur réseau'); }
     finally { setRowLoading(row.id, false); }
+  }
+
+  async function handleBulkArchive() {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const res = await fetch('/api/code-reviews/suivi', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        toast.success(`${ids.length} ligne${ids.length > 1 ? 's' : ''} archivée${ids.length > 1 ? 's' : ''}`);
+        setSelectedIds(new Set());
+        await fetchRows();
+      } else toast.error(data?.error?.message ?? 'Erreur');
+    } catch { toast.error('Erreur réseau'); }
+    finally { setBulkLoading(false); }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const res = await fetch('/api/code-reviews/suivi', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        toast.success(`${ids.length} ligne${ids.length > 1 ? 's' : ''} supprimée${ids.length > 1 ? 's' : ''}`);
+        setSelectedIds(new Set());
+        await fetchRows();
+      } else toast.error(data?.error?.message ?? 'Erreur');
+    } catch { toast.error('Erreur réseau'); }
+    finally { setBulkLoading(false); setBulkConfirmDelete(false); }
+  }
+
+  function toggleRowSelected(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllVisible(allChecked: boolean) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allChecked) {
+        // remove visible
+        for (const r of visibleRows) next.delete(r.id);
+      } else {
+        // add visible
+        for (const r of visibleRows) next.add(r.id);
+      }
+      return next;
+    });
   }
 
   // ─── Sort & filter ─────────────────────────────────────────────────────
@@ -287,11 +352,23 @@ export default function SuiviPage() {
         <LoadingCard height="lg" />
       ) : visibleRows.length === 0 ? (
         <EmptyState icon={ClipboardCheck} title="Aucun groupe à afficher" />
-      ) : (
+      ) : (() => {
+        const visibleIds = visibleRows.map(r => r.id);
+        const visibleSelectedCount = visibleIds.filter(id => selectedIds.has(id)).length;
+        const allVisibleSelected = visibleRows.length > 0 && visibleSelectedCount === visibleRows.length;
+        const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
+        return (
         <div className="rounded-lg border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40 [&>th]:py-2 [&>th]:text-[11px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-wider [&>th]:text-muted-foreground">
+                <TableHead className="w-[36px]">
+                  <Checkbox
+                    aria-label="Tout sélectionner"
+                    checked={allVisibleSelected ? true : someVisibleSelected ? 'indeterminate' : false}
+                    onCheckedChange={() => toggleAllVisible(allVisibleSelected)}
+                  />
+                </TableHead>
                 {activeTab === 'all' && <TableHead className="w-[80px]">Statut</TableHead>}
                 <SortHeader label="Projet" sortId="project" />
                 <SortHeader label="Capitaine" sortId="captain" />
@@ -307,9 +384,22 @@ export default function SuiviPage() {
                 const cat = categorize(row);
                 const badge = STATUS_BADGE[cat];
                 const isLoading = loadingIds.has(row.id);
+                const isSelected = selectedIds.has(row.id);
 
                 return (
-                  <TableRow key={row.id} className="group hover:bg-muted/20 [&>td]:py-2 [&>td]:text-[12px]">
+                  <TableRow
+                    key={row.id}
+                    data-state={isSelected ? 'selected' : undefined}
+                    className="group hover:bg-muted/20 data-[state=selected]:bg-primary/5 [&>td]:py-2 [&>td]:text-[12px]"
+                  >
+                    {/* Selection checkbox */}
+                    <TableCell>
+                      <Checkbox
+                        aria-label={`Sélectionner ${row.projectName}`}
+                        checked={isSelected}
+                        onCheckedChange={() => toggleRowSelected(row.id)}
+                      />
+                    </TableCell>
                     {/* Status */}
                     {activeTab === 'all' && (
                       <TableCell>
@@ -462,9 +552,50 @@ export default function SuiviPage() {
             </TableBody>
           </Table>
         </div>
+        );
+      })()}
+
+      {/* Floating bulk actions bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border bg-background shadow-lg px-3 py-2">
+          <span className="text-xs font-medium px-2 tabular-nums">
+            {selectedIds.size} sélectionnée{selectedIds.size > 1 ? 's' : ''}
+          </span>
+          <div className="h-4 w-px bg-border" />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs gap-1.5"
+            disabled={bulkLoading}
+            onClick={handleBulkArchive}
+          >
+            {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
+            Archiver
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+            disabled={bulkLoading}
+            onClick={() => setBulkConfirmDelete(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Supprimer
+          </Button>
+          <div className="h-4 w-px bg-border" />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 w-7 p-0 text-muted-foreground"
+            onClick={() => setSelectedIds(new Set())}
+            aria-label="Désélectionner tout"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       )}
 
-      {/* Delete confirmation */}
+      {/* Single-row delete confirmation */}
       <AlertDialog open={!!confirmDeleteRowState} onOpenChange={() => setConfirmDeleteRowState(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -475,6 +606,29 @@ export default function SuiviPage() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => { if (confirmDeleteRowState) handleDeleteRow(confirmDeleteRowState); setConfirmDeleteRowState(null); }}>
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk delete confirmation */}
+      <AlertDialog open={bulkConfirmDelete} onOpenChange={setBulkConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Supprimer {selectedIds.size} ligne{selectedIds.size > 1 ? 's' : ''} ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>Cette action est définitive et concerne toutes les lignes sélectionnées.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={bulkLoading}
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+            >
+              {bulkLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : null}
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
