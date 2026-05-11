@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingCard } from '@/components/ui/loading-card';
 import {
   Dialog,
   DialogContent,
@@ -303,21 +304,21 @@ export default function PromoManagement() {
 
       {/* Liste des promotions */}
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-lg" />)}
-        </div>
+        <LoadingCard count={3} columns={3} height="lg" />
       ) : promos.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-1">Aucune promotion</h3>
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              Commencez par créer votre première promotion
-            </p>
-            <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Créer une promotion
-            </Button>
+          <CardContent className="py-6">
+            <EmptyState
+              icon={GraduationCap}
+              title="Aucune promotion"
+              description="Commencez par créer votre première promotion"
+              action={
+                <Button onClick={() => setIsDialogOpen(true)} size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Créer une promotion
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (

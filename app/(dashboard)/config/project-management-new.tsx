@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingCard } from '@/components/ui/loading-card';
 import {
   Dialog,
   DialogContent,
@@ -247,21 +248,21 @@ export default function ProjectManagement() {
 
       {/* Liste des projets par technologie */}
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-lg" />)}
-        </div>
+        <LoadingCard count={4} columns={2} height="lg" />
       ) : Object.keys(projectsByTech).length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Code2 className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-1">Aucun projet</h3>
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              Commencez par ajouter votre premier projet
-            </p>
-            <Button onClick={() => setIsDialogOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Créer un projet
-            </Button>
+          <CardContent className="py-6">
+            <EmptyState
+              icon={Code2}
+              title="Aucun projet"
+              description="Commencez par ajouter votre premier projet"
+              action={
+                <Button onClick={() => setIsDialogOpen(true)} size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Créer un projet
+                </Button>
+              }
+            />
           </CardContent>
         </Card>
       ) : (

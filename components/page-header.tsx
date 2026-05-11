@@ -33,7 +33,7 @@ export function PageHeader({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold tracking-tight truncate">{title}</h1>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight truncate">{title}</h1>
               {/* Badge inline with title on mobile when no tabs prop (the typical case now) */}
               {!tabs && badge && <div className="md:hidden">{badge}</div>}
             </div>

@@ -8,6 +8,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingCard } from '@/components/ui/loading-card';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -282,12 +284,9 @@ export default function SuiviPage() {
       />
 
       {loading ? (
-        <Skeleton className="h-64 rounded-lg" />
+        <LoadingCard height="lg" />
       ) : visibleRows.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
-          <ClipboardCheck className="h-8 w-8 opacity-30" />
-          <p className="text-sm">Aucun groupe à afficher.</p>
-        </div>
+        <EmptyState icon={ClipboardCheck} title="Aucun groupe à afficher" />
       ) : (
         <div className="rounded-lg border overflow-x-auto">
           <Table>

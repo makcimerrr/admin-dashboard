@@ -25,6 +25,7 @@ import {
   Info
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
+import { EmptyState } from '@/components/ui/empty-state';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -350,10 +351,7 @@ export default function CodeReviewsPage() {
                 ))}
               </div>
             ) : (
-              <div className="py-8 text-center text-muted-foreground">
-                <ClipboardCheck className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Aucun audit récent</p>
-              </div>
+              <EmptyState icon={ClipboardCheck} title="Aucun audit récent" size="compact" />
             )}
           </CardContent>
         </Card>
@@ -499,12 +497,12 @@ export default function CodeReviewsPage() {
                 ))}
               </div>
             ) : (
-              <div className="py-8 text-center text-muted-foreground">
-                <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500 dark:text-green-400 opacity-50" />
-                <p className="text-sm text-green-700 dark:text-green-400">
-                  Aucune alerte
-                </p>
-              </div>
+              <EmptyState
+                icon={CheckCircle2}
+                title="Aucune alerte"
+                size="compact"
+                className="[&_p]:text-emerald-600 dark:[&_p]:text-emerald-400 [&_svg]:text-emerald-500 dark:[&_svg]:text-emerald-400"
+              />
             )}
           </CardContent>
         </Card>

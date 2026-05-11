@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
@@ -306,9 +307,8 @@ export default function ReviewerManagement() {
 
       {reviewers.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Calendar className="h-10 w-10 mb-3 opacity-30" />
-            <p className="text-sm">Aucun reviewer configuré</p>
+          <CardContent className="py-6">
+            <EmptyState icon={Calendar} title="Aucun reviewer configuré" />
           </CardContent>
         </Card>
       ) : (
