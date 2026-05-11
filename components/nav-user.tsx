@@ -1,10 +1,6 @@
 "use client"
 
-import {
-  LogOutIcon,
-  UserCircleIcon,
-  BellIcon,
-} from "lucide-react"
+import { IconUser, IconBell, IconLogout } from "@/components/icons/zone-apps"
 
 import {
   Avatar,
@@ -102,17 +98,17 @@ export function NavUser({
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => router.push('/settings')}>
-            <UserCircleIcon className="mr-2 h-4 w-4" />
+            <IconUser size={16} className="mr-2" />
             Account
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push('/settings?tab=notifications')}>
-            <BellIcon className="mr-2 h-4 w-4" />
+            <IconBell size={16} className="mr-2" />
             Notifications
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
-          <LogOutIcon className="mr-2 h-4 w-4" />
+          <IconLogout size={16} className="mr-2" />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

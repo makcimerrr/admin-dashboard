@@ -5,32 +5,40 @@ import {
   CalendarIcon,
   CalendarX2Icon,
   ClipboardCheckIcon,
+  ClockIcon,
   FileBarChartIcon,
   FileIcon,
   FolderArchiveIcon,
-  ClockIcon,
-  FolderIcon,
-  GlobeIcon,
   GraduationCapIcon,
-  LayoutDashboardIcon,
   LayoutGridIcon,
-  SettingsIcon,
-  SquareStackIcon,
-  UserCheckIcon,
   UsersIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import {
+  Icon01Deck,
+  IconConfig,
+  IconDashboard,
+  IconEmargement,
+  IconIntra,
+  IconOutils,
+  IconParametres,
+  IconPedagogie,
+  IconPlanning,
+} from '@/components/icons/zone-apps';
+
+// Accept either a Lucide icon or a custom component with { size?, className? }
+type NavIcon = LucideIcon | React.ComponentType<{ size?: number; className?: string }>;
 
 export interface NavItem {
   title: string;
   url: string;
-  icon?: LucideIcon;
+  icon?: NavIcon;
 }
 
 export interface NavApp {
   key: string;
   label: string;
-  icon: LucideIcon;
+  icon: NavIcon;
   /** Default URL when user clicks the app icon (first item if omitted) */
   defaultUrl?: string;
   /** When defined, this app has sub-navigation (tabs). Otherwise it's a direct link. */
@@ -59,13 +67,13 @@ export const NAV_APPS: NavApp[] = [
   {
     key: 'dashboard',
     label: 'Tableau de bord',
-    icon: LayoutDashboardIcon,
+    icon: IconDashboard,
     url: '/',
   },
   {
     key: 'pedagogie',
     label: 'Pédagogie',
-    icon: GraduationCapIcon,
+    icon: IconPedagogie,
     defaultUrl: '/students',
     adminOnly: true,
     items: [
@@ -81,7 +89,7 @@ export const NAV_APPS: NavApp[] = [
   {
     key: 'planning',
     label: 'Planning',
-    icon: CalendarIcon,
+    icon: IconPlanning,
     defaultUrl: '/planning',
     adminOnly: true,
     items: [
@@ -95,7 +103,7 @@ export const NAV_APPS: NavApp[] = [
   {
     key: 'outils',
     label: 'Outils',
-    icon: LayoutGridIcon,
+    icon: IconOutils,
     defaultUrl: '/01deck',
     adminOnly: true,
     items: [
@@ -106,30 +114,30 @@ export const NAV_APPS: NavApp[] = [
   {
     key: '01deck-app',
     label: '01 Deck',
-    icon: SquareStackIcon,
+    icon: Icon01Deck,
     url: 'https://01deck.zone01rouennormandie.org/',
-    external: true,
-  },
-  {
-    key: 'intra',
-    label: 'Intra',
-    icon: GlobeIcon,
-    url: 'https://intra.zone01rouennormandie.org/',
     external: true,
   },
   {
     key: 'emargement',
     label: 'Émargement',
-    icon: UserCheckIcon,
+    icon: IconEmargement,
     url: 'https://emargement.zone01rouennormandie.org/',
+    external: true,
+  },
+  {
+    key: 'intra',
+    label: 'Intra',
+    icon: IconIntra,
+    url: 'https://intra.zone01rouennormandie.org/',
     external: true,
   },
 ];
 
 /** Bottom nav (config, settings) — always direct links */
 export const NAV_BOTTOM: NavApp[] = [
-  { key: 'config', label: 'Configuration', icon: FolderIcon, url: '/config', adminOnly: true },
-  { key: 'settings', label: 'Paramètres', icon: SettingsIcon, url: '/settings' },
+  { key: 'config', label: 'Configuration', icon: IconConfig, url: '/config', adminOnly: true },
+  { key: 'settings', label: 'Paramètres', icon: IconParametres, url: '/settings' },
 ];
 
 /** Check if a path matches a nav item (exact or deeper) */
