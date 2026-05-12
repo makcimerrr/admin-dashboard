@@ -20,10 +20,10 @@ import {
   X,
   ChevronRight,
   Users,
-  Loader2
 } from 'lucide-react';
 import type { Alert } from '@/lib/types/alerts';
 import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingCard } from '@/components/ui/loading-card';
 import { CheckCircle2 } from 'lucide-react';
 
 interface AlertsPanelProps {
@@ -141,13 +141,7 @@ export default function AlertsPanel({
   const hasCriticalAlerts = summary.critical > 0 || summary.high > 0;
 
   if (loading) {
-    return (
-      <Card className="border-2">
-        <CardContent className="p-6 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
-    );
+    return <LoadingCard height="md" />;
   }
 
   // Collapsed view component reused for compact and full modes

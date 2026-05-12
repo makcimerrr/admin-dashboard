@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, Save, Plus } from "lucide-react";
+import { ArrowLeft, Save, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { LoadingCard } from "@/components/ui/loading-card";
 import { toast } from "sonner";
 import { TaskEditor } from "./TaskEditor";
 
@@ -163,14 +164,7 @@ export default function TemplateEditor({ mode, id }: TemplateEditorProps) {
   if (!isNew && loadingTemplate) {
     return (
       <div className="p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Chargement du modèle</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </CardContent>
-        </Card>
+        <LoadingCard height="lg" />
       </div>
     );
   }
