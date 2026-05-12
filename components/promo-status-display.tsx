@@ -18,9 +18,24 @@ import {
   Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { trackAccent, trackDotStyle } from '@/lib/track-colors';
 
 interface PromoStatusDisplayProps {
   selectedPromo: string;
+}
+
+function percentageBadgeClass(pct: number): string {
+  if (pct >= 80)
+    return 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400';
+  if (pct >= 50)
+    return 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400';
+  return 'bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-400';
+}
+
+function percentageRingClass(pct: number): string {
+  if (pct >= 80) return 'text-emerald-500';
+  if (pct >= 50) return 'text-amber-500';
+  return 'text-red-500';
 }
 
 interface ProgressStats {
@@ -91,12 +106,6 @@ function ProgressRing({
   const circumference = radius * 2 * Math.PI;
   const offset = circumference - (percentage / 100) * circumference;
 
-  const getColor = (pct: number) => {
-    if (pct >= 80) return 'text-emerald-500';
-    if (pct >= 50) return 'text-amber-500';
-    return 'text-red-500';
-  };
-
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg className="transform -rotate-90" width={size} height={size}>
@@ -110,7 +119,7 @@ function ProgressRing({
           cy={size / 2}
         />
         <circle
-          className={cn('transition-all duration-500', getColor(percentage))}
+          className={cn('transition-all duration-500', percentageRingClass(percentage))}
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={offset}
@@ -129,29 +138,70 @@ function ProgressRing({
   );
 }
 
-// Stat item component
-function StatItem({
+// Compact tile for the "hors projet" breakdown row.
+function OffProjectTile({
+  show,
   label,
   value,
-  color,
-  icon: Icon
+  icon: Icon,
+  tone,
 }: {
+  show: boolean;
   label: string;
   value: number;
-  color: string;
   icon: React.ElementType;
+  tone: string;
 }) {
-  if (value === 0) return null;
-
+  if (!show) return null;
   return (
-    <div className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors">
-      <div className="flex items-center gap-2">
-        <div className={cn('h-2 w-2 rounded-full', color)} />
-        <span className="text-sm text-muted-foreground">{label}</span>
+    <div className={cn('p-2 rounded-lg text-center', tone)}>
+      <Icon className="h-4 w-4 mx-auto mb-1" />
+      <p className="text-lg font-bold">{value}</p>
+      <p className="text-xs opacity-80">{label}</p>
+    </div>
+  );
+}
+
+// Theme-aware track card for the multi-choice (Rust / Java) view.
+function TrackCard({
+  track,
+  project,
+  stats,
+}: {
+  track: 'Rust' | 'Java';
+  project: string | undefined;
+  stats?: { total: number; onProject: number };
+}) {
+  const accent = trackAccent(track);
+  const pct = stats ? Math.round((stats.onProject / Math.max(1, stats.total)) * 100) : 0;
+  return (
+    <div
+      className="relative overflow-hidden p-4 rounded-xl border-2"
+      style={{
+        borderColor: `color-mix(in srgb, ${accent} 30%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${accent} 6%, transparent)`,
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-1 rounded-full" style={trackDotStyle(track)} />
+          <span className="text-sm font-semibold" style={{ color: accent }}>
+            Tronc {track}
+          </span>
+        </div>
+        {stats && (
+          <ProgressRing percentage={pct} size={40} strokeWidth={3} />
+        )}
       </div>
-      <Badge variant="secondary" className="h-5 text-xs font-semibold">
-        {value}
-      </Badge>
+      <h4 className="text-lg font-bold mb-2">{project || 'N/A'}</h4>
+      {stats && (
+        <div className="space-y-2">
+          <Progress value={pct} className="h-2" />
+          <p className="text-xs text-muted-foreground">
+            {stats.onProject} / {stats.total} étudiants
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -173,19 +223,19 @@ function SinglePromoView({
   // Formation terminée
   if (typeof project === 'string' && project.toLowerCase() === 'fin') {
     return (
-      <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-        <div className="p-3 bg-emerald-500 rounded-xl shadow-lg shadow-emerald-500/20">
-          <Trophy className="h-6 w-6 text-white" />
+      <div className="flex items-center gap-4 p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/30">
+        <div className="p-3 rounded-xl bg-emerald-500/15">
+          <Trophy className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
             Formation Terminée
           </h3>
-          <p className="text-sm text-emerald-600/70 dark:text-emerald-400/70">
+          <p className="text-sm text-muted-foreground">
             Tous les projets ont été complétés avec succès
           </p>
         </div>
-        <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white">
+        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20">
           <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
           Validé
         </Badge>
@@ -199,13 +249,13 @@ function SinglePromoView({
       <div className="space-y-4">
         {/* Project header */}
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg shadow-blue-500/20">
-            <Code2 className="h-6 w-6 text-white" />
+          <div className="p-3 rounded-xl bg-primary/10">
+            <Code2 className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xl font-bold truncate">{project}</h3>
-              <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                 Projet actuel
               </Badge>
             </div>
@@ -239,19 +289,19 @@ function SinglePromoView({
 
               {/* Stats cards */}
               <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
-                <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <span className="text-xs text-emerald-600 font-medium">Sur le projet</span>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Sur le projet</span>
                   </div>
                   <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">
                     {stats.onExpectedProject}
                   </p>
                 </div>
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
                   <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <span className="text-xs text-amber-600 font-medium">Hors projet</span>
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">Hors projet</span>
                   </div>
                   <p className="text-xl font-bold text-amber-700 dark:text-amber-400 mt-1">
                     {stats.totalStudents - stats.onExpectedProject}
@@ -272,41 +322,41 @@ function SinglePromoView({
                   Répartition des étudiants hors projet
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                  {stats.offProjectStats.ahead > 0 && (
-                    <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-center">
-                      <TrendingUp className="h-4 w-4 text-blue-600 mx-auto mb-1" />
-                      <p className="text-lg font-bold text-blue-700">{stats.offProjectStats.ahead}</p>
-                      <p className="text-xs text-blue-600">En avance</p>
-                    </div>
-                  )}
-                  {stats.offProjectStats.late > 0 && (
-                    <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950/30 text-center">
-                      <TrendingDown className="h-4 w-4 text-red-600 mx-auto mb-1" />
-                      <p className="text-lg font-bold text-red-700">{stats.offProjectStats.late}</p>
-                      <p className="text-xs text-red-600">En retard</p>
-                    </div>
-                  )}
-                  {stats.offProjectStats.specialty > 0 && (
-                    <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30 text-center">
-                      <Zap className="h-4 w-4 text-orange-600 mx-auto mb-1" />
-                      <p className="text-lg font-bold text-orange-700">{stats.offProjectStats.specialty}</p>
-                      <p className="text-xs text-orange-600">Spécialité</p>
-                    </div>
-                  )}
-                  {stats.offProjectStats.validated > 0 && (
-                    <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-center">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 mx-auto mb-1" />
-                      <p className="text-lg font-bold text-emerald-700">{stats.offProjectStats.validated}</p>
-                      <p className="text-xs text-emerald-600">Validé</p>
-                    </div>
-                  )}
-                  {stats.offProjectStats.notValidated > 0 && (
-                    <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-center">
-                      <AlertCircle className="h-4 w-4 text-rose-600 mx-auto mb-1" />
-                      <p className="text-lg font-bold text-rose-700">{stats.offProjectStats.notValidated}</p>
-                      <p className="text-xs text-rose-600">Non validé</p>
-                    </div>
-                  )}
+                  <OffProjectTile
+                    show={stats.offProjectStats.ahead > 0}
+                    label="En avance"
+                    value={stats.offProjectStats.ahead}
+                    icon={TrendingUp}
+                    tone="bg-blue-500/10 text-blue-700 dark:text-blue-400"
+                  />
+                  <OffProjectTile
+                    show={stats.offProjectStats.late > 0}
+                    label="En retard"
+                    value={stats.offProjectStats.late}
+                    icon={TrendingDown}
+                    tone="bg-red-500/10 text-red-700 dark:text-red-400"
+                  />
+                  <OffProjectTile
+                    show={stats.offProjectStats.specialty > 0}
+                    label="Spécialité"
+                    value={stats.offProjectStats.specialty}
+                    icon={Zap}
+                    tone="bg-orange-500/10 text-orange-700 dark:text-orange-400"
+                  />
+                  <OffProjectTile
+                    show={stats.offProjectStats.validated > 0}
+                    label="Validé"
+                    value={stats.offProjectStats.validated}
+                    icon={CheckCircle2}
+                    tone="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  />
+                  <OffProjectTile
+                    show={stats.offProjectStats.notValidated > 0}
+                    label="Non validé"
+                    value={stats.offProjectStats.notValidated}
+                    icon={AlertCircle}
+                    tone="bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                  />
                 </div>
               </div>
             )}
@@ -322,13 +372,13 @@ function SinglePromoView({
       <div className="space-y-4">
         {/* Header */}
         <div className="flex items-start gap-4">
-          <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl shadow-lg shadow-orange-500/20">
-            <Workflow className="h-6 w-6 text-white" />
+          <div className="p-3 rounded-xl bg-primary/10">
+            <Workflow className="h-6 w-6 text-primary" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-xl font-bold">Tronc Multi-choix</h3>
-              <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
                 Rust ou Java
               </Badge>
             </div>
@@ -340,81 +390,16 @@ function SinglePromoView({
 
         {/* Track cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Rust track */}
-          <div className="relative overflow-hidden p-4 rounded-xl border-2 border-cyan-200 dark:border-cyan-800 bg-gradient-to-br from-cyan-50 to-white dark:from-cyan-950/30 dark:to-transparent">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full -mr-8 -mt-8" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-1 bg-cyan-500 rounded-full" />
-                  <span className="text-sm font-semibold text-cyan-700 dark:text-cyan-400">
-                    Tronc Rust
-                  </span>
-                </div>
-                {stats?.rustStats && (
-                  <ProgressRing
-                    percentage={Math.round(
-                      (stats.rustStats.onProject / stats.rustStats.total) * 100
-                    )}
-                    size={40}
-                    strokeWidth={3}
-                  />
-                )}
-              </div>
-              <h4 className="text-lg font-bold mb-2">{project.rust || 'N/A'}</h4>
-              {stats?.rustStats && (
-                <div className="space-y-2">
-                  <Progress
-                    value={Math.round(
-                      (stats.rustStats.onProject / stats.rustStats.total) * 100
-                    )}
-                    className="h-2"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {stats.rustStats.onProject} / {stats.rustStats.total} étudiants
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Java track */}
-          <div className="relative overflow-hidden p-4 rounded-xl border-2 border-red-200 dark:border-red-800 bg-gradient-to-br from-red-50 to-white dark:from-red-950/30 dark:to-transparent">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/10 rounded-full -mr-8 -mt-8" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-1 bg-red-500 rounded-full" />
-                  <span className="text-sm font-semibold text-red-700 dark:text-red-400">
-                    Tronc Java
-                  </span>
-                </div>
-                {stats?.javaStats && (
-                  <ProgressRing
-                    percentage={Math.round(
-                      (stats.javaStats.onProject / stats.javaStats.total) * 100
-                    )}
-                    size={40}
-                    strokeWidth={3}
-                  />
-                )}
-              </div>
-              <h4 className="text-lg font-bold mb-2">{project.java || 'N/A'}</h4>
-              {stats?.javaStats && (
-                <div className="space-y-2">
-                  <Progress
-                    value={Math.round(
-                      (stats.javaStats.onProject / stats.javaStats.total) * 100
-                    )}
-                    className="h-2"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {stats.javaStats.onProject} / {stats.javaStats.total} étudiants
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          <TrackCard
+            track="Rust"
+            project={project.rust}
+            stats={stats?.rustStats}
+          />
+          <TrackCard
+            track="Java"
+            project={project.java}
+            stats={stats?.javaStats}
+          />
         </div>
 
         {/* Global progress */}
@@ -424,14 +409,7 @@ function SinglePromoView({
               <span className="text-sm font-medium">Progression globale</span>
               <Badge
                 variant="outline"
-                className={cn(
-                  'font-bold',
-                  stats.percentage >= 80
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : stats.percentage >= 50
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-red-50 text-red-700 border-red-200'
-                )}
+                className={cn('font-bold', percentageBadgeClass(stats.percentage))}
               >
                 {stats.percentage}%
               </Badge>
@@ -483,27 +461,23 @@ function AllPromosView({
           <div
             key={promoKey}
             className={cn(
-              'flex items-center gap-4 p-3 rounded-xl border transition-all hover:shadow-md',
-              isFin && 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
+              'flex items-center gap-4 p-3 rounded-xl border transition-colors hover:bg-muted/30',
+              isFin && 'bg-emerald-500/10 border-emerald-500/30',
             )}
           >
             {/* Icon */}
             <div
               className={cn(
                 'p-2 rounded-lg',
-                isFin
-                  ? 'bg-emerald-500'
-                  : isMultiChoice
-                  ? 'bg-gradient-to-br from-orange-500 to-amber-500'
-                  : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                isFin ? 'bg-emerald-500/15' : 'bg-primary/10',
               )}
             >
               {isFin ? (
-                <Trophy className="h-5 w-5 text-white" />
+                <Trophy className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               ) : isMultiChoice ? (
-                <Workflow className="h-5 w-5 text-white" />
+                <Workflow className="h-5 w-5 text-primary" />
               ) : (
-                <Code2 className="h-5 w-5 text-white" />
+                <Code2 className="h-5 w-5 text-primary" />
               )}
             </div>
 
@@ -515,16 +489,22 @@ function AllPromosView({
             {/* Project info */}
             <div className="flex-1 min-w-0">
               {isFin ? (
-                <span className="text-sm font-medium text-emerald-600">
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
                   Formation Terminée
                 </span>
               ) : isMultiChoice ? (
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="text-cyan-600 font-medium truncate">
+                  <span
+                    className="font-medium truncate"
+                    style={{ color: trackAccent('Rust') }}
+                  >
                     {project.rust}
                   </span>
                   <span className="text-muted-foreground">/</span>
-                  <span className="text-red-600 font-medium truncate">
+                  <span
+                    className="font-medium truncate"
+                    style={{ color: trackAccent('Java') }}
+                  >
                     {project.java}
                   </span>
                 </div>
@@ -556,14 +536,10 @@ function AllPromosView({
               className={cn(
                 'shrink-0 w-14 justify-center font-bold',
                 isFin
-                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
                   : stats
-                  ? stats.percentage >= 80
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : stats.percentage >= 50
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-red-50 text-red-700 border-red-200'
-                  : 'bg-muted text-muted-foreground'
+                    ? percentageBadgeClass(stats.percentage)
+                    : 'bg-muted text-muted-foreground',
               )}
             >
               {isFin ? '100%' : stats ? `${stats.percentage}%` : '-'}

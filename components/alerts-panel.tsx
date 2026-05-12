@@ -23,6 +23,8 @@ import {
   Loader2
 } from 'lucide-react';
 import type { Alert } from '@/lib/types/alerts';
+import { EmptyState } from '@/components/ui/empty-state';
+import { CheckCircle2 } from 'lucide-react';
 
 interface AlertsPanelProps {
   promoFilter?: string;
@@ -350,13 +352,13 @@ export default function AlertsPanel({
             {visibleAlerts.map((alert) => (
               <div
                 key={alert.id}
-                className={`flex items-start gap-4 p-4 rounded-lg border-2 ${
+                className={`flex items-start gap-4 p-4 rounded-lg border-2 transition-colors group hover:bg-muted/30 ${
                   alert.severity === 'critical'
-                    ? 'bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-900'
+                    ? 'bg-red-500/10 border-red-500/30'
                     : alert.severity === 'high'
-                      ? 'bg-orange-50/50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-900'
+                      ? 'bg-orange-500/10 border-orange-500/30'
                       : 'bg-muted/30 border-border'
-                } group hover:shadow-md transition-all`}
+                }`}
               >
                 <div className="pt-0.5">{getAlertIcon(alert.type)}</div>
                 <div className="flex-1 space-y-1">
@@ -430,13 +432,11 @@ export default function AlertsPanel({
             ))}
           </div>
         ) : (
-          <div className="text-center p-12">
-            <Bell className="h-12 w-12 mx-auto text-green-500 mb-4" />
-            <p className="text-lg font-medium">Aucune alerte !</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Tous les étudiants progressent normalement
-            </p>
-          </div>
+          <EmptyState
+            icon={CheckCircle2}
+            title="Aucune alerte"
+            description="Tous les étudiants progressent normalement"
+          />
         )}
       </CardContent>
     </Card>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, BarChart3, AlertCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts';
 
 import {
@@ -20,6 +20,8 @@ import {
   ChartTooltip,
   ChartTooltipContent
 } from '@/components/ui/chart';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingCard } from '@/components/ui/loading-card';
 import * as React from 'react';
 
 // Fonction pour transformer la date en mois (par exemple "2025-01-01" devient "January")
@@ -111,31 +113,29 @@ export default function Component({ title, eventID, keyPromo }: BarChartProps) {
   }, []);
 
   if (loading) {
-    return (
-      <Card className="flex items-center justify-center h-64">
-        <p className="text-lg font-medium text-muted-foreground animate-pulse">
-          Chargement des données...
-        </p>
-      </Card>
-    );
+    return <LoadingCard height="lg" />;
   }
 
   if (error) {
     return (
-      <Card className="flex items-center justify-center h-64">
-        <p className="text-lg font-medium text-red-500">
-          Erreur : {error}. Veuillez réessayer.
-        </p>
+      <Card>
+        <EmptyState
+          icon={AlertCircle}
+          title="Impossible de charger les données"
+          description={`${error}. Veuillez réessayer.`}
+        />
       </Card>
     );
   }
 
   if (chartData.length === 0) {
     return (
-      <Card className="flex items-center justify-center h-64">
-        <p className="text-lg font-medium text-muted-foreground">
-          Aucune donnée disponible pour la promotion spécifiée.
-        </p>
+      <Card>
+        <EmptyState
+          icon={BarChart3}
+          title="Aucune donnée"
+          description="Aucune donnée disponible pour la promotion spécifiée."
+        />
       </Card>
     );
   }
