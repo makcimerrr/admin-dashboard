@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { trackDotStyle, trackChipStyle } from '@/lib/track-colors';
+import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,6 +101,44 @@ interface GroupsTableProps {
     pendingGroups: number;
     byTrack: Record<Track, { total: number; audited: number }>;
   };
+}
+
+// Shared tone palettes — keep one source of truth for the status colors that
+// appear on stat tiles, row backgrounds, and pills. Each tone uses
+// `color/15` style alpha tints so contrast holds in both light + dark themes.
+type Tone = 'emerald' | 'amber' | 'rose' | 'red' | 'blue' | 'orange';
+
+const TONE_TILE: Record<Tone, string> = {
+  emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  amber: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  rose: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400',
+  red: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400',
+  blue: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  orange: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400',
+};
+
+const TONE_PILL: Record<Tone, string> = {
+  emerald: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400',
+  amber: 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400',
+  rose: 'bg-rose-500/15 text-rose-700 border-rose-500/30 dark:text-rose-400',
+  red: 'bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-400',
+  blue: 'bg-blue-500/15 text-blue-700 border-blue-500/30 dark:text-blue-400',
+  orange: 'bg-orange-500/15 text-orange-700 border-orange-500/30 dark:text-orange-400',
+};
+
+const TONE_ROW: Record<Tone, string> = {
+  emerald: 'bg-emerald-500/5 hover:bg-emerald-500/10',
+  amber: 'bg-amber-500/5 hover:bg-amber-500/10',
+  rose: 'bg-rose-500/5 hover:bg-rose-500/10',
+  red: 'bg-red-500/5 hover:bg-red-500/10',
+  blue: 'bg-blue-500/5 hover:bg-blue-500/10',
+  orange: 'bg-orange-500/5 hover:bg-orange-500/10',
+};
+
+function priorityTone(p: 'urgent' | 'warning' | 'normal'): Tone {
+  if (p === 'urgent') return 'rose';
+  if (p === 'warning') return 'amber';
+  return 'emerald';
 }
 
 function SortButton({
@@ -264,26 +303,26 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
           </div>
           <p className="text-2xl font-bold mt-1">{stats.totalGroups}</p>
         </div>
-        <div className="p-3 rounded-lg border border-green-200 bg-green-50">
+        <div className={cn('p-3 rounded-lg border', TONE_TILE.emerald)}>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-green-600">Audités</span>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <span className="text-xs">Audités</span>
+            <CheckCircle2 className="h-4 w-4" />
           </div>
-          <p className="text-2xl font-bold mt-1 text-green-700">{stats.auditedGroups}</p>
+          <p className="text-2xl font-bold mt-1">{stats.auditedGroups}</p>
         </div>
-        <div className="p-3 rounded-lg border border-amber-200 bg-amber-50">
+        <div className={cn('p-3 rounded-lg border', TONE_TILE.amber)}>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-amber-600">En attente</span>
-            <Clock className="h-4 w-4 text-amber-600" />
+            <span className="text-xs">En attente</span>
+            <Clock className="h-4 w-4" />
           </div>
-          <p className="text-2xl font-bold mt-1 text-amber-700">{stats.pendingGroups}</p>
+          <p className="text-2xl font-bold mt-1">{stats.pendingGroups}</p>
         </div>
-        <div className="p-3 rounded-lg border border-red-200 bg-red-50">
+        <div className={cn('p-3 rounded-lg border', TONE_TILE.red)}>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-red-600">Warnings</span>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <span className="text-xs">Warnings</span>
+            <AlertTriangle className="h-4 w-4" />
           </div>
-          <p className="text-2xl font-bold mt-1 text-red-700">{withWarnings}</p>
+          <p className="text-2xl font-bold mt-1">{withWarnings}</p>
         </div>
         <div className="p-3 rounded-lg border bg-card">
           <div className="flex items-center justify-between">
@@ -441,28 +480,27 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                   ? Math.round((group.validatedCount / group.activeMembers) * 100)
                   : null;
 
+                const rowTone: Tone | null =
+                  group.isAudited && (group.priority === 'urgent' || group.priority === 'warning')
+                    ? priorityTone(group.priority)
+                    : null;
                 return (
                   <TableRow
                     key={`${group.track}-${group.projectName}-${group.groupId}-${idx}`}
-                    className={`transition-colors ${
-                      group.isAudited
-                        ? group.priority === 'urgent'
-                          ? 'bg-rose-50/50 hover:bg-rose-100/60'
-                          : group.priority === 'warning'
-                            ? 'bg-amber-50/50 hover:bg-amber-100/60'
-                            : 'hover:bg-muted/50'
-                        : 'hover:bg-muted/50'
-                    }`}
+                    className={cn(
+                      'transition-colors',
+                      rowTone ? TONE_ROW[rowTone] : 'hover:bg-muted/50',
+                    )}
                   >
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         {group.isAudited ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Badge variant="outline" className={TONE_PILL.emerald}>
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Audité
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                          <Badge variant="outline" className={TONE_PILL.amber}>
                             <Clock className="h-3 w-3 mr-1" />
                             Attente
                           </Badge>
@@ -532,10 +570,10 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                           variant="outline"
                           className={
                             validationRate >= 80
-                              ? 'bg-green-50 text-green-700 border-green-200'
+                              ? TONE_PILL.emerald
                               : validationRate >= 50
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : 'bg-red-50 text-red-700 border-red-200'
+                                ? TONE_PILL.blue
+                                : TONE_PILL.red
                           }
                         >
                           {group.validatedCount}/{group.activeMembers}
@@ -547,17 +585,17 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                     <TableCell>
                       {group.isAudited ? (
                         group.priority === 'urgent' ? (
-                          <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200">
+                          <Badge variant="outline" className={TONE_PILL.rose}>
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             Urgent
                           </Badge>
                         ) : group.priority === 'warning' ? (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                          <Badge variant="outline" className={TONE_PILL.amber}>
                             <Flag className="h-3 w-3 mr-1" />
                             Warning
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200">
+                          <Badge variant="outline" className={TONE_PILL.emerald}>
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             OK
                           </Badge>
@@ -569,32 +607,38 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                               {(() => {
                                 const effectivePriority = getEffectivePriority(group);
                                 const isManual = !!manualPriorities[group.groupId];
+                                const manualBoost = isManual ? 'ring-1 ring-current/30' : '';
                                 if (effectivePriority === 'urgent') {
                                   return (
-                                    <Badge variant="outline" className={`cursor-help ${isManual ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                                    <Badge variant="outline" className={cn('cursor-help', TONE_PILL.rose, manualBoost)}>
                                       <AlertTriangle className="h-3 w-3 mr-1" />
                                       Urgent{isManual ? '*' : ''}
                                     </Badge>
                                   );
                                 } else if (effectivePriority === 'warning') {
                                   return (
-                                    <Badge variant="outline" className={`cursor-help ${isManual ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                    <Badge variant="outline" className={cn('cursor-help', TONE_PILL.amber, manualBoost)}>
                                       <Flag className="h-3 w-3 mr-1" />
                                       Warning{isManual ? '*' : ''}
                                     </Badge>
                                   );
-                                } else {
-                                  return (
-                                    <Badge variant="outline" className={`cursor-help ${isManual ? 'bg-gray-100 text-gray-700 border-gray-300' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-                                      Normal{isManual ? '*' : ''}
-                                    </Badge>
-                                  );
                                 }
+                                return (
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      'cursor-help bg-muted text-muted-foreground border-border',
+                                      manualBoost,
+                                    )}
+                                  >
+                                    Normal{isManual ? '*' : ''}
+                                  </Badge>
+                                );
                               })()}
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
                               {manualPriorities[group.groupId] && (
-                                <p className="text-xs text-blue-600 mb-1">* Priorité manuelle</p>
+                                <p className="text-xs text-primary mb-1">* Priorité manuelle</p>
                               )}
                               <p className="font-medium mb-1">Score auto: {group.priorityScore ?? 0}</p>
                               {group.priorityReasons && group.priorityReasons.length > 0 ? (
@@ -716,7 +760,7 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
           <span>peu d'audits précédents</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-blue-600">*</span>
+          <span className="text-primary">*</span>
           <span>priorité manuelle</span>
         </div>
         <div className="flex items-center gap-1.5">

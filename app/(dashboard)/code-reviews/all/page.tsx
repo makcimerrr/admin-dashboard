@@ -85,6 +85,7 @@ import {
   PendingGroupsTableSkeleton
 } from '@/components/code-reviews/skeletons';
 import { trackDotStyle, trackChipStyle } from '@/lib/track-colors';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type Track = 'Golang' | 'Javascript' | 'Rust' | 'Java';
 type SortField =
@@ -147,6 +148,22 @@ interface PendingGroup {
 // Track colors moved to @/lib/track-colors (theme-aware CSS chart vars).
 // Use `trackDotStyle()` for a solid dot or `trackChipStyle()` for the
 // badge fill / text / border inline styles.
+
+// Shared status pill palette (alpha-tinted so it works in both themes).
+const PILL = {
+  emerald: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400',
+  amber: 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400',
+  rose: 'bg-rose-500/15 text-rose-700 border-rose-500/30 dark:text-rose-400',
+  red: 'bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-400',
+  blue: 'bg-blue-500/15 text-blue-700 border-blue-500/30 dark:text-blue-400',
+  orange: 'bg-orange-500/15 text-orange-700 border-orange-500/30 dark:text-orange-400',
+} as const;
+
+function validationPill(rate: number): string {
+  if (rate >= 80) return PILL.emerald;
+  if (rate >= 50) return PILL.blue;
+  return PILL.red;
+}
 
 function SortButton({
   field,
@@ -225,10 +242,10 @@ function MembersList({
                   variant="outline"
                   className={`text-xs font-mono ${
                     m.hasWarnings
-                      ? 'bg-amber-50 border-amber-300 text-amber-800'
+                      ? PILL.amber
                       : m.validated
-                        ? 'bg-green-50 border-green-300 text-green-800'
-                        : 'bg-red-50 border-red-300 text-red-800'
+                        ? PILL.emerald
+                        : PILL.red
                   }`}
                 >
                   {m.hasWarnings && (
@@ -811,8 +828,8 @@ export default function AllAuditsPage() {
           </Button>
           <h1 className="text-xl md:text-2xl font-bold">Erreur</h1>
         </div>
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-6 text-red-700">{error}</CardContent>
+        <Card className="border-red-500/30 bg-red-500/10">
+          <CardContent className="p-6 text-red-700 dark:text-red-400">{error}</CardContent>
         </Card>
       </div>
     );
@@ -979,54 +996,48 @@ export default function AllAuditsPage() {
           </div>
           <p className="text-2xl font-bold mt-1">{completedStats.total}</p>
         </Card>
-        <Card className="p-3 border-blue-200 bg-blue-50">
+        <Card className="p-3 border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-blue-600">En attente</span>
-            <Hourglass className="h-4 w-4 text-blue-600" />
+            <span className="text-xs">En attente</span>
+            <Hourglass className="h-4 w-4" />
           </div>
           {loadingPending ? (
             <div className="mt-1">
-              <div className="h-8 w-20 bg-blue-100 rounded animate-pulse" />
+              <div className="h-8 w-20 bg-blue-500/20 rounded animate-pulse" />
             </div>
           ) : (
-            <p className="text-2xl font-bold mt-1 text-blue-700">
-              {filteredPendingStats.total}
-            </p>
+            <p className="text-2xl font-bold mt-1">{filteredPendingStats.total}</p>
           )}
         </Card>
-        <Card className="p-3 border-rose-200 bg-rose-50">
+        <Card className="p-3 border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-rose-600">Urgent</span>
-            <AlertTriangle className="h-4 w-4 text-rose-600" />
+            <span className="text-xs">Urgent</span>
+            <AlertTriangle className="h-4 w-4" />
           </div>
-          <p className="text-2xl font-bold mt-1 text-rose-700">
+          <p className="text-2xl font-bold mt-1">
             {completedStats.urgent + filteredPendingStats.urgent}
           </p>
         </Card>
-        <Card className="p-3 border-amber-200 bg-amber-50">
+        <Card className="p-3 border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-amber-600">Warnings</span>
-            <FileWarning className="h-4 w-4 text-amber-600" />
+            <span className="text-xs">Warnings</span>
+            <FileWarning className="h-4 w-4" />
           </div>
-          <p className="text-2xl font-bold mt-1 text-amber-700">
-            {completedStats.totalWarnings}
-          </p>
+          <p className="text-2xl font-bold mt-1">{completedStats.totalWarnings}</p>
         </Card>
-        <Card className="p-3 border-green-200 bg-green-50">
+        <Card className="p-3 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-green-600">Validés</span>
-            <UserCheck className="h-4 w-4 text-green-600" />
+            <span className="text-xs">Validés</span>
+            <UserCheck className="h-4 w-4" />
           </div>
-          <p className="text-2xl font-bold mt-1 text-green-700">
-            {completedStats.validatedStudents}
-          </p>
+          <p className="text-2xl font-bold mt-1">{completedStats.validatedStudents}</p>
         </Card>
-        <Card className="p-3 border-red-200 bg-red-50">
+        <Card className="p-3 border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-red-600">Non validés</span>
-            <UserX className="h-4 w-4 text-red-600" />
+            <span className="text-xs">Non validés</span>
+            <UserX className="h-4 w-4" />
           </div>
-          <p className="text-2xl font-bold mt-1 text-red-700">
+          <p className="text-2xl font-bold mt-1">
             {completedStats.totalResults - completedStats.validatedStudents}
           </p>
         </Card>
@@ -1309,12 +1320,12 @@ export default function AllAuditsPage() {
               <TableBody>
                 {filteredAndSortedAudits.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={9}
-                      className="text-center py-12 text-muted-foreground"
-                    >
-                      <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      <p>Aucun audit trouvé</p>
+                    <TableCell colSpan={9} className="p-0">
+                      <EmptyState
+                        icon={Search}
+                        title="Aucun audit trouvé"
+                        description="Aucun audit ne correspond aux filtres actuels."
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1346,11 +1357,11 @@ export default function AllAuditsPage() {
                         key={audit.id}
                         className={`transition-colors ${
                           audit.hasWarnings
-                            ? 'bg-amber-50/50 hover:bg-amber-100/60'
+                            ? 'bg-amber-500/5 hover:bg-amber-500/10'
                             : audit.priority === 'urgent'
-                              ? 'bg-rose-50/50 hover:bg-rose-100/60'
+                              ? 'bg-rose-500/5 hover:bg-rose-500/10'
                               : audit.priority === 'warning'
-                                ? 'bg-orange-50/50 hover:bg-orange-100/60'
+                                ? 'bg-orange-500/5 hover:bg-orange-500/10'
                                 : 'hover:bg-muted/50'
                         }`}
                       >
@@ -1422,47 +1433,29 @@ export default function AllAuditsPage() {
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={
-                              validationRate >= 80
-                                ? 'bg-green-50 text-green-700 border-green-200'
-                                : validationRate >= 50
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                  : 'bg-red-50 text-red-700 border-red-200'
-                            }
+                            className={validationPill(validationRate)}
                           >
                             {audit.validatedCount}/{audit.totalMembers}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           {audit.hasWarnings ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-amber-50 text-amber-700 border-amber-200"
-                            >
+                            <Badge variant="outline" className={PILL.amber}>
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               {audit.warningsCount}W
                             </Badge>
                           ) : audit.priority === 'urgent' ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-rose-50 text-rose-700 border-rose-200"
-                            >
+                            <Badge variant="outline" className={PILL.rose}>
                               <AlertCircle className="h-3 w-3 mr-1" />
                               Urgent
                             </Badge>
                           ) : audit.priority === 'warning' ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-orange-50 text-orange-700 border-orange-200"
-                            >
+                            <Badge variant="outline" className={PILL.orange}>
                               <Flag className="h-3 w-3 mr-1" />
                               Warning
                             </Badge>
                           ) : (
-                            <Badge
-                              variant="outline"
-                              className="bg-green-50 text-green-600 border-green-200"
-                            >
+                            <Badge variant="outline" className={PILL.emerald}>
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               OK
                             </Badge>
@@ -1523,16 +1516,12 @@ export default function AllAuditsPage() {
           {loadingPending ? (
             <PendingGroupsTableSkeleton rows={8} />
           ) : filteredPendingGroups.length === 0 ? (
-            <Card className="border-green-200 bg-green-50">
-              <CardContent className="py-12 text-center">
-                <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                <h3 className="text-lg font-semibold text-green-800">
-                  Tous les groupes ont été audités
-                </h3>
-                <p className="text-green-700 mt-1">
-                  Aucun groupe terminé en attente d'audit
-                </p>
-              </CardContent>
+            <Card className="border-emerald-500/30 bg-emerald-500/10">
+              <EmptyState
+                icon={CheckCircle2}
+                title="Tous les groupes ont été audités"
+                description="Aucun groupe terminé en attente d'audit."
+              />
             </Card>
           ) : (
             <div className="rounded-lg border overflow-hidden">
@@ -1624,9 +1613,9 @@ export default function AllAuditsPage() {
                         key={`${group.promoId}-${group.groupId}`}
                         className={`transition-colors ${
                           group.priority === 'urgent'
-                            ? 'bg-rose-50/50 hover:bg-rose-100/60'
+                            ? 'bg-rose-500/5 hover:bg-rose-500/10'
                             : group.priority === 'warning'
-                              ? 'bg-amber-50/50 hover:bg-amber-100/60'
+                              ? 'bg-amber-500/5 hover:bg-amber-500/10'
                               : 'hover:bg-muted/50'
                         }`}
                       >
@@ -1705,7 +1694,7 @@ export default function AllAuditsPage() {
                                   {group.membersNeverAudited > 0 && (
                                     <Badge
                                       variant="outline"
-                                      className="text-xs bg-rose-50 text-rose-700 border-rose-200"
+                                      className={`text-xs ${PILL.rose}`}
                                     >
                                       {group.membersNeverAudited} jamais audités
                                     </Badge>
@@ -1727,25 +1716,16 @@ export default function AllAuditsPage() {
                         </TableCell>
                         <TableCell>
                           {group.priority === 'urgent' ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-rose-50 text-rose-700 border-rose-200"
-                            >
+                            <Badge variant="outline" className={PILL.rose}>
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               Urgent
                             </Badge>
                           ) : group.priority === 'warning' ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-amber-50 text-amber-700 border-amber-200"
-                            >
+                            <Badge variant="outline" className={PILL.amber}>
                               <Flag className="h-3 w-3 mr-1" />À traiter
                             </Badge>
                           ) : (
-                            <Badge
-                              variant="outline"
-                              className="bg-blue-50 text-blue-600 border-blue-200"
-                            >
+                            <Badge variant="outline" className={PILL.blue}>
                               <Clock className="h-3 w-3 mr-1" />
                               Récent
                             </Badge>
