@@ -759,7 +759,7 @@ export default function AllAuditsPage() {
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
-            <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
+            <div className="p-3 bg-primary/10 rounded-xl">
               <ClipboardCheck className="h-6 w-6 text-primary" />
             </div>
             <div>
@@ -831,7 +831,7 @@ export default function AllAuditsPage() {
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
+          <div className="p-3 bg-primary/10 rounded-xl">
             <ClipboardCheck className="h-6 w-6 text-primary" />
           </div>
           <div>
@@ -912,23 +912,21 @@ export default function AllAuditsPage() {
       {(completedStats.totalWarnings > 0 || filteredPendingStats.urgent > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {completedStats.totalWarnings > 0 && (
-            <Card className="border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50">
+            <Card className="border-amber-500/30 bg-amber-500/10">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg">
-                    <MessageSquareWarning className="h-5 w-5 text-amber-600" />
+                  <div className="p-2 bg-amber-500/15 rounded-lg">
+                    <MessageSquareWarning className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-amber-800">
-                      Warnings détectés
-                    </h3>
-                    <p className="text-sm text-amber-700">
+                  <div className="flex-1 text-amber-700 dark:text-amber-400">
+                    <h3 className="font-semibold">Warnings détectés</h3>
+                    <p className="text-sm">
                       {completedStats.totalWarnings} warning(s) dans{' '}
                       {completedStats.withWarnings} audit(s)
                     </p>
                     <Button
                       variant="link"
-                      className="h-auto p-0 text-amber-700"
+                      className="h-auto p-0 text-amber-700 dark:text-amber-400"
                       onClick={() => {
                         setWarningsFilter('with');
                         setActiveTab('completed');
@@ -942,22 +940,20 @@ export default function AllAuditsPage() {
             </Card>
           )}
           {filteredPendingStats.urgent > 0 && (
-            <Card className="border-red-300 bg-gradient-to-r from-red-50 to-rose-50">
+            <Card className="border-red-500/30 bg-red-500/10">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <Hourglass className="h-5 w-5 text-red-600" />
+                  <div className="p-2 bg-red-500/15 rounded-lg">
+                    <Hourglass className="h-5 w-5 text-red-600 dark:text-red-400" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-800">
-                      Audits urgents en attente
-                    </h3>
-                    <p className="text-sm text-red-700">
+                  <div className="flex-1 text-red-700 dark:text-red-400">
+                    <h3 className="font-semibold">Audits urgents en attente</h3>
+                    <p className="text-sm">
                       {filteredPendingStats.urgent} groupe(s) marqués comme urgents (score ≥ 50)
                     </p>
                     <Button
                       variant="link"
-                      className="h-auto p-0 text-red-700"
+                      className="h-auto p-0 text-red-700 dark:text-red-400"
                       onClick={() => {
                         setPriorityFilter('urgent');
                         setActiveTab('pending');

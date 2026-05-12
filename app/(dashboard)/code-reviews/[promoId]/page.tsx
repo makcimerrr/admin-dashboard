@@ -359,7 +359,7 @@ export default async function PromoCodeReviewsPage({ params }: PageProps) {
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
-          <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
+          <div className="p-3 bg-primary/10 rounded-xl">
             <ClipboardCheck className="h-6 w-6 text-primary" />
           </div>
           <div>

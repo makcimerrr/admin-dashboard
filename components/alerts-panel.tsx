@@ -160,7 +160,7 @@ export default function AlertsPanel({
       <div className="flex items-center gap-3">
         <div className="p-1">
           {hasCriticalAlerts ? (
-            <BellRing className="h-5 w-5 text-red-600 animate-pulse" />
+            <BellRing className="h-5 w-5 text-red-600 dark:text-red-400 animate-pulse" />
           ) : (
             <Bell className="h-5 w-5 text-muted-foreground" />
           )}
@@ -211,7 +211,7 @@ export default function AlertsPanel({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {hasCriticalAlerts ? (
-                <BellRing className="h-5 w-5 text-red-600 animate-pulse" />
+                <BellRing className="h-5 w-5 text-red-600 dark:text-red-400 animate-pulse" />
               ) : (
                 <Bell className="h-5 w-5 text-muted-foreground" />
               )}
@@ -303,12 +303,12 @@ export default function AlertsPanel({
     <Card
       className={`border-2 ${hasCriticalAlerts ? 'border-red-500/50 shadow-xl shadow-red-500/20' : ''}`}
     >
-      <CardHeader className="bg-gradient-to-r from-red-50/50 to-orange-50/50 dark:from-red-950/20 dark:to-orange-950/20">
+      <CardHeader className={hasCriticalAlerts ? 'bg-red-500/5' : ''}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-500/10 rounded-lg">
               {hasCriticalAlerts ? (
-                <BellRing className="h-6 w-6 text-red-600 animate-pulse" />
+                <BellRing className="h-6 w-6 text-red-600 dark:text-red-400 animate-pulse" />
               ) : (
                 <Bell className="h-6 w-6 text-muted-foreground" />
               )}

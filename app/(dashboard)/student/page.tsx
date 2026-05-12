@@ -471,13 +471,13 @@ export default function StudentPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-950/20 dark:to-indigo-950/20">
+        <Card className="border-2 bg-blue-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Progression</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600" />
+            <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {completedTracks}/{totalTracksToDisplay}
             </div>
             <p className="text-xs text-muted-foreground">Troncs complétés</p>
@@ -552,7 +552,9 @@ export default function StudentPage() {
                     <span className="text-sm text-muted-foreground">Complétion</span>
                     <span
                       className={`text-sm font-medium ${
-                        track.completed ? 'text-green-600' : 'text-orange-600'
+                        track.completed
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-orange-600 dark:text-orange-400'
                       }`}
                     >
                       {track.completed ? 'Complété' : 'En cours'}
@@ -696,7 +698,7 @@ export default function StudentPage() {
       <StudentAudits studentId={student.id} />
 
       {/* Alternant Section */}
-      <Card className="border-2 bg-gradient-to-br from-orange-50/50 to-amber-50/50 dark:from-orange-950/20 dark:to-amber-950/20">
+      <Card className="border-2 bg-orange-500/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Briefcase className="h-5 w-5" />
@@ -777,7 +779,7 @@ export default function StudentPage() {
       </Card>
 
       {/* Contact Actions */}
-      <Card className="border-2 bg-gradient-to-br from-purple-50/50 to-pink-50/50 dark:from-purple-950/20 dark:to-pink-950/20">
+      <Card className="border-2 bg-violet-500/5">
         <CardHeader>
           <CardTitle>Actions</CardTitle>
           <CardDescription>

@@ -28,7 +28,7 @@ export function PageHeader({
       )}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="p-1.5 sm:p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg sm:rounded-xl shrink-0">
+          <div className="p-1.5 sm:p-3 bg-primary/10 rounded-lg sm:rounded-xl shrink-0">
             <Icon className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
           </div>
           <div className="min-w-0">

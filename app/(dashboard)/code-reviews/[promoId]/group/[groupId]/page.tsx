@@ -160,7 +160,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
           </Button>
 
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
+            <div className="p-3 rounded-xl bg-primary/10">
               <Users className="h-6 w-6 text-primary" />
             </div>
             <div>

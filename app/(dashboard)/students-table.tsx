@@ -168,7 +168,7 @@ export function StudentsTable({
           <CollapsibleTrigger asChild>
             <button className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
               <div className="flex items-center gap-4">
-                <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl group-hover:from-primary/30 group-hover:to-primary/20 transition-colors">
+                <div className="p-2.5 bg-primary/10 rounded-xl group-hover:bg-primary/15 transition-colors">
                   <Target className="h-5 w-5 text-primary" />
                 </div>
                 <div className="text-left">

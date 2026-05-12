@@ -221,7 +221,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                             <ArrowLeft className="h-5 w-5" />
                         </Link>
                     </Button>
-                    <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl">
+                    <div className="p-3 bg-primary/10 rounded-xl">
                         <ClipboardCheck className="h-6 w-6 text-primary" />
                     </div>
                     <div>
@@ -320,7 +320,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                             ) : (
                                                 <User className="h-4 w-4" />
                                             )}
-                                            <span className={`font-medium ${result.absent ? 'text-orange-600' : ''}`}>{result.login}</span>
+                                            <span className={`font-medium ${result.absent ? 'text-orange-600 dark:text-orange-400' : ''}`}>{result.login}</span>
                                             {groupData?.captainLogin && result.login === groupData.captainLogin && (
                                                 <Crown className="h-3.5 w-3.5 text-amber-500" />
                                             )}
@@ -332,7 +332,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="flex items-center gap-2">
-                                                <Label htmlFor={`absent-${result.login}`} className={`text-sm ${result.absent ? 'text-orange-600 font-medium' : ''}`}>
+                                                <Label htmlFor={`absent-${result.login}`} className={`text-sm ${result.absent ? 'text-orange-600 dark:text-orange-400 font-medium' : ''}`}>
                                                     {result.absent ? 'Absent' : 'Présent'}
                                                 </Label>
                                                 <Switch
