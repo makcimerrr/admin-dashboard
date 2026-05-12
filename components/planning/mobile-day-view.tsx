@@ -4,8 +4,9 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronLeft, ChevronRight, Coffee } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Coffee, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { EmptyState } from '@/components/ui/empty-state';
 import type { Employee } from '@/lib/db/schema/employees';
 import type { TimeSlot } from '@/lib/db/schema/schedules';
 import { formatDate } from '@/lib/db/utils';
@@ -186,7 +187,7 @@ export function MobileDayView({
           onTouchEnd={onTouchEnd}
         >
           {sortedEmployees.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-8">Aucun employé</p>
+            <EmptyState icon={Users} title="Aucun employé" size="compact" />
           ) : (
             sortedEmployees.map((emp) => {
               const slots = getEmployeeScheduleForDay(emp.id, day);

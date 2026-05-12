@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Event {
   id: string;
@@ -84,18 +85,18 @@ export default function EventsPage() {
           ))}
         </div>
       ) : events.length === 0 ? (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Aucun événement pour le moment</h3>
-            <p className="text-muted-foreground mb-4">
-              Créez votre premier événement pour commencer
-            </p>
-            <Button onClick={() => router.push("/word_assistant/events/new")}>
-              <Plus className="mr-2 h-4 w-4" />
-              Créer un événement
-            </Button>
-          </CardContent>
+        <Card>
+          <EmptyState
+            icon={Calendar}
+            title="Aucun événement pour le moment"
+            description="Créez votre premier événement pour commencer"
+            action={
+              <Button onClick={() => router.push("/word_assistant/events/new")}>
+                <Plus className="mr-2 h-4 w-4" />
+                Créer un événement
+              </Button>
+            }
+          />
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

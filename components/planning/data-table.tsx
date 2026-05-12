@@ -1,4 +1,5 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { EmptyState } from "@/components/ui/empty-state"
 import { ReactNode } from "react"
 
 interface Column<T> {
@@ -41,8 +42,8 @@ export function DataTable<T extends Record<string, any>>({
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="text-center text-muted-foreground py-8">
-                {emptyMessage}
+              <TableCell colSpan={columns.length} className="p-0">
+                <EmptyState title={emptyMessage} size="compact" />
               </TableCell>
             </TableRow>
           ) : (

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { trackDotStyle, trackChipStyle } from '@/lib/track-colors';
 import { cn } from '@/lib/utils';
 import { PILL as TONE_PILL, ROW as TONE_ROW, TILE as TONE_TILE, type Tone } from '@/lib/status-pills';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -438,9 +439,8 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
           <TableBody>
             {filteredAndSortedGroups.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
-                  <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p>Aucun groupe trouvé</p>
+                <TableCell colSpan={9} className="p-0">
+                  <EmptyState icon={Search} title="Aucun groupe trouvé" />
                 </TableCell>
               </TableRow>
             ) : (

@@ -10,6 +10,7 @@ import { fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Assignment {
   id: string;
@@ -212,12 +213,12 @@ export default function EventTimeline({ eventId }: EventTimelineProps) {
         })}
 
         {sortedEventTasks.length === 0 && (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Aucune tâche dans le calendrier</h3>
-              <p className="text-muted-foreground">Ce modèle n'a pas encore de tâches configurées.</p>
-            </CardContent>
+          <Card>
+            <EmptyState
+              icon={Calendar}
+              title="Aucune tâche dans le calendrier"
+              description="Ce modèle n'a pas encore de tâches configurées."
+            />
           </Card>
         )}
       </div>
