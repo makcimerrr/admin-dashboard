@@ -212,7 +212,7 @@ export function AuditForm({
                                     <button
                                         type="button"
                                         onClick={() => removeGlobalWarning(index)}
-                                        className="ml-1 p-0.5 hover:bg-amber-200 rounded"
+                                        className="ml-1 p-0.5 hover:bg-amber-500/20 rounded"
                                     >
                                         <X className="h-3 w-3" />
                                     </button>
@@ -321,7 +321,9 @@ function StudentResultCard({
                                     />
                                     <span
                                         className={
-                                            field.value ? 'text-orange-600 font-medium' : 'text-muted-foreground'
+                                            field.value
+                                                ? 'text-orange-600 dark:text-orange-400 font-medium'
+                                                : 'text-muted-foreground'
                                         }
                                     >
                                         {field.value ? (
@@ -348,7 +350,9 @@ function StudentResultCard({
                                         className={
                                             result.absent
                                                 ? 'text-muted-foreground/50'
-                                                : field.value ? 'text-green-600 font-medium' : 'text-muted-foreground'
+                                                : field.value
+                                                  ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                                                  : 'text-muted-foreground'
                                         }
                                     >
                                         {field.value ? 'Validé' : 'Non validé'}
@@ -421,7 +425,7 @@ function StudentResultCard({
                                     <button
                                         type="button"
                                         onClick={() => onRemoveWarning(wIndex)}
-                                        className="ml-1 p-0.5 hover:bg-amber-200 rounded"
+                                        className="ml-1 p-0.5 hover:bg-amber-500/20 rounded"
                                     >
                                         <X className="h-3 w-3" />
                                     </button>

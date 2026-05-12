@@ -34,6 +34,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { PILL } from '@/lib/status-pills';
+import { LoadingCard } from '@/components/ui/loading-card';
 import { StudentAudits } from '@/components/student-audits';
 import { StudentPendingAudits } from '@/components/student-pending-audits';
 
@@ -280,11 +281,7 @@ export default function StudentPage() {
     return (
       <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
         <Skeleton className="h-12 w-full" />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
-        </div>
+        <LoadingCard count={3} columns={3} height="md" />
       </div>
     );
   }
@@ -584,18 +581,7 @@ export default function StudentPage() {
         </CardHeader>
         <CardContent>
           {loadingExternal ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full" />
-              </div>
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full" />
-              </div>
-            </div>
+            <LoadingCard count={2} columns={2} height="md" />
           ) : externalData ? (
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">

@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Clock, Loader2, RotateCcw } from "lucide-react";
+import { Clock, Loader2, RotateCcw, History as HistoryIcon } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { FilterToolbar } from "@/components/planning/filter-toolbar";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface HistoryEntry {
   id: number;
@@ -163,7 +164,11 @@ export default function HistoryPage() {
             </thead>
             <tbody>
               {history.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Aucune action trouvée.</td></tr>
+                <tr>
+                  <td colSpan={6} className="p-0">
+                    <EmptyState icon={HistoryIcon} title="Aucune action trouvée" />
+                  </td>
+                </tr>
               ) : history.map(entry => (
                 <tr key={entry.id} className="border-b hover:bg-muted/30 align-top">
                   <td className="p-2 whitespace-nowrap font-mono text-[10px] text-muted-foreground">{format(new Date(entry.date), "dd/MM/yy HH:mm", { locale: fr })}</td>

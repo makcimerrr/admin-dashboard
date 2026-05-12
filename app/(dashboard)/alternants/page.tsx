@@ -423,11 +423,8 @@ export default function AlternantsPage() {
                 <TableBody>
                   {filteredAlternants.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="text-center py-8 text-muted-foreground"
-                      >
-                        Aucun alternant trouvé
+                      <TableCell colSpan={6} className="p-0">
+                        <EmptyState icon={Briefcase} title="Aucun alternant trouvé" />
                       </TableCell>
                     </TableRow>
                   ) : (
