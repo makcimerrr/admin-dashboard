@@ -20,6 +20,7 @@ import {
 import { Plus, Pencil, Trash2, Loader2, ExternalLink, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { trackChipStyle } from '@/lib/track-colors';
+import { LoadingCard } from '@/components/ui/loading-card';
 
 interface Reviewer {
   id: number;
@@ -189,11 +190,7 @@ export default function ReviewerManagement() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <LoadingCard count={3} columns={3} height="md" />;
   }
 
   return (

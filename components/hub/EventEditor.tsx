@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LoadingCard } from "@/components/ui/loading-card";
 import { toast } from "sonner";
 
 interface Template {
@@ -115,16 +116,7 @@ export default function EventEditor({ mode, id }: EventEditorProps) {
   if (!isNew && loadingEvent) {
     return (
       <div className="p-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Chargement de l'événement
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </CardContent>
-        </Card>
+        <LoadingCard height="lg" />
       </div>
     );
   }
