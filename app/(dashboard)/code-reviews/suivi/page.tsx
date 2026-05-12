@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { trackAccent } from '@/lib/track-colors';
+import { PILL } from '@/lib/status-pills';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -64,10 +65,10 @@ function categorize(row: SuiviRow): Category {
 }
 
 const STATUS_BADGE: Record<Category, { label: string; class: string }> = {
-  overdue: { label: 'Dépassé', class: 'bg-red-500/15 text-red-700 dark:text-red-400' },
-  warning: { label: 'Warning', class: 'bg-amber-500/15 text-amber-700 dark:text-amber-400' },
-  pending: { label: 'Attente', class: 'bg-blue-500/15 text-blue-700 dark:text-blue-400' },
-  done: { label: 'Audité', class: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' },
+  overdue: { label: 'Dépassé', class: PILL.red },
+  warning: { label: 'Warning', class: PILL.amber },
+  pending: { label: 'Attente', class: PILL.blue },
+  done: { label: 'Audité', class: PILL.emerald },
 };
 
 function shortPromo(name: string): string {

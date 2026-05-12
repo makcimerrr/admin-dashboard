@@ -7,6 +7,7 @@ import { Clock, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import Link from 'next/link';
+import { PILL } from '@/lib/status-pills';
 
 type Activity = {
   id: number;
@@ -20,15 +21,15 @@ type Activity = {
 const getDelayLevelColor = (level: string | null) => {
   switch (level) {
     case 'bien':
-      return 'bg-green-500/10 text-green-700 dark:text-green-400';
+      return PILL.emerald;
     case 'en retard':
-      return 'bg-red-500/10 text-red-700 dark:text-red-400';
+      return PILL.red;
     case 'Validé':
-      return 'bg-blue-500/10 text-blue-700 dark:text-blue-400';
+      return PILL.blue;
     case 'Non Validé':
-      return 'bg-rose-500/10 text-rose-700 dark:text-rose-400';
+      return PILL.rose;
     default:
-      return 'bg-gray-500/10 text-gray-700 dark:text-gray-400';
+      return 'bg-muted text-muted-foreground border-border';
   }
 };
 

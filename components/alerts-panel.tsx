@@ -109,11 +109,11 @@ export default function AlertsPanel({
   const getAlertIcon = (type: Alert['type']) => {
     switch (type) {
       case 'danger':
-        return <AlertCircle className="h-5 w-5 text-red-600" />;
+        return <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-orange-600" />;
+        return <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />;
       case 'info':
-        return <Info className="h-5 w-5 text-blue-600" />;
+        return <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />;
     }
   };
 

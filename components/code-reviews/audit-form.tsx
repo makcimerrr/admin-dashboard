@@ -205,7 +205,7 @@ export function AuditForm({
                                 <Badge
                                     key={index}
                                     variant="outline"
-                                    className="bg-amber-50 text-amber-700 pr-1"
+                                    className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 pr-1"
                                 >
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     {warning}
@@ -414,7 +414,7 @@ function StudentResultCard({
                                 <Badge
                                     key={wIndex}
                                     variant="outline"
-                                    className="bg-amber-50 text-amber-700 text-xs pr-1"
+                                    className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs pr-1"
                                 >
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     {warning}

@@ -67,6 +67,7 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PILL } from "@/lib/status-pills";
 
 interface ArchivedPromo {
   promoId: string;
@@ -513,7 +514,7 @@ export default function PromosManagePage() {
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="h-9 w-9 rounded-full bg-red-500/10 flex items-center justify-center">
-                                <UserX className="h-4 w-4 text-red-500" />
+                                <UserX className="h-4 w-4 text-red-600 dark:text-red-400" />
                               </div>
                               <div>
                                 <div className="font-medium">
@@ -538,10 +539,7 @@ export default function PromosManagePage() {
                           </TableCell>
                           <TableCell>
                             {student.dropoutReason ? (
-                              <Badge
-                                variant="outline"
-                                className="bg-red-500/10 text-red-700 border-red-500/20"
-                              >
+                              <Badge variant="outline" className={PILL.red}>
                                 {DROPOUT_REASON_LABELS[student.dropoutReason] ||
                                   student.dropoutReason}
                               </Badge>

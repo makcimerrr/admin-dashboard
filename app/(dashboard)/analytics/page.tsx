@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
             <Card className="border-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-green-600" />
+                  <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   Distribution des Statuts
                 </CardTitle>
                 <CardDescription>
@@ -180,10 +180,10 @@ export default function AnalyticsPage() {
         <TabsContent value="comparison" className="space-y-6 mt-6">
           {/* Global Comparison */}
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border-2 bg-gradient-to-br from-cyan-50/50 to-blue-50/50 dark:from-cyan-950/20 dark:to-blue-950/20">
+            <Card className="border-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-cyan-600" />
+                  <Activity className="h-5 w-5 text-primary" />
                   Performance des Troncs
                 </CardTitle>
                 <CardDescription>
@@ -195,10 +195,10 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20">
+            <Card className="border-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-green-600" />
+                  <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   État de Progression
                 </CardTitle>
                 <CardDescription>

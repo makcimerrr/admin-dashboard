@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingCard } from '@/components/ui/loading-card';
+import { trackChipStyle } from '@/lib/track-colors';
 import {
   Dialog,
   DialogContent,
@@ -46,13 +47,6 @@ interface Project {
 interface ProjectsByTech {
   [tech: string]: Project[];
 }
-
-const TECH_COLORS: Record<string, string> = {
-  Golang: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400',
-  Javascript: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
-  Rust: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
-  Java: 'bg-blue-500/10 text-blue-700 dark:text-blue-400'
-};
 
 export default function ProjectManagement() {
   const [projectsByTech, setProjectsByTech] = useState<ProjectsByTech>({});
@@ -271,7 +265,7 @@ export default function ProjectManagement() {
             <Card key={tech}>
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Badge className={TECH_COLORS[tech] || 'bg-gray-500/10'}>
+                  <Badge variant="outline" style={trackChipStyle(tech)}>
                     {tech}
                   </Badge>
                   <CardDescription>
