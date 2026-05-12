@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Code2, Zap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { trackAccent } from '@/lib/track-colors';
 
 type TrackData = {
   track: string;
@@ -13,35 +14,8 @@ type TrackData = {
   percentage: number;
 };
 
-const getTrackColor = (track: string) => {
-  switch (track.toLowerCase()) {
-    case 'golang':
-      return 'text-cyan-600';
-    case 'javascript':
-      return 'text-yellow-600';
-    case 'rust':
-      return 'text-orange-600';
-    case 'java':
-      return 'text-red-600';
-    default:
-      return 'text-gray-600';
-  }
-};
-
-const getProgressColor = (track: string) => {
-  switch (track.toLowerCase()) {
-    case 'golang':
-      return 'bg-cyan-500';
-    case 'javascript':
-      return 'bg-yellow-500';
-    case 'rust':
-      return 'bg-orange-500';
-    case 'java':
-      return 'bg-red-500';
-    default:
-      return 'bg-gray-500';
-  }
-};
+const trackTitle = (track: string) =>
+  track.charAt(0).toUpperCase() + track.slice(1).toLowerCase();
 
 export default function TrackProgressWidget() {
   const [tracks, setTracks] = useState<TrackData[]>([]);
@@ -101,12 +75,14 @@ export default function TrackProgressWidget() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {tracks.map((track) => (
+          {tracks.map((track) => {
+            const color = trackAccent(trackTitle(track.track));
+            return (
             <div key={track.track} className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Zap className={`h-4 w-4 ${getTrackColor(track.track)}`} />
-                  <span className={`font-medium ${getTrackColor(track.track)}`}>
+                  <Zap className="h-4 w-4" style={{ color }} />
+                  <span className="font-medium" style={{ color }}>
                     {track.track}
                   </span>
                 </div>
@@ -122,7 +98,8 @@ export default function TrackProgressWidget() {
                 className="h-2"
               />
             </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

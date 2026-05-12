@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
+import { trackDotStyle } from '@/lib/track-colors';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -107,13 +108,6 @@ interface PendingGroup {
   daysPending: number;
   priority: 'urgent' | 'warning' | 'normal';
 }
-
-const trackColors: Record<string, string> = {
-  Golang: 'bg-cyan-500',
-  Javascript: 'bg-yellow-500',
-  Rust: 'bg-orange-500',
-  Java: 'bg-red-500'
-};
 
 async function safeFetch<T>(path: string): Promise<T | null> {
   try {
@@ -301,7 +295,8 @@ export default function CodeReviewsPage() {
                   >
                     {/* Track indicator */}
                     <div
-                      className={`w-1 h-12 rounded-full ${trackColors[review.track] || 'bg-gray-400'}`}
+                      className="w-1 h-12 rounded-full"
+                      style={trackDotStyle(review.track)}
                     />
 
                     {/* Content */}
@@ -432,7 +427,8 @@ export default function CodeReviewsPage() {
                           </span>
                           {review.track && (
                             <div
-                              className={`w-2 h-2 rounded-full ${trackColors[review.track] || 'bg-gray-400'}`}
+                              className="w-2 h-2 rounded-full"
+                              style={trackDotStyle(review.track)}
                             />
                           )}
                           {review.warningsCount && review.warningsCount > 0 && (

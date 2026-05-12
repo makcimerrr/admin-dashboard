@@ -1,8 +1,9 @@
 import { getTrackStatsByPromo } from '@/lib/db/services/track-stats';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { trackAccent } from '@/lib/track-colors';
 
 interface TrackStatsDisplayProps {
   selectedPromo: string | null;
@@ -12,96 +13,75 @@ export default async function TrackStatsDisplay({ selectedPromo }: TrackStatsDis
   const stats = await getTrackStatsByPromo(selectedPromo === 'all' ? null : selectedPromo);
   const promos = await getAllPromotions();
 
-  // Déterminer quels troncs afficher selon la promo
+  // Visible tracks depend on whether the JS / Rust-Java piscines have started
   const getVisibleTracks = () => {
-    if (selectedPromo === 'all') {
-      return ['Golang', 'Javascript', 'Rust', 'Java'];
-    }
-
-    const promo = promos.find(p => p.key === selectedPromo);
-    if (!promo) {
-      return ['Golang', 'Javascript', 'Rust', 'Java'];
-    }
+    if (selectedPromo === 'all') return ['Golang', 'Javascript', 'Rust', 'Java'];
+    const promo = promos.find((p) => p.key === selectedPromo);
+    if (!promo) return ['Golang', 'Javascript', 'Rust', 'Java'];
 
     const today = new Date();
     const piscineJsStart = new Date(promo.dates['piscine-js-start']);
     const piscineRustJavaStart = new Date(promo.dates['piscine-rust-java-start']);
 
-    const visibleTracks = ['Golang']; // Toujours afficher Golang
-
+    const visible = ['Golang'];
     if (!isNaN(piscineJsStart.getTime()) && today >= piscineJsStart) {
-      visibleTracks.push('Javascript');
+      visible.push('Javascript');
     }
-
     if (!isNaN(piscineRustJavaStart.getTime()) && today >= piscineRustJavaStart) {
-      visibleTracks.push('Rust', 'Java');
+      visible.push('Rust', 'Java');
     }
-
-    return visibleTracks;
+    return visible;
   };
 
   const visibleTracks = getVisibleTracks();
-  const filteredStats = stats.filter(stat => visibleTracks.includes(stat.track));
-
-  const getTrackColor = (track: string) => {
-    switch (track.toLowerCase()) {
-      case 'golang':
-        return 'bg-cyan-500';
-      case 'javascript':
-        return 'bg-yellow-500';
-      case 'rust':
-        return 'bg-orange-500';
-      case 'java':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  if (filteredStats.length === 0) {
-    return null;
-  }
+  const filteredStats = stats.filter((stat) => visibleTracks.includes(stat.track));
+  if (filteredStats.length === 0) return null;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-      {filteredStats.map((stat) => (
-        <Card key={stat.track} className="overflow-hidden">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium">{stat.track}</CardTitle>
-              <div className={`h-2 w-2 rounded-full ${getTrackColor(stat.track)}`} />
-            </div>
-            <CardDescription className="text-xs">
-              {stat.total} étudiants au total
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span className="font-medium">{stat.completed}</span>
-                  <span className="text-muted-foreground">terminés</span>
-                </div>
+    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      {filteredStats.map((stat) => {
+        const accent = trackAccent(stat.track);
+        return (
+          <Card key={stat.track} className="border">
+            <CardHeader className="pb-2 pt-3 px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold">{stat.track}</CardTitle>
+                <span
+                  className="h-2 w-2 rounded-full"
+                  style={{ backgroundColor: accent }}
+                  aria-hidden
+                />
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-orange-600" />
-                  <span className="font-medium">{stat.inProgress}</span>
+              <p className="text-[11px] text-muted-foreground">
+                {stat.total} étudiant{stat.total > 1 ? 's' : ''}
+              </p>
+            </CardHeader>
+            <CardContent className="px-4 pb-3 space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5" style={{ color: accent }} />
+                  <span className="font-medium tabular-nums">{stat.completed}</span>
+                  <span className="text-muted-foreground">terminé{stat.completed > 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium tabular-nums">{stat.inProgress}</span>
                   <span className="text-muted-foreground">en cours</span>
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-[11px]">
                   <span className="text-muted-foreground">Progression</span>
-                  <span className="font-bold">{stat.completionRate}%</span>
+                  <span className="font-bold tabular-nums" style={{ color: accent }}>
+                    {stat.completionRate}%
+                  </span>
                 </div>
-                <Progress value={stat.completionRate} className="h-2" />
+                <Progress value={stat.completionRate} className="h-1.5" />
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Plus, Pencil, Trash2, Loader2, ExternalLink, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { trackChipStyle } from '@/lib/track-colors';
 
 interface Reviewer {
   id: number;
@@ -36,13 +37,6 @@ interface PromoInfo {
   key: string;
   title: string;
 }
-
-const TRACK_COLORS: Record<string, string> = {
-  Golang: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300',
-  Javascript: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
-  Rust: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
-  Java: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
-};
 
 export default function ReviewerManagement() {
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
@@ -237,20 +231,24 @@ export default function ReviewerManagement() {
               <div className="space-y-2">
                 <Label>Tracks autorisés</Label>
                 <div className="flex flex-wrap gap-2">
-                  {allTracks.map(track => (
-                    <button
-                      key={track}
-                      type="button"
-                      onClick={() => toggleTrack(track)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                        tracks.includes(track)
-                          ? TRACK_COLORS[track] + ' border-transparent'
-                          : 'bg-muted/30 text-muted-foreground border-border opacity-50'
-                      }`}
-                    >
-                      {track}
-                    </button>
-                  ))}
+                  {allTracks.map(track => {
+                    const active = tracks.includes(track);
+                    return (
+                      <button
+                        key={track}
+                        type="button"
+                        onClick={() => toggleTrack(track)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                          active
+                            ? 'border-transparent'
+                            : 'bg-muted/30 text-muted-foreground border-border opacity-50'
+                        }`}
+                        style={active ? trackChipStyle(track) : undefined}
+                      >
+                        {track}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="space-y-2">
@@ -336,7 +334,12 @@ export default function ReviewerManagement() {
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap gap-1.5">
                   {reviewer.tracks.map(track => (
-                    <Badge key={track} variant="secondary" className={`text-[10px] ${TRACK_COLORS[track] || ''}`}>
+                    <Badge
+                      key={track}
+                      variant="secondary"
+                      className="text-[10px]"
+                      style={trackChipStyle(track)}
+                    >
                       {track}
                     </Badge>
                   ))}

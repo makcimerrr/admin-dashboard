@@ -1,120 +1,114 @@
-import React, { useEffect, useState } from 'react';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 
 interface LastUpdateProps {
   lastUpdate: string | null;
   eventId: string;
   allUpdate?: string | null;
-  isAuto?: boolean; // Flag pour indiquer si la MAJ a été faite automatiquement
-  allIsAuto?: boolean; // Flag pour la MAJ "all"
+  isAuto?: boolean;
+  allIsAuto?: boolean;
+  outOfDeltaPromos?: { promo: string; date: string }[];
 }
 
-const getTimeAgo = (time: string): string => {
-  const now = new Date();
-  const updatedTime = new Date(time);
+function formatRelative(iso: string): string {
+  const now = Date.now();
+  const t = new Date(iso).getTime();
+  const tzOffset = new Date().getTimezoneOffset() * 60 * 1000;
+  const diffSec = Math.max(0, Math.floor((now - t + tzOffset) / 1000));
+  const days = Math.floor(diffSec / 86400);
+  const hours = Math.floor(diffSec / 3600);
+  const minutes = Math.floor(diffSec / 60);
+  if (days > 0) return `il y a ${days} jour${days > 1 ? 's' : ''}`;
+  if (hours > 0) return `il y a ${hours} heure${hours > 1 ? 's' : ''}`;
+  if (minutes > 0) return `il y a ${minutes} minute${minutes > 1 ? 's' : ''}`;
+  return `il y a ${diffSec} seconde${diffSec > 1 ? 's' : ''}`;
+}
 
-  const timeOffset = now.getTimezoneOffset() * 60 * 1000;
-  const diff = Math.floor(
-    (now.getTime() - updatedTime.getTime() + timeOffset) / 1000
+function AutoBadge() {
+  return (
+    <span className="inline-flex items-center gap-0.5 ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-primary/15 text-primary">
+      <Sparkles className="h-2.5 w-2.5" />
+      MAJ AUTO
+    </span>
   );
+}
 
-  const minutes = Math.floor(diff / 60);
-  const hours = Math.floor(diff / 3600);
-  const days = Math.floor(diff / 86400);
+const LastUpdate = ({
+  lastUpdate,
+  eventId,
+  allUpdate,
+  isAuto,
+  allIsAuto,
+  outOfDeltaPromos,
+}: LastUpdateProps) => {
+  const [, tick] = useState(0);
 
-  if (days > 0) return `${days} jour${days > 1 ? 's' : ''} ago`;
-  if (hours > 0) return `${hours} heure${hours > 1 ? 's' : ''} ago`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-  return `${diff} seconde${diff > 1 ? 's' : ''} ago`;
-};
-
-const AutoBadge = () => (
-  <span className="inline-flex items-center ml-1.5 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-    ⚡ MAJ AUTO
-  </span>
-);
-
-const LastUpdate = ({ lastUpdate, eventId, allUpdate, isAuto, allIsAuto, outOfDeltaPromos }: LastUpdateProps & { outOfDeltaPromos?: { promo: string; date: string }[] }) => {
-  const [timeAgo, setTimeAgo] = useState<string | null>(null);
-  const [timeAgoAll, setTimeAgoAll] = useState<string | null>(null);
-
+  // Re-render every minute to refresh the relative time string. 1s was
+  // wasteful — the smallest unit shown is "X seconde(s)" and the user
+  // doesn't actually need second-precision past the first minute.
   useEffect(() => {
-    if (lastUpdate) {
-      setTimeAgo(getTimeAgo(lastUpdate));
-    }
+    const id = setInterval(() => tick((v) => v + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
-    if (allUpdate) {
-      setTimeAgoAll(getTimeAgo(allUpdate));
-    }
+  const timeAgoLast = lastUpdate ? formatRelative(lastUpdate) : null;
+  const timeAgoAll = allUpdate ? formatRelative(allUpdate) : null;
 
-    const interval = setInterval(() => {
-      if (lastUpdate) setTimeAgo(getTimeAgo(lastUpdate));
-      if (allUpdate) setTimeAgoAll(getTimeAgo(allUpdate));
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [lastUpdate, allUpdate]);
-
-  const compareUpdates = () => {
+  // Which timestamp is the most recent?
+  const updateType: 'lastUpdate' | 'allUpdate' | null = (() => {
     if (lastUpdate && allUpdate) {
-      const lastUpdateTime = new Date(lastUpdate).getTime();
-      const allUpdateTime = new Date(allUpdate).getTime();
-      return lastUpdateTime > allUpdateTime ? 'lastUpdate' : 'allUpdate';
+      return new Date(lastUpdate).getTime() > new Date(allUpdate).getTime()
+        ? 'lastUpdate'
+        : 'allUpdate';
     }
     return lastUpdate ? 'lastUpdate' : allUpdate ? 'allUpdate' : null;
-  };
+  })();
 
-  const updateType = compareUpdates();
+  const isAll = eventId === 'all';
+  const hasOutOfDelta = outOfDeltaPromos && outOfDeltaPromos.length > 0;
 
   return (
-    <div className="mt-2 text-sm text-gray-600">
-      {eventId !== 'all' ? (
-        <>
-          {updateType === 'lastUpdate' ? (
-            <p className="flex items-center flex-wrap gap-1">
-              Dernière mise à jour pour la promo {eventId} : {timeAgo}
-              {isAuto && <AutoBadge />}
-            </p>
-          ) : (
-            <>
-              {updateType === 'allUpdate' ? (
-                <p className="flex items-center flex-wrap gap-1">
-                  Dernière mise à jour pour toutes les promos : {timeAgoAll}
-                  {allIsAuto && <AutoBadge />}
-                </p>
-              ) : (
-                <p>Aucune mise à jour pour la promo {eventId}.</p>
-              )}
-            </>
-          )}
-        </>
+    <div className="mt-2 text-sm text-muted-foreground">
+      {isAll ? (
+        hasOutOfDelta ? (
+          <p>
+            Dernière mise à jour de toutes les promotions {timeAgoLast} mais les promos{' '}
+            {outOfDeltaPromos!.map((p, idx) => (
+              <span key={p.promo}>
+                <span className="font-medium text-foreground">{p.promo}</span>{' '}
+                ({formatRelative(p.date)})
+                {idx < outOfDeltaPromos!.length - 1 ? ', ' : ''}
+              </span>
+            ))}{' '}
+            ont été mises à jour à des dates différentes.
+          </p>
+        ) : timeAgoLast ? (
+          <p className="flex items-center flex-wrap gap-1">
+            Dernière mise à jour pour toutes les promotions : {timeAgoLast}
+            {isAuto && <AutoBadge />}
+          </p>
+        ) : timeAgoAll ? (
+          <p className="flex items-center flex-wrap gap-1">
+            Dernière mise à jour pour toutes les promos : {timeAgoAll}
+            {allIsAuto && <AutoBadge />}
+          </p>
+        ) : (
+          <p>Aucune mise à jour pour toutes les promos.</p>
+        )
+      ) : updateType === 'lastUpdate' ? (
+        <p className="flex items-center flex-wrap gap-1">
+          Dernière mise à jour pour la promo <span className="font-medium text-foreground">{eventId}</span> : {timeAgoLast}
+          {isAuto && <AutoBadge />}
+        </p>
+      ) : updateType === 'allUpdate' ? (
+        <p className="flex items-center flex-wrap gap-1">
+          Dernière mise à jour pour toutes les promos : {timeAgoAll}
+          {allIsAuto && <AutoBadge />}
+        </p>
       ) : (
-        <>
-          {outOfDeltaPromos && outOfDeltaPromos.length > 0 ? (
-            <div>
-              <p>
-                Dernière mise à jour de toutes les promotions le {timeAgo} mais les promos&nbsp;
-                {outOfDeltaPromos.map((p, idx) => (
-                  <span key={p.promo}>
-                    {p.promo} (le {getTimeAgo(p.date)}){idx < outOfDeltaPromos.length - 1 ? ', ' : ''}
-                  </span>
-                ))}
-                ont été mises à jour à des dates différentes.
-              </p>
-            </div>
-          ) : lastUpdate ? (
-            <p className="flex items-center flex-wrap gap-1">
-              Dernière mise à jour pour toutes les promotions : {timeAgo}
-              {isAuto && <AutoBadge />}
-            </p>
-          ) : allUpdate ? (
-            <p className="flex items-center flex-wrap gap-1">
-              Dernière mise à jour pour toutes les promos : {timeAgoAll}
-              {allIsAuto && <AutoBadge />}
-            </p>
-          ) : (
-            <p>Aucune mise à jour pour toutes les promos.</p>
-          )}
-        </>
+        <p>Aucune mise à jour pour la promo {eventId}.</p>
       )}
     </div>
   );

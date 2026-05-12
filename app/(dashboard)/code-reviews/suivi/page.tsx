@@ -24,6 +24,7 @@ import {
   MoreHorizontal, ShieldAlert, CircleDot, ArrowUpDown, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
+import { trackAccent } from '@/lib/track-colors';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -61,13 +62,6 @@ function categorize(row: SuiviRow): Category {
   if (days >= 10) return 'warning';
   return 'pending';
 }
-
-const TRACK_COLORS: Record<string, string> = {
-  Golang: 'text-cyan-600 dark:text-cyan-400',
-  Javascript: 'text-yellow-600 dark:text-yellow-400',
-  Rust: 'text-orange-600 dark:text-orange-400',
-  Java: 'text-red-600 dark:text-red-400',
-};
 
 const STATUS_BADGE: Record<Category, { label: string; class: string }> = {
   overdue: { label: 'Dépassé', class: 'bg-red-500/15 text-red-700 dark:text-red-400' },
@@ -496,7 +490,10 @@ export default function SuiviPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{row.projectName}</span>
                         {row.track && (
-                          <span className={`text-[10px] font-semibold ${TRACK_COLORS[row.track] ?? 'text-muted-foreground'}`}>
+                          <span
+                            className="text-[10px] font-semibold"
+                            style={{ color: trackAccent(row.track) }}
+                          >
                             {row.track}
                           </span>
                         )}

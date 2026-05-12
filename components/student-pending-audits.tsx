@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Clock, AlertCircle, ExternalLink, FileCode, Users } from 'lucide-react';
 import Link from 'next/link';
+import { trackChipStyle } from '@/lib/track-colors';
 
 type PendingAudit = {
   projectName: string;
@@ -22,47 +23,20 @@ interface StudentPendingAuditsProps {
   studentId: number;
 }
 
-const getTrackColor = (track: string) => {
-  switch (track) {
-    case 'Golang':
-      return 'bg-cyan-500/10 text-cyan-700 border-cyan-500/20';
-    case 'Javascript':
-      return 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20';
-    case 'Rust':
-      return 'bg-orange-500/10 text-orange-700 border-orange-500/20';
-    case 'Java':
-      return 'bg-red-500/10 text-red-700 border-red-500/20';
-    default:
-      return 'bg-gray-500/10 text-gray-700 border-gray-500/20';
-  }
-};
-
 export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
   const [pendingAudits, setPendingAudits] = useState<PendingAudit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPendingAudits = async () => {
-      try {
-        const response = await fetch(`/api/student/${studentId}/pending-audits`);
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[StudentPendingAudits] Response:', data);
-          if (data.success) {
-            setPendingAudits(data.pendingAudits);
-            console.log('[StudentPendingAudits] Pending audits count:', data.pendingAudits.length);
-          }
-        } else {
-          console.error('[StudentPendingAudits] HTTP error:', response.status);
-        }
-      } catch (error) {
-        console.error('[StudentPendingAudits] Error fetching pending audits:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPendingAudits();
+    let active = true;
+    fetch(`/api/student/${studentId}/pending-audits`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.success) setPendingAudits(data.pendingAudits);
+      })
+      .catch(() => {})
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [studentId]);
 
   if (loading) {
@@ -116,7 +90,7 @@ export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">{audit.projectName}</span>
-                      <Badge variant="outline" className={getTrackColor(audit.track)}>
+                      <Badge variant="outline" style={trackChipStyle(audit.track)}>
                         {audit.track}
                       </Badge>
                     </div>

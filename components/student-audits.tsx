@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { trackChipStyle } from '@/lib/track-colors';
 import {
   Select,
   SelectContent,
@@ -60,21 +61,6 @@ const getPriorityColor = (priority: string) => {
       return 'bg-orange-500/10 text-orange-700 border-orange-500/20';
     default:
       return 'bg-green-500/10 text-green-700 border-green-500/20';
-  }
-};
-
-const getTrackColor = (track: string) => {
-  switch (track) {
-    case 'Golang':
-      return 'bg-cyan-500/10 text-cyan-700 border-cyan-500/20';
-    case 'Javascript':
-      return 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20';
-    case 'Rust':
-      return 'bg-orange-500/10 text-orange-700 border-orange-500/20';
-    case 'Java':
-      return 'bg-red-500/10 text-red-700 border-red-500/20';
-    default:
-      return 'bg-gray-500/10 text-gray-700 border-gray-500/20';
   }
 };
 
@@ -223,7 +209,7 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
                     <div className="flex items-center gap-2 mb-1">
                       <FileCode className="h-4 w-4 text-primary" />
                       <span className="font-semibold">{audit.projectName}</span>
-                      <Badge variant="outline" className={getTrackColor(audit.track)}>
+                      <Badge variant="outline" style={trackChipStyle(audit.track)}>
                         {audit.track}
                       </Badge>
                       <Badge variant="outline" className={getPriorityColor(audit.priority)}>

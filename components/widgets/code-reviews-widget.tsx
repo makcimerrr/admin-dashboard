@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { trackDotStyle } from '@/lib/track-colors';
 import {
     ClipboardCheck,
     ArrowRight,
@@ -33,14 +34,6 @@ type CodeReviewsData = {
     promos: PromoStats[];
     totalPending: number;
     recentAuditsCount: number;
-};
-
-// Couleurs par tronc
-const trackColors: Record<string, string> = {
-    'Golang': 'bg-cyan-500',
-    'Javascript': 'bg-yellow-500',
-    'Rust': 'bg-orange-500',
-    'Java': 'bg-red-500',
 };
 
 export default function CodeReviewsWidget() {
@@ -166,8 +159,11 @@ export default function CodeReviewsWidget() {
                                         </div>
                                         <div className="h-2 bg-muted rounded-full overflow-hidden">
                                             <div
-                                                className={`h-full transition-all ${trackColors[track.track] || 'bg-primary'}`}
-                                                style={{ width: `${track.auditProgress}%` }}
+                                                className="h-full transition-all"
+                                                style={{
+                                                    width: `${track.auditProgress}%`,
+                                                    ...trackDotStyle(track.track),
+                                                }}
                                             />
                                         </div>
                                     </div>

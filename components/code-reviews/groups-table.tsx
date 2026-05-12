@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { trackDotStyle, trackChipStyle } from '@/lib/track-colors';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,20 +101,6 @@ interface GroupsTableProps {
     byTrack: Record<Track, { total: number; audited: number }>;
   };
 }
-
-const trackColors: Record<Track, string> = {
-  Golang: 'bg-cyan-500',
-  Javascript: 'bg-yellow-500',
-  Rust: 'bg-orange-500',
-  Java: 'bg-red-500'
-};
-
-const trackBadgeColors: Record<Track, string> = {
-  Golang: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-  Javascript: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  Rust: 'bg-orange-100 text-orange-800 border-orange-200',
-  Java: 'bg-red-100 text-red-800 border-red-200'
-};
 
 function SortButton({
   field,
@@ -334,7 +321,7 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
             {(['Golang', 'Javascript', 'Rust', 'Java'] as Track[]).map((track) => (
               <SelectItem key={track} value={track}>
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${trackColors[track]}`} />
+                  <div className="w-2 h-2 rounded-full" style={trackDotStyle(track)} />
                   {track}
                 </div>
               </SelectItem>
@@ -501,7 +488,7 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className={trackBadgeColors[group.track]}>
+                      <Badge variant="outline" style={trackChipStyle(group.track)}>
                         {group.track}
                       </Badge>
                     </TableCell>

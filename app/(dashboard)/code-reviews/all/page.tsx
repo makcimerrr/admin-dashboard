@@ -84,6 +84,7 @@ import {
   AuditsTableSkeleton,
   PendingGroupsTableSkeleton
 } from '@/components/code-reviews/skeletons';
+import { trackDotStyle, trackChipStyle } from '@/lib/track-colors';
 
 type Track = 'Golang' | 'Javascript' | 'Rust' | 'Java';
 type SortField =
@@ -143,19 +144,9 @@ interface PendingGroup {
   membersNeverAudited: number;
 }
 
-const trackColors: Record<Track, string> = {
-  Golang: 'bg-cyan-500',
-  Javascript: 'bg-yellow-500',
-  Rust: 'bg-orange-500',
-  Java: 'bg-red-500'
-};
-
-const trackBadgeColors: Record<Track, string> = {
-  Golang: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-  Javascript: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  Rust: 'bg-orange-100 text-orange-800 border-orange-200',
-  Java: 'bg-red-100 text-red-800 border-red-200'
-};
+// Track colors moved to @/lib/track-colors (theme-aware CSS chart vars).
+// Use `trackDotStyle()` for a solid dot or `trackChipStyle()` for the
+// badge fill / text / border inline styles.
 
 function SortButton({
   field,
@@ -1101,7 +1092,8 @@ export default function AllAuditsPage() {
                 <SelectItem key={track} value={track}>
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-2 h-2 rounded-full ${trackColors[track]}`}
+                      className="w-2 h-2 rounded-full"
+                      style={trackDotStyle(track)}
                     />
                     {track}
                   </div>
@@ -1422,7 +1414,7 @@ export default function AllAuditsPage() {
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={trackBadgeColors[audit.track]}
+                            style={trackChipStyle(audit.track)}
                           >
                             {audit.track}
                           </Badge>
@@ -1689,10 +1681,7 @@ export default function AllAuditsPage() {
                         <TableCell>
                           <Badge
                             variant="outline"
-                            className={
-                              trackBadgeColors[group.track as Track] ||
-                              'bg-gray-100'
-                            }
+                            style={trackChipStyle(group.track)}
                           >
                             {group.track}
                           </Badge>
