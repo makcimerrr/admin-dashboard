@@ -469,7 +469,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
+          <Card className="border-blue-500/30 bg-blue-500/10">
             <CardContent className="flex items-start gap-3 pt-6">
               <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
               <div>

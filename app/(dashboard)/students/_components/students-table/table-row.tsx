@@ -11,6 +11,7 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { PILL } from '@/lib/status-pills';
 import { SelectStudent } from '@/lib/db/schema/students';
 import { StudentCell } from './cells/student-cell';
 import { ProjectCell } from './cells/project-cell';
@@ -150,7 +151,7 @@ export function StudentTableRow({ student, promoConfig }: StudentTableRowProps) 
       onClick={handleRowClick}
       className={cn(
         'transition-colors hover:bg-muted/50 cursor-pointer group',
-        isDropout && 'bg-red-50/50 hover:bg-red-100/50 opacity-75'
+        isDropout && 'bg-red-500/5 hover:bg-red-500/10 opacity-75'
       )}
     >
       {/* Student cell */}
@@ -174,7 +175,7 @@ export function StudentTableRow({ student, promoConfig }: StudentTableRowProps) 
               <TooltipTrigger>
                 <Badge
                   variant="outline"
-                  className="font-medium bg-red-50 text-red-700 border-red-200"
+                  className={cn('font-medium', PILL.red)}
                 >
                   <UserX className="h-3 w-3 mr-1" />
                   Perdition

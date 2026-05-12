@@ -164,9 +164,9 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
     if (!groupId || !projectName || !track) {
         return (
             <div className="p-6">
-                <Card className="bg-red-50 border-red-200">
+                <Card className="bg-red-500/10 border-red-500/30">
                     <CardContent className="p-4">
-                        <p className="text-red-700">Paramètres manquants. Veuillez sélectionner un groupe depuis la liste.</p>
+                        <p className="text-red-700 dark:text-red-400">Paramètres manquants. Veuillez sélectionner un groupe depuis la liste.</p>
                         <Button variant="outline" className="mt-4" asChild>
                             <Link href={`/code-reviews/${promoId}`}>
                                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -194,9 +194,9 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
     if (error || !groupData) {
         return (
             <div className="p-6">
-                <Card className="bg-red-50 border-red-200">
+                <Card className="bg-red-500/10 border-red-500/30">
                     <CardContent className="p-4">
-                        <p className="text-red-700">{error || 'Groupe non trouvé'}</p>
+                        <p className="text-red-700 dark:text-red-400">{error || 'Groupe non trouvé'}</p>
                         <Button variant="outline" className="mt-4" asChild>
                             <Link href={`/code-reviews/${promoId}`}>
                                 <ArrowLeft className="h-4 w-4 mr-2" />

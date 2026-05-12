@@ -33,6 +33,7 @@ import { toast } from 'react-hot-toast';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { PILL } from '@/lib/status-pills';
 import { StudentAudits } from '@/components/student-audits';
 import { StudentPendingAudits } from '@/components/student-pending-audits';
 
@@ -93,36 +94,36 @@ type ExternalUserData = {
 const getDelayLevelClass = (level: string | null) => {
   switch (level) {
     case 'bien':
-      return 'bg-green-500/10 text-green-700 border-green-500/20';
+      return PILL.emerald;
     case 'en retard':
-      return 'bg-red-500/10 text-red-700 border-red-500/20';
+      return PILL.red;
     case 'en avance':
-      return 'bg-blue-500/10 text-blue-700 border-blue-500/20';
+      return PILL.blue;
     case 'spécialité':
-      return 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20';
+      return PILL.amber;
     case 'Validé':
-      return 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20';
+      return PILL.emerald;
     case 'Non Validé':
-      return 'bg-rose-500/10 text-rose-700 border-rose-500/20';
+      return PILL.rose;
     default:
-      return 'bg-gray-500/10 text-gray-700 border-gray-500/20';
+      return 'bg-muted text-muted-foreground border-border';
   }
 };
 
 const getProgressStatusBadge = (status: string | null) => {
   switch (status) {
     case 'finished':
-      return { text: 'Terminé', className: 'bg-green-500/10 text-green-700 border-green-500/20' };
+      return { text: 'Terminé', className: PILL.emerald };
     case 'working':
-      return { text: 'En cours', className: 'bg-blue-500/10 text-blue-700 border-blue-500/20' };
+      return { text: 'En cours', className: PILL.blue };
     case 'audit':
-      return { text: 'Audit', className: 'bg-orange-500/10 text-orange-700 border-orange-500/20' };
+      return { text: 'Audit', className: PILL.orange };
     case 'setup':
-      return { text: 'Configuration', className: 'bg-purple-500/10 text-purple-700 border-purple-500/20' };
+      return { text: 'Configuration', className: PILL.violet };
     case 'without group':
-      return { text: 'Sans groupe', className: 'bg-red-500/10 text-red-700 border-red-500/20' };
+      return { text: 'Sans groupe', className: PILL.red };
     default:
-      return { text: status || 'Inconnu', className: 'bg-gray-500/10 text-gray-700 border-gray-500/20' };
+      return { text: status || 'Inconnu', className: 'bg-muted text-muted-foreground border-border' };
   }
 };
 

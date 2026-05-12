@@ -31,10 +31,10 @@ interface EmployeeWithSchedule extends Employee {
 const daysOfWeek = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 
 const slotTypeConfig: Record<string, { label: string; bgColor: string; borderColor: string; textColor: string }> = {
-  work: { label: 'Travail', bgColor: 'bg-blue-50 dark:bg-blue-950/30', borderColor: 'border-blue-200 dark:border-blue-800', textColor: 'text-blue-800 dark:text-blue-400' },
-  vacation: { label: 'Congés', bgColor: 'bg-orange-50 dark:bg-orange-950/30', borderColor: 'border-orange-200 dark:border-orange-800', textColor: 'text-orange-800 dark:text-orange-400' },
-  sick: { label: 'Arrêt maladie', bgColor: 'bg-red-50 dark:bg-red-950/30', borderColor: 'border-red-200 dark:border-red-800', textColor: 'text-red-800 dark:text-red-400' },
-  personal: { label: 'Personnel', bgColor: 'bg-purple-50 dark:bg-purple-950/30', borderColor: 'border-purple-200 dark:border-purple-800', textColor: 'text-purple-800 dark:text-purple-400' },
+  work: { label: 'Travail', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', textColor: 'text-blue-700 dark:text-blue-400' },
+  vacation: { label: 'Congés', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30', textColor: 'text-orange-700 dark:text-orange-400' },
+  sick: { label: 'Arrêt maladie', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', textColor: 'text-red-700 dark:text-red-400' },
+  personal: { label: 'Personnel', bgColor: 'bg-violet-500/10', borderColor: 'border-violet-500/30', textColor: 'text-violet-700 dark:text-violet-400' },
 };
 
 export default function PlanningPage() {
@@ -302,7 +302,7 @@ export default function PlanningPage() {
         title="Planning"
         description={isEditor ? 'Cliquez sur un crayon puis peignez la grille' : 'Consultation'}
         badge={
-          <Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>
+          <Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>
             {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
           </Badge>
         }

@@ -69,6 +69,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingCard } from "@/components/ui/loading-card";
+import { PILL } from "@/lib/status-pills";
 
 interface Alternant {
   id: number;
@@ -469,18 +470,12 @@ export default function AlternantsPage() {
                         </TableCell>
                         <TableCell>
                           {isEndingSoon(alt.alternantEndDate) ? (
-                            <Badge
-                              variant="outline"
-                              className="bg-orange-500/10 text-orange-700 border-orange-500/20"
-                            >
+                            <Badge variant="outline" className={PILL.orange}>
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               Fin proche
                             </Badge>
                           ) : (
-                            <Badge
-                              variant="outline"
-                              className="bg-green-500/10 text-green-700 border-green-500/20"
-                            >
+                            <Badge variant="outline" className={PILL.emerald}>
                               Actif
                             </Badge>
                           )}

@@ -310,21 +310,17 @@ async function PromoContent({ promoId }: { promoId: string }) {
                   Groupes finished
                 </p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900">
-                <p className="text-2xl md:text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-300">
+              <div className="text-center p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                <p className="text-2xl md:text-3xl font-bold tabular-nums">
                   {stats.auditedGroups}
                 </p>
-                <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80 mt-1">
-                  Groupes audités
-                </p>
+                <p className="text-xs opacity-80 mt-1">Groupes audités</p>
               </div>
-              <div className="text-center p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
-                <p className="text-2xl md:text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-300">
+              <div className="text-center p-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                <p className="text-2xl md:text-3xl font-bold tabular-nums">
                   {stats.pendingGroups}
                 </p>
-                <p className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-1">
-                  En attente d'audit
-                </p>
+                <p className="text-xs opacity-80 mt-1">En attente d'audit</p>
               </div>
             </div>
           </CardContent>

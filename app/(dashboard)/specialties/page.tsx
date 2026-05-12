@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/page-header';
 import { PageSkeleton } from '@/components/page-skeleton';
+import { PILL } from '@/lib/status-pills';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -67,9 +68,9 @@ function getStudentStatus(s: Student): 'active' | 'inactive' | 'completed' {
 }
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline'; className: string }> = {
-  active: { label: 'En cours', variant: 'default', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20' },
-  inactive: { label: 'Inactif', variant: 'secondary', className: 'bg-muted text-muted-foreground' },
-  completed: { label: 'Terminé', variant: 'default', className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' },
+  active: { label: 'En cours', variant: 'default', className: PILL.blue },
+  inactive: { label: 'Inactif', variant: 'secondary', className: 'bg-muted text-muted-foreground border-border' },
+  completed: { label: 'Terminé', variant: 'default', className: PILL.emerald },
 };
 
 function progressColor(pct: number): string {

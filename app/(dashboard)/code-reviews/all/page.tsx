@@ -86,6 +86,7 @@ import {
 } from '@/components/code-reviews/skeletons';
 import { trackDotStyle, trackChipStyle } from '@/lib/track-colors';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PILL, validationPill } from '@/lib/status-pills';
 
 type Track = 'Golang' | 'Javascript' | 'Rust' | 'Java';
 type SortField =
@@ -149,21 +150,6 @@ interface PendingGroup {
 // Use `trackDotStyle()` for a solid dot or `trackChipStyle()` for the
 // badge fill / text / border inline styles.
 
-// Shared status pill palette (alpha-tinted so it works in both themes).
-const PILL = {
-  emerald: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400',
-  amber: 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400',
-  rose: 'bg-rose-500/15 text-rose-700 border-rose-500/30 dark:text-rose-400',
-  red: 'bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-400',
-  blue: 'bg-blue-500/15 text-blue-700 border-blue-500/30 dark:text-blue-400',
-  orange: 'bg-orange-500/15 text-orange-700 border-orange-500/30 dark:text-orange-400',
-} as const;
-
-function validationPill(rate: number): string {
-  if (rate >= 80) return PILL.emerald;
-  if (rate >= 50) return PILL.blue;
-  return PILL.red;
-}
 
 function SortButton({
   field,

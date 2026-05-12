@@ -306,12 +306,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
                   </div>
 
               {(audit.warnings?.length ?? 0) > 0 ? (
-                <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                  <p className="font-medium text-amber-800 flex items-center gap-2 mb-2">
+                <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+                  <p className="font-medium flex items-center gap-2 mb-2">
                     <AlertTriangle className="h-4 w-4" />
                     Warnings globaux
                   </p>
-                  <ul className="list-disc list-inside text-sm text-amber-700">
+                  <ul className="list-disc list-inside text-sm">
                     {audit.warnings?.map((w, i) => <li key={i}>{w}</li>)}
                   </ul>
                 </div>
@@ -385,7 +385,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                             <Badge
                               key={i}
                               variant="outline"
-                              className="text-xs bg-amber-50 text-amber-700"
+                              className="text-xs bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400"
                             >
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               {w}

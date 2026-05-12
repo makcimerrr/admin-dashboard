@@ -252,7 +252,7 @@ export default function ExtractionPage() {
         icon={FileBarChart}
         title="Extraction"
         description="Extraction des heures et statistiques"
-        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       >
         <Button
           size="sm"

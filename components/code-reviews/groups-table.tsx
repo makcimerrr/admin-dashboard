@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { trackDotStyle, trackChipStyle } from '@/lib/track-colors';
 import { cn } from '@/lib/utils';
+import { PILL as TONE_PILL, ROW as TONE_ROW, TILE as TONE_TILE, type Tone } from '@/lib/status-pills';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,38 +103,6 @@ interface GroupsTableProps {
     byTrack: Record<Track, { total: number; audited: number }>;
   };
 }
-
-// Shared tone palettes — keep one source of truth for the status colors that
-// appear on stat tiles, row backgrounds, and pills. Each tone uses
-// `color/15` style alpha tints so contrast holds in both light + dark themes.
-type Tone = 'emerald' | 'amber' | 'rose' | 'red' | 'blue' | 'orange';
-
-const TONE_TILE: Record<Tone, string> = {
-  emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-  amber: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  rose: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400',
-  red: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400',
-  blue: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400',
-  orange: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400',
-};
-
-const TONE_PILL: Record<Tone, string> = {
-  emerald: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400',
-  amber: 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400',
-  rose: 'bg-rose-500/15 text-rose-700 border-rose-500/30 dark:text-rose-400',
-  red: 'bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-400',
-  blue: 'bg-blue-500/15 text-blue-700 border-blue-500/30 dark:text-blue-400',
-  orange: 'bg-orange-500/15 text-orange-700 border-orange-500/30 dark:text-orange-400',
-};
-
-const TONE_ROW: Record<Tone, string> = {
-  emerald: 'bg-emerald-500/5 hover:bg-emerald-500/10',
-  amber: 'bg-amber-500/5 hover:bg-amber-500/10',
-  rose: 'bg-rose-500/5 hover:bg-rose-500/10',
-  red: 'bg-red-500/5 hover:bg-red-500/10',
-  blue: 'bg-blue-500/5 hover:bg-blue-500/10',
-  orange: 'bg-orange-500/5 hover:bg-orange-500/10',
-};
 
 function priorityTone(p: 'urgent' | 'warning' | 'normal'): Tone {
   if (p === 'urgent') return 'rose';

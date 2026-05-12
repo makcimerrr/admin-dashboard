@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { PILL } from '@/lib/status-pills';
 import { CheckCircle2 } from 'lucide-react';
 import {
   Tooltip,
@@ -142,13 +143,13 @@ export function ProjectCell({
               className={cn(
                 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors max-w-[140px]',
                 completed
-                  ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                  : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                  ? PILL.emerald
+                  : 'bg-muted text-muted-foreground border-border hover:bg-muted/70'
               )}
             >
               <span className="truncate">{displayName}</span>
               {completed && (
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
               )}
             </div>
           </div>

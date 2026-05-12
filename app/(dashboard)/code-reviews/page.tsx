@@ -27,6 +27,7 @@ import {
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { trackDotStyle } from '@/lib/track-colors';
+import { PILL, validationPill } from '@/lib/status-pills';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -330,13 +331,7 @@ export default function CodeReviewsPage() {
                       )}
                       <Badge
                         variant="outline"
-                        className={
-                          review.validationRate >= 80
-                            ? 'border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-400'
-                            : review.validationRate >= 50
-                              ? 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400'
-                              : 'border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400'
-                        }
+                        className={validationPill(review.validationRate)}
                       >
                         {review.validatedCount}/{review.totalMembers}
                       </Badge>
@@ -404,12 +399,12 @@ export default function CodeReviewsPage() {
                 {urgentReviews.map((review) => (
                   <div
                     key={review.id}
-                    className={`p-3 -mx-2 rounded-lg ${
+                    className={`p-3 -mx-2 rounded-lg border ${
                       review.priority === 'urgent'
-                        ? 'bg-red-50 border border-red-100 dark:bg-red-950/40 dark:border-red-900'
+                        ? 'bg-red-500/10 border-red-500/30'
                         : review.priority === 'warning'
-                          ? 'bg-amber-50 border border-amber-100 dark:bg-amber-950/40 dark:border-amber-900'
-                          : 'bg-blue-50 border border-blue-100 dark:bg-blue-950/40 dark:border-blue-900'
+                          ? 'bg-amber-500/10 border-amber-500/30'
+                          : 'bg-blue-500/10 border-blue-500/30'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
