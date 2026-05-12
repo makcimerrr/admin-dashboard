@@ -426,7 +426,7 @@ export function PlanningGrid({
             return (
               <div key={day} className="flex flex-col min-h-0 border-r last:border-r-0">
                 {/* Day header */}
-                <div className={cn('h-14 border-b flex flex-col items-center justify-center px-1 flex-shrink-0', holidayName && 'bg-red-50 dark:bg-red-950/30')}>
+                <div className={cn('h-14 border-b flex flex-col items-center justify-center px-1 flex-shrink-0', holidayName && 'bg-red-500/10')}>
                   <div className="text-xs font-bold capitalize">{day}</div>
                   <div className="text-[10px] text-muted-foreground">{formatDate(currentWeekDates[dayIndex])}</div>
                   {holidayName && <div className="text-[9px] text-red-600 dark:text-red-400 font-medium truncate max-w-full">{holidayName}</div>}
@@ -465,8 +465,8 @@ export function PlanningGrid({
                         className={cn(
                           'flex-1 border-b border-border/30',
                           isPaintModeActive && !isInteracting && 'hover:bg-muted/40',
-                          isPaintModeActive && paintMode === 'erase' && !isInteracting && 'hover:bg-red-50 dark:hover:bg-red-950/20',
-                          holidayName && 'bg-red-50/30 dark:bg-red-950/10'
+                          isPaintModeActive && paintMode === 'erase' && !isInteracting && 'hover:bg-red-500/10',
+                          holidayName && 'bg-red-500/5'
                         )}
                         style={isPaintPreview && activeEmployee ? { backgroundColor: paintMode === 'erase' ? '#ef444420' : `${activeEmployee.color}30` } : undefined}
                       />
@@ -648,7 +648,7 @@ export function PlanningGrid({
           <div className="border-t my-1" />
           <button
             type="button"
-            className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 text-left"
+            className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-red-500/10 text-red-600 dark:text-red-400 text-left"
             onClick={() => { handleSlotDelete(contextMenu.employeeId, contextMenu.day, contextMenu.slotIndex); setContextMenu(null); }}
           >
             <Trash2 className="h-3.5 w-3.5" />

@@ -82,9 +82,9 @@ export const CalendarView = ({ tasks }: CalendarViewProps) => {
   const getTaskStyle = (status: TaskStatus) => {
     switch (status) {
       case "COMPLETED":
-        return "bg-green-500/15 text-green-600 line-through";
+        return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 line-through";
       case "IN_PROGRESS":
-        return "bg-orange-500/15 text-orange-600";
+        return "bg-orange-500/15 text-orange-700 dark:text-orange-400";
       case "NOT_STARTED":
       default:
         return "bg-muted/60 text-muted-foreground";

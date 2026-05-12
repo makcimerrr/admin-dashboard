@@ -143,7 +143,7 @@ export function PlanningToolbar({
           'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 transition-all duration-150',
           paintMode === 'erase'
             ? 'border-red-500 bg-red-500 text-white scale-105 shadow-lg'
-            : 'border-border hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20',
+            : 'border-border hover:border-red-500/50 hover:bg-red-500/10',
           !isEditor && 'opacity-50 cursor-not-allowed'
         )}
         title="Mode gomme — cliquez sur un créneau pour le supprimer"

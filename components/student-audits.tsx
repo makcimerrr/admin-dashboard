@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { trackChipStyle } from '@/lib/track-colors';
+import { PILL } from '@/lib/status-pills';
 import {
   Select,
   SelectContent,
@@ -56,11 +57,11 @@ interface StudentAuditsProps {
 const getPriorityColor = (priority: string) => {
   switch (priority) {
     case 'urgent':
-      return 'bg-red-500/10 text-red-700 border-red-500/20';
+      return PILL.red;
     case 'warning':
-      return 'bg-orange-500/10 text-orange-700 border-orange-500/20';
+      return PILL.orange;
     default:
-      return 'bg-green-500/10 text-green-700 border-green-500/20';
+      return PILL.emerald;
   }
 };
 
@@ -234,18 +235,12 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
                   {/* Validation Status & Link */}
                   <div className="flex items-center gap-2">
                     {audit.validated ? (
-                      <Badge
-                        variant="outline"
-                        className="bg-green-500/10 text-green-700 border-green-500/20"
-                      >
+                      <Badge variant="outline" className={PILL.emerald}>
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Validé
                       </Badge>
                     ) : (
-                      <Badge
-                        variant="outline"
-                        className="bg-red-500/10 text-red-700 border-red-500/20"
-                      >
+                      <Badge variant="outline" className={PILL.red}>
                         <XCircle className="h-3 w-3 mr-1" />
                         Non validé
                       </Badge>
@@ -279,19 +274,19 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
 
                 {/* Warnings individuels */}
                 {audit.warnings.length > 0 && (
-                  <div className="mb-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30">
+                  <div className="mb-2 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-700 dark:text-orange-400">
                     <div className="flex items-start gap-2">
-                      <div className="p-1.5 bg-orange-100 dark:bg-orange-900/30 rounded">
-                        <AlertTriangle className="h-4 w-4 text-orange-600" />
+                      <div className="p-1.5 bg-orange-500/15 rounded">
+                        <AlertTriangle className="h-4 w-4" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-orange-700 dark:text-orange-400 mb-2">
+                        <p className="text-sm font-medium mb-2">
                           Points d'attention ({audit.warnings.length})
                         </p>
                         <ul className="text-sm space-y-1.5">
                           {audit.warnings.map((warning, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-orange-700 dark:text-orange-400">
-                              <span className="text-orange-400 mt-1">•</span>
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="opacity-60 mt-1">•</span>
                               <span className="flex-1">{warning}</span>
                             </li>
                           ))}
