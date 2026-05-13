@@ -955,145 +955,215 @@ export default function AllAuditsPage() {
         </Card>
       </div>
 
-      {/* Filtres avancés */}
-      <div className="flex flex-wrap gap-3 p-4 rounded-lg border bg-muted/30">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher projet, groupe, membre, auditeur..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8"
-          />
-        </div>
+      {/* Filtres */}
+      {(() => {
+        const advancedActive =
+          (activeTab === 'completed'
+            ? Number(auditorFilter !== 'all') +
+              Number(warningsFilter !== 'all') +
+              Number(validationFilter !== 'all') +
+              Number(dateFilter !== 'all')
+            : 0);
+        const baseActive =
+          Number(promoFilter !== 'all') +
+          Number(trackFilter !== 'all') +
+          Number(priorityFilter !== 'all');
+        const totalActive = baseActive + advancedActive;
+        const resetAll = () => {
+          setSearch('');
+          setPromoFilter('all');
+          setTrackFilter('all');
+          setPriorityFilter('all');
+          setAuditorFilter('all');
+          setWarningsFilter('all');
+          setValidationFilter('all');
+          setDateFilter('all');
+        };
 
-        <Select value={promoFilter} onValueChange={setPromoFilter}>
-          <SelectTrigger className="w-[150px] h-8">
-            <SelectValue placeholder="Promotion" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes promos</SelectItem>
-            {uniquePromos.map(([id, name]) => (
-              <SelectItem key={id} value={id}>
-                {name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        return (
+          <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg border bg-muted/30">
+            <div className="flex items-center gap-2 flex-1 min-w-[220px]">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                placeholder="Rechercher projet, groupe, membre, auditeur…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 border-0 bg-transparent shadow-none focus-visible:ring-0 px-1"
+              />
+            </div>
 
-        <Select
-          value={trackFilter}
-          onValueChange={(value: string) =>
-            setTrackFilter(value as 'all' | Track)
-          }
-        >
-          <SelectTrigger className="w-[130px] h-8">
-            <SelectValue placeholder="Tronc" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous troncs</SelectItem>
-            {(['Golang', 'Javascript', 'Rust', 'Java'] as Track[]).map(
-              (track) => (
-                <SelectItem key={track} value={track}>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={trackDotStyle(track)}
-                    />
-                    {track}
-                  </div>
-                </SelectItem>
-              )
-            )}
-          </SelectContent>
-        </Select>
-
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-[130px] h-8">
-            <SelectValue placeholder="Priorité" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes priorités</SelectItem>
-            <SelectItem value="urgent">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-3 w-3 text-rose-500" />
-                Urgent
-              </div>
-            </SelectItem>
-            <SelectItem value="warning">
-              <div className="flex items-center gap-2">
-                <Flag className="h-3 w-3 text-amber-500" />
-                Warning
-              </div>
-            </SelectItem>
-            <SelectItem value="normal">Normal</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {activeTab === 'completed' && (
-          <>
-            <Select value={auditorFilter} onValueChange={setAuditorFilter}>
-              <SelectTrigger className="w-[140px] h-8">
-                <SelectValue placeholder="Auditeur" />
+            <Select value={promoFilter} onValueChange={setPromoFilter}>
+              <SelectTrigger className="w-[150px] h-8">
+                <SelectValue placeholder="Promotion" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous auditeurs</SelectItem>
-                {uniqueAuditors.map((auditor) => (
-                  <SelectItem key={auditor} value={auditor}>
-                    {auditor}
+                <SelectItem value="all">Toutes promos</SelectItem>
+                {uniquePromos.map(([id, name]) => (
+                  <SelectItem key={id} value={id}>
+                    {name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={warningsFilter} onValueChange={setWarningsFilter}>
-              <SelectTrigger className="w-[130px] h-8">
-                <SelectValue placeholder="Warnings" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="with">Avec warnings</SelectItem>
-                <SelectItem value="without">Sans warnings</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select
-              value={validationFilter}
-              onValueChange={setValidationFilter}
+              value={trackFilter}
+              onValueChange={(value: string) =>
+                setTrackFilter(value as 'all' | Track)
+              }
             >
               <SelectTrigger className="w-[130px] h-8">
-                <SelectValue placeholder="Validation" />
+                <SelectValue placeholder="Tronc" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="high">≥ 80%</SelectItem>
-                <SelectItem value="medium">50-79%</SelectItem>
-                <SelectItem value="low">&lt; 50%</SelectItem>
+                <SelectItem value="all">Tous troncs</SelectItem>
+                {(['Golang', 'Javascript', 'Rust', 'Java'] as Track[]).map(
+                  (track) => (
+                    <SelectItem key={track} value={track}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={trackDotStyle(track)}
+                        />
+                        {track}
+                      </div>
+                    </SelectItem>
+                  ),
+                )}
               </SelectContent>
             </Select>
 
-            <Select value={dateFilter} onValueChange={setDateFilter}>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
               <SelectTrigger className="w-[130px] h-8">
-                <SelectValue placeholder="Période" />
+                <SelectValue placeholder="Priorité" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes dates</SelectItem>
-                <SelectItem value="today">Aujourd'hui</SelectItem>
-                <SelectItem value="week">7 derniers jours</SelectItem>
-                <SelectItem value="month">30 derniers jours</SelectItem>
+                <SelectItem value="all">Toutes priorités</SelectItem>
+                <SelectItem value="urgent">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-3 w-3 text-rose-500" />
+                    Urgent
+                  </div>
+                </SelectItem>
+                <SelectItem value="warning">
+                  <div className="flex items-center gap-2">
+                    <Flag className="h-3 w-3 text-amber-500" />
+                    Warning
+                  </div>
+                </SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
               </SelectContent>
             </Select>
-          </>
-        )}
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground px-2">
-          <Filter className="h-3.5 w-3.5" />
-          <span>
-            {activeTab === 'completed'
-              ? `${filteredAndSortedAudits.length} audits`
-              : `${filteredAndSortedPendingGroups.length} en attente`}
-          </span>
-        </div>
-      </div>
+
+            {activeTab === 'completed' && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-2">
+                    <Filter className="h-3.5 w-3.5" />
+                    Plus de filtres
+                    {advancedActive > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                        {advancedActive}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-4 space-y-3" align="end">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      Auditeur
+                    </Label>
+                    <Select value={auditorFilter} onValueChange={setAuditorFilter}>
+                      <SelectTrigger className="w-full h-8">
+                        <SelectValue placeholder="Auditeur" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous auditeurs</SelectItem>
+                        {uniqueAuditors.map((auditor) => (
+                          <SelectItem key={auditor} value={auditor}>
+                            {auditor}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      Warnings
+                    </Label>
+                    <Select value={warningsFilter} onValueChange={setWarningsFilter}>
+                      <SelectTrigger className="w-full h-8">
+                        <SelectValue placeholder="Warnings" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous</SelectItem>
+                        <SelectItem value="with">Avec warnings</SelectItem>
+                        <SelectItem value="without">Sans warnings</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      Taux de validation
+                    </Label>
+                    <Select
+                      value={validationFilter}
+                      onValueChange={setValidationFilter}
+                    >
+                      <SelectTrigger className="w-full h-8">
+                        <SelectValue placeholder="Validation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous</SelectItem>
+                        <SelectItem value="high">≥ 80%</SelectItem>
+                        <SelectItem value="medium">50–79%</SelectItem>
+                        <SelectItem value="low">&lt; 50%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      Période
+                    </Label>
+                    <Select value={dateFilter} onValueChange={setDateFilter}>
+                      <SelectTrigger className="w-full h-8">
+                        <SelectValue placeholder="Période" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Toutes dates</SelectItem>
+                        <SelectItem value="today">Aujourd&apos;hui</SelectItem>
+                        <SelectItem value="week">7 derniers jours</SelectItem>
+                        <SelectItem value="month">30 derniers jours</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {activeTab === 'completed'
+                  ? `${filteredAndSortedAudits.length} audits`
+                  : `${filteredAndSortedPendingGroups.length} en attente`}
+              </span>
+              {(totalActive > 0 || search.length > 0) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-xs text-muted-foreground"
+                  onClick={resetAll}
+                >
+                  Réinitialiser
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
