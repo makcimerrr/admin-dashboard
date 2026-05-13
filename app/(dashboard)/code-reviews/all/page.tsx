@@ -54,12 +54,10 @@ import {
   Filter,
   AlertTriangle,
   Eye,
-  Users,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
   User,
-  BarChart3,
   Flag,
   ArrowLeft,
   ClipboardCheck,
@@ -71,11 +69,7 @@ import {
   XCircle,
   FileWarning,
   Hourglass,
-  ClipboardList,
-  UserCheck,
-  UserX,
-  MessageSquareWarning,
-  FileDown
+  FileDown,
 } from 'lucide-react';
 import { formatDistanceToNow, format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -764,16 +758,16 @@ export default function AllAuditsPage() {
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-                Centre de Suivi des Code Reviews
+                Tous les audits
               </h1>
-              <p className="text-muted-foreground">Chargement...</p>
+              <p className="text-sm text-muted-foreground">Chargement...</p>
             </div>
           </div>
         </div>
 
         {/* Stats Cards Skeleton */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-          {Array.from({ length: 8 }).map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
             <StatCardSkeleton key={i} />
           ))}
         </div>
@@ -824,7 +818,7 @@ export default function AllAuditsPage() {
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/code-reviews">
@@ -836,10 +830,11 @@ export default function AllAuditsPage() {
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-              Centre de Suivi des Code Reviews
+              Tous les audits
             </h1>
-            <p className="text-muted-foreground">
-              {audits.length} audits réalisés · {pendingStats.total} en attente
+            <p className="text-sm text-muted-foreground">
+              {audits.length} réalisés · {pendingStats.total} en attente,
+              toutes promos confondues
             </p>
           </div>
         </div>
@@ -908,75 +903,17 @@ export default function AllAuditsPage() {
         </Popover>
       </div>
 
-      {/* Alertes globales */}
-      {(completedStats.totalWarnings > 0 || filteredPendingStats.urgent > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {completedStats.totalWarnings > 0 && (
-            <Card className="border-amber-500/30 bg-amber-500/10">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-500/15 rounded-lg">
-                    <MessageSquareWarning className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <div className="flex-1 text-amber-700 dark:text-amber-400">
-                    <h3 className="font-semibold">Warnings détectés</h3>
-                    <p className="text-sm">
-                      {completedStats.totalWarnings} warning(s) dans{' '}
-                      {completedStats.withWarnings} audit(s)
-                    </p>
-                    <Button
-                      variant="link"
-                      className="h-auto p-0 text-amber-700 dark:text-amber-400"
-                      onClick={() => {
-                        setWarningsFilter('with');
-                        setActiveTab('completed');
-                      }}
-                    >
-                      Voir les audits concernés →
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          {filteredPendingStats.urgent > 0 && (
-            <Card className="border-red-500/30 bg-red-500/10">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-red-500/15 rounded-lg">
-                    <Hourglass className="h-5 w-5 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div className="flex-1 text-red-700 dark:text-red-400">
-                    <h3 className="font-semibold">Audits urgents en attente</h3>
-                    <p className="text-sm">
-                      {filteredPendingStats.urgent} groupe(s) marqués comme urgents (score ≥ 50)
-                    </p>
-                    <Button
-                      variant="link"
-                      className="h-auto p-0 text-red-700 dark:text-red-400"
-                      onClick={() => {
-                        setPriorityFilter('urgent');
-                        setActiveTab('pending');
-                      }}
-                    >
-                      Voir les groupes urgents →
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Stats globales */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      {/* Stats globales — 4 essentielles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-3">
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Audités</span>
             <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
           </div>
           <p className="text-2xl font-bold mt-1">{completedStats.total}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {completedStats.avgValidation}% validation moyenne
+          </p>
         </Card>
         <Card className="p-3 border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400">
           <div className="flex items-center justify-between">
@@ -990,14 +927,20 @@ export default function AllAuditsPage() {
           ) : (
             <p className="text-2xl font-bold mt-1">{filteredPendingStats.total}</p>
           )}
+          <p className="text-[11px] opacity-70 mt-0.5">
+            score moy. {pendingStats.avgScore}
+          </p>
         </Card>
         <Card className="p-3 border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400">
           <div className="flex items-center justify-between">
-            <span className="text-xs">Urgent</span>
+            <span className="text-xs">Urgents</span>
             <AlertTriangle className="h-4 w-4" />
           </div>
           <p className="text-2xl font-bold mt-1">
             {completedStats.urgent + filteredPendingStats.urgent}
+          </p>
+          <p className="text-[11px] opacity-70 mt-0.5">
+            {filteredPendingStats.urgent} en attente
           </p>
         </Card>
         <Card className="p-3 border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
@@ -1006,39 +949,8 @@ export default function AllAuditsPage() {
             <FileWarning className="h-4 w-4" />
           </div>
           <p className="text-2xl font-bold mt-1">{completedStats.totalWarnings}</p>
-        </Card>
-        <Card className="p-3 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-          <div className="flex items-center justify-between">
-            <span className="text-xs">Validés</span>
-            <UserCheck className="h-4 w-4" />
-          </div>
-          <p className="text-2xl font-bold mt-1">{completedStats.validatedStudents}</p>
-        </Card>
-        <Card className="p-3 border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400">
-          <div className="flex items-center justify-between">
-            <span className="text-xs">Non validés</span>
-            <UserX className="h-4 w-4" />
-          </div>
-          <p className="text-2xl font-bold mt-1">
-            {completedStats.totalResults - completedStats.validatedStudents}
-          </p>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Étudiants</span>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-2xl font-bold mt-1">
-            {completedStats.totalStudents}
-          </p>
-        </Card>
-        <Card className="p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Valid. moy.</span>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-2xl font-bold mt-1">
-            {completedStats.avgValidation}%
+          <p className="text-[11px] opacity-70 mt-0.5">
+            dans {completedStats.withWarnings} audit(s)
           </p>
         </Card>
       </div>
