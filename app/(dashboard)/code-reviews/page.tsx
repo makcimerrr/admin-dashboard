@@ -7,90 +7,20 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   ClipboardCheck,
   ArrowRight,
   Calendar,
   Users,
-  AlertTriangle,
   AlertCircle,
-  CheckCircle2,
-  Clock,
-  Eye,
-  ChevronRight,
-  Info
+  Bell,
+  ListFilter,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { EmptyState } from '@/components/ui/empty-state';
-import { trackDotStyle } from '@/lib/track-colors';
-import { PILL, validationPill } from '@/lib/status-pills';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import {
-  ReviewItemSkeleton,
-  PromoCardSkeleton
-} from '@/components/code-reviews/skeletons';
-
-interface RecentReview {
-  id: number;
-  projectName: string;
-  groupId: string;
-  groupMembers: string[];
-  promotionName: string;
-  promoId: string;
-  track: string;
-  reviewedAt: string;
-  auditorName: string;
-  status: 'OK' | 'WARNING' | 'CRITICAL';
-  priority: 'urgent' | 'warning' | 'normal';
-  hasWarnings: boolean;
-  warningsCount: number;
-  validatedCount: number;
-  totalMembers: number;
-  validationRate: number;
-  globalWarnings: string[];
-  memberWarnings: { login: string; warnings: string[] }[];
-}
-
-interface UrgentReview {
-  id: string;
-  type:
-    | 'audit_warning'
-    | 'low_validation'
-    | 'pending_old'
-    | 'pending_recent'
-    | 'alert';
-  groupId?: string;
-  projectName?: string;
-  promoId?: string;
-  promotionName?: string;
-  track?: string;
-  reason: string;
-  reasonDetail?: string;
-  priority: 'urgent' | 'warning' | 'info';
-  auditId?: number;
-  validationRate?: number;
-  warningsCount?: number;
-  auditorName?: string;
-  auditDate?: string;
-  daysPending?: number;
-  membersCount?: number;
-}
-
-interface Alert {
-  id: string;
-  type: 'danger' | 'warning' | 'info';
-  severity: 'critical' | 'high' | 'medium' | 'low';
-  title: string;
-  description: string;
-  promoKey?: string;
-  count?: number;
-  action?: string;
-}
+import { PromoCardSkeleton } from '@/components/code-reviews/skeletons';
 
 interface PendingStats {
   total: number;
@@ -100,406 +30,95 @@ interface PendingStats {
   avgDaysPending: number;
 }
 
-interface PendingGroup {
-  groupId: string;
-  projectName: string;
-  track: string;
-  promoId: string;
-  promoName: string;
-  daysPending: number;
-  priority: 'urgent' | 'warning' | 'normal';
+interface Promo {
+  eventId: number | string;
+  key: string;
+  title: string;
+  dates: { start: string; end: string };
 }
 
 async function safeFetch<T>(path: string): Promise<T | null> {
   try {
     const res = await fetch(path);
-    if (!res.ok) {
-      console.error(`safeFetch failed: ${path} -> ${res.status}`);
-      return null;
-    }
+    if (!res.ok) return null;
     return await res.json();
-  } catch (err) {
-    console.error(`safeFetch error for ${path}:`, err);
+  } catch {
     return null;
   }
 }
 
 export default function CodeReviewsPage() {
-  const [recentReviews, setRecentReviews] = useState<RecentReview[] | null>(
-    null
-  );
-  const [urgentReviews, setUrgentReviews] = useState<UrgentReview[] | null>(
-    null
-  );
   const [pendingStats, setPendingStats] = useState<PendingStats | null>(null);
-  const [promotions, setPromotions] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [promotions, setPromotions] = useState<Promo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    async function load() {
-      try {
-        // Fetch recent code reviews, alerts, pending audits, and active promotions
-        const [recent, alertsResponse, pendingResponse, promotionsResponse] =
-          await Promise.all([
-            safeFetch<RecentReview[]>('/api/code-reviews/recent'),
-            safeFetch<{ success: boolean; alerts: Alert[] }>('/api/alerts'),
-            safeFetch<{
-              success: boolean;
-              pending: PendingGroup[];
-              stats: PendingStats;
-            }>('/api/code-reviews/pending'),
-            safeFetch<{ success: boolean; promotions: any[] }>(
-              '/api/promotions/active'
-            )
-          ]);
-        if (!mounted) return;
-        setRecentReviews(recent || []);
+    (async () => {
+      const [pendingRes, promosRes] = await Promise.all([
+        safeFetch<{ success: boolean; stats: PendingStats }>(
+          '/api/code-reviews/pending',
+        ),
+        safeFetch<{ success: boolean; promotions: Promo[] }>(
+          '/api/promotions/active',
+        ),
+      ]);
+      if (!mounted) return;
 
-        // Set pending stats
-        if (pendingResponse?.success) {
-          setPendingStats(pendingResponse.stats);
-        }
+      if (pendingRes?.success) setPendingStats(pendingRes.stats);
+      if (promosRes?.success) setPromotions(promosRes.promotions ?? []);
+      setLoading(false);
+    })();
 
-        // Set active promotions
-        if (promotionsResponse?.success && promotionsResponse.promotions) {
-          setPromotions(promotionsResponse.promotions);
-        } else {
-          setPromotions([]);
-        }
-
-        // Combine alerts: code-review alerts from /api/alerts + pending audits
-        const urgentItems: UrgentReview[] = [];
-
-        // 1. Add code-review related alerts from main alerts
-        if (alertsResponse?.success && alertsResponse.alerts) {
-          const codeReviewAlerts = alertsResponse.alerts
-            .filter(
-              (alert) =>
-                alert.id.startsWith('audit-') ||
-                alert.title.toLowerCase().includes('code review') ||
-                alert.title.toLowerCase().includes('audit') ||
-                alert.title.toLowerCase().includes('validation')
-            )
-            .slice(0, 5)
-            .map((alert) => ({
-              id: alert.id,
-              type: 'alert' as const,
-              reason: alert.title,
-              reasonDetail: alert.description,
-              priority:
-                alert.severity === 'critical' || alert.severity === 'high'
-                  ? ('urgent' as const)
-                  : alert.severity === 'medium'
-                    ? ('warning' as const)
-                    : ('info' as const),
-              promotionName: alert.promoKey,
-              warningsCount: alert.count
-            }));
-          urgentItems.push(...codeReviewAlerts);
-        }
-
-        // 2. Add pending audits (urgent and warning only)
-        if (pendingResponse?.success && pendingResponse.pending) {
-          const pendingAlerts = pendingResponse.pending
-            .filter((g) => g.priority === 'urgent' || g.priority === 'warning')
-            .slice(0, 5)
-            .map((group) => ({
-              id: `pending-${group.promoId}-${group.groupId}`,
-              type: 'pending_old' as const,
-              groupId: group.groupId,
-              projectName: group.projectName,
-              promoId: group.promoId,
-              promotionName: group.promoName,
-              track: group.track,
-              reason:
-                group.priority === 'urgent'
-                  ? 'Audit urgent'
-                  : 'Audit à traiter',
-              reasonDetail: `En attente depuis ${group.daysPending} jour(s)`,
-              priority:
-                group.priority === 'urgent'
-                  ? ('urgent' as const)
-                  : ('warning' as const),
-              daysPending: group.daysPending
-            }));
-          urgentItems.push(...pendingAlerts);
-        }
-
-        // Sort by priority
-        const priorityOrder = { urgent: 0, warning: 1, info: 2 };
-        urgentItems.sort(
-          (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]
-        );
-
-        setUrgentReviews(urgentItems.slice(0, 8));
-      } catch (e) {
-        if (!mounted) return;
-        setError('Erreur lors du chargement des données.');
-        setRecentReviews([]);
-        setUrgentReviews([]);
-      }
-    }
-
-    load();
     return () => {
       mounted = false;
     };
   }, []);
 
-  const isLoading = recentReviews === null || urgentReviews === null;
-
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
-      {/* Header */}
-      <PageHeader icon={ClipboardCheck} title="Code Reviews" description="Suivi des audits pédagogiques par promotion">
-        <Button asChild variant="outline" size="sm">
-          <Link href="/code-reviews/all">
-            <Eye className="h-4 w-4 mr-2" />
-            Tous les audits
-          </Link>
-        </Button>
-      </PageHeader>
+      <PageHeader
+        icon={ClipboardCheck}
+        title="Code Reviews"
+        description="Sélectionnez une promotion pour gérer ses audits, ou explorez les vues transverses."
+      />
 
-      {/* Widgets */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Reviews Widget */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Derniers audits
-              </CardTitle>
-              <span className="text-xs text-muted-foreground">
-                {recentReviews?.length || 0} récent(s)
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {isLoading ? (
-              <div className="space-y-1">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <ReviewItemSkeleton key={i} />
-                ))}
-              </div>
-            ) : error ? (
-              <div className="p-4 text-sm text-destructive">{error}</div>
-            ) : recentReviews && recentReviews.length > 0 ? (
-              <div className="space-y-1">
-                {recentReviews.map((review) => (
-                  <Link
-                    key={review.id}
-                    href={`/code-reviews/${review.promoId}/group/${review.groupId}`}
-                    className="flex items-center gap-3 p-3 -mx-2 rounded-lg hover:bg-muted transition-colors group"
-                  >
-                    {/* Track indicator */}
-                    <div
-                      className="w-1 h-12 rounded-full"
-                      style={trackDotStyle(review.track)}
-                    />
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">
-                          {review.projectName}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          #{review.groupId.slice(-6)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        <span>{review.promotionName}</span>
-                        <span>·</span>
-                        <span>{review.auditorName}</span>
-                        <span>·</span>
-                        <span>
-                          {formatDistanceToNow(new Date(review.reviewedAt), {
-                            addSuffix: true,
-                            locale: fr
-                          })}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <div className="flex items-center gap-2">
-                      {review.hasWarnings && (
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                      )}
-                      <Badge
-                        variant="outline"
-                        className={validationPill(review.validationRate)}
-                      >
-                        {review.validatedCount}/{review.totalMembers}
-                      </Badge>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <EmptyState icon={ClipboardCheck} title="Aucun audit récent" size="compact" />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Urgent Reviews Widget */}
-        <Card
-          className={
-            urgentReviews && urgentReviews.length > 0
-              ? 'border-amber-200 dark:border-amber-800'
-              : ''
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatTile
+          label="En attente"
+          value={pendingStats?.total ?? '—'}
+          icon={ClipboardCheck}
+          loading={loading}
+        />
+        <StatTile
+          label="Urgents"
+          value={pendingStats?.urgent ?? '—'}
+          icon={AlertCircle}
+          tone="urgent"
+          loading={loading}
+        />
+        <StatTile
+          label="À traiter"
+          value={pendingStats?.warning ?? '—'}
+          icon={Bell}
+          tone="warning"
+          loading={loading}
+        />
+        <StatTile
+          label="Délai moyen"
+          value={
+            pendingStats?.avgDaysPending != null
+              ? `${pendingStats.avgDaysPending} j`
+              : '—'
           }
-        >
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                Alertes
-                {pendingStats && pendingStats.total > 0 && (
-                  <span className="text-xs font-normal text-muted-foreground">
-                    ({pendingStats.total} en attente)
-                  </span>
-                )}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {urgentReviews && urgentReviews.length > 0 && (
-                  <Badge variant="destructive" className="text-xs">
-                    {urgentReviews.length}
-                  </Badge>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-xs"
-                  asChild
-                >
-                  <Link href="/code-reviews/all">
-                    Tout voir
-                    <ChevronRight className="h-3 w-3 ml-1" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {isLoading ? (
-              <div className="space-y-1">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <ReviewItemSkeleton key={i} />
-                ))}
-              </div>
-            ) : error ? (
-              <div className="p-4 text-sm text-destructive">{error}</div>
-            ) : urgentReviews && urgentReviews.length > 0 ? (
-              <div className="space-y-1">
-                {urgentReviews.map((review) => (
-                  <div
-                    key={review.id}
-                    className={`p-3 -mx-2 rounded-lg border ${
-                      review.priority === 'urgent'
-                        ? 'bg-red-500/10 border-red-500/30'
-                        : review.priority === 'warning'
-                          ? 'bg-amber-500/10 border-amber-500/30'
-                          : 'bg-blue-500/10 border-blue-500/30'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {review.priority === 'urgent' ? (
-                            <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0" />
-                          ) : review.priority === 'warning' ? (
-                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                          ) : (
-                            <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                          )}
-                          <span className="font-medium truncate">
-                            {review.projectName || review.reason}
-                          </span>
-                          {review.track && (
-                            <div
-                              className="w-2 h-2 rounded-full"
-                              style={trackDotStyle(review.track)}
-                            />
-                          )}
-                          {review.warningsCount && review.warningsCount > 0 && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs px-1.5 py-0"
-                            >
-                              {review.warningsCount}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1 ml-6">
-                          {review.promotionName && (
-                            <span>{review.promotionName}</span>
-                          )}
-                          {review.promotionName &&
-                            (review.reason || review.reasonDetail) && (
-                              <span> · </span>
-                            )}
-                          {review.projectName
-                            ? review.reason
-                            : review.reasonDetail}
-                        </div>
-                      </div>
-                      {review.promoId && review.groupId ? (
-                        <Button
-                          variant={
-                            review.type === 'pending_old' ? 'default' : 'ghost'
-                          }
-                          size="sm"
-                          className="h-7 px-2"
-                          asChild
-                        >
-                          <Link
-                            href={`/code-reviews/${review.promoId}/group/${review.groupId}`}
-                          >
-                            {review.type === 'pending_old' ? (
-                              <>Auditer</>
-                            ) : (
-                              <>
-                                <Eye className="h-3.5 w-3.5 mr-1" />
-                                Voir
-                              </>
-                            )}
-                          </Link>
-                        </Button>
-                      ) : review.auditId ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2"
-                          asChild
-                        >
-                          <Link href="/code-reviews/all">
-                            <Eye className="h-3.5 w-3.5 mr-1" />
-                            Voir
-                          </Link>
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                icon={CheckCircle2}
-                title="Aucune alerte"
-                size="compact"
-                className="[&_p]:text-emerald-600 dark:[&_p]:text-emerald-400 [&_svg]:text-emerald-500 dark:[&_svg]:text-emerald-400"
-              />
-            )}
-          </CardContent>
-        </Card>
+          icon={Calendar}
+          loading={loading}
+        />
       </div>
 
-      {/* Promotions Grid */}
+      {/* Promotions grid — primary entry point */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -507,12 +126,13 @@ export default function CodeReviewsPage() {
             Promotions
           </CardTitle>
           <CardDescription>
-            Sélectionnez une promotion pour gérer les audits
+            Sélectionnez une promotion pour voir sa progression et auditer ses
+            groupes.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {promotions.length === 0
+            {loading
               ? Array.from({ length: 3 }).map((_, i) => (
                   <PromoCardSkeleton key={i} />
                 ))
@@ -522,7 +142,7 @@ export default function CodeReviewsPage() {
                     href={`/code-reviews/${promo.eventId}`}
                     className="block group"
                   >
-                    <div className="p-4 rounded-lg border hover:border-primary hover:shadow-sm transition-all">
+                    <div className="p-4 rounded-lg border hover:border-primary hover:bg-muted/30 transition-colors">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold group-hover:text-primary transition-colors">
@@ -539,12 +159,12 @@ export default function CodeReviewsPage() {
                         <span>
                           {new Date(promo.dates.start).toLocaleDateString(
                             'fr-FR',
-                            { day: 'numeric', month: 'short' }
+                            { day: 'numeric', month: 'short' },
                           )}{' '}
                           -{' '}
                           {new Date(promo.dates.end).toLocaleDateString(
                             'fr-FR',
-                            { day: 'numeric', month: 'short', year: 'numeric' }
+                            { day: 'numeric', month: 'short', year: 'numeric' },
                           )}
                         </span>
                       </div>
@@ -555,15 +175,100 @@ export default function CodeReviewsPage() {
         </CardContent>
       </Card>
 
-      {/* Info */}
-      <div className="text-xs text-muted-foreground px-1">
-        <span className="font-medium">Info:</span> Seuls les groupes avec statut{' '}
+      {/* Cross-cutting views — secondary nav */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <NavCard
+          href="/code-reviews/all"
+          icon={ListFilter}
+          title="Tous les audits"
+          description="Recherche, filtres et export sur l'ensemble des audits, toutes promos confondues."
+        />
+        <NavCard
+          href="/code-reviews/suivi"
+          icon={Bell}
+          title="Suivi des notifications"
+          description="État des relances Discord et créneaux d'audit non saisis."
+        />
+      </div>
+
+      <p className="text-xs text-muted-foreground px-1">
+        <span className="font-medium">Info :</span> seuls les groupes avec
+        statut{' '}
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 mx-1">
           finished
         </Badge>{' '}
-        peuvent être audités. Les étudiants en perdition sont marqués mais
-        exclus des statistiques.
-      </div>
+        peuvent être audités. Les étudiants en perdition sont exclus des
+        statistiques.
+      </p>
     </div>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  loading,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon: React.ElementType;
+  tone?: 'urgent' | 'warning';
+  loading?: boolean;
+}) {
+  const toneClass =
+    tone === 'urgent'
+      ? 'text-red-600 dark:text-red-400'
+      : tone === 'warning'
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-muted-foreground';
+  return (
+    <Card className="p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <Icon className={`h-4 w-4 ${toneClass}`} />
+      </div>
+      <p
+        className={`text-2xl font-bold mt-1 tabular-nums ${
+          loading ? 'opacity-30 animate-pulse' : ''
+        }`}
+      >
+        {value}
+      </p>
+    </Card>
+  );
+}
+
+function NavCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+}: {
+  href: string;
+  icon: React.ElementType;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link href={href} className="block group">
+      <Card className="p-4 hover:border-primary hover:bg-muted/30 transition-colors">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+            <Icon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold group-hover:text-primary transition-colors">
+                {title}
+              </p>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+          </div>
+        </div>
+      </Card>
+    </Link>
   );
 }
