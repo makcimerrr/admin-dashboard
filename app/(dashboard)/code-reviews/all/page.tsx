@@ -1721,7 +1721,7 @@ export default function AllAuditsPage() {
                             asChild
                           >
                             <Link
-                              href={`/code-reviews/${group.promoId}/group/${group.groupId}`}
+                              href={`/code-reviews/${group.promoId}/audit?groupId=${group.groupId}&project=${encodeURIComponent(group.projectName)}&track=${encodeURIComponent(group.track)}`}
                             >
                               Auditer
                             </Link>
