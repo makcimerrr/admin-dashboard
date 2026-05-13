@@ -212,7 +212,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
     const absentCount = memberResults.filter(r => r.absent).length;
 
     return (
-        <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6 pb-24">
+        <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
@@ -404,9 +404,9 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                 </CardContent>
             </Card>
 
-            {/* Sticky save bar */}
-            <div className="fixed bottom-0 left-0 right-0 z-30 bg-background/95 backdrop-blur-sm border-t md:left-[var(--sidebar-width,0)]">
-                <div className="page-container flex items-center justify-between gap-3 p-3 md:p-4">
+            {/* Sticky save bar — sticks at the bottom of the scroll container */}
+            <div className="sticky bottom-0 -mx-4 md:-mx-6 mt-2 bg-background/95 backdrop-blur-sm border-t z-30">
+                <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3">
                     <div className="text-xs text-muted-foreground hidden sm:block">
                         {validatedCount}/{activeMembers.length} validés
                         {absentCount > 0 && ` • ${absentCount} absent${absentCount > 1 ? 's' : ''}`}
