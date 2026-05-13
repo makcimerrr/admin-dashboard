@@ -154,7 +154,10 @@ export default async function GroupDetailPage({ params }: PageProps) {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href={`/code-reviews/${promoId}`}>
+            <Link
+              href={`/code-reviews/${promoId}/group`}
+              aria-label="Retour à la liste des groupes"
+            >
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>

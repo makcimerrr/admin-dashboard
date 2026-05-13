@@ -169,9 +169,9 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                     <CardContent className="p-4">
                         <p className="text-red-700 dark:text-red-400">Paramètres manquants. Veuillez sélectionner un groupe depuis la liste.</p>
                         <Button variant="outline" className="mt-4" asChild>
-                            <Link href={`/code-reviews/${promoId}`}>
+                            <Link href={`/code-reviews/${promoId}/group`}>
                                 <ArrowLeft className="h-4 w-4 mr-2" />
-                                Retour
+                                Retour à la liste des groupes
                             </Link>
                         </Button>
                     </CardContent>
@@ -196,9 +196,9 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                     <CardContent className="p-4">
                         <p className="text-red-700 dark:text-red-400">{error || 'Groupe non trouvé'}</p>
                         <Button variant="outline" className="mt-4" asChild>
-                            <Link href={`/code-reviews/${promoId}`}>
+                            <Link href={`/code-reviews/${promoId}/group`}>
                                 <ArrowLeft className="h-4 w-4 mr-2" />
-                                Retour
+                                Retour à la liste des groupes
                             </Link>
                         </Button>
                     </CardContent>
@@ -215,7 +215,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/code-reviews/${promoId}`}>
+                        <Link href={`/code-reviews/${promoId}/group`}>
                             <ArrowLeft className="h-5 w-5" />
                         </Link>
                     </Button>
@@ -377,7 +377,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
             {/* Actions */}
             <div className="flex justify-end gap-3">
                 <Button variant="outline" asChild>
-                    <Link href={`/code-reviews/${promoId}`}>
+                    <Link href={`/code-reviews/${promoId}/group`}>
                         Annuler
                     </Link>
                 </Button>

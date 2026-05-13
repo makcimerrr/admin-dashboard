@@ -9,7 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import { Eye, EyeOff, FileText, UserX } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, Eye, EyeOff, FileText, UserX } from 'lucide-react';
+import Link from 'next/link';
 import MarkdownWithTables from './markdown-with-tables';
 
 type Member = {
@@ -30,7 +31,6 @@ type Props = {
   initialSummary?: string | null;
   initialGlobalWarnings?: string[];
   members: Member[];
-  otherAudits?: { auditId: number; groupId: string; projectName: string }[];
 };
 
 export default function AuditEditForm({
@@ -42,7 +42,6 @@ export default function AuditEditForm({
   initialSummary = "",
   initialGlobalWarnings = [],
   members,
-  otherAudits = [],
 }: Props) {
   const [summary, setSummary] = useState(initialSummary ?? "");
   const [globalWarnings, setGlobalWarnings] = useState<string[]>(initialGlobalWarnings);
@@ -102,42 +101,36 @@ export default function AuditEditForm({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-4 md:gap-6 p-4 md:p-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Modifier l'audit</h1>
-            <p className="text-muted-foreground">{projectName} • Groupe #{groupId} • {promoKey}</p>
+          <Button variant="ghost" size="icon" asChild>
+            <Link href={`/code-reviews/${promoId}/group/${groupId}`} aria-label="Retour à l'audit">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div className="p-3 bg-primary/10 rounded-xl">
+            <ClipboardCheck className="h-6 w-6 text-primary" />
           </div>
-          {/* quick audits selector */}
-          {otherAudits.length > 0 && (
-            <div className="ml-4">
-              <label className="sr-only">Autres audits</label>
-              <select
-                defaultValue=""
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (!val) return;
-                  // value format: auditId::groupId
-                  const [aid, gid] = val.split('::');
-                  window.location.href = `/code-reviews/${promoId}/group/${gid}/audit`;
-                }}
-                className="rounded-md border px-2 py-1 text-sm"
-              >
-                <option value="">Ouvrir un autre audit…</option>
-                {otherAudits.map(o => (
-                  <option key={o.auditId} value={`${o.auditId}::${o.groupId}`}>{o.projectName} • #{o.groupId}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+              Modifier l&apos;audit
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {projectName} • Groupe #{groupId}
+              {promoKey ? ` • ${promoKey}` : ''}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => window.location.href = `/code-reviews/${promoId}/group/${groupId}`}>
-            Annuler
+          <Button
+            variant="outline"
+            asChild
+          >
+            <Link href={`/code-reviews/${promoId}/group/${groupId}`}>Annuler</Link>
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>
-            {saving ? "Enregistrement..." : "Enregistrer"}
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
         </div>
       </div>
