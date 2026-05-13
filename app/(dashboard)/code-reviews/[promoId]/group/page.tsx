@@ -18,7 +18,7 @@ import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { getAuditsByPromoAndTrack } from '@/lib/db/services/audits';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
-import { BarChart3, ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { db } from '@/lib/db/config';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -245,40 +245,32 @@ export default async function PromoGroupsIndexPage(props: any) {
 
   return (
     <div className="page-container flex flex-col gap-6 p-6">
-      {/* Header: grouped navigation (left), title (center), actions (right) */}
-      <div className="flex items-center justify-between">
-        {/* Left: navigation group */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-md border bg-muted/5 px-2 py-1">
-            <Button variant="ghost" asChild>
-              <Link
-                href="/code-reviews"
-                className="flex items-center gap-2 px-3 py-2"
-                aria-label="Retour à Code Reviews"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline text-sm font-medium">
-                  Code Reviews
-                </span>
-              </Link>
-            </Button>
+      {/* Header: simple breadcrumb-style nav, title, single context action */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button variant="ghost" size="icon" asChild>
+          <Link href={`/code-reviews/${promoId}`} aria-label="Retour à la vue promo">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </Button>
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+            Groupes — {promo.key}
+          </h1>
+          <p className="text-sm text-muted-foreground">{promo.title}</p>
+        </div>
 
-            <div className="hidden sm:flex items-center h-8 ml-1">
-              <div className="w-px h-6 bg-border/40" />
-            </div>
-
-            {/* Prev promo with tooltip */}
+        {/* Prev / next promo — keep but compact, only when relevant */}
+        {(prevPromo || nextPromo) && (
+          <div className="ml-auto flex items-center gap-1">
             {prevPromo ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" asChild className="px-2 py-2">
+                  <Button variant="outline" size="sm" asChild>
                     <Link
                       href={`/code-reviews/${eventIdToString(prevPromo.eventId)}/group`}
-                      className="flex items-center gap-2 px-3 py-2"
                       aria-label={`Aller à ${prevPromo.key}`}
                     >
-                      <ArrowLeft className="h-4 w-4 rotate-90" />
-                      <span className="hidden md:inline text-sm">Précéd.</span>
+                      <ArrowLeft className="h-4 w-4" />
                     </Link>
                   </Button>
                 </TooltipTrigger>
@@ -288,29 +280,16 @@ export default async function PromoGroupsIndexPage(props: any) {
                   </div>
                 </TooltipContent>
               </Tooltip>
-            ) : (
-              <Button
-                variant="outline"
-                disabled
-                className="px-3 py-2 opacity-60"
-                aria-label="Aucune promotion précédente"
-              >
-                <ArrowLeft className="h-4 w-4 rotate-90 opacity-40" />
-              </Button>
-            )}
-
-            {/* Next promo with tooltip */}
+            ) : null}
             {nextPromo ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" asChild className="px-2 py-2">
+                  <Button variant="outline" size="sm" asChild>
                     <Link
                       href={`/code-reviews/${eventIdToString(nextPromo.eventId)}/group`}
-                      className="flex items-center gap-2 px-3 py-2"
                       aria-label={`Aller à ${nextPromo.key}`}
                     >
-                      <ArrowLeft className="h-4 w-4 -rotate-90" />
-                      <span className="hidden md:inline text-sm">Suiv.</span>
+                      <ArrowLeft className="h-4 w-4 rotate-180" />
                     </Link>
                   </Button>
                 </TooltipTrigger>
@@ -320,63 +299,12 @@ export default async function PromoGroupsIndexPage(props: any) {
                   </div>
                 </TooltipContent>
               </Tooltip>
-            ) : (
-              <Button
-                variant="outline"
-                disabled
-                className="px-3 py-2 opacity-60"
-                aria-label="Aucune promotion suivante"
-              >
-                <ArrowLeft className="h-4 w-4 -rotate-90 opacity-40" />
-              </Button>
-            )}
+            ) : null}
           </div>
-        </div>
-
-        {/* Center: title (responsive) */}
-        <div className="flex-1 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Groupes — {promo.key}
-          </h1>
-          <p className="text-sm text-muted-foreground">{promo.title}</p>
-        </div>
-
-        {/* Right: actions */}
-        <div className="flex items-center gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" asChild>
-                <Link
-                  href={`/code-reviews/${promoId}`}
-                  className="flex items-center gap-2 px-3 py-2"
-                  aria-label="Voir la promo"
-                >
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  <span className="hidden sm:inline text-sm font-medium">
-                    Voir la promo
-                  </span>
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-xs">
-                Ouvrir la vue promo et ses statistiques
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        )}
       </div>
 
       <div>
-        <div className="mb-4 rounded-md border bg-card p-4">
-          <h3 className="text-lg font-semibold">Vue des audits</h3>
-          <p className="text-sm text-muted-foreground">
-            Sépare les audits en attente et ceux déjà réalisés. Cliquez sur une
-            carte pour ouvrir l'audit (ou créer si en attente). Les membres sont
-            cliquables pour accéder à leur profil.
-          </p>
-        </div>
-
         <GroupFilters tracks={TRACKS as unknown as string[]} />
 
         {/* Grouped-by-track with Pending / Audited separation */}
@@ -481,7 +409,7 @@ export default async function PromoGroupsIndexPage(props: any) {
                           {/* Bouton en bas */}
                           <div className="mt-4 flex items-center justify-end">
                             <Link
-                              href={`/code-reviews/${promoId}/group/${g.groupId}`}
+                              href={`/code-reviews/${promoId}/audit?groupId=${g.groupId}&project=${encodeURIComponent(g.projectName)}&track=${encodeURIComponent(g.track)}`}
                               className="flex items-center gap-2 text-sm text-primary group px-2 py-1 rounded-md hover:bg-primary/5 transition-colors"
                               aria-label={`Créer l'audit du groupe ${g.groupId}`}
                             >
