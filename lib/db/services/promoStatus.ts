@@ -46,5 +46,8 @@ export async function deletePromoStatus(promoKey: string) {
 }
 
 export async function getPromoStatusForDisplay() {
-  return db.select().from(promoStatus).orderBy(promoStatus.promoKey);
+  const { getArchivedPromoNames } = await import('../filters');
+  const archived = await getArchivedPromoNames();
+  const rows = await db.select().from(promoStatus).orderBy(promoStatus.promoKey);
+  return rows.filter((r) => !archived.has(r.promoKey));
 }

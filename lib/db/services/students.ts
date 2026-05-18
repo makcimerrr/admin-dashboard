@@ -6,8 +6,9 @@ import {
   studentSpecialtyProgress
 } from '../schema';
 import { projects } from '../schema/projects';
-import { and, asc, count, desc, eq, ilike, or, sql, SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, notInArray, or, sql, SQL } from 'drizzle-orm';
 import { SelectStudent } from '@/lib/db/schema/students';
+import { getArchivedPromoNames } from '@/lib/db/filters';
 
 // Helper générique pour normaliser et obtenir la position du projet pour n'importe quel track
 const projectPositionSubquery = (
@@ -107,14 +108,25 @@ export async function getStudents(
       )
     : null;
 
-  // Combinaison des filtres (promo, recherche, status, delay_level, track, dropout)
+  // Exclure les promos archivées (sauf si l'appelant cible explicitement une promo via `promo`,
+  // auquel cas on lui fait confiance — utile pour les pages de promo archivée).
+  let archivedExclusion: SQL<unknown> | null = null;
+  if (!promo) {
+    const archived = Array.from(await getArchivedPromoNames());
+    if (archived.length > 0) {
+      archivedExclusion = notInArray(students.promoName, archived);
+    }
+  }
+
+  // Combinaison des filtres (promo, recherche, status, delay_level, track, dropout, archivées)
   const filters = [
     promoFilter,
     searchFilter,
     statusFilter,
     delayLevelFilter,
     trackFilter,
-    dropoutSqlFilter
+    dropoutSqlFilter,
+    archivedExclusion,
   ].filter((filter) => filter != null);
   let finalFilter: SQL<unknown> | undefined =
     filters.length > 0 ? and(...filters) : undefined;
@@ -568,7 +580,12 @@ export async function getProjectProgressStats(
     const totalResult = await db
       .select({ count: count() })
       .from(students)
-      .where(eq(students.promoName, promoName))
+      .where(
+        and(
+          eq(students.promoName, promoName),
+          eq(students.isDropout, false),
+        ),
+      )
       .execute();
 
     const totalStudents = totalResult[0]?.count || 0;
@@ -582,6 +599,7 @@ export async function getProjectProgressStats(
         .where(
           and(
             eq(students.promoName, promoName),
+            eq(students.isDropout, false),
             sql`LOWER(${studentProjects.project_name}) = LOWER(${expectedProject})`
           )
         )
@@ -604,6 +622,7 @@ export async function getProjectProgressStats(
         .where(
           and(
             eq(students.promoName, promoName),
+            eq(students.isDropout, false),
             sql`LOWER(${studentProjects.project_name}) != LOWER(${expectedProject})`
           )
         )
@@ -659,6 +678,7 @@ export async function getProjectProgressStats(
           .where(
             and(
               eq(students.promoName, promoName),
+              eq(students.isDropout, false),
               sql`LOWER(${studentCurrentProjects.rust_project}) = LOWER(${rustProject})`
             )
           )
@@ -678,6 +698,7 @@ export async function getProjectProgressStats(
           .where(
             and(
               eq(students.promoName, promoName),
+              eq(students.isDropout, false),
               sql`LOWER(${studentCurrentProjects.java_project}) = LOWER(${javaProject})`
             )
           )
@@ -706,6 +727,7 @@ export async function getProjectProgressStats(
         .where(
           and(
             eq(students.promoName, promoName),
+            eq(students.isDropout, false),
             rustProject && javaProject
               ? and(
                   sql`LOWER(${studentCurrentProjects.rust_project}) != LOWER(${rustProject})`,

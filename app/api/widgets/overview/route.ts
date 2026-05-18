@@ -1,9 +1,10 @@
 import { unstable_cache } from 'next/cache';
 import { db } from '@/lib/db/config';
 import { students, studentProjects, promotions } from '@/lib/db/schema';
-import { count, sql, eq, and, or, isNull } from 'drizzle-orm';
+import { count, sql, eq, or, isNull } from 'drizzle-orm';
 import { apiSuccess, withAuth, withErrorHandler } from '@/lib/api';
 import { CACHE_TAGS, CACHE_TTL } from '@/lib/cache';
+import { countableStudentsWhere } from '@/lib/db/filters';
 
 const computeOverview = unstable_cache(
   async () => {
@@ -18,12 +19,7 @@ const computeOverview = unstable_cache(
         .select({ count: count() })
         .from(students)
         .innerJoin(promotions, eq(students.promoName, promotions.name))
-        .where(
-          and(
-            eq(students.isDropout, false),
-            or(eq(promotions.isArchived, false), isNull(promotions.isArchived)),
-          ),
-        )
+        .where(countableStudentsWhere())
         .execute(),
       db
         .select({ count: count() })
@@ -34,19 +30,22 @@ const computeOverview = unstable_cache(
         .select({ count: count() })
         .from(studentProjects)
         .innerJoin(students, eq(studentProjects.student_id, students.id))
-        .where(and(sql`${studentProjects.delay_level} = 'bien'`, eq(students.isDropout, false)))
+        .innerJoin(promotions, eq(students.promoName, promotions.name))
+        .where(countableStudentsWhere(sql`${studentProjects.delay_level} = 'bien'`))
         .execute(),
       db
         .select({ count: count() })
         .from(studentProjects)
         .innerJoin(students, eq(studentProjects.student_id, students.id))
-        .where(and(sql`${studentProjects.delay_level} = 'en retard'`, eq(students.isDropout, false)))
+        .innerJoin(promotions, eq(students.promoName, promotions.name))
+        .where(countableStudentsWhere(sql`${studentProjects.delay_level} = 'en retard'`))
         .execute(),
       db
         .select({ count: count() })
         .from(studentProjects)
         .innerJoin(students, eq(studentProjects.student_id, students.id))
-        .where(and(sql`${studentProjects.delay_level} = 'Validé'`, eq(students.isDropout, false)))
+        .innerJoin(promotions, eq(students.promoName, promotions.name))
+        .where(countableStudentsWhere(sql`${studentProjects.delay_level} = 'Validé'`))
         .execute(),
     ]);
 

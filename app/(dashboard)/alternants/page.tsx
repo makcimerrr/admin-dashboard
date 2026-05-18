@@ -171,7 +171,7 @@ export default function AlternantsPage() {
         fetch("/api/alternants"),
         fetch("/api/alternants?stats=true"),
         fetch("/api/alternants?companies=true"),
-        fetch("/api/promotions"),
+        fetch("/api/promotions/active"),
       ]);
 
       const alternantsData = await alternantsRes.json();

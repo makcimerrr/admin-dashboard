@@ -1,6 +1,7 @@
 import { db } from '../config';
 import { students } from '../schema';
-import { eq, and, or, sql, desc, asc } from 'drizzle-orm';
+import { eq, and, or, sql, desc, asc, notInArray } from 'drizzle-orm';
+import { getArchivedPromoNames } from '../filters';
 
 // ============== TYPES ==============
 
@@ -61,6 +62,12 @@ export async function getAlternants(
 
         if (promoName) {
             conditions.push(eq(students.promoName, promoName));
+        } else {
+            // Quand aucune promo n'est ciblée explicitement, exclure les archivées.
+            const archived = Array.from(await getArchivedPromoNames());
+            if (archived.length > 0) {
+                conditions.push(notInArray(students.promoName, archived));
+            }
         }
 
         const result = await db

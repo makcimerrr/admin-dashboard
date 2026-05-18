@@ -17,7 +17,7 @@ export default function AnalyticsPage() {
   const [promos, setPromos] = useState<{ key: string; title: string; eventId: number }[]>([]);
 
   useEffect(() => {
-    fetch('/api/promotions').then(r => r.json()).then(data => {
+    fetch('/api/promotions/active').then(r => r.json()).then(data => {
       if (data.success) setPromos(data.promotions);
     }).catch(() => {});
   }, []);

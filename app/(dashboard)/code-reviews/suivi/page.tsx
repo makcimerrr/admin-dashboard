@@ -118,7 +118,7 @@ export default function SuiviPage() {
     try {
       const [suiviRes, promosRes] = await Promise.all([
         fetch('/api/code-reviews/suivi'),
-        fetch('/api/promotions'),
+        fetch('/api/promotions/active'),
       ]);
       const [suiviData, promosData] = await Promise.all([suiviRes.json(), promosRes.json()]);
       if (suiviData?.success) setRows(suiviData.data.rows);

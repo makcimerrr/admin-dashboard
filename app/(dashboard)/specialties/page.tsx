@@ -110,7 +110,7 @@ export default function SpecialtiesPage() {
   useEffect(() => {
     Promise.all([
       fetch('/api/specialties').then((r) => r.json()),
-      fetch('/api/promotions').then((r) => r.json()),
+      fetch('/api/promotions/active').then((r) => r.json()),
     ])
       .then(([specData, promoData]) => {
         const specs: SpecialtyDef[] = Array.isArray(specData) ? specData : specData.specialties || [];
