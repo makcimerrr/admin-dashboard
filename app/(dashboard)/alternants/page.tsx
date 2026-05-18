@@ -554,7 +554,7 @@ export default function AlternantsPage() {
                                   {CONTRACT_TYPE_LABELS[contract.contractType] || contract.contractType}
                                 </div>
                                 {contract.isActive && (
-                                  <Badge className="bg-green-500">Actif</Badge>
+                                  <Badge variant="outline" className={PILL.emerald}>Actif</Badge>
                                 )}
                               </div>
                               <div className="text-sm text-muted-foreground">

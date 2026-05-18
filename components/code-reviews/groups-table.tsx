@@ -680,14 +680,14 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => handleSetManualPriority(group.groupId, 'urgent')}
-                                  className={getEffectivePriority(group) === 'urgent' ? 'bg-rose-50' : ''}
+                                  className={getEffectivePriority(group) === 'urgent' ? 'bg-rose-500/10' : ''}
                                 >
                                   <AlertTriangle className="h-4 w-4 mr-2 text-rose-500" />
                                   Urgent
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleSetManualPriority(group.groupId, 'warning')}
-                                  className={getEffectivePriority(group) === 'warning' ? 'bg-amber-50' : ''}
+                                  className={getEffectivePriority(group) === 'warning' ? 'bg-amber-500/10' : ''}
                                 >
                                   <Flag className="h-4 w-4 mr-2 text-amber-500" />
                                   Warning
