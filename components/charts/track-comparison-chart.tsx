@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { Loader2 } from 'lucide-react';
+import { Loader2, BarChart3 } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type TrackData = {
   track: string;
@@ -83,8 +84,8 @@ export default function TrackComparisonChart({ promoKey }: { promoKey: string })
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-        Aucune donnée disponible
+      <div className="h-[300px] flex items-center justify-center">
+        <EmptyState icon={BarChart3} title="Aucune donnée disponible" size="compact" />
       </div>
     );
   }

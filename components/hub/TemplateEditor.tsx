@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Plus } from "lucide-react";
+import { ArrowLeft, Save, Plus, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LoadingCard } from "@/components/ui/loading-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { TaskEditor } from "./TaskEditor";
 
@@ -252,10 +253,11 @@ export default function TemplateEditor({ mode, id }: TemplateEditorProps) {
             </DndContext>
 
             {subEvents.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Aucune tâche pour le moment.</p>
-                <p className="text-sm">Cliquez sur "Ajouter une Tâche" pour commencer.</p>
-              </div>
+              <EmptyState
+                icon={ListTodo}
+                title="Aucune tâche pour le moment"
+                description="Cliquez sur « Ajouter une Tâche » pour commencer."
+              />
             )}
           </CardContent>
         </Card>

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { EmptyState } from '@/components/ui/empty-state';
 
 type Conversation = {
   id: number;
@@ -109,12 +110,11 @@ export function ChatSidebar({
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         ) : filteredConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-            <MessageSquare className="h-8 w-8 mb-2 text-muted-foreground/30" />
-            <p className="text-xs text-muted-foreground/50">
-              {searchQuery ? 'Aucun résultat' : 'Aucune conversation'}
-            </p>
-          </div>
+          <EmptyState
+            icon={MessageSquare}
+            title={searchQuery ? 'Aucun résultat' : 'Aucune conversation'}
+            size="compact"
+          />
         ) : (
           groups.map(({ title, items }) => {
             if (items.length === 0) return null;
