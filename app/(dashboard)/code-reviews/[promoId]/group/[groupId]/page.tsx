@@ -342,7 +342,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
             <div className="space-y-3">
               {audit.results.map((result) => {
                 return (
-                  <div key={result.id} className="border rounded-lg p-4 bg-white/50">
+                  <div key={result.id} className="border rounded-lg p-4 bg-card">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">{initialsFrom(undefined, result.studentLogin)}</div>

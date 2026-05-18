@@ -340,7 +340,7 @@ export default async function PromoGroupsIndexPage(props: any) {
                           data-group-card
                           data-track={g.track}
                           data-status="pending"
-                          className="relative block p-4 border rounded-lg bg-background hover:shadow-lg transition cursor-pointer
+                          className="relative block p-4 border rounded-lg bg-background hover:border-primary/50 hover:bg-muted/30 transition-colors cursor-pointer
                      flex flex-col justify-between min-h-[180px]" // <-- hauteur uniforme
                         >
                           {/* Contenu principal */}
@@ -436,7 +436,7 @@ export default async function PromoGroupsIndexPage(props: any) {
                           data-group-card
                           data-track={g.track}
                           data-status="audited"
-                          className="relative block p-4 border rounded-lg bg-white hover:shadow-lg transition cursor-pointer
+                          className="relative block p-4 border rounded-lg bg-card hover:border-primary/50 hover:bg-muted/30 transition-colors cursor-pointer
                      flex flex-col justify-between min-h-[180px]" // <-- même hauteur
                         >
                           {/* Contenu principal */}

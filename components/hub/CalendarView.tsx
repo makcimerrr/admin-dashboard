@@ -149,7 +149,7 @@ export const CalendarView = ({ tasks }: CalendarViewProps) => {
 
   return (
     <>
-      <Card className="border-2">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-center gap-2">
             <Button variant="outline" size="icon" onClick={previousMonth}>

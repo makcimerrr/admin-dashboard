@@ -155,7 +155,7 @@ export default function ProjectsManager() {
               {projects.map(({ id, name, project_time_week }, index) => (
                 <li
                   key={id}
-                  className="p-4 bg-white dark:bg-gray-900 rounded-lg shadow-md flex items-center justify-between hover:bg-gray-50 transition-all"
+                  className="p-4 bg-card border rounded-lg flex items-center justify-between hover:bg-muted/30 transition-colors"
                 >
                   <div className="text-lg font-medium">
                     <strong>{name}</strong> ({project_time_week} semaines)

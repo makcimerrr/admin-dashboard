@@ -131,7 +131,7 @@ export default function HolidayManager() {
         {holidays.map(({ name, start, end }) => (
           <li
             key={name}
-            className="flex justify-between items-center p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm hover:shadow-md transition-all"
+            className="flex justify-between items-center p-4 bg-card border rounded-lg hover:bg-muted/30 transition-colors"
           >
             <div className="text-lg font-medium">
               <strong>{name}</strong> : {start} - {end}

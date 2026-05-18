@@ -65,7 +65,7 @@ export default function MarkdownWithTables({ md }: { md?: string | null }) {
 
         return (
           <div key={`table-${idx}`} className="overflow-auto my-2">
-            <table className="min-w-full table-fixed border border-slate-200 text-sm">
+            <table className="min-w-full table-fixed border border-border text-sm">
               <colgroup>
                 {Array.from({ length: colCount }).map((_, i) => (
                   <col key={i} style={{ width: colWidth }} />
@@ -74,7 +74,7 @@ export default function MarkdownWithTables({ md }: { md?: string | null }) {
               <thead className="bg-muted/10">
                 <tr>
                   {seg.header.map((h, i) => (
-                    <th key={i} className="px-3 py-2 text-left font-semibold border-b border-slate-200">
+                    <th key={i} className="px-3 py-2 text-left font-semibold border-b border-border">
                       {h}
                     </th>
                   ))}
@@ -82,9 +82,9 @@ export default function MarkdownWithTables({ md }: { md?: string | null }) {
               </thead>
               <tbody>
                 {seg.rows.map((r, ri) => (
-                  <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-muted/5'}>
+                  <tr key={ri} className={ri % 2 === 0 ? 'bg-card' : 'bg-muted/30'}>
                     {seg.header.map((_, ci) => (
-                      <td key={ci} className="px-3 py-2 align-top border-b border-slate-100">
+                      <td key={ci} className="px-3 py-2 align-top border-b border-border/60">
                         {r[ci] ?? ''}
                       </td>
                     ))}

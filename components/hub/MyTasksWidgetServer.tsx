@@ -143,7 +143,7 @@ export async function MyTasksWidgetServer() {
 
   if (!userId) {
     return (
-      <Card className="border-2">
+      <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg">
             <CheckSquare className="h-5 w-5" />
@@ -160,7 +160,7 @@ export async function MyTasksWidgetServer() {
   }
 
   return (
-    <Card className="border-2">
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>

@@ -87,7 +87,7 @@ export default function TemplatesPage() {
           {templates.map((template) => (
             <Card
               key={template.id}
-              className="hover:shadow-lg transition-shadow"
+              className="hover:border-primary/50 hover:bg-muted/30 transition-colors"
             >
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">

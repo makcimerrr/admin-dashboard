@@ -199,7 +199,7 @@ export default function AlertsPanel({
   if (compact) {
     return (
       <Card
-        className={`border-2 ${hasCriticalAlerts ? 'border-red-500/50 shadow-lg shadow-red-500/20' : ''}`}
+        className={hasCriticalAlerts ? 'border-red-500/50 bg-red-500/5' : ''}
       >
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -295,7 +295,7 @@ export default function AlertsPanel({
   // Full expanded view
   return (
     <Card
-      className={`border-2 ${hasCriticalAlerts ? 'border-red-500/50 shadow-xl shadow-red-500/20' : ''}`}
+      className={hasCriticalAlerts ? 'border-red-500/50' : ''}
     >
       <CardHeader className={hasCriticalAlerts ? 'bg-red-500/5' : ''}>
         <div className="flex items-center justify-between">

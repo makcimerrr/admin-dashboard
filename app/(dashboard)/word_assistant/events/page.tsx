@@ -101,7 +101,7 @@ export default function EventsPage() {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {events.map((event) => (
-            <Card key={event.id} className="hover:shadow-lg transition-shadow">
+            <Card key={event.id} className="hover:border-primary/50 hover:bg-muted/30 transition-colors">
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   {event.name}
