@@ -100,7 +100,10 @@ export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
                   </div>
                 </div>
                 <Button variant="outline" size="sm" asChild className="group transition">
-                  <Link href={`/code-reviews/${audit.promoId}/group/${audit.groupId}/audit`} className="flex items-center gap-1 transition-transform group-hover:translate-x-1">
+                  <Link
+                    href={`/code-reviews/${audit.promoId}/audit?groupId=${audit.groupId}&project=${encodeURIComponent(audit.projectName)}&track=${encodeURIComponent(audit.track)}`}
+                    className="flex items-center gap-1 transition-transform group-hover:translate-x-1"
+                  >
                     <ExternalLink className="h-3 w-3 mr-1" />
                     <span className="text-sm">Auditer</span>
                   </Link>
