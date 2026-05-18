@@ -7,8 +7,7 @@ import Update from '@/components/update';
 import PromoStatusDisplay from '@/components/promo-status-display';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Button } from '@/components/ui/button';
-import { ChevronDown, Target, ChevronRight } from 'lucide-react';
+import { ChevronDown, Target } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 // Import new components
@@ -162,52 +161,34 @@ export function StudentsTable({
 
   return (
     <div className="space-y-6">
-      {/* Promo Status - Collapsible */}
+      {/* Promo Status — collapsible */}
       <Collapsible open={isPromoStatusOpen} onOpenChange={setIsPromoStatusOpen}>
-        <Card className="overflow-hidden border-2 hover:border-primary/20 transition-colors">
+        <Card className="overflow-hidden">
           <CollapsibleTrigger asChild>
-            <button className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors group">
-              <div className="flex items-center gap-4">
-                <div className="p-2.5 bg-primary/10 rounded-xl group-hover:bg-primary/15 transition-colors">
-                  <Target className="h-5 w-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-base">
-                      {promo ? `Projet Attendu` : 'Projets Attendus'}
-                    </h3>
-                    {promo && (
-                      <Badge variant="outline" className="font-medium">
-                        {promo}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {promo
-                      ? "Suivi de la progression sur le projet actuel"
-                      : "Vue d'ensemble de toutes les promotions"}
-                  </p>
+            <button className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left">
+              <div className="flex items-center gap-3 min-w-0">
+                <Target className="h-4 w-4 text-primary shrink-0" />
+                <div className="flex items-center gap-2 min-w-0">
+                  <h3 className="font-semibold text-sm truncate">
+                    {promo ? 'Projet attendu' : 'Projets attendus'}
+                  </h3>
+                  {promo && (
+                    <Badge variant="outline" className="font-medium text-[10px] h-5 px-1.5">
+                      {promo}
+                    </Badge>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground hidden sm:block">
-                  {isPromoStatusOpen ? 'Réduire' : 'Développer'}
-                </span>
-                <div className="p-1 rounded-md bg-muted/50 group-hover:bg-muted transition-colors">
-                  <ChevronDown
-                    className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
-                      isPromoStatusOpen ? 'rotate-180' : ''
-                    }`}
-                  />
-                </div>
-              </div>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition-transform shrink-0 ${
+                  isPromoStatusOpen ? 'rotate-180' : ''
+                }`}
+              />
             </button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="px-4 pb-4 border-t">
-              <div className="pt-4">
-                <PromoStatusDisplay selectedPromo={promo || 'all'} />
-              </div>
+            <div className="px-4 pb-4 pt-4 border-t">
+              <PromoStatusDisplay selectedPromo={promo || 'all'} />
             </div>
           </CollapsibleContent>
         </Card>
