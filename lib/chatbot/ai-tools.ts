@@ -197,7 +197,12 @@ async function checkStudentProgress({ firstName, lastName, fullName, studentId }
 }
 
 async function listStudentsByStatus({ status, promoName, limit }: { status: string; promoName?: string; limit: number }) {
-  const conditions: any[] = [eq(studentProjects.delay_level, status)];
+  // Always exclude dropouts when listing students for action — Nova should
+  // never surface students en perdition in these "qui est en retard" answers.
+  const conditions: any[] = [
+    eq(studentProjects.delay_level, status),
+    eq(students.isDropout, false),
+  ];
   if (promoName) conditions.push(eq(students.promoName, promoName));
 
   const results = await db
@@ -219,6 +224,8 @@ async function listStudentsByStatus({ status, promoName, limit }: { status: stri
 }
 
 async function listStudentsByPromo({ promoName, limit }: { promoName: string; limit: number }) {
+  // Exclude dropouts from "list students in this promo" — the dropouts have
+  // their own dedicated endpoint / question phrasing.
   const results = await db
     .select({
       id: students.id, firstName: students.first_name, lastName: students.last_name,
@@ -227,7 +234,7 @@ async function listStudentsByPromo({ promoName, limit }: { promoName: string; li
     })
     .from(students)
     .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
-    .where(eq(students.promoName, promoName))
+    .where(and(eq(students.promoName, promoName), eq(students.isDropout, false)))
     .limit(limit);
 
   if (results.length === 0) return { found: false, message: `Aucun étudiant dans "${promoName}"` };
@@ -263,7 +270,7 @@ async function listStudentsByProject({ projectName, track, limit }: { projectNam
     .from(students)
     .leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
     .leftJoin(studentCurrentProjects, eq(students.id, studentCurrentProjects.student_id))
-    .where(whereClause)
+    .where(and(whereClause, eq(students.isDropout, false)))
     .limit(limit);
 
   return { projectName, track, count: results.length, students: results.map(formatStudentShort) };
@@ -271,39 +278,47 @@ async function listStudentsByProject({ projectName, track, limit }: { projectNam
 
 async function getStats({ promoName }: { promoName?: string }) {
   const promoFilter = promoName ? eq(students.promoName, promoName) : undefined;
+  // Active = not dropout. Rates should be computed against active students.
+  const activeFilter = promoFilter
+    ? and(promoFilter, eq(students.isDropout, false))
+    : eq(students.isDropout, false);
 
-  const [totalResult, statusResults, dropoutResult, alternantResult] = await Promise.all([
-    db.select({ count: count() }).from(students).where(promoFilter),
+  const [totalActiveResult, statusResults, dropoutResult, alternantResult] = await Promise.all([
+    db.select({ count: count() }).from(students).where(activeFilter),
     db.select({ delayLevel: studentProjects.delay_level, count: count() })
       .from(students).leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
-      .where(promoFilter).groupBy(studentProjects.delay_level),
+      .where(activeFilter).groupBy(studentProjects.delay_level),
     db.select({ count: count() }).from(students).where(promoFilter ? and(promoFilter, eq(students.isDropout, true)) : eq(students.isDropout, true)),
-    db.select({ count: count() }).from(students).where(promoFilter ? and(promoFilter, eq(students.isAlternant, true)) : eq(students.isAlternant, true))
+    db.select({ count: count() }).from(students).where(promoFilter ? and(promoFilter, eq(students.isAlternant, true), eq(students.isDropout, false)) : and(eq(students.isAlternant, true), eq(students.isDropout, false)))
   ]);
 
-  const total = totalResult[0].count;
+  const totalActive = totalActiveResult[0].count;
   const statsByStatus: Record<string, number> = {};
   statusResults.forEach(r => { statsByStatus[r.delayLevel || 'Non défini'] = r.count; });
 
   return {
     promoName: promoName || 'Toutes',
-    totalEtudiants: total,
+    totalEtudiants: totalActive,
     enPerdition: dropoutResult[0].count,
     alternants: alternantResult[0].count,
     repartitionStatuts: statsByStatus,
-    taux: Object.fromEntries(Object.entries(statsByStatus).map(([k, v]) => [k, total > 0 ? Math.round((v / total) * 100) : 0]))
+    taux: Object.fromEntries(Object.entries(statsByStatus).map(([k, v]) => [k, totalActive > 0 ? Math.round((v / totalActive) * 100) : 0]))
   };
 }
 
 async function getTrackStats({ track, promoName }: { track: string; promoName?: string }) {
   const completedColumn = { golang: studentSpecialtyProgress.golang_completed, javascript: studentSpecialtyProgress.javascript_completed, rust: studentSpecialtyProgress.rust_completed, java: studentSpecialtyProgress.java_completed }[track]!;
   const promoFilter = promoName ? eq(students.promoName, promoName) : undefined;
+  // Active students only — track completion rates should not be skewed by dropouts.
+  const activeFilter = promoFilter
+    ? and(promoFilter, eq(students.isDropout, false))
+    : eq(students.isDropout, false);
 
   const results = await db
     .select({ completed: completedColumn, count: count() })
     .from(students)
     .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
-    .where(promoFilter)
+    .where(activeFilter)
     .groupBy(completedColumn);
 
   let total = 0, completed = 0;
@@ -320,25 +335,43 @@ async function compareStudents({ studentIds }: { studentIds: number[] }) {
 }
 
 async function listAllPromos() {
+  // Exclude archived promos from "list all" — they shouldn't surface in
+  // operational answers. Counts return active students (nombreEtudiants)
+  // plus separately the dropout total.
   const results = await db
     .select({ name: promotions.name, promoId: promotions.promoId })
-    .from(promotions);
+    .from(promotions)
+    .where(or(eq(promotions.isArchived, false), sql`${promotions.isArchived} IS NULL`));
 
   const promosWithCounts = await Promise.all(
     results.map(async (promo) => {
-      const [countResult, dropoutCount] = await Promise.all([
-        db.select({ count: count() }).from(students).where(eq(students.promoName, promo.name)),
-        db.select({ count: count() }).from(students).where(and(eq(students.promoName, promo.name), eq(students.isDropout, true)))
+      const [activeCountResult, dropoutCount] = await Promise.all([
+        db
+          .select({ count: count() })
+          .from(students)
+          .where(and(eq(students.promoName, promo.name), eq(students.isDropout, false))),
+        db
+          .select({ count: count() })
+          .from(students)
+          .where(and(eq(students.promoName, promo.name), eq(students.isDropout, true))),
       ]);
-      return { id: promo.promoId, nom: promo.name, nombreEtudiants: countResult[0].count, enPerdition: dropoutCount[0].count };
-    })
+      return {
+        id: promo.promoId,
+        nom: promo.name,
+        nombreEtudiants: activeCountResult[0].count,
+        enPerdition: dropoutCount[0].count,
+      };
+    }),
   );
   return { count: promosWithCounts.length, promotions: promosWithCounts };
 }
 
 async function getStudentsByTrackCompletion({ track, completed, promoName, limit }: { track: string; completed: boolean; promoName?: string; limit: number }) {
   const completedColumn = { golang: studentSpecialtyProgress.golang_completed, javascript: studentSpecialtyProgress.javascript_completed, rust: studentSpecialtyProgress.rust_completed, java: studentSpecialtyProgress.java_completed }[track]!;
-  const conditions: any[] = [eq(completedColumn, completed)];
+  const conditions: any[] = [
+    eq(completedColumn, completed),
+    eq(students.isDropout, false),
+  ];
   if (promoName) conditions.push(eq(students.promoName, promoName));
 
   const results = await db
