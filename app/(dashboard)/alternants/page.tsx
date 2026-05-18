@@ -286,7 +286,7 @@ export default function AlternantsPage() {
         <>
           {/* Stats Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-2 hover:shadow-lg transition-shadow">
+            <Card className="hover:shadow-sm transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Total Alternants
@@ -303,7 +303,7 @@ export default function AlternantsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 hover:shadow-lg transition-shadow">
+            <Card className="hover:shadow-sm transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Contrats Actifs
@@ -322,7 +322,7 @@ export default function AlternantsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 hover:shadow-lg transition-shadow">
+            <Card className="hover:shadow-sm transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Fin Prochaine
@@ -341,7 +341,7 @@ export default function AlternantsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 hover:shadow-lg transition-shadow">
+            <Card className="hover:shadow-sm transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Entreprises

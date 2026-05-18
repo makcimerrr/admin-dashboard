@@ -45,7 +45,7 @@ export default function TrackProgressWidget() {
 
   if (loading) {
     return (
-      <Card className="border-2">
+      <Card>
         <CardHeader>
           <Skeleton className="h-5 w-40 mb-2" />
           <Skeleton className="h-4 w-60" />
@@ -65,7 +65,7 @@ export default function TrackProgressWidget() {
   }
 
   return (
-    <Card className="border-2">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Code2 className="h-5 w-5" />

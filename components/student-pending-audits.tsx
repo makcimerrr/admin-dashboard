@@ -41,7 +41,7 @@ export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
 
   if (loading) {
     return (
-      <Card className="border-2">
+      <Card>
         <CardHeader>
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-full" />
@@ -61,7 +61,7 @@ export function StudentPendingAudits({ studentId }: StudentPendingAuditsProps) {
   }
 
   return (
-    <Card className="border-2 bg-card">
+    <Card className="bg-card">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-primary" />

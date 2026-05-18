@@ -111,7 +111,7 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
 
   if (loading) {
     return (
-      <Card className="border-2">
+      <Card>
         <CardHeader>
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-full" />
@@ -129,7 +129,7 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
 
   if (audits.length === 0) {
     return (
-      <Card className="border-2">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ClipboardCheck className="h-5 w-5" />
@@ -148,7 +148,7 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
   }
 
   return (
-    <Card className="border-2">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ClipboardCheck className="h-5 w-5" />

@@ -61,7 +61,7 @@ export default function RecentActivityWidget() {
 
   if (loading) {
     return (
-      <Card className="border-2">
+      <Card>
         <CardHeader>
           <Skeleton className="h-5 w-40 mb-2" />
           <Skeleton className="h-4 w-60" />
@@ -84,7 +84,7 @@ export default function RecentActivityWidget() {
   }
 
   return (
-    <Card className="border-2">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />

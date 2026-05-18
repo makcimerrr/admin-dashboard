@@ -426,7 +426,7 @@ export default function StudentPage() {
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-2">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Email</CardTitle>
             <Mail className="h-4 w-4 text-muted-foreground" />
@@ -442,7 +442,7 @@ export default function StudentPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-2">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Promotion</CardTitle>
             <User className="h-4 w-4 text-muted-foreground" />
@@ -452,7 +452,7 @@ export default function StudentPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-2">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Dernière MAJ</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -468,7 +468,7 @@ export default function StudentPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-2 bg-blue-500/5">
+        <Card className="bg-blue-500/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Progression</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -483,7 +483,7 @@ export default function StudentPage() {
       </div>
 
       {/* Progression Overview */}
-      <Card className="border-2">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
@@ -509,7 +509,7 @@ export default function StudentPage() {
       {/* Tracks Progress */}
       <div className="grid gap-4 md:grid-cols-2">
         {tracks.map((track) => (
-          <Card key={track.name} className="border-2">
+          <Card key={track.name} >
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
@@ -569,7 +569,7 @@ export default function StudentPage() {
       </div>
 
       {/* External Data Section */}
-      <Card className="border-2">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
@@ -637,7 +637,7 @@ export default function StudentPage() {
 
       {/* Projects List */}
       {projects.length > 0 && (
-        <Card className="border-2">
+        <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
@@ -684,7 +684,7 @@ export default function StudentPage() {
       <StudentAudits studentId={student.id} />
 
       {/* Alternant Section */}
-      <Card className="border-2 bg-orange-500/5">
+      <Card className="bg-orange-500/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Briefcase className="h-5 w-5" />
@@ -765,7 +765,7 @@ export default function StudentPage() {
       </Card>
 
       {/* Contact Actions */}
-      <Card className="border-2 bg-violet-500/5">
+      <Card className="bg-violet-500/5">
         <CardHeader>
           <CardTitle>Actions</CardTitle>
           <CardDescription>

@@ -103,7 +103,7 @@ export default function AnalyticsPage() {
         <TabsContent value="overview" className="space-y-4 mt-6">
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Track Comparison */}
-            <Card className="border-2">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5 text-cyan-600" />
@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Delay Distribution */}
-            <Card className="border-2">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -139,7 +139,7 @@ export default function AnalyticsPage() {
         <TabsContent value="distribution" className="space-y-4 mt-6">
           <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
             {filteredPromos.map((promo) => (
-              <Card key={promo.key} className="border-2">
+              <Card key={promo.key}>
                 <CardHeader>
                   <CardTitle className="text-lg">{promo.title}</CardTitle>
                   <CardDescription>Répartition des étudiants</CardDescription>
@@ -159,7 +159,7 @@ export default function AnalyticsPage() {
         <TabsContent value="progression" className="space-y-4 mt-6">
           <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
             {filteredPromos.map((promo) => (
-              <Card key={promo.key} className="border-2">
+              <Card key={promo.key}>
                 <CardHeader>
                   <CardTitle className="text-lg">{promo.title}</CardTitle>
                   <CardDescription>Progression détaillée des étudiants</CardDescription>
@@ -180,7 +180,7 @@ export default function AnalyticsPage() {
         <TabsContent value="comparison" className="space-y-6 mt-6">
           {/* Global Comparison */}
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border-2">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5 text-primary" />
@@ -195,7 +195,7 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-2">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
               <h3 className="text-lg font-semibold mb-4">Comparaison par Promotion</h3>
               <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
                 {filteredPromos.map((promo) => (
-                  <Card key={promo.key} className="border-2">
+                  <Card key={promo.key}>
                     <CardHeader>
                       <CardTitle className="text-lg">{promo.title}</CardTitle>
                       <CardDescription>Performance par tronc</CardDescription>
