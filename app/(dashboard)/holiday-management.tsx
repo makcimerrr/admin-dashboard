@@ -155,7 +155,7 @@ export default function HolidayManager() {
           <h3 className="text-xl font-bold">Ajouter une Vacance</h3>
           <button
             onClick={() => setIsModalOpen(false)}
-            className="text-gray-600 hover:text-gray-900"
+            className="text-muted-foreground hover:text-foreground"
             aria-label="Fermer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">

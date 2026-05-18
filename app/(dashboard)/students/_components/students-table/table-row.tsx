@@ -38,23 +38,24 @@ interface StudentTableRowProps {
   promoConfig?: PromoConfig[];
 }
 
-// Delay level badge styling
+// Delay level badge styling — routes through the shared PILL palette
+// so it stays legible in both light and dark themes.
 const getDelayLevelClass = (level: string | null) => {
   switch (level) {
     case 'bien':
-      return 'bg-green-100 text-green-800 border-green-200';
+      return PILL.emerald;
     case 'en retard':
-      return 'bg-red-100 text-red-800 border-red-200';
+      return PILL.red;
     case 'en avance':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
+      return PILL.blue;
     case 'spécialité':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return PILL.amber;
     case 'Validé':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      return PILL.emerald;
     case 'Non Validé':
-      return 'bg-rose-100 text-rose-800 border-rose-200';
+      return PILL.rose;
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-muted text-muted-foreground border-border';
   }
 };
 

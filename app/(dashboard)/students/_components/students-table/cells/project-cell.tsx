@@ -25,55 +25,55 @@ const STATUS_CONFIG = {
     letter: 'F',
     emoji: '✅',
     text: 'Terminé',
-    letterClass: 'bg-green-100 text-green-700 border-green-300'
+    letterClass: PILL.emerald
   },
   working: {
     letter: 'W',
     emoji: '🔨',
     text: 'En cours',
-    letterClass: 'bg-blue-100 text-blue-700 border-blue-300'
+    letterClass: PILL.blue
   },
   audit: {
     letter: 'A',
     emoji: '🔍',
     text: 'Audit',
-    letterClass: 'bg-orange-100 text-orange-700 border-orange-300'
+    letterClass: PILL.orange
   },
   setup: {
     letter: 'S',
     emoji: '⚙️',
     text: 'Setup',
-    letterClass: 'bg-purple-100 text-purple-700 border-purple-300'
+    letterClass: PILL.violet
   },
   'without group': {
     letter: 'X',
     emoji: '🚫',
     text: 'Sans groupe',
-    letterClass: 'bg-red-100 text-red-700 border-red-300'
+    letterClass: PILL.red
   },
   not_started: {
     letter: '-',
     emoji: '⏳',
     text: 'Non démarré',
-    letterClass: 'bg-gray-100 text-gray-500 border-gray-300'
+    letterClass: 'bg-muted text-muted-foreground border-border'
   },
   not_chosen: {
     letter: '?',
     emoji: '🤷',
     text: 'Non choisi',
-    letterClass: 'bg-gray-100 text-gray-400 border-gray-300'
+    letterClass: 'bg-muted text-muted-foreground/70 border-border'
   },
   track_not_started: {
     letter: '-',
     emoji: '🕐',
     text: 'Tronc non démarré',
-    letterClass: 'bg-slate-100 text-slate-400 border-slate-300'
+    letterClass: 'bg-muted text-muted-foreground/70 border-border'
   },
   default: {
     letter: '?',
     emoji: '❔',
     text: 'Inconnu',
-    letterClass: 'bg-gray-100 text-gray-400 border-gray-300'
+    letterClass: 'bg-muted text-muted-foreground/70 border-border'
   }
 } as const;
 
@@ -105,7 +105,7 @@ export function ProjectCell({
         >
           {config.letter}
         </span>
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium bg-slate-50 text-slate-400 border-slate-200 italic">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium bg-muted text-muted-foreground border-border italic">
           Non démarré
         </div>
       </div>

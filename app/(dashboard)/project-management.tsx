@@ -167,7 +167,7 @@ export default function ProjectsManager() {
                       size="sm"
                       onClick={() => handleMoveProject(tech, id, 'up')}
                       disabled={index === 0}
-                      className="text-sm text-gray-600 hover:text-primary transition-colors"
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       ↑
                     </Button>
@@ -176,7 +176,7 @@ export default function ProjectsManager() {
                       size="sm"
                       onClick={() => handleMoveProject(tech, id, 'down')}
                       disabled={index === projects.length - 1}
-                      className="text-sm text-gray-600 hover:text-primary transition-colors"
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       ↓
                     </Button>
@@ -202,7 +202,7 @@ export default function ProjectsManager() {
           <h3 className="text-xl font-bold">Ajouter un Projet</h3>
           <button
             onClick={() => setIsModalOpen(false)}
-            className="text-gray-600 hover:text-gray-900"
+            className="text-muted-foreground hover:text-foreground"
             aria-label="Fermer"
           >
             <svg

@@ -519,7 +519,7 @@ export default function StudentPage() {
                 {track.completed ? (
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                 ) : (
-                  <XCircle className="h-5 w-5 text-gray-400" />
+                  <XCircle className="h-5 w-5 text-muted-foreground" />
                 )}
               </CardTitle>
             </CardHeader>

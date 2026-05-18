@@ -714,7 +714,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
         )}
       </Button>
       {/* Affichage de la mise à jour à côté du bouton */}
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-muted-foreground">
         <LastUpdate
           lastUpdate={lastUpdate}
           eventId={eventId}

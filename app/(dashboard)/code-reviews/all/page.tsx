@@ -1179,7 +1179,7 @@ export default function AllAuditsPage() {
               <Hourglass className="h-4 w-4" />
               En attente
               {loadingPending ? (
-                <div className="ml-1 h-4 w-8 rounded bg-gray-200 animate-pulse" aria-hidden />
+                <div className="ml-1 h-4 w-8 rounded bg-muted animate-pulse" aria-hidden />
               ) : filteredPendingStats.urgent > 0 ? (
                 <Badge variant="destructive" className="ml-1">
                   {filteredAndSortedPendingGroups.length}

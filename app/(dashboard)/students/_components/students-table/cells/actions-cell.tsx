@@ -166,7 +166,7 @@ export function ActionsCell({
         {isAlternant ? (
           <DropdownMenuItem
             onClick={(e) => handleAlternantAction(e, 'remove')}
-            className="cursor-pointer text-gray-600 focus:text-gray-600"
+            className="cursor-pointer text-muted-foreground focus:text-foreground"
           >
             <Briefcase className="h-4 w-4 mr-2" />
             Retirer statut alternant
