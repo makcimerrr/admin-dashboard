@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-cyan-600" />
+                  <Activity className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
                   Comparaison des Troncs
                 </CardTitle>
                 <CardDescription>

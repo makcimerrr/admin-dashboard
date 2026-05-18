@@ -323,7 +323,7 @@ export default function PlanningPage() {
                 onChange={(e) => handleToggleHackaton(e.target.checked)}
                 className="accent-pink-600 w-4 h-4"
               />
-              <span className="font-semibold text-pink-600">Hackaton</span>
+              <span className="font-semibold text-pink-600 dark:text-pink-400">Hackaton</span>
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer text-xs">
               <input
@@ -332,7 +332,7 @@ export default function PlanningPage() {
                 onChange={(e) => handleTogglePiscine(e.target.checked)}
                 className="accent-cyan-600 w-4 h-4"
               />
-              <span className="font-semibold text-cyan-600">Piscine</span>
+              <span className="font-semibold text-cyan-600 dark:text-cyan-400">Piscine</span>
             </label>
           </>
         )}

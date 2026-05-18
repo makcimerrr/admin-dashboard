@@ -121,7 +121,7 @@ export default function HelpPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <BrainCircuit className="h-8 w-8 text-violet-600" />
+              <BrainCircuit className="h-8 w-8 text-violet-600 dark:text-violet-400" />
               <h1 className="text-3xl font-bold">Aide & Documentation</h1>
               <Sparkles className="h-5 w-5 text-blue-500" />
             </div>

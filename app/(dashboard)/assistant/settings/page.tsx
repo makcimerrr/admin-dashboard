@@ -124,7 +124,7 @@ export default function SettingsPage() {
           {/* Header */}
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <BrainCircuit className="h-8 w-8 text-violet-600" />
+              <BrainCircuit className="h-8 w-8 text-violet-600 dark:text-violet-400" />
               <h1 className="text-3xl font-bold">Paramètres Nova</h1>
               <Sparkles className="h-5 w-5 text-blue-500" />
             </div>
@@ -239,7 +239,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BrainCircuit className="h-5 w-5 text-violet-600" />
+                <BrainCircuit className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 À propos de Nova
               </CardTitle>
             </CardHeader>
