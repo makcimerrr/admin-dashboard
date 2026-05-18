@@ -90,7 +90,10 @@ const TAB_CONFIG: { key: Category | 'all'; label: string; icon: React.ElementTyp
 
 export default function SuiviPage() {
   const [rows, setRows] = useState<SuiviRow[]>([]);
-  const [promos, setPromos] = useState<Map<string, string>>(new Map());
+  // Promo info indexed by eventId (as string). We keep both `title` (long
+  // form used for display) and `key` (short form like "P1 2025") so the
+  // search bar can match either.
+  const [promos, setPromos] = useState<Map<string, { title: string; key: string }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
@@ -123,8 +126,10 @@ export default function SuiviPage() {
       const [suiviData, promosData] = await Promise.all([suiviRes.json(), promosRes.json()]);
       if (suiviData?.success) setRows(suiviData.data.rows);
       if (promosData?.success) {
-        const map = new Map<string, string>();
-        for (const p of promosData.promotions as PromoInfo[]) map.set(String(p.eventId), p.title || p.key);
+        const map = new Map<string, { title: string; key: string }>();
+        for (const p of promosData.promotions as PromoInfo[]) {
+          map.set(String(p.eventId), { title: p.title || p.key, key: p.key });
+        }
         setPromos(map);
       }
     } catch { toast.error('Erreur lors du chargement'); }
@@ -136,7 +141,8 @@ export default function SuiviPage() {
   const setRowLoading = (id: number, on: boolean) =>
     setLoadingIds(prev => { const s = new Set(prev); on ? s.add(id) : s.delete(id); return s; });
 
-  const promoName = (id: string) => promos.get(id) ?? id;
+  const promoName = (id: string) => promos.get(id)?.title ?? id;
+  const promoKey = (id: string) => promos.get(id)?.key ?? '';
 
   // ─── Actions ─────────────────────────────────────────────────────────────
 
@@ -316,6 +322,7 @@ export default function SuiviPage() {
     return r.projectName.toLowerCase().includes(q) ||
       (r.captainLogin ?? '').toLowerCase().includes(q) ||
       promoName(r.promoId).toLowerCase().includes(q) ||
+      promoKey(r.promoId).toLowerCase().includes(q) ||
       (r.track ?? '').toLowerCase().includes(q);
   });
 
