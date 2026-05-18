@@ -285,9 +285,9 @@ export default async function GroupDetailPage({ params }: PageProps) {
                               ) : null}
 
                               {absent ? (
-                                <Badge className="bg-orange-100 text-orange-800 text-xs">ABS</Badge>
+                                <Badge variant="outline" className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30 text-xs">ABS</Badge>
                               ) : validated ? (
-                                <Badge className="bg-green-100 text-green-800 text-xs">V</Badge>
+                                <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs">V</Badge>
                               ) : (
                                 <Badge variant="destructive" className="text-xs">NV</Badge>
                               )}
@@ -358,12 +358,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
                       <div className="flex items-center gap-2">
                         {result.absent ? (
-                          <Badge className="bg-orange-100 text-orange-800">
+                          <Badge variant="outline" className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30">
                             <UserX className="h-3 w-3 mr-1" />
                             Absent
                           </Badge>
                         ) : result.validated ? (
-                          <Badge className="bg-green-100 text-green-800">Validé</Badge>
+                          <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">Validé</Badge>
                         ) : (
                           <Badge variant="destructive">Non validé</Badge>
                         )}

@@ -36,14 +36,14 @@ export function StudentCell({
       <Avatar
         className={cn(
           'h-10 w-10 border-2',
-          isDropout ? 'border-red-300 opacity-60' : 'border-border'
+          isDropout ? 'border-red-500/40 opacity-60' : 'border-border'
         )}
       >
         <AvatarFallback
           className={cn(
             'font-medium text-sm',
             isDropout
-              ? 'bg-red-100 text-red-600'
+              ? 'bg-red-500/10 text-red-600 dark:text-red-400'
               : 'bg-primary/10 text-primary'
           )}
         >

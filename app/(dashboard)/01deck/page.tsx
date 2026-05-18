@@ -330,7 +330,7 @@ const AdminScreen: React.FC = () => {
 
   const renderCardPreview = () => {
     return (
-      <section className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mt-8 shadow-lg w-full">
+      <section className="bg-muted/40 border p-4 rounded-lg mt-8 w-full">
         <h3 className="text-xl font-semibold mb-2">
           {formData.name || 'Nom de la carte'}
         </h3>
