@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getStudents, getStudentCounts } from '@/lib/db/services/students';
 import { StudentsTable } from '../students-table';
-import { getAllPromotions } from '@/lib/config/promotions';
+import { getAllPromotions, getActivePromotions } from '@/lib/config/promotions';
 import TrackStatsDisplay from '@/components/track-stats-display';
 import { Users } from 'lucide-react';
 import { QuickStats } from './_components/quick-stats';
@@ -33,7 +33,13 @@ interface StudentsPageProps {
 }
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
-  const promos = await getAllPromotions();
+  // `promos` drives the visible Tabs + promoConfig (active only — archived
+  // promos no longer get a tab). `allPromos` still maps any historical
+  // student row back to its promo metadata if needed.
+  const [promos, allPromos] = await Promise.all([
+    getActivePromotions(),
+    getAllPromotions(),
+  ]);
   const resolvedParams = await searchParams;
   const {
     q = '',
@@ -51,8 +57,10 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
   const search = q;
   const offsetNumber = Number(offset);
 
-  // Find selected promo
-  const selectedPromo = promos.find((p) => p.key === promo);
+  // Find selected promo — fall back to allPromos so a deep-link to an
+  // archived promo still resolves an eventId for the table header.
+  const selectedPromo =
+    promos.find((p) => p.key === promo) ?? allPromos.find((p) => p.key === promo);
   const eventId: string = selectedPromo ? String(selectedPromo.eventId) : '';
 
   // Fetch students data and counts in parallel
@@ -120,7 +128,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
             search={search}
             promo={promo}
             eventId="all"
-            promoConfig={promos as Promo[]}
+            promoConfig={allPromos as Promo[]}
           />
         </TabsContent>
 
@@ -134,8 +142,11 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
               previousOffset={previousOffset}
               search={search}
               promo={key}
-              eventId={String(promos.find((p) => p.key === key)?.eventId)}
-              promoConfig={promos as Promo[]}
+              eventId={String(
+                promos.find((p) => p.key === key)?.eventId ??
+                  allPromos.find((p) => p.key === key)?.eventId,
+              )}
+              promoConfig={allPromos as Promo[]}
             />
           </TabsContent>
         ))}

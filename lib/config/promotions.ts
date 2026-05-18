@@ -48,16 +48,17 @@ export const getAllPromotions = unstable_cache(
 );
 
 export async function getActivePromotions(): Promise<PromoConfig[]> {
+    // "Active" = not archived. We do NOT filter by `dates.end` here: a promo
+    // whose end date has passed but that hasn't been archived yet should still
+    // appear in dropdowns, analytics, code-reviews — students may still have
+    // open work on it until the admin explicitly archives.
     const [all, archivedNames] = await Promise.all([
         getAllPromotions(),
-        // Lazy import to avoid cycle: lib/db/filters imports CACHE_TTL/TAGS from lib/cache,
-        // and lib/config/promotions also imports from lib/cache.
-        import('@/lib/db/filters').then(m => m.getArchivedPromoNames()),
+        // Lazy import to avoid cycle: lib/db/filters imports CACHE_TTL/TAGS
+        // from lib/cache, and lib/config/promotions also imports from lib/cache.
+        import('@/lib/db/filters').then((m) => m.getArchivedPromoNames()),
     ]);
-    const now = new Date();
-    return all.filter(
-        (p) => new Date(p.dates.end) > now && !archivedNames.has(p.key),
-    );
+    return all.filter((p) => !archivedNames.has(p.key));
 }
 
 export async function getPromotionByEventId(eventId: number): Promise<PromoConfig | undefined> {
