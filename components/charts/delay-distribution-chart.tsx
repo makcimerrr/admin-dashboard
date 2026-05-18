@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { Loader2, BarChart3 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type DelayData = {
   level: string;
@@ -77,11 +78,7 @@ export default function DelayDistributionChart({ promoKey }: { promoKey: string 
   }, [promoKey]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[300px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <Skeleton className="h-[300px] w-full rounded-lg" />;
   }
 
   if (data.length === 0) {
