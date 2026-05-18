@@ -717,13 +717,13 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
       <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
         <span className="font-medium">Priorités:</span>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] px-1.5 py-0">
+          <Badge variant="outline" className={`${TONE_PILL.rose} text-[10px] px-1.5 py-0`}>
             Urgent
           </Badge>
           <span>membres jamais audités</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] px-1.5 py-0">
+          <Badge variant="outline" className={`${TONE_PILL.amber} text-[10px] px-1.5 py-0`}>
             Warning
           </Badge>
           <span>peu d'audits précédents</span>

@@ -96,7 +96,7 @@ export function StudentCell({
             className={cn(
               'font-medium text-sm transition-colors truncate',
               isDropout
-                ? 'text-red-700 line-through'
+                ? 'text-red-700 dark:text-red-400 line-through'
                 : 'text-foreground group-hover:text-primary'
             )}
           >

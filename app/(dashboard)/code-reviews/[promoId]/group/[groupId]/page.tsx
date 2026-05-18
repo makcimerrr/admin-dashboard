@@ -368,7 +368,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                           <Badge variant="destructive">Non validé</Badge>
                         )}
                         {(result.warnings?.length ?? 0) > 0 && (
-                          <Badge variant="outline" className="text-amber-700">{result.warnings?.length} W</Badge>
+                          <Badge variant="outline" className="text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">{result.warnings?.length} W</Badge>
                         )}
                       </div>
                     </div>

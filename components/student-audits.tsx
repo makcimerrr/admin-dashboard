@@ -299,8 +299,8 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
                 {/* Global Summary */}
                 {audit.globalSummary && (
                   <div className="mt-2 p-3 rounded bg-blue-500/5 border border-blue-500/20">
-                    <p className="text-sm text-blue-700 font-medium mb-2">Compte rendu du groupe</p>
-                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none prose-headings:text-blue-700 prose-p:text-blue-700 prose-li:text-blue-700">
+                    <p className="text-sm text-blue-700 dark:text-blue-400 font-medium mb-2">Compte rendu du groupe</p>
+                    <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                         {audit.globalSummary}
                       </ReactMarkdown>

@@ -213,7 +213,7 @@ export default function EmployeesPage() {
             {employees.map((employee) => (
               <div
                 key={employee.id}
-                className="rounded-xl border bg-background p-3 border-l-4 transition-shadow hover:shadow-md"
+                className="rounded-xl border bg-background p-3 border-l-4 transition-colors hover:bg-muted/30"
                 style={{ borderLeftColor: employee.color || '#8884d8' }}
               >
                 <div className="flex items-center justify-between">
