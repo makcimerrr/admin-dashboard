@@ -180,11 +180,11 @@ export default async function GroupDetailPage({ params }: PageProps) {
             <div className="text-sm text-muted-foreground">Statuts</div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <div className="text-sm font-medium">{validatedCount} validé</div>
               </div>
               <div className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-red-600" />
+                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                 <div className="text-sm font-medium">{notValidatedCount} non validé</div>
               </div>
               <div className="flex items-center gap-2">
@@ -264,7 +264,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                               ) : (
                                 <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               )}
-                              <span className={`truncate max-w-[11rem] ${absent ? 'text-orange-600' : ''}`}>{name}</span>
+                              <span className={`truncate max-w-[11rem] ${absent ? 'text-orange-600 dark:text-orange-400' : ''}`}>{name}</span>
                               {isCaptain && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
                             </div>
 
@@ -273,7 +273,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger>
-                                      <span className="text-amber-600 text-xs cursor-default" aria-hidden>
+                                      <span className="text-amber-600 dark:text-amber-400 text-xs cursor-default" aria-hidden>
                                         ⚠
                                       </span>
                                     </TooltipTrigger>

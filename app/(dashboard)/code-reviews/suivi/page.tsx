@@ -80,10 +80,10 @@ function shortPromo(name: string): string {
 
 const TAB_CONFIG: { key: Category | 'all'; label: string; icon: React.ElementType; color: string }[] = [
   { key: 'all', label: 'Tous', icon: ClipboardCheck, color: 'text-foreground' },
-  { key: 'overdue', label: 'Dépassement', icon: ShieldAlert, color: 'text-red-600' },
-  { key: 'warning', label: 'Warning', icon: AlertTriangle, color: 'text-amber-600' },
-  { key: 'pending', label: 'En attente', icon: CircleDot, color: 'text-blue-600' },
-  { key: 'done', label: 'Audité', icon: CheckCircle2, color: 'text-emerald-600' },
+  { key: 'overdue', label: 'Dépassement', icon: ShieldAlert, color: 'text-red-600 dark:text-red-400' },
+  { key: 'warning', label: 'Warning', icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400' },
+  { key: 'pending', label: 'En attente', icon: CircleDot, color: 'text-blue-600 dark:text-blue-400' },
+  { key: 'done', label: 'Audité', icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400' },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -519,7 +519,7 @@ export default function SuiviPage() {
                       {row.notifiedAuditAt && row.hasDiscordId ? (
                         <span className="text-emerald-600 dark:text-emerald-400 text-[11px]">{fmtShort(row.notifiedAuditAt)}</span>
                       ) : row.notifiedAuditAt && !row.hasDiscordId ? (
-                        <span className="text-amber-600 text-[11px]">Pas de Discord</span>
+                        <span className="text-amber-600 dark:text-amber-400 text-[11px]">Pas de Discord</span>
                       ) : !row.hasDiscordId ? (
                         <span className="text-muted-foreground/50 text-[11px]">—</span>
                       ) : (

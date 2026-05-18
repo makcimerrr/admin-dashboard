@@ -217,7 +217,7 @@ export default function HelpPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <span className="font-medium">100% Gratuit</span>
                   </div>
                   <p className="text-sm text-muted-foreground pl-6">
@@ -227,7 +227,7 @@ export default function HelpPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <span className="font-medium">Système RAG</span>
                   </div>
                   <p className="text-sm text-muted-foreground pl-6">
@@ -237,7 +237,7 @@ export default function HelpPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <span className="font-medium">Recherche sémantique</span>
                   </div>
                   <p className="text-sm text-muted-foreground pl-6">
@@ -247,7 +247,7 @@ export default function HelpPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <span className="font-medium">Historique sauvegardé</span>
                   </div>
                   <p className="text-sm text-muted-foreground pl-6">
@@ -257,7 +257,7 @@ export default function HelpPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <span className="font-medium">Liens rapides</span>
                   </div>
                   <p className="text-sm text-muted-foreground pl-6">
@@ -267,7 +267,7 @@ export default function HelpPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <span className="font-medium">Suggestions</span>
                   </div>
                   <p className="text-sm text-muted-foreground pl-6">

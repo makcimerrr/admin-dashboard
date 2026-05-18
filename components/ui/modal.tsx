@@ -7,11 +7,11 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, children }) => {
-  if (!isOpen) return null; // Si le modal n'est pas ouvert, ne rien afficher.
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50">
-      <div className="rounded-lg shadow-lg w-96 p-6 bg-white dark:bg-gray-900">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="rounded-lg border shadow-lg w-96 p-6 bg-card text-card-foreground">
         {children}
       </div>
     </div>

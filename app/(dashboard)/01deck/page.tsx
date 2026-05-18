@@ -460,7 +460,7 @@ const AdminScreen: React.FC = () => {
                 Déconnexion
               </Button>
             </div>
-            <div className="bg-white dark:bg-gray-900 shadow-xl rounded-lg p-8 max-w-3xl w-full">
+            <div className="bg-card border shadow-sm rounded-lg p-8 max-w-3xl w-full">
               <h2 className="text-2xl font-semibold mb-4">Créer une carte</h2>
               <form onSubmit={handleSubmit}>
                 <Label>Type de carte</Label>

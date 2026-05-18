@@ -245,12 +245,12 @@ function MembersList({
                   <p className="font-medium">{m.login}</p>
                   <p>{m.validated ? 'Validé' : 'Non validé'}</p>
                   {m.hasWarnings && (
-                    <p className="text-amber-600">
+                    <p className="text-amber-600 dark:text-amber-400">
                       {m.warningsCount} warning(s)
                     </p>
                   )}
                   {m.warnings.length > 0 && (
-                    <ul className="mt-1 text-amber-600">
+                    <ul className="mt-1 text-amber-600 dark:text-amber-400">
                       {m.warnings.map((w, i) => (
                         <li key={i}>• {w}</li>
                       ))}
@@ -1647,10 +1647,10 @@ export default function AllAuditsPage() {
                                   <span
                                     className={`font-mono font-medium ${
                                       group.priorityScore >= 50
-                                        ? 'text-red-600'
+                                        ? 'text-red-600 dark:text-red-400'
                                         : group.priorityScore >= 25
-                                          ? 'text-amber-600'
-                                          : 'text-blue-600'
+                                          ? 'text-amber-600 dark:text-amber-400'
+                                          : 'text-blue-600 dark:text-blue-400'
                                     }`}
                                   >
                                     {group.priorityScore}
