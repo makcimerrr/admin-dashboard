@@ -110,7 +110,8 @@ export default function Component({ title, eventID, keyPromo }: BarChartProps) {
 
   useEffect(() => {
     fetchData().then((r) => r);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventID, keyPromo]);
 
   if (loading) {
     return <LoadingCard height="lg" />;

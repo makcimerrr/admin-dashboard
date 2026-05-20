@@ -145,7 +145,8 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
 
   useEffect(() => {
     fetchData().then(r => r);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventID, keyPromo]);
 
   const activeIndex = React.useMemo(
     () => delayLevelData.findIndex((item) => item.level === activeLevel),
