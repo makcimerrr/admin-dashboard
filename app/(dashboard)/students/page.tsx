@@ -6,6 +6,7 @@ import { getAllPromotions, getActivePromotions } from '@/lib/config/promotions';
 import TrackStatsDisplay from '@/components/track-stats-display';
 import { Users } from 'lucide-react';
 import { QuickStats } from './_components/quick-stats';
+import { StudentsSubnav } from './_components/students-subnav';
 import { LoadingCard } from '@/components/ui/loading-card';
 import Link from 'next/link';
 import { PageHeader } from '@/components/page-header';
@@ -79,6 +80,8 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         <ClientImport />
         <AddStudent />
       </PageHeader>
+
+      <StudentsSubnav />
 
       {/* Quick Stats Cards */}
       <QuickStats
