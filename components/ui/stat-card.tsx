@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
@@ -16,6 +17,9 @@ interface StatCardProps {
   /** Optional href — turns the card into a link. Server component safe. */
   href?: string;
   className?: string;
+  /** When true, renders a skeleton in place of the value (and hint).
+   * Prefer this to passing a "0" / "—" fallback during the loading window. */
+  loading?: boolean;
 }
 
 /**
@@ -38,6 +42,7 @@ export function StatCard({
   onClick,
   href,
   className,
+  loading,
 }: StatCardProps) {
   const interactive = Boolean(onClick || href);
   const cardClasses = cn(
@@ -61,13 +66,22 @@ export function StatCard({
         )}
       </CardHeader>
       <CardContent className="pb-3 pt-0 px-4">
-        <div
-          className="text-2xl font-bold leading-none tabular-nums"
-          style={accent ? { color: accent } : undefined}
-        >
-          {value}
-        </div>
-        {hint && <p className="text-[11px] text-muted-foreground mt-1.5">{hint}</p>}
+        {loading ? (
+          <>
+            <Skeleton className="h-7 w-16 rounded" />
+            {hint && <Skeleton className="h-3 w-24 rounded mt-2" />}
+          </>
+        ) : (
+          <>
+            <div
+              className="text-2xl font-bold leading-none tabular-nums"
+              style={accent ? { color: accent } : undefined}
+            >
+              {value}
+            </div>
+            {hint && <p className="text-[11px] text-muted-foreground mt-1.5">{hint}</p>}
+          </>
+        )}
       </CardContent>
     </>
   );

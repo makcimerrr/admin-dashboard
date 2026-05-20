@@ -148,12 +148,20 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="p-4 border border-border/40 rounded-lg">
-                <div className="text-2xl font-bold">{stats.totalConversations}</div>
-                <div className="text-sm text-muted-foreground">Conversations</div>
+                {isLoadingConversations ? (
+                  <div className="h-8 w-12 bg-muted rounded animate-pulse" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats.totalConversations}</div>
+                )}
+                <div className="text-sm text-muted-foreground mt-1">Conversations</div>
               </div>
               <div className="p-4 border border-border/40 rounded-lg">
-                <div className="text-2xl font-bold">{stats.totalMessages}</div>
-                <div className="text-sm text-muted-foreground">Messages échangés</div>
+                {isLoadingConversations ? (
+                  <div className="h-8 w-12 bg-muted rounded animate-pulse" />
+                ) : (
+                  <div className="text-2xl font-bold">{stats.totalMessages}</div>
+                )}
+                <div className="text-sm text-muted-foreground mt-1">Messages échangés</div>
               </div>
             </CardContent>
           </Card>

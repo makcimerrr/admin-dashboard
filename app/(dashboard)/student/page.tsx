@@ -138,7 +138,10 @@ export default function StudentPage() {
   const [externalData, setExternalData] = useState<ExternalUserData | null>(null);
   const [studentPromoConfig, setStudentPromoConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingExternal, setLoadingExternal] = useState(false);
+  // Both initial fetches are kicked off as soon as the student lands; mark
+  // them as loading from mount so the dependent sections show their
+  // skeletons instead of "Non disponible" while they're in flight.
+  const [loadingExternal, setLoadingExternal] = useState(true);
   const [loadingAlternant, setLoadingAlternant] = useState(false);
 
   useEffect(() => {
