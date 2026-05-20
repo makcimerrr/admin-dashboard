@@ -1,4 +1,5 @@
 import { CalendarView, CalendarTask } from "@/components/hub/CalendarView";
+import { WordAssistantSubnav } from "@/components/hub/word-assistant-subnav";
 import { getHubEvents } from "@/lib/db/services/hub";
 import { db } from "@/lib/db/config";
 import { employees } from "@/lib/db/schema/employees";
@@ -58,13 +59,15 @@ export default async function HubCalendarPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
+    <div className="p-6 space-y-6">
+      <div>
         <h1 className="text-xl md:text-2xl font-bold">Calendrier des tâches</h1>
         <p className="text-muted-foreground">
           Vue calendrier de toutes les tâches planifiées
         </p>
       </div>
+
+      <WordAssistantSubnav />
 
       <CalendarView tasks={calendarTasks} />
     </div>

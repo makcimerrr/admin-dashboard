@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { WordAssistantSubnav } from "@/components/hub/word-assistant-subnav";
 
 interface Event {
   id: string;
@@ -56,8 +57,8 @@ export default function EventsPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl md:text-3xl font-bold mb-1">Événements</h1>
           <p className="text-muted-foreground">Liste des événements instanciés</p>
@@ -68,6 +69,8 @@ export default function EventsPage() {
           Nouvel événement
         </Button>
       </div>
+
+      <WordAssistantSubnav />
 
       {loading ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

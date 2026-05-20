@@ -89,7 +89,9 @@ const colorThemeOptions: {
 
 export default function SettingsPage() {
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'profile';
+  // Reflect `?tab=` directly so navigation to /settings?tab=nova from
+  // anywhere in the app switches the active tab (not just on first mount).
+  const tabFromUrl = searchParams.get('tab') ?? 'profile';
   const { theme, setTheme } = useTheme();
   const user = useUser();
   const { density, setDensity, colorTheme, setColorTheme } = useUIPreferences();
@@ -155,7 +157,7 @@ export default function SettingsPage() {
       <PageHeader icon={Settings2} title="Paramètres" description="Préférences utilisateur" />
 
       {/* Tabs */}
-      <Tabs defaultValue={defaultTab} className="w-full">
+      <Tabs key={tabFromUrl} defaultValue={tabFromUrl} className="w-full">
         <TabsList className="grid w-full grid-cols-4 lg:w-[640px]">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />

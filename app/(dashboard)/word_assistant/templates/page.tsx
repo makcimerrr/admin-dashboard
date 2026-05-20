@@ -14,6 +14,7 @@ import { Plus, Calendar, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingCard } from "@/components/ui/loading-card";
+import { WordAssistantSubnav } from "@/components/hub/word-assistant-subnav";
 
 interface Template {
   id: string;
@@ -61,8 +62,8 @@ export default function TemplatesPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl md:text-3xl font-bold text-foreground mb-2">
             Modèles d'Événements
@@ -79,6 +80,8 @@ export default function TemplatesPage() {
           </Button>
         </Link>
       </div>
+
+      <WordAssistantSubnav />
 
       {loading ? (
         <LoadingCard count={3} columns={3} height="md" />

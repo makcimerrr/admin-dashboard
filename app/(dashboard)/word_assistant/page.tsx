@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Calendar, FileText, Plus, ArrowRight } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
+import { WordAssistantSubnav } from '@/components/hub/word-assistant-subnav';
 import {
   getUpcomingHubEvents,
   getUpcomingHubTasks
@@ -153,6 +154,8 @@ export default async function HubDashboardPage() {
           </Link>
         </div>
       </PageHeader>
+
+      <WordAssistantSubnav />
 
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         <Card>
