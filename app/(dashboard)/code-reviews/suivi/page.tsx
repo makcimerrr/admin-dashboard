@@ -86,6 +86,59 @@ const TAB_CONFIG: { key: Category | 'all'; label: string; icon: React.ElementTyp
   { key: 'done', label: 'Audité', icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400' },
 ];
 
+/**
+ * Compute the "pourquoi" badge for a row — surfaces the dominant reason
+ * a row is in warning/overdue so the user doesn't have to read multiple
+ * columns to figure out what's blocking. Returns null when there's no
+ * actionable reason (done or healthy pending rows).
+ */
+function whyBadge(
+  row: SuiviRow,
+  cat: Category,
+): { label: string; tooltip: string; tone: string } | null {
+  if (cat === 'done') return null;
+  const tonesRed =
+    'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30';
+  const tonesAmber =
+    'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30';
+  if (!row.captainLogin) {
+    return {
+      label: 'Pas de capitaine',
+      tooltip: 'Aucun capitaine renseigné — impossible de notifier le groupe.',
+      tone: tonesRed,
+    };
+  }
+  if (!row.hasDiscordId) {
+    return {
+      label: 'Pas de Discord',
+      tooltip: `${row.captainLogin} n'a pas encore lié son compte Discord — le DM ne peut pas être envoyé.`,
+      tone: tonesAmber,
+    };
+  }
+  if (cat === 'overdue' || cat === 'warning') {
+    const days = Math.floor(
+      row.notifiedAuditAt
+        ? (Date.now() - new Date(row.notifiedAuditAt).getTime()) / 86_400_000
+        : 0,
+    );
+    if (days > 0) {
+      return {
+        label: `${days}j sans audit`,
+        tooltip: `Capitaine notifié il y a ${days} jour(s), audit toujours en attente.`,
+        tone: cat === 'overdue' ? tonesRed : tonesAmber,
+      };
+    }
+  }
+  if (cat === 'pending' && !row.notifiedAuditAt) {
+    return {
+      label: 'Non notifié',
+      tooltip: 'Le capitaine n\'a pas encore reçu de notification Discord.',
+      tone: tonesAmber,
+    };
+  }
+  return null;
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function SuiviPage() {
@@ -442,10 +495,9 @@ export default function SuiviPage() {
                 {activeTab === 'all' && <TableHead className="w-[80px]">Statut</TableHead>}
                 <SortHeader label="Projet" sortId="project" />
                 <SortHeader label="Capitaine" sortId="captain" />
-                <SortHeader label="Notif" sortId="notif" />
+                <SortHeader label="Notification" sortId="notif" />
                 {showDelayColumn && <SortHeader label="Délai" sortId="delay" />}
                 {showDoneColumns && <SortHeader label="Review" sortId="review" />}
-                <TableHead>Relance</TableHead>
                 <TableHead className="w-8" />
               </TableRow>
             </TableHeader>
@@ -493,9 +545,9 @@ export default function SuiviPage() {
                       </TableCell>
                     )}
 
-                    {/* Projet + track + promo */}
+                    {/* Projet + track + promo + "pourquoi" badge */}
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{row.projectName}</span>
                         {row.track && (
                           <span
@@ -506,6 +558,14 @@ export default function SuiviPage() {
                           </span>
                         )}
                         <span className="text-[10px] text-muted-foreground/60">{shortPromo(promoName(row.promoId))}</span>
+                        {whyBadge(row, cat) && (
+                          <span
+                            title={whyBadge(row, cat)?.tooltip}
+                            className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${whyBadge(row, cat)!.tone}`}
+                          >
+                            {whyBadge(row, cat)!.label}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
 
@@ -521,20 +581,50 @@ export default function SuiviPage() {
                       ) : <span className="text-muted-foreground">—</span>}
                     </TableCell>
 
-                    {/* Notification */}
+                    {/* Notification — smart unified action */}
                     <TableCell>
-                      {row.notifiedAuditAt && row.hasDiscordId ? (
-                        <span className="text-emerald-600 dark:text-emerald-400 text-[11px]">{fmtShort(row.notifiedAuditAt)}</span>
-                      ) : row.notifiedAuditAt && !row.hasDiscordId ? (
-                        <span className="text-amber-600 dark:text-amber-400 text-[11px]">Pas de Discord</span>
+                      {cat === 'done' ? (
+                        <span className="text-muted-foreground/40">—</span>
+                      ) : !row.captainLogin ? (
+                        <span className="text-amber-600 dark:text-amber-400 text-[10px]">Pas de capitaine</span>
                       ) : !row.hasDiscordId ? (
-                        <span className="text-muted-foreground/50 text-[11px]">—</span>
-                      ) : (
-                        <Button size="sm" variant="ghost" className="h-5 text-[10px] px-2 gap-1 text-primary"
-                          disabled={isLoading} onClick={() => callResendDM(row)}>
+                        <span className="text-amber-600 dark:text-amber-400 text-[10px]" title="Le capitaine n'a pas lié son Discord">
+                          Pas de Discord
+                        </span>
+                      ) : !row.notifiedAuditAt ? (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="h-6 text-[10px] px-2 gap-1"
+                          disabled={isLoading}
+                          onClick={() => callResendDM(row)}
+                          title="Envoyer la première notification Discord au capitaine"
+                        >
                           {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-2.5 w-2.5" />}
                           Envoyer
                         </Button>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-[10px] px-2 gap-1"
+                            disabled={isLoading}
+                            onClick={() => callResendDM(row)}
+                            title={`Notifié ${fmtShort(row.notifiedAuditAt)} • Relancer`}
+                          >
+                            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-2.5 w-2.5" />}
+                            Relancer
+                          </Button>
+                          {row.manualReminderAt && (
+                            <span
+                              className="text-[10px] text-muted-foreground"
+                              title={`Dernière relance: ${fmtShort(row.manualReminderAt)}`}
+                            >
+                              {fmtShort(row.manualReminderAt)}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </TableCell>
 
@@ -570,31 +660,6 @@ export default function SuiviPage() {
                         )}
                       </TableCell>
                     )}
-
-                    {/* Relance manuelle */}
-                    <TableCell>
-                      {cat === 'done' ? (
-                        <span className="text-muted-foreground/40">—</span>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 text-[10px] px-2 gap-1"
-                            disabled={isLoading}
-                            onClick={() => callResendDM(row)}
-                          >
-                            {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-2.5 w-2.5" />}
-                            Relance
-                          </Button>
-                          {row.manualReminderAt && (
-                            <span className="text-[10px] text-muted-foreground" title={`Dernière relance: ${fmtShort(row.manualReminderAt)}`}>
-                              {fmtShort(row.manualReminderAt)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </TableCell>
 
                     {/* Actions menu */}
                     <TableCell>
