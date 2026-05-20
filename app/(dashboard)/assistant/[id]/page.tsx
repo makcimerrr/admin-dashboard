@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
-import { ChatSidebar } from '@/components/assistant/chat-sidebar';
+import { ChatSidebar, ChatSidebarMobile } from '@/components/assistant/chat-sidebar';
 import { ChatInterface } from '@/components/assistant/chat-interface';
 import { BrainCircuit, Loader2 } from 'lucide-react';
 
@@ -190,15 +190,26 @@ export default function ConversationPage() {
           onNewChat={handleNewChat}
           onDeleteConversation={handleDeleteConversation}
         />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4 text-muted-foreground">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
-                <BrainCircuit className="h-4 w-4 text-white" />
+        <div className="flex-1 flex flex-col">
+          <div className="md:hidden flex items-center gap-2 border-b px-2 py-1.5 shrink-0">
+            <ChatSidebarMobile
+              conversations={conversations}
+              isLoading={isLoadingConversations}
+              onNewChat={handleNewChat}
+              onDeleteConversation={handleDeleteConversation}
+            />
+            <span className="text-xs text-muted-foreground">Nova</span>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4 text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
+                  <BrainCircuit className="h-4 w-4 text-white" />
+                </div>
+                <Loader2 className="h-5 w-5 animate-spin" />
               </div>
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Chargement de la conversation...</span>
             </div>
-            <span className="text-sm">Chargement de la conversation...</span>
           </div>
         </div>
       </div>
@@ -213,7 +224,16 @@ export default function ConversationPage() {
         onNewChat={handleNewChat}
         onDeleteConversation={handleDeleteConversation}
       />
-      <div className="flex-1 min-w-0 min-h-0">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+        <div className="md:hidden flex items-center gap-2 border-b px-2 py-1.5 shrink-0">
+          <ChatSidebarMobile
+            conversations={conversations}
+            isLoading={isLoadingConversations}
+            onNewChat={handleNewChat}
+            onDeleteConversation={handleDeleteConversation}
+          />
+          <span className="text-xs text-muted-foreground">Nova</span>
+        </div>
         <ChatInterface
           messages={messages}
           isLoading={isLoading}

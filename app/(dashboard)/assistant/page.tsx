@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
-import { ChatSidebar } from '@/components/assistant/chat-sidebar';
+import { ChatSidebar, ChatSidebarMobile } from '@/components/assistant/chat-sidebar';
 import { ChatInterface } from '@/components/assistant/chat-interface';
 
 type Message = {
@@ -159,7 +159,17 @@ export default function AssistantPage() {
         onNewChat={handleNewChat}
         onDeleteConversation={handleDeleteConversation}
       />
-      <div className="flex-1 min-w-0 min-h-0">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+        {/* Mobile-only header: drawer trigger for conversation history */}
+        <div className="md:hidden flex items-center gap-2 border-b px-2 py-1.5 shrink-0">
+          <ChatSidebarMobile
+            conversations={conversations}
+            isLoading={isLoadingConversations}
+            onNewChat={handleNewChat}
+            onDeleteConversation={handleDeleteConversation}
+          />
+          <span className="text-xs text-muted-foreground">Nova</span>
+        </div>
         <ChatInterface
           messages={messages}
           isLoading={isLoading}
