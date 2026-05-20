@@ -553,10 +553,11 @@ function AllPromosView({
 
 // Main component
 const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
-  const [statusData, setStatusData] = useState<Record<string, any>>({});
+  const [statusData, setStatusData] = useState<Record<string, any> | null>(null);
   const [progressStats, setProgressStats] = useState<ProgressStats | null>(null);
   const [allProgressStats, setAllProgressStats] = useState<Record<string, ProgressStats>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  // Start in loading state — we always have a pending fetch on mount.
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadStatusData = async () => {
@@ -573,14 +574,21 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
             map[p.promoKey] = project;
           }
           setStatusData(map);
+        } else {
+          setStatusData({});
         }
-      } catch { /* ignore */ }
+      } catch {
+        setStatusData({});
+      }
     };
     loadStatusData();
   }, []);
 
   useEffect(() => {
     const fetchProgressStats = async () => {
+      // Wait for the first /api/promos/status fetch to land before kicking
+      // off per-promo progress queries.
+      if (statusData === null) return;
       if (selectedPromo === 'all') {
         setIsLoading(true);
         const statsMap: Record<string, ProgressStats> = {};
@@ -651,15 +659,15 @@ const PromoStatusDisplay = ({ selectedPromo }: PromoStatusDisplayProps) => {
     <div>
       {selectedPromo === 'all' ? (
         <AllPromosView
-          statusData={statusData}
+          statusData={statusData ?? {}}
           allStats={allProgressStats}
-          isLoading={isLoading}
+          isLoading={isLoading || statusData === null}
         />
       ) : (
         <SinglePromoView
-          project={statusData[selectedPromo]}
+          project={statusData?.[selectedPromo]}
           stats={progressStats}
-          isLoading={isLoading}
+          isLoading={isLoading || statusData === null}
         />
       )}
     </div>

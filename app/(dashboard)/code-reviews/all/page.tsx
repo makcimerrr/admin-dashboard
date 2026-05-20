@@ -833,7 +833,8 @@ export default function AllAuditsPage() {
               Tous les audits
             </h1>
             <p className="text-sm text-muted-foreground">
-              {audits.length} réalisés · {pendingStats.total} en attente,
+              {audits.length} réalisés ·{' '}
+              {loadingPending ? '…' : pendingStats.total} en attente,
               toutes promos confondues
             </p>
           </div>
@@ -921,27 +922,39 @@ export default function AllAuditsPage() {
             <Hourglass className="h-4 w-4" />
           </div>
           {loadingPending ? (
-            <div className="mt-1">
-              <div className="h-8 w-20 bg-blue-500/20 rounded animate-pulse" />
-            </div>
+            <>
+              <div className="h-8 w-20 bg-blue-500/20 rounded animate-pulse mt-1" />
+              <div className="h-3 w-24 bg-blue-500/10 rounded animate-pulse mt-1.5" />
+            </>
           ) : (
-            <p className="text-2xl font-bold mt-1">{filteredPendingStats.total}</p>
+            <>
+              <p className="text-2xl font-bold mt-1">{filteredPendingStats.total}</p>
+              <p className="text-[11px] opacity-70 mt-0.5">
+                score moy. {pendingStats.avgScore}
+              </p>
+            </>
           )}
-          <p className="text-[11px] opacity-70 mt-0.5">
-            score moy. {pendingStats.avgScore}
-          </p>
         </Card>
         <Card className="p-3 border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400">
           <div className="flex items-center justify-between">
             <span className="text-xs">Urgents</span>
             <AlertTriangle className="h-4 w-4" />
           </div>
-          <p className="text-2xl font-bold mt-1">
-            {completedStats.urgent + filteredPendingStats.urgent}
-          </p>
-          <p className="text-[11px] opacity-70 mt-0.5">
-            {filteredPendingStats.urgent} en attente
-          </p>
+          {loadingPending ? (
+            <>
+              <div className="h-8 w-20 bg-rose-500/20 rounded animate-pulse mt-1" />
+              <div className="h-3 w-24 bg-rose-500/10 rounded animate-pulse mt-1.5" />
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-bold mt-1">
+                {completedStats.urgent + filteredPendingStats.urgent}
+              </p>
+              <p className="text-[11px] opacity-70 mt-0.5">
+                {filteredPendingStats.urgent} en attente
+              </p>
+            </>
+          )}
         </Card>
         <Card className="p-3 border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
           <div className="flex items-center justify-between">

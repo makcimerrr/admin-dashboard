@@ -229,13 +229,11 @@ function StatTile({
         <span className="text-xs text-muted-foreground">{label}</span>
         <Icon className={`h-4 w-4 ${toneClass}`} />
       </div>
-      <p
-        className={`text-2xl font-bold mt-1 tabular-nums ${
-          loading ? 'opacity-30 animate-pulse' : ''
-        }`}
-      >
-        {value}
-      </p>
+      {loading ? (
+        <div className="h-8 w-16 bg-muted rounded animate-pulse mt-1" />
+      ) : (
+        <p className="text-2xl font-bold mt-1 tabular-nums">{value}</p>
+      )}
     </Card>
   );
 }
