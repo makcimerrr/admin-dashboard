@@ -5,7 +5,7 @@ import PieChart from '@/components/pie-chart-student';
 import BarChartStacked from '@/components/bar-chart-student-stacked';
 import TrackComparisonChart from '@/components/charts/track-comparison-chart';
 import DelayDistributionChart from '@/components/charts/delay-distribution-chart';
-import { BarChart3, TrendingUp, Users, Calendar, Activity, Target } from 'lucide-react';
+import { BarChart3, Activity, Target } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -47,48 +47,6 @@ export default function AnalyticsPage() {
           </SelectContent>
         </Select>
       </PageHeader>
-
-      {/* Stats Overview Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Promotions</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredPromos.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {selectedPromo === 'all' ? 'Toutes les promotions actives' : 'Promotion sélectionnée'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Métriques Actives</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredPromos.length * 2}</div>
-            <p className="text-xs text-muted-foreground">
-              Graphiques et statistiques
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Suivi en Temps Réel</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Actif</div>
-            <p className="text-xs text-muted-foreground">
-              Données mises à jour
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Charts Tabs */}
       <Tabs defaultValue="overview" className="w-full">
