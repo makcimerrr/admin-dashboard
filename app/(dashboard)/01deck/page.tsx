@@ -468,7 +468,7 @@ const AdminScreen: React.FC = () => {
                   value={selectedType}
                   onValueChange={(e:any) => setSelectedType(e)}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -483,7 +483,7 @@ const AdminScreen: React.FC = () => {
                   value={selectedCategory}
                   onValueChange={(e: any) => setSelectedCategory(e)}
                 >
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Catégorie" />
                   </SelectTrigger>
                   <SelectContent>

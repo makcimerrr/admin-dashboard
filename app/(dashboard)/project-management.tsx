@@ -252,7 +252,7 @@ export default function ProjectsManager() {
               value={newProject.tech}
               onValueChange={handleTechChange}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Sélectionnez une technologie" />
               </SelectTrigger>
               <SelectContent>
