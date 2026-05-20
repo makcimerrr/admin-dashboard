@@ -4,6 +4,7 @@ import { Table, TableBody } from '@/components/ui/table';
 import { SelectStudent } from '@/lib/db/schema/students';
 import { StudentsTableHeader } from './table-header';
 import { StudentTableRow } from './table-row';
+import { StudentMobileCard } from './mobile-card';
 import { EmptyState } from './empty-state';
 import { StudentsTableSkeleton, StudentsLoadingOverlay } from './table-skeleton';
 import { cn } from '@/lib/utils';
@@ -63,26 +64,40 @@ export function StudentsTable({
   }
 
   return (
-    <div className={cn('relative rounded-lg border overflow-hidden bg-background shadow-sm')}>
+    <div className={cn('relative')}>
       {/* Loading overlay when refreshing */}
       {isLoading && students.length > 0 && <StudentsLoadingOverlay />}
 
-      <div className="overflow-x-auto">
-        <Table>
-          <StudentsTableHeader
-            currentSortKey={currentSortKey}
-            currentSortDirection={currentSortDirection}
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-lg border overflow-hidden bg-background shadow-sm">
+        <div className="overflow-x-auto">
+          <Table>
+            <StudentsTableHeader
+              currentSortKey={currentSortKey}
+              currentSortDirection={currentSortDirection}
+            />
+            <TableBody>
+              {students.map((student) => (
+                <StudentTableRow
+                  key={student.id}
+                  student={student}
+                  promoConfig={promoConfig}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-2">
+        {students.map((student) => (
+          <StudentMobileCard
+            key={student.id}
+            student={student}
+            promoConfig={promoConfig}
           />
-          <TableBody>
-            {students.map((student) => (
-              <StudentTableRow
-                key={student.id}
-                student={student}
-                promoConfig={promoConfig}
-              />
-            ))}
-          </TableBody>
-        </Table>
+        ))}
       </div>
     </div>
   );
