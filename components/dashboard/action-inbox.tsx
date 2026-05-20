@@ -164,7 +164,7 @@ export function ActionInbox() {
             {pending && filterCount(pending, filter) > MAX_ROWS && (
               <div className="pt-2">
                 <Button variant="ghost" size="sm" asChild className="w-full text-xs">
-                  <Link href="/code-reviews/all">
+                  <Link href="/code-reviews/suivi">
                     Voir tout ({filterCount(pending, filter)})
                     <ArrowRight className="h-3 w-3 ml-1" />
                   </Link>

@@ -24,6 +24,7 @@ import {
   MoreHorizontal, ShieldAlert, CircleDot, ArrowUpDown, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
+import { PdfExportButton } from '@/components/code-reviews/pdf-export-button';
 import { trackAccent } from '@/lib/track-colors';
 import { PILL } from '@/lib/status-pills';
 
@@ -481,7 +482,13 @@ export default function SuiviPage() {
   return (
     <div className="page-container flex flex-col gap-4 p-4 md:p-6">
       {/* Header */}
-      <PageHeader icon={ClipboardCheck} title="Suivi" description="Suivi des code reviews en attente" />
+      <PageHeader
+        icon={ClipboardCheck}
+        title="Suivi"
+        description="Suivi des code reviews en attente"
+      >
+        <PdfExportButton />
+      </PageHeader>
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b">

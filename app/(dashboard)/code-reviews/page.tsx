@@ -17,7 +17,6 @@ import {
   Users,
   AlertCircle,
   Bell,
-  ListFilter,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { PromoCardSkeleton } from '@/components/code-reviews/skeletons';
@@ -176,18 +175,12 @@ export default function CodeReviewsPage() {
       </Card>
 
       {/* Cross-cutting views — secondary nav */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <NavCard
-          href="/code-reviews/all"
-          icon={ListFilter}
-          title="Tous les audits"
-          description="Recherche, filtres et export sur l'ensemble des audits, toutes promos confondues."
-        />
+      <div className="grid gap-3 sm:grid-cols-1">
         <NavCard
           href="/code-reviews/suivi"
           icon={Bell}
-          title="Suivi des notifications"
-          description="État des relances Discord et créneaux d'audit non saisis."
+          title="Suivi des audits"
+          description="État des relances Discord, audits réalisés, et export PDF — toutes promos confondues."
         />
       </div>
 
