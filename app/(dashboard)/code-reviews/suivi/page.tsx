@@ -287,6 +287,57 @@ export default function SuiviPage() {
     finally { setBulkLoading(false); setBulkConfirmDelete(false); }
   }
 
+  /**
+   * Send a Discord DM to every selected captain that has Discord linked +
+   * isn't already audited. Walks the rows sequentially so the toast feedback
+   * tracks progress and we don't hammer the Discord API.
+   */
+  async function handleBulkRelance() {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    const idSet = selectedIds;
+    const eligibleRows = rows.filter(
+      (r) => idSet.has(r.id) && r.captainLogin && r.hasDiscordId && !r.auditId,
+    );
+    const skipped = idSet.size - eligibleRows.length;
+    if (eligibleRows.length === 0) {
+      toast.info('Aucune ligne éligible (pas de Discord ou déjà auditée).');
+      setBulkLoading(false);
+      return;
+    }
+    let sent = 0;
+    let failed = 0;
+    for (const row of eligibleRows) {
+      try {
+        const res = await fetch('/api/code-reviews/suivi/resend-dm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: row.id }),
+        });
+        const data = await res.json();
+        if (data?.success && (!data.data?.reason || data.data.reason === 'sent'))
+          sent += 1;
+        else failed += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    if (sent > 0) {
+      toast.success(
+        `${sent} relance${sent > 1 ? 's' : ''} envoyée${sent > 1 ? 's' : ''}` +
+          (skipped > 0 ? ` · ${skipped} ignorée${skipped > 1 ? 's' : ''}` : '') +
+          (failed > 0 ? ` · ${failed} échec${failed > 1 ? 's' : ''}` : ''),
+      );
+    } else if (failed > 0) {
+      toast.error(`${failed} échec${failed > 1 ? 's' : ''}`);
+    } else {
+      toast.info('Rien à relancer.');
+    }
+    setSelectedIds(new Set());
+    await fetchRows();
+    setBulkLoading(false);
+  }
+
   function toggleRowSelected(id: number) {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -714,6 +765,17 @@ export default function SuiviPage() {
             {selectedIds.size} sélectionnée{selectedIds.size > 1 ? 's' : ''}
           </span>
           <div className="h-4 w-px bg-border" />
+          <Button
+            size="sm"
+            variant="default"
+            className="h-7 px-2 text-xs gap-1.5"
+            disabled={bulkLoading}
+            onClick={handleBulkRelance}
+            title="Envoyer une relance Discord à tous les capitaines éligibles"
+          >
+            {bulkLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            Relancer
+          </Button>
           <Button
             size="sm"
             variant="ghost"
