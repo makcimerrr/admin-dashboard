@@ -1,10 +1,9 @@
 import { Suspense } from 'react';
 import { Badge } from '@/components/ui/badge';
 import OverviewWidget from '@/components/widgets/overview-widget';
-import RecentActivityWidget from '@/components/widgets/recent-activity-widget';
-import CodeReviewsWidget from '@/components/widgets/code-reviews-widget';
 import { MyTasksWidgetServer } from '@/components/hub/MyTasksWidgetServer';
-import { AlertBlock } from '@/components/dashboard/alert-block';
+import { ActionInbox } from '@/components/dashboard/action-inbox';
+import { PromoStrip } from '@/components/dashboard/promo-strip';
 import { NonAdminLanding } from '@/components/non-admin-landing';
 import { LoadingCard } from '@/components/ui/loading-card';
 import { BarChart3 } from 'lucide-react';
@@ -49,7 +48,7 @@ export default async function DashboardPage() {
       <PageHeader
         icon={BarChart3}
         title="Tableau de Bord"
-        description="Vue d'ensemble de votre plateforme"
+        description="Vue d'ensemble — actions à traiter en priorité"
         badge={
           <Badge variant="outline" className="text-xs hidden sm:inline-flex">
             zone01rouennormandie.org
@@ -57,30 +56,23 @@ export default async function DashboardPage() {
         }
       />
 
+      {/* Overview: students + promos active (2 stat cards) */}
       <Suspense fallback={<LoadingCard height="sm" count={2} columns={2} />}>
         <OverviewWidget />
       </Suspense>
 
+      {/* Main action area: inbox (2/3) + my tasks (1/3) */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <Suspense fallback={<LoadingCard height="lg" />}>
-            <MyTasksWidgetServer />
-          </Suspense>
+          <ActionInbox />
         </div>
         <Suspense fallback={<LoadingCard height="lg" />}>
-          <CodeReviewsWidget />
+          <MyTasksWidgetServer />
         </Suspense>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <AlertBlock title="Émargement" category="emargement" />
-        <AlertBlock title="Code Reviews" category="code-reviews" />
-        <AlertBlock title="Retards" category="retards" />
-      </div>
-
-      <Suspense fallback={<LoadingCard height="lg" />}>
-        <RecentActivityWidget />
-      </Suspense>
+      {/* Promotions strip with live pending counts */}
+      <PromoStrip />
     </div>
   );
 }
