@@ -26,7 +26,11 @@ export async function upsertGroupStatus(
     .onConflictDoUpdate({
       target: [groupStatuses.groupId, groupStatuses.promoId, groupStatuses.projectName],
       set: {
-        status,
+        // Preserve a manually-archived row: if the existing status is
+        // 'archived', keep it. Otherwise overwrite with the freshly
+        // observed Zone01 status. Without this guard the daily cron
+        // would resurrect archived rows in /code-reviews/suivi.
+        status: sql`CASE WHEN ${groupStatuses.status} = 'archived' THEN 'archived' ELSE ${status} END`,
         captainLogin: captainLogin ?? null,
         lastSeenAt: new Date(),
       },
