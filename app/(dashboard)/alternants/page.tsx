@@ -292,7 +292,7 @@ export default function AlternantsPage() {
                   Total Alternants
                 </CardTitle>
                 <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Users className="h-4 w-4 text-blue-600" />
+                  <Users className="h-4 w-4 text-blue-700 dark:text-blue-400" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -308,12 +308,12 @@ export default function AlternantsPage() {
                 <CardTitle className="text-sm font-medium">
                   Contrats Actifs
                 </CardTitle>
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <Briefcase className="h-4 w-4 text-green-600" />
+                <div className="p-2 bg-emerald-500/10 rounded-lg">
+                  <Briefcase className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">
+                <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
                   {stats?.activeContracts || 0}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -328,11 +328,11 @@ export default function AlternantsPage() {
                   Fin Prochaine
                 </CardTitle>
                 <div className="p-2 bg-orange-500/10 rounded-lg">
-                  <Clock className="h-4 w-4 text-orange-600" />
+                  <Clock className="h-4 w-4 text-orange-700 dark:text-orange-400" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-orange-600">
+                <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">
                   {stats?.endingSoon || 0}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -346,8 +346,8 @@ export default function AlternantsPage() {
                 <CardTitle className="text-sm font-medium">
                   Entreprises
                 </CardTitle>
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <Building2 className="h-4 w-4 text-purple-600" />
+                <div className="p-2 bg-violet-500/10 rounded-lg">
+                  <Building2 className="h-4 w-4 text-violet-700 dark:text-violet-400" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -409,7 +409,8 @@ export default function AlternantsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
+              {/* Desktop table */}
+              <Table className="hidden md:table">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Étudiant</TableHead>
@@ -485,6 +486,68 @@ export default function AlternantsPage() {
                   )}
                 </TableBody>
               </Table>
+
+              {/* Mobile card stack */}
+              <div className="md:hidden">
+                {filteredAlternants.length === 0 ? (
+                  <EmptyState icon={Briefcase} title="Aucun alternant trouvé" />
+                ) : (
+                  <ul className="divide-y">
+                    {filteredAlternants.map((alt) => (
+                      <li
+                        key={alt.id}
+                        onClick={() => handleSelectAlternant(alt)}
+                        className="py-3 cursor-pointer active:bg-muted/50 -mx-6 px-6"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="h-9 w-9 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-medium truncate">
+                                  {alt.firstName} {alt.lastName}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {alt.login}
+                                </div>
+                              </div>
+                              {isEndingSoon(alt.alternantEndDate) ? (
+                                <Badge variant="outline" className={`${PILL.orange} shrink-0`}>
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Fin proche
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className={`${PILL.emerald} shrink-0`}>
+                                  Actif
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1">
+                                <Badge variant="outline" className="font-normal">
+                                  {alt.promoName}
+                                </Badge>
+                              </span>
+                              {alt.companyName && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Building2 className="h-3 w-3" />
+                                  {alt.companyName}
+                                </span>
+                              )}
+                              <span className="inline-flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(alt.alternantStartDate)} – {formatDate(alt.alternantEndDate)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </CardContent>
           </Card>
         </>

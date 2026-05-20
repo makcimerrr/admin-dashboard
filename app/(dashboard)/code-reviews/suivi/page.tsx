@@ -539,7 +539,8 @@ export default function SuiviPage() {
         const allVisibleSelected = visibleRows.length > 0 && visibleSelectedCount === visibleRows.length;
         const someVisibleSelected = visibleSelectedCount > 0 && !allVisibleSelected;
         return (
-        <div className="rounded-lg border overflow-x-auto">
+        <>
+        <div className="rounded-lg border overflow-x-auto hidden md:block">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40 [&>th]:py-2 [&>th]:text-[11px] [&>th]:font-semibold [&>th]:uppercase [&>th]:tracking-wider [&>th]:text-muted-foreground">
@@ -762,6 +763,168 @@ export default function SuiviPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-2">
+          {visibleRows.map(row => {
+            const cat = categorize(row);
+            const badge = STATUS_BADGE[cat];
+            const isLoading = loadingIds.has(row.id);
+            const isSelected = selectedIds.has(row.id);
+            const why = whyBadge(row, cat);
+            const days = Math.floor(daysSinceNotified(row));
+
+            return (
+              <div
+                key={row.id}
+                data-state={isSelected ? 'selected' : undefined}
+                className="rounded-lg border bg-card p-3 data-[state=selected]:border-primary data-[state=selected]:bg-primary/5"
+              >
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleRowSelected(row.id)}
+                    className="mt-1 shrink-0"
+                    aria-label={`Sélectionner ${row.projectName}`}
+                  />
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-sm truncate">{row.projectName}</span>
+                          {row.track && (
+                            <span className="text-[10px] font-semibold" style={{ color: trackAccent(row.track) }}>
+                              {row.track}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {shortPromo(promoName(row.promoId))}
+                        </div>
+                      </div>
+                      <span className={`shrink-0 inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.class}`}>
+                        {badge.label}
+                      </span>
+                    </div>
+
+                    {/* Captain + why badge */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {row.captainLogin ? (
+                        <span className="inline-flex items-center gap-1 text-xs">
+                          <span className="font-mono">{row.captainLogin}</span>
+                          <span
+                            className={`inline-block h-1.5 w-1.5 rounded-full ${row.hasDiscordId ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`}
+                            title={row.hasDiscordId ? 'Discord lié' : 'Sans Discord'}
+                          />
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Pas de capitaine</span>
+                      )}
+                      {why && (
+                        <span
+                          title={why.tooltip}
+                          className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${why.tone}`}
+                        >
+                          {why.label}
+                        </span>
+                      )}
+                      {showDelayColumn && days > 0 && (
+                        <span className={`text-[10px] ${
+                          days >= 14 ? 'text-red-600 dark:text-red-400 font-semibold'
+                          : days >= 10 ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-muted-foreground'
+                        }`}>
+                          {days}j
+                        </span>
+                      )}
+                      {showDoneColumns && row.auditId && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                          ✓ {fmtShort(row.auditCreatedAt)}
+                          {row.auditorName && <span className="text-muted-foreground"> ({row.auditorName})</span>}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Actions row */}
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <div className="flex items-center gap-1.5">
+                        {cat !== 'done' && row.captainLogin && row.hasDiscordId && (
+                          !row.notifiedAuditAt ? (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="h-7 text-xs px-2 gap-1"
+                              disabled={isLoading}
+                              onClick={() => callResendDM(row)}
+                            >
+                              {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                              Envoyer
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs px-2 gap-1"
+                              disabled={isLoading}
+                              onClick={() => callResendDM(row)}
+                            >
+                              {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                              Relancer
+                            </Button>
+                          )
+                        )}
+                        {showDoneColumns && !row.auditId && (
+                          <a
+                            href={row.track
+                              ? `/code-reviews/${row.promoId}/audit?groupId=${row.groupId}&project=${encodeURIComponent(row.projectName)}&track=${encodeURIComponent(row.track)}`
+                              : `/code-reviews/${row.promoId}`}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            Saisir la review
+                          </a>
+                        )}
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {row.auditId ? (
+                            <DropdownMenuItem asChild>
+                              <a href={`/code-reviews/${row.promoId}/group/${row.groupId}`}>
+                                <ExternalLink className="mr-2 h-3.5 w-3.5" />Consulter la review
+                              </a>
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem asChild>
+                              <a href={row.track
+                                ? `/code-reviews/${row.promoId}/audit?groupId=${row.groupId}&project=${encodeURIComponent(row.projectName)}&track=${encodeURIComponent(row.track)}`
+                                : `/code-reviews/${row.promoId}`}>
+                                <ExternalLink className="mr-2 h-3.5 w-3.5" />Saisir la review
+                              </a>
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => handleArchiveRow(row)} disabled={isLoading}>
+                            Archiver
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={e => { e.preventDefault(); setConfirmDeleteRowState(row); }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            Supprimer
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </>
         );
       })()}
 

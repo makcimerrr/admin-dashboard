@@ -279,7 +279,8 @@ export default function PromosManagePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
+                {/* Desktop table */}
+                <Table className="hidden md:table">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Promotion</TableHead>
@@ -324,6 +325,30 @@ export default function PromosManagePage() {
                     })}
                   </TableBody>
                 </Table>
+
+                {/* Mobile cards */}
+                <ul className="md:hidden divide-y -mx-6">
+                  {promoConfig.filter(p => !archivedPromos.some(a => a.name === p.key)).map((promo) => (
+                    <li key={promo.key} className="flex items-start gap-3 px-6 py-3">
+                      <div className="h-9 w-9 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                        <GraduationCap className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium truncate">{promo.title}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                          <span>{promo.key}</span>
+                          <Badge variant="outline" className="font-normal">{promo.eventId}</Badge>
+                        </div>
+                      </div>
+                      <ArchivePromoDialog
+                        promoName={promo.key}
+                        promoTitle={promo.title}
+                        onArchive={handleArchive}
+                        loading={actionLoading === promo.key}
+                      />
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           </TabsContent>
@@ -342,7 +367,8 @@ export default function PromosManagePage() {
                 {archivedPromos.length === 0 ? (
                   <EmptyState icon={FolderArchive} title="Aucune promotion archivée" />
                 ) : (
-                  <Table>
+                  <>
+                  <Table className="hidden md:table">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Promotion</TableHead>
@@ -417,6 +443,56 @@ export default function PromosManagePage() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Mobile cards */}
+                  <ul className="md:hidden divide-y -mx-6">
+                    {archivedPromos.map((promo) => (
+                      <li key={promo.name} className="px-6 py-3 space-y-2">
+                        <div className="flex items-start gap-3">
+                          <div className="h-9 w-9 shrink-0 rounded-full bg-muted flex items-center justify-center">
+                            <Archive className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{promo.name}</div>
+                            <div className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(promo.archivedAt)}
+                            </div>
+                            {promo.archivedReason && (
+                              <div className="mt-1 text-xs text-muted-foreground">{promo.archivedReason}</div>
+                            )}
+                          </div>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" disabled={actionLoading === promo.name}>
+                                {actionLoading === promo.name ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <ArchiveRestore className="h-4 w-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">Restaurer</span>
+                                  </>
+                                )}
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Restaurer {promo.name} ?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Cette promotion sera de nouveau incluse dans les mises à jour automatiques et les statistiques.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleUnarchive(promo.name)}>Restaurer</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -439,7 +515,8 @@ export default function PromosManagePage() {
                 {transferredStudents.length === 0 ? (
                   <EmptyState icon={ArrowRightLeft} title="Aucun transfert enregistré" />
                 ) : (
-                  <Table>
+                  <>
+                  <Table className="hidden md:table">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Étudiant</TableHead>
@@ -479,6 +556,27 @@ export default function PromosManagePage() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Mobile cards */}
+                  <ul className="md:hidden divide-y -mx-6">
+                    {transferredStudents.map((student) => (
+                      <li key={student.login} className="flex items-start gap-3 px-6 py-3">
+                        <div className="h-9 w-9 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{student.firstName} {student.lastName}</div>
+                          <div className="text-xs text-muted-foreground truncate">{student.login}</div>
+                          <div className="mt-1 flex items-center gap-1.5 text-xs flex-wrap">
+                            <Badge variant="outline" className="bg-muted font-normal">{student.previousPromo || "-"}</Badge>
+                            <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+                            <Badge variant="default">{student.currentPromo}</Badge>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -497,7 +595,8 @@ export default function PromosManagePage() {
                 {dropoutStudents.length === 0 ? (
                   <EmptyState icon={UserMinus} title="Aucun étudiant en perdition" />
                 ) : (
-                  <Table>
+                  <>
+                  <Table className="hidden md:table">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Étudiant</TableHead>
@@ -596,6 +695,72 @@ export default function PromosManagePage() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Mobile cards */}
+                  <ul className="md:hidden divide-y -mx-6">
+                    {dropoutStudents.map((student) => (
+                      <li key={student.id} className="px-6 py-3 space-y-2">
+                        <div className="flex items-start gap-3">
+                          <div className="h-9 w-9 shrink-0 rounded-full bg-red-500/10 flex items-center justify-center">
+                            <UserX className="h-4 w-4 text-red-600 dark:text-red-400" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-medium truncate">
+                                  {student.firstName} {student.lastName}
+                                </div>
+                                <div className="text-xs text-muted-foreground truncate">{student.login}</div>
+                              </div>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="sm" disabled={actionLoading === `dropout-${student.id}`}>
+                                    {actionLoading === `dropout-${student.id}` ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <RotateCcw className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Réactiver {student.firstName} {student.lastName} ?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Cet étudiant sera de nouveau inclus dans les statistiques et les mises à jour. Il restera dans sa promotion actuelle ({student.promoName}).
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleReactivateStudent(student.id)}>
+                                      Réactiver
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                              <Badge variant="outline">{student.previousPromo || student.promoName}</Badge>
+                              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(student.dropoutAt)}
+                              </span>
+                              {student.dropoutReason && (
+                                <Badge variant="outline" className={PILL.red}>
+                                  {DROPOUT_REASON_LABELS[student.dropoutReason] || student.dropoutReason}
+                                </Badge>
+                              )}
+                            </div>
+                            {student.dropoutNotes && (
+                              <div className="mt-1 text-xs text-muted-foreground">{student.dropoutNotes}</div>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  </>
                 )}
               </CardContent>
             </Card>

@@ -264,7 +264,7 @@ export default function SpecialtiesPage() {
       {/* ── Filters ────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-3">
         <Select value={selectedSpec} onValueChange={setSelectedSpec}>
-          <SelectTrigger className="w-[240px]">
+          <SelectTrigger className="w-full sm:w-[240px]">
             <SelectValue placeholder="Spécialité" />
           </SelectTrigger>
           <SelectContent>
@@ -277,7 +277,7 @@ export default function SpecialtiesPage() {
         </Select>
 
         <Select value={selectedPromo} onValueChange={setSelectedPromo}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Promo" />
           </SelectTrigger>
           <SelectContent>
@@ -291,7 +291,7 @@ export default function SpecialtiesPage() {
         </Select>
 
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

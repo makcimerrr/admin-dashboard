@@ -9,7 +9,6 @@ import {
   FileBarChartIcon,
   FileIcon,
   FolderArchiveIcon,
-  GraduationCapIcon,
   LayoutGridIcon,
   UsersIcon,
 } from 'lucide-react';
@@ -79,7 +78,6 @@ export const NAV_APPS: NavApp[] = [
     items: [
       { title: 'Étudiants', url: '/students', icon: UsersIcon },
       { title: 'Alternants', url: '/alternants', icon: BriefcaseIcon },
-      { title: 'Spécialités', url: '/students/specialties', icon: GraduationCapIcon },
       { title: 'Code Reviews', url: '/code-reviews', icon: ClipboardCheckIcon },
       { title: 'Suivi', url: '/code-reviews/suivi', icon: BellIcon },
       { title: 'Gestion Promos', url: '/promos/manage', icon: FolderArchiveIcon },
