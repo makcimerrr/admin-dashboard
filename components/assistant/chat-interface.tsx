@@ -212,7 +212,7 @@ export function ChatInterface({
                     <div className="flex flex-wrap gap-1.5">
                       {message.studentIds.slice(0, 5).map((id) => (
                         <Button key={id} asChild variant="outline" size="sm" className="h-6 text-[10px] px-2">
-                          <Link href={`/student?id=${id}`}>
+                          <Link href={`/students/${id}`}>
                             <User className="h-2.5 w-2.5 mr-1" />
                             #{id}
                           </Link>

@@ -252,7 +252,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                         const warnings = res?.warnings ?? [];
                         const warningsText = warnings.join('\n');
                         const name = m.firstName || m.lastName ? `${safeText(m.firstName)} ${safeText(m.lastName)}`.trim() : m.login;
-                        const href = m.studentId ? `/student?id=${m.studentId}` : undefined;
+                        const href = m.studentId ? `/students/${m.studentId}` : undefined;
                         const rowClasses = `flex items-center justify-between text-sm p-2 rounded-md transition-colors ${href ? 'hover:bg-primary/5 cursor-pointer' : 'opacity-80'}`;
 
                         const isCaptain = captainLogin !== null && m.login === captainLogin;

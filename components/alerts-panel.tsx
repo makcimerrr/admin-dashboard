@@ -242,7 +242,7 @@ export default function AlertsPanel({
                   <div className="pt-0.5">{getAlertIcon(alert.type)}</div>
                   {alert.studentId ? (
                     <Link
-                      href={`/student?id=${alert.studentId}`}
+                      href={`/students/${alert.studentId}`}
                       className="flex-1 min-w-0"
                     >
                       <p className="text-sm font-medium truncate hover:text-primary">
@@ -388,7 +388,7 @@ export default function AlertsPanel({
                           size="sm"
                           className="h-7 text-xs"
                         >
-                          <Link href={`/student?id=${alert.studentId}`}>
+                          <Link href={`/students/${alert.studentId}`}>
                             {alert.action}
                             <ChevronRight className="h-3 w-3 ml-1" />
                           </Link>

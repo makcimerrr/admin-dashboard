@@ -39,7 +39,7 @@ export function ActionsCell({
 
   const handleViewDetails = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/student?id=${studentId}`);
+    router.push(`/students/${studentId}`);
   };
 
   const handleDropoutAction = async (

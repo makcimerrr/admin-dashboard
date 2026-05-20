@@ -100,7 +100,7 @@ export default function RecentActivityWidget() {
             activities.map((activity) => (
               <Link
                 key={activity.id}
-                href={`/student?id=${activity.id}`}
+                href={`/students/${activity.id}`}
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors"
               >
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">

@@ -144,7 +144,7 @@ export function StudentTableRow({ student, promoConfig }: StudentTableRowProps) 
   const rustJavaCompleted = student.java_completed || student.rust_completed;
 
   const handleRowClick = () => {
-    router.push(`/student?id=${student.id}`);
+    router.push(`/students/${student.id}`);
   };
 
   return (

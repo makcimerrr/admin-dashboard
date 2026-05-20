@@ -377,7 +377,7 @@ export default async function PromoGroupsIndexPage(props: any) {
                                 .slice(0, 4)
                                 .map((m: any, mi: number) => {
                                   const studentHref = m.studentId
-                                    ? `/student?id=${m.studentId}`
+                                    ? `/students/${m.studentId}`
                                     : undefined;
                                   const key = `${m.login}-${mi}`;
                                   return studentHref ? (
@@ -475,7 +475,7 @@ export default async function PromoGroupsIndexPage(props: any) {
                                 .slice(0, 4)
                                 .map((m: any, mi: number) => {
                                   const studentHref = m.studentId
-                                    ? `/student?id=${m.studentId}`
+                                    ? `/students/${m.studentId}`
                                     : undefined;
                                   const key = `${m.login}-${mi}`;
                                   return studentHref ? (
