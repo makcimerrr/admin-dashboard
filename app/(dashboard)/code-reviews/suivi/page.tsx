@@ -491,7 +491,7 @@ export default function SuiviPage() {
       </PageHeader>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b">
+      <div className="flex items-center gap-1 border-b overflow-x-auto scrollbar-none">
         {loading ? (
           <Skeleton className="h-9 w-96" />
         ) : TAB_CONFIG.map(({ key, label, icon: Icon, color }) => {
@@ -501,7 +501,7 @@ export default function SuiviPage() {
             <button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-colors -mb-px whitespace-nowrap shrink-0 ${
                 isActive
                   ? `${color} border-current`
                   : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
@@ -928,9 +928,10 @@ export default function SuiviPage() {
         );
       })()}
 
-      {/* Floating bulk actions bar */}
+      {/* Floating bulk actions bar — sits above the mobile BottomNav (~56px + safe-area) */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border bg-background shadow-lg px-3 py-2">
+        <div
+          className="fixed bottom-[calc(env(safe-area-inset-bottom)+72px)] md:bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border bg-background shadow-lg px-3 py-2 max-w-[calc(100vw-1rem)] flex-wrap justify-center">
           <span className="text-xs font-medium px-2 tabular-nums">
             {selectedIds.size} sélectionnée{selectedIds.size > 1 ? 's' : ''}
           </span>

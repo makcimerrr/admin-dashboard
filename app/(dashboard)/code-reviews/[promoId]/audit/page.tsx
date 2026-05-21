@@ -343,7 +343,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                         )}
                                     </div>
 
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center flex-wrap gap-x-4 gap-y-2">
                                         <div className="flex items-center gap-2">
                                             <Switch
                                                 id={`absent-${result.login}`}
