@@ -244,7 +244,7 @@ export default async function PromoGroupsIndexPage(props: any) {
   });
 
   return (
-    <div className="page-container flex flex-col gap-6 p-6">
+    <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header: simple breadcrumb-style nav, title, single context action */}
       <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="icon" asChild>

@@ -106,7 +106,7 @@ export default function GroupFilters({ tracks }: FiltersProps) {
       </div>
 
       {/* Recherche */}
-      <div className="flex-1 min-w-[200px]">
+      <div className="flex-1 w-full sm:min-w-[200px]">
         <Input
           placeholder="Rechercher projet ou login..."
           value={search}
@@ -119,7 +119,7 @@ export default function GroupFilters({ tracks }: FiltersProps) {
       <Button
         size="sm"
         variant="outline"
-        className="ml-auto"
+        className="sm:ml-auto"
         onClick={resetFilters}
       >
         Réinitialiser

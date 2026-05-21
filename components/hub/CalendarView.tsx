@@ -155,7 +155,7 @@ export const CalendarView = ({ tasks }: CalendarViewProps) => {
             <Button variant="outline" size="icon" onClick={previousMonth}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="text-lg font-semibold min-w-[200px] text-center capitalize">
+            <div className="text-base sm:text-lg font-semibold min-w-[140px] sm:min-w-[200px] text-center capitalize">
               {format(currentMonth, "MMMM yyyy", { locale: fr })}
             </div>
             <Button variant="outline" size="icon" onClick={nextMonth}>
@@ -165,18 +165,19 @@ export const CalendarView = ({ tasks }: CalendarViewProps) => {
         </CardHeader>
 
         <CardContent>
-          <div className="grid grid-cols-7 gap-2">
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((day) => (
               <div
                 key={day}
-                className="text-center font-semibold text-sm text-muted-foreground p-2"
+                className="text-center font-semibold text-[10px] sm:text-sm text-muted-foreground p-1 sm:p-2"
               >
-                {day}
+                <span className="hidden sm:inline">{day}</span>
+                <span className="sm:hidden">{day.charAt(0)}</span>
               </div>
             ))}
 
             {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, i) => (
-              <div key={`empty-${i}`} className="p-2" />
+              <div key={`empty-${i}`} className="p-1 sm:p-2" />
             ))}
 
             {calendarDays.map((day) => {
@@ -187,7 +188,7 @@ export const CalendarView = ({ tasks }: CalendarViewProps) => {
               return (
                 <div
                   key={day.toISOString()}
-                  className={`min-h-[80px] p-2 border rounded-lg ${
+                  className={`min-h-[52px] sm:min-h-[80px] p-1 sm:p-2 border rounded-md sm:rounded-lg ${
                     isToday
                       ? "border-primary bg-primary/5"
                       : isPast
@@ -195,26 +196,42 @@ export const CalendarView = ({ tasks }: CalendarViewProps) => {
                       : "border-border"
                   } ${!isSameMonth(day, currentMonth) ? "opacity-50" : ""}`}
                 >
-                  <div className="text-sm font-medium mb-1">{format(day, "d")}</div>
-                  <div className="space-y-1">
-                    {dayTasks.slice(0, 2).map((task) => (
-                      <button
-                        key={task.id}
-                        onClick={() => setSelectedTask(task)}
-                        className={`w-full text-left text-xs p-1 rounded flex items-center gap-1 ${getTaskStyle(
-                          task.status
-                        )}`}
-                      >
-                        {getTaskIcon(task.status)}
-                        <span className="truncate flex-1 min-w-0">{task.title}</span>
-                        <CompactAvatars assignees={task.assignedUsers} />
-                      </button>
-                    ))}
-                    {dayTasks.length > 2 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{dayTasks.length - 2} autre(s)
-                      </div>
-                    )}
+                  <div className="text-[11px] sm:text-sm font-medium mb-0.5 sm:mb-1">{format(day, "d")}</div>
+                  <div className="space-y-0.5 sm:space-y-1">
+                    {/* On mobile only show a dot indicator; on sm+ show full task buttons */}
+                    <div className="sm:hidden flex flex-wrap gap-0.5">
+                      {dayTasks.slice(0, 3).map((task) => (
+                        <button
+                          key={task.id}
+                          onClick={() => setSelectedTask(task)}
+                          className={`h-1.5 w-1.5 rounded-full ${getTaskStyle(task.status)}`}
+                          aria-label={task.title}
+                        />
+                      ))}
+                      {dayTasks.length > 3 && (
+                        <span className="text-[8px] text-muted-foreground leading-none">+{dayTasks.length - 3}</span>
+                      )}
+                    </div>
+                    <div className="hidden sm:block space-y-1">
+                      {dayTasks.slice(0, 2).map((task) => (
+                        <button
+                          key={task.id}
+                          onClick={() => setSelectedTask(task)}
+                          className={`w-full text-left text-xs p-1 rounded flex items-center gap-1 ${getTaskStyle(
+                            task.status
+                          )}`}
+                        >
+                          {getTaskIcon(task.status)}
+                          <span className="truncate flex-1 min-w-0">{task.title}</span>
+                          <CompactAvatars assignees={task.assignedUsers} />
+                        </button>
+                      ))}
+                      {dayTasks.length > 2 && (
+                        <div className="text-xs text-muted-foreground">
+                          +{dayTasks.length - 2} autre(s)
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
