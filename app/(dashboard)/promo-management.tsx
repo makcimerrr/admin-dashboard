@@ -150,9 +150,9 @@ export default function PromoManager() {
   const closeModal = () => setIsModalOpen(false);
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-semibold mb-6">Gestion des Promotions</h1>
-      <div className="flex gap-6 mb-6">
+    <div className="p-4 md:p-6">
+      <h1 className="text-2xl md:text-3xl font-semibold mb-4 md:mb-6">Gestion des Promotions</h1>
+      <div className="flex flex-col sm:flex-row gap-3 md:gap-6 mb-6">
         <div className="flex-1">
           <Input
             placeholder="Clé (e.g., P1 2024)"
