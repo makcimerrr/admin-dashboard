@@ -42,7 +42,7 @@ export function DatePickerDemo({ value, onChange, id, className }: DatePickerDem
           className={cn(
             'justify-start text-left font-normal',
             !date && 'text-muted-foreground',
-            className || 'w-[240px]'
+            className || 'w-full sm:w-[240px]'
           )}
         >
           <CalendarIcon />

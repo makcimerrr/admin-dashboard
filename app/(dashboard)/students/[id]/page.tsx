@@ -395,40 +395,41 @@ export default function StudentPage() {
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => router.push('/students')}
+            className="shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Avatar className="h-16 w-16 border-2 border-border">
-            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xl">
+          <Avatar className="h-12 w-12 sm:h-16 sm:w-16 border-2 border-border shrink-0">
+            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-base sm:text-xl">
               {student.first_name[0]}
               {student.last_name[0]}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl md:text-3xl font-bold tracking-tight truncate">
               {student.first_name} {student.last_name}
             </h1>
-            <p className="text-muted-foreground font-mono text-sm">
+            <p className="text-muted-foreground font-mono text-xs sm:text-sm truncate">
               @{student.login}
             </p>
           </div>
         </div>
         <Badge
           variant="outline"
-          className={`text-sm px-3 py-1 ${getDelayLevelClass(student.delay_level)}`}
+          className={`text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 shrink-0 ${getDelayLevelClass(student.delay_level)}`}
         >
           {student.delay_level || 'Statut inconnu'}
         </Badge>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Email</CardTitle>
