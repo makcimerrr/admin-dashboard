@@ -281,7 +281,7 @@ export default function PromoManager() {
               id="end-date"
             />
           </div>
-          <div className="flex justify-end mt-4 space-x-4">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-4 mt-4">
             <Button onClick={handleAdd}>Ajouter</Button>
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Annuler</Button>
           </div>

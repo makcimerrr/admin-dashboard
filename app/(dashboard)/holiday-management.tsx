@@ -131,9 +131,9 @@ export default function HolidayManager() {
         {holidays.map(({ name, start, end }) => (
           <li
             key={name}
-            className="flex justify-between items-center p-4 bg-card border rounded-lg hover:bg-muted/30 transition-colors"
+            className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-4 bg-card border rounded-lg hover:bg-muted/30 transition-colors"
           >
-            <div className="text-lg font-medium">
+            <div className="text-base sm:text-lg font-medium break-words">
               <strong>{name}</strong> : {start} - {end}
             </div>
 
@@ -141,7 +141,7 @@ export default function HolidayManager() {
               variant="destructive"
               size="sm"
               onClick={() => handleDeleteHoliday(name)}
-              className="text-sm text-red-200 hover:text-red-800 transition-colors"
+              className="text-sm text-red-200 hover:text-red-800 transition-colors self-start sm:self-auto shrink-0"
             >
               Supprimer
             </Button>
@@ -200,7 +200,7 @@ export default function HolidayManager() {
           </div>
         </div>
 
-        <div className="flex justify-end space-x-4 mt-6">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-4 mt-6">
           <Button
             onClick={() => {
               handleAddHoliday();

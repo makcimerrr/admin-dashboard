@@ -102,7 +102,7 @@ async function PromoOverview({ promoId }: { promoId: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {TRACKS.map((track) => {
               const t = byTrack[track];
               const pct =
@@ -150,7 +150,7 @@ async function PromoOverview({ promoId }: { promoId: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
             <div className="text-center p-4 rounded-lg bg-muted/40 border">
               <p className="text-2xl md:text-3xl font-bold tabular-nums">
                 {totalGroups}

@@ -183,7 +183,7 @@ export default function PromoManagement() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="key">Clé de la promotion *</Label>
                   <Input
@@ -216,7 +216,7 @@ export default function PromoManagement() {
 
               <div className="border-t pt-4">
                 <h4 className="text-sm font-semibold mb-4">Dates de la promotion</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Date de début *</Label>
                     <DatePickerDemo
@@ -242,7 +242,7 @@ export default function PromoManagement() {
 
               <div className="border-t pt-4">
                 <h4 className="text-sm font-semibold mb-4">Piscine JavaScript (optionnel)</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Début Piscine JS</Label>
                     <DatePickerDemo
@@ -268,7 +268,7 @@ export default function PromoManagement() {
 
               <div className="border-t pt-4">
                 <h4 className="text-sm font-semibold mb-4">Piscine Rust/Java (optionnel)</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Début Piscine Rust/Java</Label>
                     <DatePickerDemo
