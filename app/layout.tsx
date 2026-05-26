@@ -3,6 +3,7 @@ import './globals.css';
 import { Analytics } from '@vercel/analytics/react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
+import { Toaster as HotToaster } from 'react-hot-toast';
 import { Providers } from './providers';
 
 export const metadata = {
@@ -23,6 +24,18 @@ export default function RootLayout({
             {children}
             <Toaster />
             <SonnerToaster />
+            <HotToaster
+              position="top-center"
+              containerStyle={{ top: 16 }}
+              toastOptions={{
+                className: 'text-sm',
+                style: {
+                  background: 'hsl(var(--background))',
+                  color: 'hsl(var(--foreground))',
+                  border: '1px solid hsl(var(--border))',
+                },
+              }}
+            />
           </Providers>
         </body>
         <Analytics />
