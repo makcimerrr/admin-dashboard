@@ -73,16 +73,22 @@ const LastUpdate = ({
     <div className="mt-2 text-sm text-muted-foreground">
       {isAll ? (
         hasOutOfDelta ? (
-          <p>
-            Dernière mise à jour de toutes les promotions {timeAgoLast} mais les promos{' '}
-            {outOfDeltaPromos!.map((p, idx) => (
-              <span key={p.promo}>
-                <span className="font-medium text-foreground">{p.promo}</span>{' '}
-                ({formatRelative(p.date)})
-                {idx < outOfDeltaPromos!.length - 1 ? ', ' : ''}
-              </span>
-            ))}{' '}
-            ont été mises à jour à des dates différentes.
+          <p className="flex flex-wrap items-center gap-1">
+            <span>
+              Dernière mise à jour de toutes les promotions {timeAgoLast}
+            </span>
+            {isAuto && <AutoBadge />}
+            <span>
+              mais les promos{' '}
+              {outOfDeltaPromos!.map((p, idx) => (
+                <span key={p.promo}>
+                  <span className="font-medium text-foreground">{p.promo}</span>{' '}
+                  ({formatRelative(p.date)})
+                  {idx < outOfDeltaPromos!.length - 1 ? ', ' : ''}
+                </span>
+              ))}{' '}
+              ont été mises à jour à des dates différentes.
+            </span>
           </p>
         ) : timeAgoLast ? (
           <p className="flex items-center flex-wrap gap-1">
