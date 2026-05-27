@@ -185,6 +185,15 @@ export async function POST(req: Request) {
     }
     // else: orphan with matching name — fall through to upsertPromoConfig.
 
+    // Normalize optional piscine dates: the form sends '' for empty fields and
+    // legacy callers send 'NaN'. The DB column is `date NULL`, both must map to null.
+    const toDateOrNull = (v: unknown): string | null => {
+      if (v === null || v === undefined) return null;
+      const s = String(v).trim();
+      if (s === '' || s === 'NaN') return null;
+      return s;
+    };
+
     // Add to promoConfig table
     await upsertPromoConfig({
       key,
@@ -192,10 +201,10 @@ export async function POST(req: Request) {
       title,
       start,
       end,
-      piscineJsStart: piscineJsStart !== 'NaN' ? piscineJsStart : null,
-      piscineJsEnd: piscineJsEnd !== 'NaN' ? piscineJsEnd : null,
-      piscineRustStart: piscineRustJavaStart !== 'NaN' ? piscineRustJavaStart : null,
-      piscineRustEnd: piscineRustJavaEnd !== 'NaN' ? piscineRustJavaEnd : null,
+      piscineJsStart: toDateOrNull(piscineJsStart),
+      piscineJsEnd: toDateOrNull(piscineJsEnd),
+      piscineRustStart: toDateOrNull(piscineRustJavaStart),
+      piscineRustEnd: toDateOrNull(piscineRustJavaEnd),
     });
     invalidate(CACHE_TAGS.promotions, CACHE_TAGS.widgetsOverview);
 
