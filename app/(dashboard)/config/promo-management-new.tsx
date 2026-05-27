@@ -45,6 +45,8 @@ interface Promo {
     'piscine-rust-java-end': string;
     end: string;
   };
+  /** Set by GET /api/promos when the row only exists in `promotions`, not in `promoConfig` yet. */
+  incomplete?: boolean;
 }
 
 export default function PromoManagement() {
@@ -328,13 +330,26 @@ export default function PromoManagement() {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <CardTitle className="text-xl">{promo.key}</CardTitle>
                       <Badge variant="outline" className="font-mono">
                         ID: {promo.eventId}
                       </Badge>
+                      {promo.incomplete && (
+                        <Badge
+                          variant="outline"
+                          className="bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400"
+                          title="Existe dans la table promotions mais sans configuration de dates. Ajoute-la via le formulaire pour compléter."
+                        >
+                          Configuration incomplète
+                        </Badge>
+                      )}
                     </div>
-                    <CardDescription>{promo.title}</CardDescription>
+                    <CardDescription>
+                      {promo.incomplete
+                        ? 'Cette promo est enregistrée mais sans dates. Recrée-la via « Nouvelle promotion » avec le même ID et la même clé pour compléter la configuration.'
+                        : promo.title}
+                    </CardDescription>
                   </div>
                   <Button
                     variant="ghost"

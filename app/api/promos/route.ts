@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { addPromotion, deletePromotion } from '@/lib/db/services/promotions';
-import { getAllPromotions, dbRowToPromoConfig } from '@/lib/config/promotions';
-import { upsertPromoConfig, deletePromoConfig, getPromoConfigByKey } from '@/lib/db/services/promoConfig';
+import { dbRowToPromoConfig } from '@/lib/config/promotions';
+import {
+  upsertPromoConfig,
+  deletePromoConfig,
+  getPromoConfigByKey,
+  getAllPromoConfig,
+} from '@/lib/db/services/promoConfig';
+import { db } from '@/lib/db/config';
+import { promotions } from '@/lib/db/schema/promotions';
+import { eq } from 'drizzle-orm';
 import { CACHE_TAGS, invalidate } from '@/lib/cache';
 
 function isDateValid(date: string): boolean {
@@ -16,7 +24,37 @@ function isDateInRange(date: string, start: string, end: string): boolean {
 
 export async function GET(req: Request) {
   try {
-    const promos = await getAllPromotions();
+    // Admin /config page needs fresh data — bypass the cached getAllPromotions().
+    // Also surface "orphan" rows: promotions present in `promotions` but missing
+    // from `promoConfig`, so the admin can complete or delete them instead of
+    // hitting silent 400s when adding a promo whose row already exists.
+    const [configRows, promoRows] = await Promise.all([
+      getAllPromoConfig(),
+      db
+        .select({ promoId: promotions.promoId, name: promotions.name })
+        .from(promotions)
+        .execute(),
+    ]);
+
+    const configKeys = new Set(configRows.map((r) => r.key));
+    const orphans = promoRows
+      .filter((p) => !configKeys.has(p.name))
+      .map((p) => ({
+        key: p.name,
+        eventId: Number(p.promoId),
+        title: p.name,
+        dates: {
+          start: '',
+          'piscine-js-start': 'NaN',
+          'piscine-js-end': 'NaN',
+          'piscine-rust-java-start': 'NaN',
+          'piscine-rust-java-end': 'NaN',
+          end: '',
+        },
+        incomplete: true,
+      }));
+
+    const promos = [...configRows.map(dbRowToPromoConfig), ...orphans];
     return NextResponse.json({ promos }, { status: 200 });
   } catch (error) {
     console.error('Erreur lors de la récupération des promos :', error);
@@ -109,7 +147,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check for conflicts in promoConfig DB
+    // Check for conflicts in promoConfig DB — true duplicate, refuse.
     const existing = await getPromoConfigByKey(key);
     if (existing.length > 0) {
       return NextResponse.json(
@@ -118,14 +156,34 @@ export async function POST(req: Request) {
       );
     }
 
-    // Add to promotions table
-    const dbResult = await addPromotion(String(eventId), key);
-    if (dbResult.includes('existe déjà')) {
+    // Check `promotions` table state. Three cases:
+    //   1. No row → add it.
+    //   2. Row exists with the SAME name → orphan to complete (skip insert,
+    //      keep going to upsertPromoConfig below).
+    //   3. Row exists with a DIFFERENT name → real conflict on eventId.
+    const existingPromo = await db
+      .select({ promoId: promotions.promoId, name: promotions.name })
+      .from(promotions)
+      .where(eq(promotions.promoId, String(eventId)))
+      .execute();
+
+    if (existingPromo.length === 0) {
+      const dbResult = await addPromotion(String(eventId), key);
+      if (dbResult.includes('existe déjà')) {
+        return NextResponse.json(
+          { error: `Une promotion avec cet ID existe déjà dans la base de données.` },
+          { status: 400 }
+        );
+      }
+    } else if (existingPromo[0].name !== key) {
       return NextResponse.json(
-        { error: `Une promotion avec cet ID ou ce titre existe déjà dans la base de données.` },
+        {
+          error: `L'ID ${eventId} est déjà utilisé par la promotion "${existingPromo[0].name}". Choisis un autre ID ou supprime l'existante d'abord.`,
+        },
         { status: 400 }
       );
     }
+    // else: orphan with matching name — fall through to upsertPromoConfig.
 
     // Add to promoConfig table
     await upsertPromoConfig({
