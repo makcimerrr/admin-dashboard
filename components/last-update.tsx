@@ -10,6 +10,13 @@ interface LastUpdateProps {
   isAuto?: boolean;
   allIsAuto?: boolean;
   outOfDeltaPromos?: { promo: string; date: string }[];
+  /** event_id of the promo whose timestamp is the displayed max — used for the
+   *  "all" view so we can say "Dernière mise à jour : P1 2024 il y a 1h" rather
+   *  than the misleading "pour toutes les promotions". */
+  latestPromoEventId?: string | null;
+  /** eventId → human-friendly promo name (key), used to resolve names in all
+   *  displayed lists. */
+  promoNameById?: Record<string, string>;
 }
 
 function formatRelative(iso: string): string {
@@ -42,7 +49,10 @@ const LastUpdate = ({
   isAuto,
   allIsAuto,
   outOfDeltaPromos,
+  latestPromoEventId,
+  promoNameById,
 }: LastUpdateProps) => {
+  const nameFor = (id: string) => promoNameById?.[id] ?? id;
   const [, tick] = useState(0);
 
   // Re-render every minute to refresh the relative time string. 1s was
@@ -75,14 +85,20 @@ const LastUpdate = ({
         hasOutOfDelta ? (
           <p className="flex flex-wrap items-center gap-1">
             <span>
-              Dernière mise à jour de toutes les promotions {timeAgoLast}
+              Mise à jour la plus récente{' '}
+              {latestPromoEventId && (
+                <>
+                  (<span className="font-medium text-foreground">{nameFor(latestPromoEventId)}</span>){' '}
+                </>
+              )}
+              {timeAgoLast}
             </span>
             {isAuto && <AutoBadge />}
             <span>
               mais les promos{' '}
               {outOfDeltaPromos!.map((p, idx) => (
                 <span key={p.promo}>
-                  <span className="font-medium text-foreground">{p.promo}</span>{' '}
+                  <span className="font-medium text-foreground">{nameFor(p.promo)}</span>{' '}
                   ({formatRelative(p.date)})
                   {idx < outOfDeltaPromos!.length - 1 ? ', ' : ''}
                 </span>
@@ -92,7 +108,12 @@ const LastUpdate = ({
           </p>
         ) : timeAgoLast ? (
           <p className="flex items-center flex-wrap gap-1">
-            Dernière mise à jour pour toutes les promotions : {timeAgoLast}
+            Mise à jour la plus récente
+            {latestPromoEventId && (
+              <>
+                {' '}(<span className="font-medium text-foreground">{nameFor(latestPromoEventId)}</span>)
+              </>
+            )}{' '}: {timeAgoLast}
             {isAuto && <AutoBadge />}
           </p>
         ) : timeAgoAll ? (
@@ -105,7 +126,7 @@ const LastUpdate = ({
         )
       ) : updateType === 'lastUpdate' ? (
         <p className="flex items-center flex-wrap gap-1">
-          Dernière mise à jour pour la promo <span className="font-medium text-foreground">{eventId}</span> : {timeAgoLast}
+          Dernière mise à jour pour la promo <span className="font-medium text-foreground">{nameFor(eventId)}</span> : {timeAgoLast}
           {isAuto && <AutoBadge />}
         </p>
       ) : updateType === 'allUpdate' ? (
@@ -114,7 +135,7 @@ const LastUpdate = ({
           {allIsAuto && <AutoBadge />}
         </p>
       ) : (
-        <p>Aucune mise à jour pour la promo {eventId}.</p>
+        <p>Aucune mise à jour pour la promo {nameFor(eventId)}.</p>
       )}
     </div>
   );

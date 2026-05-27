@@ -40,6 +40,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [isAuto, setIsAuto] = useState<boolean>(false);
   const [allIsAuto, setAllIsAuto] = useState<boolean>(false);
   const [outOfDeltaPromos, setOutOfDeltaPromos] = useState<{ promo: string; date: string }[]>([]);
+  const [latestPromoEventId, setLatestPromoEventId] = useState<string | null>(null);
+  const [promoNameById, setPromoNameById] = useState<Record<string, string>>({});
 
   const [updates, setUpdates] = useState<
     { last_update: string; event_id: string }[]
@@ -49,6 +51,18 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     fetch('/api/projects').then(r => r.json()).then(data => {
       setAllProjectsTyped(data as AllProjects);
     }).catch(() => {});
+
+    // Map eventId → promo key so the LastUpdate widget can resolve names.
+    fetch('/api/promos')
+      .then((r) => r.json())
+      .then((data) => {
+        const map: Record<string, string> = {};
+        for (const p of data?.promos ?? []) {
+          map[String(p.eventId)] = p.key;
+        }
+        setPromoNameById(map);
+      })
+      .catch(() => {});
   }, []);
 
   const projectsList: any[] = [];
@@ -677,16 +691,19 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           // Toujours utiliser le max — le marker 'all' n'est pas représentatif.
           setLastUpdate(maxUpdate.last_update);
           setIsAuto(maxUpdate.is_auto ?? false);
+          setLatestPromoEventId(maxUpdate.event_id);
         } else if (allUpdateEntry) {
           // Edge case : aucune promo active n'a jamais été mise à jour.
           // On retombe sur le marker manuel s'il existe.
           setLastUpdate(allUpdateEntry.last_update);
           setIsAuto(allUpdateEntry.is_auto ?? false);
           setOutOfDeltaPromos([]);
+          setLatestPromoEventId(null);
         } else {
           setLastUpdate(null);
           setIsAuto(false);
           setOutOfDeltaPromos([]);
+          setLatestPromoEventId(null);
         }
       }
     } catch (error) {
@@ -728,6 +745,8 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           isAuto={isAuto}
           allIsAuto={allIsAuto}
           outOfDeltaPromos={outOfDeltaPromos}
+          latestPromoEventId={latestPromoEventId}
+          promoNameById={promoNameById}
         />
       </div>
       <style jsx>{`
