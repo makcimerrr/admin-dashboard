@@ -644,9 +644,15 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       setAllUpdate(allUpdateEntry?.last_update ?? null);
       setAllIsAuto(allUpdateEntry?.is_auto ?? false);
 
-      // Nouvelle logique : vérifier une par une.
-      // On ignore les promos archivées : le cron ne les touche plus, donc leur
-      // last_update est volontairement figé — pas un signal de désynchro.
+      // Vérification globale :
+      //   - on ignore les promos archivées (cron ne les touche plus),
+      //   - on ignore le marker 'all' qui n'est mis à jour qu'au clic manuel
+      //     du bouton "Update all" — il devient vite stale et il n'a aucun
+      //     sens à le comparer aux promos individuelles que le cron rafraîchit.
+      //   - la timestamp affichée est toujours le MAX des promos actives.
+      //   - une promo est considérée "out of delta" si elle est en retard
+      //     d'au moins 6 h sur ce max — ce qui couvre la variance d'un même
+      //     run de cron tout en flagging une promo loupée d'un cycle.
       if (eventId === 'all') {
         const promoUpdates = data.filter(
           (update: { event_id: string; last_update: string; is_auto?: boolean; is_archived?: boolean }) =>
@@ -659,26 +665,21 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
             }
           );
           const maxDate = new Date(maxUpdate.last_update);
-          const tolerance = 60; // secondes
+          const TOLERANCE_SEC = 6 * 3600; // 6h
           const outOfDelta: { promo: string; date: string }[] = [];
           promoUpdates.forEach((u: { event_id: string; last_update: string; is_auto?: boolean }) => {
             const diff = Math.abs((maxDate.getTime() - new Date(u.last_update).getTime()) / 1000);
-            if (diff > tolerance) {
+            if (diff > TOLERANCE_SEC) {
               outOfDelta.push({ promo: u.event_id, date: u.last_update });
             }
           });
           setOutOfDeltaPromos(outOfDelta);
-          if (outOfDelta.length === 0) {
-            setLastUpdate(maxUpdate.last_update);
-            setIsAuto(maxUpdate.is_auto ?? false);
-          } else if (allUpdateEntry) {
-            setLastUpdate(allUpdateEntry.last_update);
-            setIsAuto(allUpdateEntry.is_auto ?? false);
-          } else {
-            setLastUpdate(null);
-            setIsAuto(false);
-          }
+          // Toujours utiliser le max — le marker 'all' n'est pas représentatif.
+          setLastUpdate(maxUpdate.last_update);
+          setIsAuto(maxUpdate.is_auto ?? false);
         } else if (allUpdateEntry) {
+          // Edge case : aucune promo active n'a jamais été mise à jour.
+          // On retombe sur le marker manuel s'il existe.
           setLastUpdate(allUpdateEntry.last_update);
           setIsAuto(allUpdateEntry.is_auto ?? false);
           setOutOfDeltaPromos([]);
