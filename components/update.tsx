@@ -644,9 +644,14 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       setAllUpdate(allUpdateEntry?.last_update ?? null);
       setAllIsAuto(allUpdateEntry?.is_auto ?? false);
 
-      // Nouvelle logique : vérifier une par une
+      // Nouvelle logique : vérifier une par une.
+      // On ignore les promos archivées : le cron ne les touche plus, donc leur
+      // last_update est volontairement figé — pas un signal de désynchro.
       if (eventId === 'all') {
-        const promoUpdates = data.filter((update: { event_id: string; last_update: string; is_auto?: boolean }) => update.event_id !== 'all');
+        const promoUpdates = data.filter(
+          (update: { event_id: string; last_update: string; is_auto?: boolean; is_archived?: boolean }) =>
+            update.event_id !== 'all' && !update.is_archived
+        );
         if (promoUpdates.length > 0) {
           const maxUpdate = promoUpdates.reduce(
             (max: { last_update: string; event_id: string }, curr: { last_update: string; event_id: string }) => {

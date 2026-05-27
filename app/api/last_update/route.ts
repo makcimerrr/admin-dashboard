@@ -1,22 +1,48 @@
 import { NextResponse } from 'next/server';
 import { updateLastUpdate, getAllUpdates } from '@/lib/db/services/updates'; // Import des fonctions depuis db.ts
+import { getAllPromoConfig } from '@/lib/db/services/promoConfig';
+import { getArchivedPromoNames } from '@/lib/db/filters';
 
 /**
  * Fonction GET pour récupérer la dernière mise à jour avec son `event_id`.
+ *
+ * Chaque ligne reçoit un flag `is_archived` calculé via
+ *   promo_config.event_id → promo_config.key → promotions.is_archived.
+ * Le client utilise ce flag pour exclure les promos archivées du calcul
+ * « out-of-delta » : une promo archivée n'est plus mise à jour par le cron,
+ * donc son dernier `last_update` peut être très ancien sans que ce soit un
+ * souci.
  */
 export async function GET(req: Request) {
   try {
-    // Récupérer toutes les mises à jour
-    const updates = await getAllUpdates();
+    const [allUpdates, archivedNames, promoConfigRows] = await Promise.all([
+      getAllUpdates(),
+      getArchivedPromoNames(),
+      getAllPromoConfig(),
+    ]);
 
-    if (updates.length === 0) {
+    if (allUpdates.length === 0) {
       return NextResponse.json(
         { message: 'Aucune mise à jour trouvée.' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(updates);
+    // Build the archived event_id set once. event_id is a string in `updates`,
+    // promo_config.eventId is an int — normalize to string.
+    const archivedEventIds = new Set<string>();
+    for (const row of promoConfigRows) {
+      if (archivedNames.has(row.key)) {
+        archivedEventIds.add(String(row.eventId));
+      }
+    }
+
+    const enriched = allUpdates.map((u) => ({
+      ...u,
+      is_archived: archivedEventIds.has(u.event_id),
+    }));
+
+    return NextResponse.json(enriched);
   } catch (error) {
     return NextResponse.json(
       { message: 'Erreur lors de la récupération des mises à jour.', error: error },
