@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Briefcase, Code2 } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Briefcase, Code2, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface Project {
@@ -51,6 +51,9 @@ interface ProjectsByTech {
 export default function ProjectManagement() {
   const [projectsByTech, setProjectsByTech] = useState<ProjectsByTech>({});
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [movingId, setMovingId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteProject, setDeleteProject] = useState<{ tech: string; id: number } | null>(null);
   const [newProject, setNewProject] = useState<Omit<Project, 'id'> & { tech: string }>({
@@ -84,6 +87,7 @@ export default function ProjectManagement() {
       return;
     }
 
+    setSaving(true);
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -97,10 +101,13 @@ export default function ProjectManagement() {
       setIsDialogOpen(false);
     } catch (error) {
       toast.error('Erreur lors de l\'ajout du projet.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (tech: string, id: number) => {
+    setDeleting(true);
     try {
       const response = await fetch('/api/projects', {
         method: 'DELETE',
@@ -113,6 +120,8 @@ export default function ProjectManagement() {
       setDeleteProject(null);
     } catch (error) {
       toast.error('Erreur lors de la suppression du projet.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -134,6 +143,7 @@ export default function ProjectManagement() {
       reorderedProjects[index]
     ];
 
+    setMovingId(id);
     try {
       const response = await fetch('/api/projects', {
         method: 'PATCH',
@@ -148,6 +158,8 @@ export default function ProjectManagement() {
       toast.success('Ordre modifié avec succès.');
     } catch (error) {
       toast.error('Erreur lors de la réorganisation.');
+    } finally {
+      setMovingId(null);
     }
   };
 
@@ -231,10 +243,19 @@ export default function ProjectManagement() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
                 Annuler
               </Button>
-              <Button onClick={handleAdd}>Ajouter</Button>
+              <Button onClick={handleAdd} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Ajout...
+                  </>
+                ) : (
+                  'Ajouter'
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -294,19 +315,27 @@ export default function ProjectManagement() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleMove(tech, project.id, 'up')}
-                          disabled={index === 0}
+                          disabled={index === 0 || movingId !== null}
                           className="h-8 w-8"
                         >
-                          <ChevronUp className="h-4 w-4" />
+                          {movingId === project.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleMove(tech, project.id, 'down')}
-                          disabled={index === projects.length - 1}
+                          disabled={index === projects.length - 1 || movingId !== null}
                           className="h-8 w-8"
                         >
-                          <ChevronDown className="h-4 w-4" />
+                          {movingId === project.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
@@ -336,12 +365,23 @@ export default function ProjectManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteProject && handleDelete(deleteProject.tech, deleteProject.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleteProject) handleDelete(deleteProject.tech, deleteProject.id);
+              }}
+              disabled={deleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Supprimer
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

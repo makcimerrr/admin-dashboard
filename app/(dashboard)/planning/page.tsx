@@ -61,6 +61,9 @@ export default function PlanningPage() {
   // UI state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'person' | 'table'>('grid');
+  // Count of in-flight save requests. The grid edits optimistically, so instead
+  // of blocking the UI we surface a small "Enregistrement…" pill while > 0.
+  const [savingCount, setSavingCount] = useState(0);
 
   // Defer mobile-dependent rendering until after mount to avoid hydration
   // mismatches (SSR always renders as desktop; the mobile view would otherwise
@@ -165,21 +168,23 @@ export default function PlanningPage() {
   // Toggle hackaton
   const handleToggleHackaton = (checked: boolean) => {
     setHackatonWeeks((w) => ({ ...w, [currentWeekKey]: checked }));
+    setSavingCount((c) => c + 1);
     fetch('/api/hackaton-week', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ weekKey: currentWeekKey, isHackaton: checked }),
-    });
+    }).finally(() => setSavingCount((c) => c - 1));
   };
 
   // Toggle piscine
   const handleTogglePiscine = (checked: boolean) => {
     setPiscineWeeks((w) => ({ ...w, [currentWeekKey]: checked }));
+    setSavingCount((c) => c + 1);
     fetch('/api/piscine-week', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ weekKey: currentWeekKey, isPiscine: checked }),
-    });
+    }).finally(() => setSavingCount((c) => c - 1));
   };
 
   // Core functions
@@ -202,6 +207,7 @@ export default function PlanningPage() {
 
   const updateLocalSchedule = useCallback(async (employeeId: string, day: string, timeSlots: TimeSlot[], weekKey?: string) => {
     const wk = weekKey || currentWeekKey;
+    setSavingCount((c) => c + 1);
     try {
       const response = await fetch('/api/schedules', {
         method: 'POST',
@@ -246,6 +252,8 @@ export default function PlanningPage() {
       }
     } catch {
       toast({ title: 'Erreur', description: 'Impossible de mettre à jour le planning', variant: 'destructive' });
+    } finally {
+      setSavingCount((c) => c - 1);
     }
   }, [currentWeekKey, toast]);
 
@@ -264,26 +272,31 @@ export default function PlanningPage() {
   }, [employees, getEmployeeScheduleForDay]);
 
   const handleSaturdayEmployeeChange = useCallback(async (employeeId: string, day: string) => {
-    for (const emp of employees) {
-      await fetch('/api/schedules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId: emp.id, weekKey: currentWeekKey, day, timeSlots: [] }),
-      });
+    setSavingCount((c) => c + 1);
+    try {
+      for (const emp of employees) {
+        await fetch('/api/schedules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employeeId: emp.id, weekKey: currentWeekKey, day, timeSlots: [] }),
+        });
+      }
+      if (employeeId) {
+        await fetch('/api/schedules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            employeeId,
+            weekKey: currentWeekKey,
+            day,
+            timeSlots: [{ start: '10:00', end: '18:00', isWorking: true, type: 'work' }],
+          }),
+        });
+      }
+      await loadSchedules();
+    } finally {
+      setSavingCount((c) => c - 1);
     }
-    if (employeeId) {
-      await fetch('/api/schedules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId,
-          weekKey: currentWeekKey,
-          day,
-          timeSlots: [{ start: '10:00', end: '18:00', isWorking: true, type: 'work' }],
-        }),
-      });
-    }
-    await loadSchedules();
   }, [employees, currentWeekKey, loadSchedules]);
 
   if (loading && employees.length === 0) {
@@ -302,9 +315,17 @@ export default function PlanningPage() {
         title="Planning"
         description={isEditor ? 'Cliquez sur un crayon puis peignez la grille' : 'Consultation'}
         badge={
-          <Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>
-            {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>
+              {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
+            </Badge>
+            {savingCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Enregistrement…
+              </span>
+            )}
+          </div>
         }
       >
         <WeekSelector

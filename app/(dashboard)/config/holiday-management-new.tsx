@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Plane, Calendar } from 'lucide-react';
+import { Plus, Trash2, Plane, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DatePickerDemo } from '@/components/date-picker';
 import { format, differenceInDays } from 'date-fns';
@@ -46,6 +46,8 @@ interface DateRange {
 export default function HolidayManagement() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteHoliday, setDeleteHoliday] = useState<string | null>(null);
   const [newHoliday, setNewHoliday] = useState<Holiday>({
@@ -100,6 +102,7 @@ export default function HolidayManagement() {
       return;
     }
 
+    setSaving(true);
     try {
       const response = await fetch('/api/holidays', {
         method: 'POST',
@@ -118,10 +121,13 @@ export default function HolidayManagement() {
     } catch (error) {
       console.error('Erreur lors de l\'ajout :', error);
       toast.error('Impossible d\'ajouter la vacance.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (name: string) => {
+    setDeleting(true);
     try {
       const response = await fetch('/api/holidays', {
         method: 'DELETE',
@@ -139,6 +145,8 @@ export default function HolidayManagement() {
     } catch (error) {
       console.error('Erreur lors de la suppression :', error);
       toast.error('Impossible de supprimer la vacance.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -210,10 +218,19 @@ export default function HolidayManagement() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
                 Annuler
               </Button>
-              <Button onClick={handleAdd}>Ajouter</Button>
+              <Button onClick={handleAdd} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Ajout...
+                  </>
+                ) : (
+                  'Ajouter'
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -280,12 +297,23 @@ export default function HolidayManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteHoliday && handleDelete(deleteHoliday)}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleteHoliday) handleDelete(deleteHoliday);
+              }}
+              disabled={deleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Supprimer
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

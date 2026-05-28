@@ -47,6 +47,8 @@ export default function ReviewerManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Reviewer | null>(null);
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | number | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -155,6 +157,7 @@ export default function ReviewerManagement() {
   }
 
   async function handleToggleActive(reviewer: Reviewer) {
+    setTogglingId(reviewer.id);
     try {
       const res = await fetch(`/api/reviewers/${reviewer.id}`, {
         method: 'PUT',
@@ -164,24 +167,29 @@ export default function ReviewerManagement() {
       const data = await res.json();
       if (data.success) {
         toast.success(reviewer.isActive ? 'Reviewer désactivé' : 'Reviewer activé');
-        fetchReviewers();
+        await fetchReviewers();
       }
     } catch {
       toast.error('Erreur');
+    } finally {
+      setTogglingId(null);
     }
   }
 
   async function handleDelete(reviewer: Reviewer) {
     if (!confirm(`Supprimer ${reviewer.name} ?`)) return;
+    setDeletingId(reviewer.id);
     try {
       const res = await fetch(`/api/reviewers/${reviewer.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) {
         toast.success('Reviewer supprimé');
-        fetchReviewers();
+        await fetchReviewers();
       }
     } catch {
       toast.error('Erreur');
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -314,16 +322,31 @@ export default function ReviewerManagement() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{reviewer.name}</CardTitle>
                   <div className="flex items-center gap-1">
-                    <Switch
-                      checked={reviewer.isActive}
-                      onCheckedChange={() => handleToggleActive(reviewer)}
-                      className="scale-75"
-                    />
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(reviewer)}>
+                    {togglingId === reviewer.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-1" />
+                    ) : (
+                      <Switch
+                        checked={reviewer.isActive}
+                        onCheckedChange={() => handleToggleActive(reviewer)}
+                        disabled={togglingId !== null || deletingId === reviewer.id}
+                        className="scale-75"
+                      />
+                    )}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(reviewer)} disabled={deletingId === reviewer.id}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(reviewer)}>
-                      <Trash2 className="h-3.5 w-3.5" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => handleDelete(reviewer)}
+                      disabled={deletingId === reviewer.id}
+                    >
+                      {deletingId === reviewer.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
                     </Button>
                   </div>
                 </div>

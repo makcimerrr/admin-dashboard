@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Plus, Trash2, Edit, GraduationCap } from 'lucide-react';
+import { Calendar, Plus, Trash2, Edit, GraduationCap, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { DatePickerDemo } from '@/components/date-picker';
 import { format } from 'date-fns';
@@ -52,6 +52,8 @@ interface Promo {
 export default function PromoManagement() {
   const [promos, setPromos] = useState<Promo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deletePromo, setDeletePromo] = useState<string | null>(null);
   const [newPromo, setNewPromo] = useState<Promo>({
@@ -93,6 +95,7 @@ export default function PromoManagement() {
       return;
     }
 
+    setSaving(true);
     try {
       const response = await fetch('/api/promos', {
         method: 'POST',
@@ -125,10 +128,13 @@ export default function PromoManagement() {
     } catch (error) {
       console.error('Erreur lors de l\'ajout :', error);
       toast.error('Impossible d\'ajouter la promotion.');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (key: string) => {
+    setDeleting(true);
     try {
       const response = await fetch('/api/promos', {
         method: 'DELETE',
@@ -148,6 +154,8 @@ export default function PromoManagement() {
     } catch (error) {
       console.error('Erreur lors de la suppression :', error);
       toast.error('Impossible de supprimer la promotion.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -295,10 +303,19 @@ export default function PromoManagement() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
                 Annuler
               </Button>
-              <Button onClick={handleAdd}>Ajouter la promotion</Button>
+              <Button onClick={handleAdd} disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Ajout...
+                  </>
+                ) : (
+                  'Ajouter la promotion'
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -406,12 +423,23 @@ export default function PromoManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deletePromo && handleDelete(deletePromo)}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deletePromo) handleDelete(deletePromo);
+              }}
+              disabled={deleting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Supprimer
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
