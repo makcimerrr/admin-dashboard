@@ -17,6 +17,10 @@ interface LastUpdateProps {
   /** eventId → human-friendly promo name (key), used to resolve names in all
    *  displayed lists. */
   promoNameById?: Record<string, string>;
+  /** True when every active promo was refreshed within the same short window
+   *  (a cron batch). Lets us say "toutes les promotions" instead of naming a
+   *  single promo. */
+  allInSync?: boolean;
 }
 
 function formatRelative(iso: string): string {
@@ -51,6 +55,7 @@ const LastUpdate = ({
   outOfDeltaPromos,
   latestPromoEventId,
   promoNameById,
+  allInSync,
 }: LastUpdateProps) => {
   const nameFor = (id: string) => promoNameById?.[id] ?? id;
   const [, tick] = useState(0);
@@ -107,15 +112,24 @@ const LastUpdate = ({
             </span>
           </p>
         ) : timeAgoLast ? (
-          <p className="flex items-center flex-wrap gap-1">
-            Mise à jour la plus récente
-            {latestPromoEventId && (
-              <>
-                {' '}(<span className="font-medium text-foreground">{nameFor(latestPromoEventId)}</span>)
-              </>
-            )}{' '}: {timeAgoLast}
-            {isAuto && <AutoBadge />}
-          </p>
+          allInSync ? (
+            // Toutes les promos rafraîchies ensemble (run de cron) → message global.
+            <p className="flex items-center flex-wrap gap-1">
+              Dernière mise à jour pour toutes les promotions : {timeAgoLast}
+              {isAuto && <AutoBadge />}
+            </p>
+          ) : (
+            // Une seule promo récemment mise à jour, les autres simplement encore récentes.
+            <p className="flex items-center flex-wrap gap-1">
+              Mise à jour la plus récente
+              {latestPromoEventId && (
+                <>
+                  {' '}(<span className="font-medium text-foreground">{nameFor(latestPromoEventId)}</span>)
+                </>
+              )}{' '}: {timeAgoLast}
+              {isAuto && <AutoBadge />}
+            </p>
+          )
         ) : timeAgoAll ? (
           <p className="flex items-center flex-wrap gap-1">
             Dernière mise à jour pour toutes les promos : {timeAgoAll}

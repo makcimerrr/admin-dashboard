@@ -42,6 +42,10 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
   const [outOfDeltaPromos, setOutOfDeltaPromos] = useState<{ promo: string; date: string }[]>([]);
   const [latestPromoEventId, setLatestPromoEventId] = useState<string | null>(null);
   const [promoNameById, setPromoNameById] = useState<Record<string, string>>({});
+  // True when every active promo was updated within the same short window
+  // (i.e. a single cron batch). Distinguishes "all promos refreshed together"
+  // from "only one promo was just updated, the rest are merely still recent".
+  const [allInSync, setAllInSync] = useState<boolean>(false);
 
   const [updates, setUpdates] = useState<
     { last_update: string; event_id: string }[]
@@ -680,13 +684,19 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           );
           const maxDate = new Date(maxUpdate.last_update);
           const TOLERANCE_SEC = 6 * 3600; // 6h
+          const SYNC_WINDOW_SEC = 3600; // 1h — promos updated within this span count as "ensemble"
           const outOfDelta: { promo: string; date: string }[] = [];
+          let minTime = maxDate.getTime();
           promoUpdates.forEach((u: { event_id: string; last_update: string; is_auto?: boolean }) => {
-            const diff = Math.abs((maxDate.getTime() - new Date(u.last_update).getTime()) / 1000);
+            const t = new Date(u.last_update).getTime();
+            if (t < minTime) minTime = t;
+            const diff = Math.abs((maxDate.getTime() - t) / 1000);
             if (diff > TOLERANCE_SEC) {
               outOfDelta.push({ promo: u.event_id, date: u.last_update });
             }
           });
+          const spreadSec = (maxDate.getTime() - minTime) / 1000;
+          setAllInSync(promoUpdates.length > 1 && spreadSec <= SYNC_WINDOW_SEC);
           setOutOfDeltaPromos(outOfDelta);
           // Toujours utiliser le max — le marker 'all' n'est pas représentatif.
           setLastUpdate(maxUpdate.last_update);
@@ -699,11 +709,13 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           setIsAuto(allUpdateEntry.is_auto ?? false);
           setOutOfDeltaPromos([]);
           setLatestPromoEventId(null);
+          setAllInSync(false);
         } else {
           setLastUpdate(null);
           setIsAuto(false);
           setOutOfDeltaPromos([]);
           setLatestPromoEventId(null);
+          setAllInSync(false);
         }
       }
     } catch (error) {
@@ -747,6 +759,7 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           outOfDeltaPromos={outOfDeltaPromos}
           latestPromoEventId={latestPromoEventId}
           promoNameById={promoNameById}
+          allInSync={allInSync}
         />
       </div>
       <style jsx>{`
