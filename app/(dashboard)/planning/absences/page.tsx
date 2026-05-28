@@ -576,7 +576,7 @@ export default function AbsencesPage() {
                           className="h-6 w-6 p-0"
                           title="Éditer"
                           onClick={() => openEdit(group)}
-                          disabled={planningPermission !== 'editor'}
+                          disabled={planningPermission !== 'editor' || editLoading}
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
@@ -586,7 +586,7 @@ export default function AbsencesPage() {
                           className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                           title="Supprimer"
                           onClick={() => handleDeleteGroup(group)}
-                          disabled={planningPermission !== 'editor'}
+                          disabled={planningPermission !== 'editor' || editLoading}
                         >
                           <Trash2 className="w-3 h-3" />
                         </Button>
@@ -685,8 +685,17 @@ export default function AbsencesPage() {
               <Input value={editNote} onChange={(e) => setEditNote(e.target.value)} />
             </div>
             <div className="flex gap-2 justify-end mt-4">
-              <Button variant="outline" onClick={closeEdit}>Annuler</Button>
-              <Button disabled={editLoading || !editMode} onClick={handleEdit}>Enregistrer</Button>
+              <Button variant="outline" onClick={closeEdit} disabled={editLoading}>Annuler</Button>
+              <Button disabled={editLoading || !editMode} onClick={handleEdit}>
+                {editLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : (
+                  'Enregistrer'
+                )}
+              </Button>
             </div>
           </div>
         </DialogContent>
