@@ -28,6 +28,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingCard } from '@/components/ui/loading-card';
 import { PILL } from '@/lib/status-pills';
@@ -424,6 +434,7 @@ function DiscordIdEditor({
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(discordId ?? '');
   const [busy, setBusy] = useState(false);
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
 
   const save = async () => {
     const v = value.trim();
@@ -466,6 +477,7 @@ function DiscordIdEditor({
         toast.success('Liaison supprimée.');
         setValue('');
         setEditing(false);
+        setConfirmUnlink(false);
         onChange();
       } else {
         toast.error(data.error || 'Erreur.');
@@ -534,13 +546,45 @@ function DiscordIdEditor({
           size="icon"
           variant="ghost"
           className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive"
-          onClick={unlink}
+          onClick={() => setConfirmUnlink(true)}
           disabled={busy}
           title="Délier"
         >
           {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2Off className="h-3 w-3" />}
         </Button>
       )}
+
+      <AlertDialog open={confirmUnlink} onOpenChange={setConfirmUnlink}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Délier le Discord ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La liaison Discord de <strong className="font-mono">{login}</strong> sera supprimée.
+              L'étudiant devra relier son compte.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                unlink();
+              }}
+              disabled={busy}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Délier'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -571,6 +615,7 @@ function OrphanSection({ orphans, onChange }: { orphans: OrphanRow[]; onChange: 
 function OrphanRowEditor({ orphan, onChange }: { orphan: OrphanRow; onChange: () => void }) {
   const [login, setLogin] = useState(orphan.login);
   const [busy, setBusy] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const emailLogin = looksLikeEmail(orphan.login);
   const dirty = login.trim() !== orphan.login;
 
@@ -609,6 +654,7 @@ function OrphanRowEditor({ orphan, onChange }: { orphan: OrphanRow; onChange: ()
       const data = await res.json();
       if (data.success) {
         toast.success('Liaison supprimée.');
+        setConfirmRemove(false);
         onChange();
       } else {
         toast.error(data.error || 'Erreur.');
@@ -647,13 +693,46 @@ function OrphanRowEditor({ orphan, onChange }: { orphan: OrphanRow; onChange: ()
           size="icon"
           variant="ghost"
           className="h-7 w-7 text-destructive"
-          onClick={remove}
+          onClick={() => setConfirmRemove(true)}
           disabled={busy}
           title="Supprimer la liaison"
         >
           <X className="h-3.5 w-3.5" />
         </Button>
       </div>
+
+      <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette liaison orpheline ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La liaison <strong className="font-mono">{orphan.login}</strong> →{' '}
+              <strong className="font-mono">{orphan.discordId}</strong> sera supprimée
+              définitivement.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                remove();
+              }}
+              disabled={busy}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
