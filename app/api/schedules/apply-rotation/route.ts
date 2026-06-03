@@ -9,81 +9,121 @@ type SlotDef = { start: string; end: string; isWorking: boolean; type: "work" }[
 const w = (start: string, end: string): SlotDef => [{ start, end, isWorking: true, type: "work" }]
 const off: SlotDef = []
 
-function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<string, SlotDef>>[] {
-  // En mode piscine, les créneaux 09:00 deviennent 08:00
-  const h9 = mode === "piscine" ? "08:00" : "09:00"
+/**
+ * Roulement piscine — ouverture à 8h.
+ *
+ * En piscine, le campus ouvre à 8h, mais ce n'est PAS toute l'équipe qui
+ * commence à 8h : une seule personne ouvre chaque jour, en rotation entre
+ * Vivien, Cyril et Maxime (uniquement eux). L'ouvreur du jour fait 08:00–16:00
+ * au lieu de 09:00–17:00 ; tous les autres gardent leurs horaires standards.
+ *
+ * L'assignation ci-dessous respecte deux contraintes :
+ *  - on ne désigne jamais quelqu'un en repos ou en poste d'après-midi
+ *    (13:00–21:00) ce jour-là (il doit avoir un créneau matin 09:00–17:00) ;
+ *  - la charge est équilibrée : 5 ouvertures chacun sur le cycle de 3 semaines.
+ *
+ * Lun→Ven uniquement ; le samedi (10:00–18:00) n'est pas concerné.
+ */
+const PISCINE_OPENERS: Record<number, Record<string, string>> = {
+  // ── Semaine 1 ──
+  0: { lundi: "Cyril Ramananjaona", mardi: "Maxime Dubois", mercredi: "Vivien Frebourg", jeudi: "Cyril Ramananjaona", vendredi: "Vivien Frebourg" },
+  // ── Semaine 2 ──
+  1: { lundi: "Maxime Dubois", mardi: "Vivien Frebourg", mercredi: "Cyril Ramananjaona", jeudi: "Vivien Frebourg", vendredi: "Maxime Dubois" },
+  // ── Semaine 3 ──
+  2: { lundi: "Cyril Ramananjaona", mardi: "Maxime Dubois", mercredi: "Vivien Frebourg", jeudi: "Cyril Ramananjaona", vendredi: "Maxime Dubois" },
+}
 
-  return [
+/** Horaire de l'ouvreur piscine. */
+const PISCINE_OPEN = w("08:00", "16:00")
+
+function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<string, SlotDef>>[] {
+  // Base : horaires standards (09:00) pour tout le monde, dans les deux modes.
+  const templates: Record<string, Record<string, SlotDef>>[] = [
     // ── Semaine 1 (type S15) ──
     {
       "Bastien Lagrue": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
-        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("09:00", "17:00"),
+        jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Maxime Dubois": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w("13:00", "21:00"),
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("13:00", "21:00"),
         jeudi: off, vendredi: off, samedi: w("10:00", "18:00"), dimanche: off,
       },
       "Cyril Ramananjaona": {
-        lundi: w(h9, "17:00"), mardi: off, mercredi: w(h9, "17:00"),
-        jeudi: w(h9, "17:00"), vendredi: w("13:00", "21:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: off, mercredi: w("09:00", "17:00"),
+        jeudi: w("09:00", "17:00"), vendredi: w("13:00", "21:00"), samedi: off, dimanche: off,
       },
       "Vivien Frebourg": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
-        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("09:00", "17:00"),
+        jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Permanence Externe": {
-        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w(h9, "17:00"),
+        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w("09:00", "17:00"),
         jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
       },
     },
     // ── Semaine 2 (type S16) ──
     {
       "Bastien Lagrue": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
-        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("09:00", "17:00"),
+        jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Maxime Dubois": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w("13:00", "21:00"),
-        jeudi: off, vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("13:00", "21:00"),
+        jeudi: off, vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Cyril Ramananjaona": {
-        lundi: w(h9, "17:00"), mardi: off, mercredi: w(h9, "17:00"),
-        jeudi: w(h9, "17:00"), vendredi: w("13:00", "21:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: off, mercredi: w("09:00", "17:00"),
+        jeudi: w("09:00", "17:00"), vendredi: w("13:00", "21:00"), samedi: off, dimanche: off,
       },
       "Vivien Frebourg": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: off,
-        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: w("10:00", "18:00"), dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: off,
+        jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: w("10:00", "18:00"), dimanche: off,
       },
       "Permanence Externe": {
-        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w(h9, "17:00"),
+        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w("09:00", "17:00"),
         jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
       },
     },
     // ── Semaine 3 (type S17) ──
     {
       "Bastien Lagrue": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
-        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("09:00", "17:00"),
+        jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Maxime Dubois": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w("13:00", "21:00"),
-        jeudi: off, vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("13:00", "21:00"),
+        jeudi: off, vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Cyril Ramananjaona": {
-        lundi: w(h9, "17:00"), mardi: off, mercredi: off,
-        jeudi: w(h9, "17:00"), vendredi: w("13:00", "21:00"), samedi: w("10:00", "18:00"), dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: off, mercredi: off,
+        jeudi: w("09:00", "17:00"), vendredi: w("13:00", "21:00"), samedi: w("10:00", "18:00"), dimanche: off,
       },
       "Vivien Frebourg": {
-        lundi: w(h9, "17:00"), mardi: w(h9, "17:00"), mercredi: w(h9, "17:00"),
-        jeudi: w(h9, "17:00"), vendredi: w(h9, "17:00"), samedi: off, dimanche: off,
+        lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("09:00", "17:00"),
+        jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Permanence Externe": {
-        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w(h9, "17:00"),
+        lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w("09:00", "17:00"),
         jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
       },
     },
   ]
+
+  if (mode !== "piscine") return templates
+
+  // Mode piscine : un seul ouvreur par jour passe en 08:00–16:00.
+  templates.forEach((template, weekIndex) => {
+    const openers = PISCINE_OPENERS[weekIndex]
+    if (!openers) return
+    for (const [day, name] of Object.entries(openers)) {
+      if (template[name]) {
+        template[name][day] = PISCINE_OPEN
+      }
+    }
+  })
+
+  return templates
 }
 
 /**
