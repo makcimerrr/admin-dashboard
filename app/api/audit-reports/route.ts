@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getAuditedProjects,
   recordAuditReportRequest,
+  buildAuditReportMessage,
   SINCE_DAYS_DEFAULT,
 } from '@/lib/db/services/auditReports';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
@@ -32,17 +33,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function buildMessage(auditorLogin: string, project: string): string {
-  return [
-    `Hey ${auditorLogin} ! 👋`,
-    ``,
-    `Tu as réalisé un audit sur le projet **${project}**.`,
-    `Peux-tu nous envoyer un court **compte-rendu** de cet audit : déroulé, points forts/faibles, et soucis éventuels ?`,
-    ``,
-    `Merci pour ton retour, ça aide à suivre la qualité des audits ! 🙏`,
-  ].join('\n');
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -61,7 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sent = await sendDiscordDM(discordId, buildMessage(auditorLogin, project || 'son projet'));
+    const sent = await sendDiscordDM(discordId, buildAuditReportMessage(auditorLogin, project || 'son projet'));
     if (!sent) {
       return NextResponse.json({ success: false, error: 'Échec de l\'envoi du DM Discord.' }, { status: 502 });
     }

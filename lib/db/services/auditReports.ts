@@ -5,6 +5,7 @@ import { auditReportRequests } from '../schema/auditReportRequests';
 import { eq, and, inArray } from 'drizzle-orm';
 import { zone01Graphql } from '@/lib/services/zone01-graphql';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { getArchivedPromoNames } from '@/lib/db/filters';
 
 const SINCE_DAYS_DEFAULT = 60;
 
@@ -122,6 +123,84 @@ export async function recordAuditReportRequest(
       target: [auditReportRequests.auditorLogin, auditReportRequests.groupId],
       set: { requestedAt: new Date(), projectName },
     });
+}
+
+/** Message Discord de demande de compte-rendu d'audit. */
+export function buildAuditReportMessage(auditorLogin: string, project: string): string {
+  return [
+    `Hey ${auditorLogin} ! 👋`,
+    ``,
+    `Tu as réalisé un audit sur le projet **${project}**.`,
+    `Peux-tu nous envoyer un court **compte-rendu** de cet audit : déroulé, points forts/faibles, et soucis éventuels ?`,
+    ``,
+    `Merci pour ton retour, ça aide à suivre la qualité des audits ! 🙏`,
+  ].join('\n');
+}
+
+export interface AuditorToRequest {
+  auditorLogin: string;
+  discordId: string;
+  groupId: string;
+  project: string;
+}
+
+/**
+ * Chantier D (auto) — auditeurs à solliciter automatiquement : groupes passés
+ * `finished` (audits terminés) sur les `sinceDays` derniers jours, toutes promos
+ * actives confondues, dont l'auditeur a un Discord lié et n'a pas déjà été
+ * sollicité pour ce groupe. Déclencheur côté cron.
+ */
+export async function getFinishedAuditorsToRequest(sinceDays = 7): Promise<AuditorToRequest[]> {
+  const [promoConfig, archived] = await Promise.all([getAllPromotions(), getArchivedPromoNames()]);
+  const activeKeys = promoConfig.filter((p) => !archived.has(p.key)).map((p) => p.key);
+  if (activeKeys.length === 0) return [];
+
+  const promoStudents = await db
+    .select({ login: students.login })
+    .from(students)
+    .where(and(inArray(students.promoName, activeKeys), eq(students.isDropout, false)));
+  const promoLogins = promoStudents.map((s) => s.login);
+  if (promoLogins.length === 0) return [];
+
+  const since = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
+  const query = `query($l:[String!], $s:timestamptz!){
+    audit(
+      where:{ auditedAt:{_gte:$s}, auditorLogin:{_is_null:false}, group:{ status:{_eq:finished}, members:{ userLogin:{_in:$l} } } }
+      order_by:{ auditedAt: desc }
+      limit: 2000
+    ){ auditorLogin group { id object { name } } }
+  }`;
+  const data = await zone01Graphql<{ audit: RawAudit[] }>(query, { l: promoLogins, s: since });
+
+  // Dédup (auditorLogin, groupId).
+  const pairs = new Map<string, { auditorLogin: string; groupId: string; project: string }>();
+  for (const a of data.audit) {
+    if (!a.group || !a.auditorLogin) continue;
+    const gid = String(a.group.id);
+    pairs.set(`${a.auditorLogin}:${gid}`, {
+      auditorLogin: a.auditorLogin,
+      groupId: gid,
+      project: a.group.object?.name ?? '—',
+    });
+  }
+  if (pairs.size === 0) return [];
+
+  const logins = [...new Set([...pairs.values()].map((p) => p.auditorLogin))];
+  const [discordRows, reqRows] = await Promise.all([
+    db.select({ login: discordUsers.login, discordId: discordUsers.discordId }).from(discordUsers).where(inArray(discordUsers.login, logins)),
+    db.select({ auditorLogin: auditReportRequests.auditorLogin, groupId: auditReportRequests.groupId }).from(auditReportRequests).where(inArray(auditReportRequests.auditorLogin, logins)),
+  ]);
+  const discordByLogin = new Map(discordRows.map((d) => [d.login, d.discordId]));
+  const alreadyRequested = new Set(reqRows.map((r) => `${r.auditorLogin}:${r.groupId}`));
+
+  const out: AuditorToRequest[] = [];
+  for (const [key, p] of pairs) {
+    if (alreadyRequested.has(key)) continue;
+    const discordId = discordByLogin.get(p.auditorLogin);
+    if (!discordId) continue; // pas de Discord → on ne peut pas DM (et on ne marque pas)
+    out.push({ auditorLogin: p.auditorLogin, discordId, groupId: p.groupId, project: p.project });
+  }
+  return out;
 }
 
 export { SINCE_DAYS_DEFAULT };
