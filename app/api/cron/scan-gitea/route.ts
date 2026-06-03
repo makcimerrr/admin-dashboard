@@ -13,7 +13,9 @@ import {
 } from '@/lib/services/gitea';
 import { synthesizeSkills, isAiSynthesisAvailable } from '@/lib/services/skills-ai';
 
-export const maxDuration = 300;
+// Plan Hobby : plafond à 60s par invocation. Pour couvrir tous les étudiants,
+// scanner par tranches via ?offset/?limit (voir plus bas).
+export const maxDuration = 60;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const CONCURRENCY = 5;
@@ -40,7 +42,16 @@ export async function GET(request: NextRequest) {
   }
 
   const single = request.nextUrl.searchParams.get('login');
-  const logins = single ? [single] : await getActiveStudentLogins();
+  const offsetParam = Number(request.nextUrl.searchParams.get('offset') ?? '0');
+  const limitParam = request.nextUrl.searchParams.get('limit');
+  const offset = Number.isFinite(offsetParam) && offsetParam > 0 ? Math.floor(offsetParam) : 0;
+  const limit = limitParam && Number.isFinite(Number(limitParam)) ? Math.floor(Number(limitParam)) : null;
+
+  const allLogins = single ? [single] : await getActiveStudentLogins();
+  // Tranche optionnelle (Hobby = 60s/invocation) : ?offset=&limit=.
+  const logins = single
+    ? allLogins
+    : allLogins.slice(offset, limit != null ? offset + limit : undefined);
 
   // Synthèse IA opt-in (coût) : ?ai=1 ou SKILLS_AI_SYNTHESIS=1, si provider dispo.
   const aiRequested =
@@ -120,7 +131,10 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     durationMs: Date.now() - startTime,
-    total: logins.length,
+    totalActive: allLogins.length,
+    offset,
+    limit,
+    inThisRun: logins.length,
     scanned,
     withActivity,
     aiRequested,
