@@ -4,8 +4,6 @@ node_modules
 .github
 .vercel
 .env*
-*.md
-docs
 drizzle/migrations/meta
 .claude
 npm-debug.log*
