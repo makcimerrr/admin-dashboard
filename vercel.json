@@ -1,1 +1,8 @@
-{}
+{
+  "crons": [
+    {
+      "path": "/api/cron/scan-gitea",
+      "schedule": "0 4 * * 1"
+    }
+  ]
+}
