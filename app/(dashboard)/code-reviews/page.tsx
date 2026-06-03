@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Bell,
   Gauge,
+  FileText,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { PromoCardSkeleton } from '@/components/code-reviews/skeletons';
@@ -188,6 +189,12 @@ export default function CodeReviewsPage() {
           icon={Gauge}
           title="Cockpit CR"
           description="Surveiller et faire progresser le nombre de code-reviews : objectifs, tendance, capitaines bloqués."
+        />
+        <NavCard
+          href="/code-reviews/audit-reports"
+          icon={FileText}
+          title="Comptes-rendus d'audit"
+          description="Auditeurs (pairs) par projet audité — demander leur compte-rendu via Discord."
         />
       </div>
 

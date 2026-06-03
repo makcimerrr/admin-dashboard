@@ -1,0 +1,127 @@
+import { db } from '../config';
+import { students } from '../schema/students';
+import { discordUsers } from '../schema/discordUsers';
+import { auditReportRequests } from '../schema/auditReportRequests';
+import { eq, and, inArray } from 'drizzle-orm';
+import { zone01Graphql } from '@/lib/services/zone01-graphql';
+import { getAllPromotions } from '@/lib/config/promotions';
+
+const SINCE_DAYS_DEFAULT = 60;
+
+interface RawAudit {
+  auditorLogin: string | null;
+  auditedAt: string | null;
+  grade: number | null;
+  group: { id: number; object: { name: string } | null } | null;
+}
+
+export interface AuditorEntry {
+  login: string;
+  /** Discord lié ? (peut recevoir le DM) */
+  hasDiscord: boolean;
+  /** Compte-rendu déjà demandé ? */
+  requested: boolean;
+  requestedAt: string | null;
+  grade: number | null;
+}
+
+export interface AuditedProject {
+  groupId: string;
+  project: string;
+  auditedAt: string | null;
+  auditors: AuditorEntry[];
+}
+
+/**
+ * Projets audités d'une promo (via GraphQL Zone01), avec la liste des auditeurs
+ * (jusqu'à 5 par projet), leur statut Discord et si le compte-rendu a déjà été
+ * demandé. Scoping promo = groupes dont un membre appartient à la promo.
+ */
+export async function getAuditedProjects(
+  promoKey: string,
+  sinceDays = SINCE_DAYS_DEFAULT,
+): Promise<AuditedProject[]> {
+  // Logins de la promo (actifs).
+  const promoStudents = await db
+    .select({ login: students.login })
+    .from(students)
+    .where(and(eq(students.promoName, promoKey), eq(students.isDropout, false)));
+  const promoLogins = promoStudents.map((s) => s.login);
+  if (promoLogins.length === 0) return [];
+
+  const since = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
+
+  const query = `query($l:[String!], $s:timestamptz!){
+    audit(
+      where:{ auditedAt:{_gte:$s}, auditorLogin:{_is_null:false}, group:{ members:{ userLogin:{_in:$l} } } }
+      order_by:{ auditedAt: desc }
+      limit: 1000
+    ){
+      auditorLogin auditedAt grade
+      group { id object { name } }
+    }
+  }`;
+
+  const data = await zone01Graphql<{ audit: RawAudit[] }>(query, { l: promoLogins, s: since });
+
+  // Regroupe par groupe audité.
+  const byGroup = new Map<string, { project: string; auditedAt: string | null; auditors: Map<string, { grade: number | null }> }>();
+  for (const a of data.audit) {
+    if (!a.group || !a.auditorLogin) continue;
+    const gid = String(a.group.id);
+    const entry = byGroup.get(gid) ?? { project: a.group.object?.name ?? '—', auditedAt: a.auditedAt, auditors: new Map() };
+    if (a.auditedAt && (!entry.auditedAt || a.auditedAt > entry.auditedAt)) entry.auditedAt = a.auditedAt;
+    if (!entry.auditors.has(a.auditorLogin)) entry.auditors.set(a.auditorLogin, { grade: a.grade });
+    byGroup.set(gid, entry);
+  }
+
+  // Discord + demandes déjà envoyées, en batch.
+  const allAuditorLogins = [...new Set([...byGroup.values()].flatMap((g) => [...g.auditors.keys()]))];
+  const discordSet = new Set<string>();
+  const requestedSet = new Map<string, string>(); // `${login}:${gid}` -> requestedAt
+  if (allAuditorLogins.length > 0) {
+    const [discordRows, reqRows] = await Promise.all([
+      db.select({ login: discordUsers.login }).from(discordUsers).where(inArray(discordUsers.login, allAuditorLogins)),
+      db
+        .select({ auditorLogin: auditReportRequests.auditorLogin, groupId: auditReportRequests.groupId, requestedAt: auditReportRequests.requestedAt })
+        .from(auditReportRequests)
+        .where(inArray(auditReportRequests.auditorLogin, allAuditorLogins)),
+    ]);
+    for (const d of discordRows) discordSet.add(d.login);
+    for (const r of reqRows) requestedSet.set(`${r.auditorLogin}:${r.groupId}`, r.requestedAt.toISOString());
+  }
+
+  const projects: AuditedProject[] = [...byGroup.entries()].map(([gid, g]) => ({
+    groupId: gid,
+    project: g.project,
+    auditedAt: g.auditedAt,
+    auditors: [...g.auditors.entries()].map(([login, { grade }]) => ({
+      login,
+      hasDiscord: discordSet.has(login),
+      requested: requestedSet.has(`${login}:${gid}`),
+      requestedAt: requestedSet.get(`${login}:${gid}`) ?? null,
+      grade,
+    })),
+  }));
+
+  // Tri : projets les plus récemment audités d'abord.
+  projects.sort((a, b) => (b.auditedAt ?? '').localeCompare(a.auditedAt ?? ''));
+  return projects;
+}
+
+/** Enregistre une demande de compte-rendu (idempotent sur login+group). */
+export async function recordAuditReportRequest(
+  auditorLogin: string,
+  groupId: string,
+  projectName: string | null,
+): Promise<void> {
+  await db
+    .insert(auditReportRequests)
+    .values({ auditorLogin, groupId, projectName })
+    .onConflictDoUpdate({
+      target: [auditReportRequests.auditorLogin, auditReportRequests.groupId],
+      set: { requestedAt: new Date(), projectName },
+    });
+}
+
+export { SINCE_DAYS_DEFAULT };
