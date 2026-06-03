@@ -17,8 +17,10 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * audit_report_requests.
  *
  * Auth : Authorization: Bearer <CRON_SECRET> ou ?secret=.
- * ?dry=1 : liste les envois prévus sans rien envoyer.
- * ?sinceDays=N : fenêtre (défaut 7).
+ * ?dry=1  : liste les envois prévus sans rien envoyer.
+ * ?seed=1 : marque les candidats comme déjà demandés SANS envoyer (baseline,
+ *           pour ne déclencher que sur les futures transitions audit→finished).
+ * ?sinceDays=N : fenêtre (défaut 7 ; pour le seed initial, mettre large).
  */
 export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV === 'production' && CRON_SECRET) {
@@ -31,6 +33,7 @@ export async function GET(request: NextRequest) {
   }
 
   const dry = request.nextUrl.searchParams.get('dry') === '1';
+  const seed = request.nextUrl.searchParams.get('seed') === '1';
   const sinceDays = Number(request.nextUrl.searchParams.get('sinceDays') ?? 7);
 
   const targets = await getFinishedAuditorsToRequest(Number.isFinite(sinceDays) ? sinceDays : 7);
@@ -42,6 +45,16 @@ export async function GET(request: NextRequest) {
       count: targets.length,
       targets: targets.map((t) => ({ auditorLogin: t.auditorLogin, project: t.project, groupId: t.groupId })),
     });
+  }
+
+  // Baseline : enregistre sans envoyer, pour ne déclencher que sur les futures
+  // transitions vers finished.
+  if (seed) {
+    for (const t of targets) {
+      // eslint-disable-next-line no-await-in-loop
+      await recordAuditReportRequest(t.auditorLogin, t.groupId, t.project);
+    }
+    return NextResponse.json({ success: true, seeded: targets.length });
   }
 
   let sent = 0;
