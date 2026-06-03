@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCrCockpit } from '@/lib/db/services/crCockpit';
+import { getWeeklyRecap } from '@/lib/db/services/crCockpit';
 import { buildRecapCard } from '@/lib/services/teams-recap';
 import { sendTeamsCard, isTeamsConfigured } from '@/lib/services/teams';
 
@@ -26,13 +26,8 @@ export async function GET(request: NextRequest) {
 
   const dry = request.nextUrl.searchParams.get('dry') === '1';
 
-  const cockpit = await getCrCockpit(Date.now());
-  const dateLabel = new Date().toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const card = buildRecapCard(cockpit, dateLabel);
+  const recap = await getWeeklyRecap(Date.now());
+  const card = buildRecapCard(recap);
 
   if (dry) {
     return NextResponse.json({ success: true, dry: true, teamsConfigured: isTeamsConfigured(), card });

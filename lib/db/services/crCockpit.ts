@@ -1,7 +1,8 @@
 import { db } from '../config';
 import { audits } from '../schema/audits';
+import { students } from '../schema/students';
 import { promoCrTargets } from '../schema/crTargets';
-import { sql } from 'drizzle-orm';
+import { sql, inArray } from 'drizzle-orm';
 import { getAllForSuivi } from './groupStatuses';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getArchivedPromoNames } from '@/lib/db/filters';
@@ -166,6 +167,90 @@ export async function getCrCockpit(nowMs: number): Promise<CrCockpit> {
   );
 
   return { promos, totals, weekStarts: weekStartStrings };
+}
+
+// ─── Recap hebdo (semaine écoulée) ───────────────────────────────────────────
+
+export interface WeeklyRecap {
+  /** Bornes de la semaine écoulée (ISO date). */
+  weekStart: string;
+  weekEnd: string;
+  /** CR réalisées pendant la semaine écoulée. */
+  auditsLastWeek: number;
+  /** Chefs de groupe contactés (notifiés) sans CR pris (ni créneau ni audit). */
+  captains: { name: string; promo: string }[];
+}
+
+/**
+ * Données du recap hebdo : porte sur la SEMAINE ÉCOULÉE (lundi → dimanche
+ * précédents). Liste les capitaines contactés qui n'ont pas pris de CR, avec
+ * leur promo. Dédupliqué par login, trié du plus anciennement contacté au plus
+ * récent (les plus urgents d'abord).
+ */
+export async function getWeeklyRecap(nowMs: number): Promise<WeeklyRecap> {
+  const thisMonday = mondayOf(new Date(nowMs));
+  const lastMonday = new Date(thisMonday);
+  lastMonday.setUTCDate(lastMonday.getUTCDate() - 7);
+  const lastSunday = new Date(thisMonday);
+  lastSunday.setUTCDate(lastSunday.getUTCDate() - 1);
+
+  const [rows, promoConfig, lastWeekRaw] = await Promise.all([
+    getAllForSuivi(),
+    getAllPromotions(),
+    db.execute(sql`
+      SELECT count(*)::int AS cnt FROM ${audits}
+      WHERE ${audits.createdAt} >= ${isoDate(lastMonday)}
+        AND ${audits.createdAt} < ${isoDate(thisMonday)}
+    `),
+  ]);
+
+  const auditsLastWeek = Number(((lastWeekRaw as any).rows ?? lastWeekRaw)[0]?.cnt ?? 0);
+
+  // eventId(string) → clé promo courte (ex: "P1 2024").
+  const promoKeyById = new Map(promoConfig.map((p) => [String(p.eventId), p.key]));
+
+  // Capitaines contactés sans CR : notifié, pas de créneau réservé, pas d'audit.
+  const contacted = rows.filter(
+    (r) => r.captainLogin && r.notifiedAuditAt != null && r.slotBookedAt == null && r.auditId == null,
+  );
+
+  // Dédup par login (garde le contact le plus ancien).
+  const byLogin = new Map<string, { login: string; promoId: string; notifiedAt: number }>();
+  for (const r of contacted) {
+    const login = r.captainLogin as string;
+    const notifiedAt = new Date(r.notifiedAuditAt as Date).getTime();
+    const existing = byLogin.get(login);
+    if (!existing || notifiedAt < existing.notifiedAt) {
+      byLogin.set(login, { login, promoId: r.promoId, notifiedAt });
+    }
+  }
+
+  // Résolution login → "Prénom Nom".
+  const logins = [...byLogin.keys()];
+  const nameByLogin = new Map<string, string>();
+  if (logins.length > 0) {
+    const studentRows = await db
+      .select({ login: students.login, firstName: students.first_name, lastName: students.last_name })
+      .from(students)
+      .where(inArray(students.login, logins));
+    for (const s of studentRows) {
+      nameByLogin.set(s.login, `${s.firstName} ${s.lastName}`.trim());
+    }
+  }
+
+  const captains = [...byLogin.values()]
+    .sort((a, b) => a.notifiedAt - b.notifiedAt)
+    .map((c) => ({
+      name: nameByLogin.get(c.login) || c.login,
+      promo: promoKeyById.get(c.promoId) ?? c.promoId,
+    }));
+
+  return {
+    weekStart: isoDate(lastMonday),
+    weekEnd: isoDate(lastSunday),
+    auditsLastWeek,
+    captains,
+  };
 }
 
 export async function setCrTarget(promoId: string, weeklyTarget: number): Promise<void> {
