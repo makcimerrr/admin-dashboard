@@ -16,6 +16,7 @@ on:
 
 env:
   IMAGE: ghcr.io/makcimerrr/admin-dashboard
+  VPS_HOST: ${{ secrets.VPS_HOST }}
 
 jobs:
   build-and-deploy:
@@ -54,10 +55,17 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE }}:${{ steps.env.outputs.tag }}
+          build-args: |
+            NEXT_PUBLIC_STACK_PROJECT_ID=${{ secrets.NEXT_PUBLIC_STACK_PROJECT_ID }}
+            NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=${{ secrets.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY }}
+            NEXT_PUBLIC_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_ACCESS_TOKEN }}
+            NEXT_PUBLIC_BASE_URL=${{ secrets.NEXT_PUBLIC_BASE_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Deploy over SSH
+        # Ne tente le déploiement SSH que si les secrets VPS_* sont configurés.
+        if: ${{ env.VPS_HOST != '' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}

@@ -17,8 +17,17 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Variables NEXT_PUBLIC_* injectées au build si besoin (build args).
-ENV NEXT_TELEMETRY_DISABLED=1
+# Variables NEXT_PUBLIC_* inlinées au build (publiques) — requises notamment par
+# Stack Auth lors du prerender.
+ARG NEXT_PUBLIC_STACK_PROJECT_ID
+ARG NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY
+ARG NEXT_PUBLIC_ACCESS_TOKEN
+ARG NEXT_PUBLIC_BASE_URL
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_STACK_PROJECT_ID=$NEXT_PUBLIC_STACK_PROJECT_ID \
+    NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=$NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY \
+    NEXT_PUBLIC_ACCESS_TOKEN=$NEXT_PUBLIC_ACCESS_TOKEN \
+    NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
 RUN pnpm build
 
 # ── Runner ───────────────────────────────────────────────────────────────────
