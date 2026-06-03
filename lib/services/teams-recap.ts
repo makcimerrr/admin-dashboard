@@ -44,7 +44,10 @@ export function buildRecapCard(recap: WeeklyRecap): object {
       ),
     );
     for (const c of recap.captains) {
-      body.push(textBlock(`• ${c.name} (${c.promo})`, { spacing: 'None' }));
+      const stack = c.track ? ` _${c.track}_` : '';
+      body.push(
+        textBlock(`• **${c.name}** (${c.promo}) — ${c.project}${stack}`, { spacing: 'None' }),
+      );
     }
   }
 

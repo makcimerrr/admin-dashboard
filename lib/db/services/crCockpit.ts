@@ -178,7 +178,7 @@ export interface WeeklyRecap {
   /** CR réalisées pendant la semaine écoulée. */
   auditsLastWeek: number;
   /** Chefs de groupe contactés (notifiés) sans CR pris (ni créneau ni audit). */
-  captains: { name: string; promo: string }[];
+  captains: { name: string; promo: string; project: string; track: string | null }[];
 }
 
 /**
@@ -209,19 +209,26 @@ export async function getWeeklyRecap(nowMs: number): Promise<WeeklyRecap> {
   // eventId(string) → clé promo courte (ex: "P1 2024").
   const promoKeyById = new Map(promoConfig.map((p) => [String(p.eventId), p.key]));
 
-  // Capitaines contactés sans CR : notifié, pas de créneau réservé, pas d'audit.
-  const contacted = rows.filter(
-    (r) => r.captainLogin && r.notifiedAuditAt != null && r.slotBookedAt == null && r.auditId == null,
-  );
+  // Capitaines contactés sans CR : notifié PENDANT la semaine écoulée, pas de
+  // créneau réservé, pas d'audit.
+  const lastMondayMs = lastMonday.getTime();
+  const thisMondayMs = thisMonday.getTime();
+  const contacted = rows.filter((r) => {
+    if (!r.captainLogin || r.notifiedAuditAt == null || r.slotBookedAt != null || r.auditId != null) {
+      return false;
+    }
+    const t = new Date(r.notifiedAuditAt as Date).getTime();
+    return t >= lastMondayMs && t < thisMondayMs;
+  });
 
   // Dédup par login (garde le contact le plus ancien).
-  const byLogin = new Map<string, { login: string; promoId: string; notifiedAt: number }>();
+  const byLogin = new Map<string, { login: string; promoId: string; notifiedAt: number; project: string; track: string | null }>();
   for (const r of contacted) {
     const login = r.captainLogin as string;
     const notifiedAt = new Date(r.notifiedAuditAt as Date).getTime();
     const existing = byLogin.get(login);
     if (!existing || notifiedAt < existing.notifiedAt) {
-      byLogin.set(login, { login, promoId: r.promoId, notifiedAt });
+      byLogin.set(login, { login, promoId: r.promoId, notifiedAt, project: r.projectName, track: r.track });
     }
   }
 
@@ -239,11 +246,14 @@ export async function getWeeklyRecap(nowMs: number): Promise<WeeklyRecap> {
   }
 
   const captains = [...byLogin.values()]
-    .sort((a, b) => a.notifiedAt - b.notifiedAt)
     .map((c) => ({
       name: nameByLogin.get(c.login) || c.login,
       promo: promoKeyById.get(c.promoId) ?? c.promoId,
-    }));
+      project: c.project,
+      track: c.track,
+    }))
+    // Tri par promo puis nom.
+    .sort((a, b) => a.promo.localeCompare(b.promo) || a.name.localeCompare(b.name));
 
   return {
     weekStart: isoDate(lastMonday),
