@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.github
+.vercel
+.env*
+*.md
+docs
+drizzle/migrations/meta
+.claude
+npm-debug.log*
+.DS_Store
+coverage
+.vscode
+.idea

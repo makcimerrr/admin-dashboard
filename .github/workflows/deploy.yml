@@ -1,0 +1,70 @@
+name: Deploy
+
+# Build l'image (GHCR) puis déploie sur le VPS par SSH.
+#   main    -> production : ghcr.io/makcimerrr/admin-dashboard:latest  -> hub.zone01normandie.org
+#   staging -> staging    : ghcr.io/makcimerrr/admin-dashboard:staging -> staging-hub.zone01normandie.org
+#
+# Secrets requis (repo > Settings > Secrets and variables > Actions) :
+#   VPS_HOST     : hôte/IP du VPS
+#   VPS_USER     : z01
+#   VPS_SSH_KEY  : clé privée correspondant à la clé "github@actions" déjà autorisée sur le VPS
+
+on:
+  push:
+    branches: [main, staging]
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/makcimerrr/admin-dashboard
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+            echo "site=hub.zone01normandie.org" >> "$GITHUB_OUTPUT"
+            echo "compose=docker-compose.production.yml" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=staging" >> "$GITHUB_OUTPUT"
+            echo "site=staging-hub.zone01normandie.org" >> "$GITHUB_OUTPUT"
+            echo "compose=docker-compose.staging.yml" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}:${{ steps.env.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ~/sites/${{ steps.env.outputs.site }}
+            docker compose -f ${{ steps.env.outputs.compose }} pull
+            docker compose -f ${{ steps.env.outputs.compose }} up -d
+            docker image prune -f
