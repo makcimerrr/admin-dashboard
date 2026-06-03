@@ -61,7 +61,10 @@ export const POST = withErrorHandler(
 
     await db
       .update(groupStatuses)
-      .set({ manualReminderAt: new Date() })
+      .set({
+        manualReminderAt: new Date(),
+        ...(reviewer ? { notifiedReviewerName: reviewer.name } : {}),
+      })
       .where(eq(groupStatuses.id, Number(groupStatusId)));
 
     return apiSuccess({ sent: true });

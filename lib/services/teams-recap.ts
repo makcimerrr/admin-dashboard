@@ -45,8 +45,9 @@ export function buildRecapCard(recap: WeeklyRecap): object {
     );
     for (const c of recap.captains) {
       const stack = c.track ? ` _${c.track}_` : '';
+      const coach = c.coach ? ` · coach : ${c.coach}` : '';
       body.push(
-        textBlock(`• **${c.name}** (${c.promo}) — ${c.project}${stack}`, { spacing: 'None' }),
+        textBlock(`• **${c.name}** (${c.promo}) — ${c.project}${stack}${coach}`, { spacing: 'None' }),
       );
     }
   }

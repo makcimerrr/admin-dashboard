@@ -46,10 +46,13 @@ export async function getPendingAuditNotifications(): Promise<
     .where(and(eq(groupStatuses.status, 'audit'), isNull(groupStatuses.notifiedAuditAt)));
 }
 
-export async function markAuditNotified(id: number): Promise<void> {
+export async function markAuditNotified(id: number, reviewerName?: string): Promise<void> {
   await db
     .update(groupStatuses)
-    .set({ notifiedAuditAt: new Date() })
+    .set({
+      notifiedAuditAt: new Date(),
+      ...(reviewerName ? { notifiedReviewerName: reviewerName } : {}),
+    })
     .where(eq(groupStatuses.id, id));
 }
 
@@ -103,6 +106,7 @@ export interface SuiviRow {
   auditCreatedAt: Date | null;
   auditorName: string | null;
   manualReminderAt: Date | null;
+  notifiedReviewerName: string | null;
 }
 
 export async function getAllForSuivi(): Promise<SuiviRow[]> {
@@ -188,6 +192,7 @@ export async function getAllForSuivi(): Promise<SuiviRow[]> {
       auditCreatedAt: audit?.createdAt ?? null,
       auditorName: audit?.auditorName ?? null,
       manualReminderAt: r.manualReminderAt,
+      notifiedReviewerName: r.notifiedReviewerName ?? null,
     };
   });
 }

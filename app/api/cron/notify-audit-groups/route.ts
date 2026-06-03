@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
 
         if (sent) {
           assignmentIndex++;
-          await markAuditNotified(group.id);
+          await markAuditNotified(group.id, reviewer.name);
         }
         results.push({ outcome: sent ? 'notified' : 'error' });
       } catch (err) {

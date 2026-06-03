@@ -16,6 +16,8 @@ export const groupStatuses = pgTable(
     slotAttendeeEmail: varchar('slot_attendee_email', { length: 200 }),
     reminderSentAt: timestamp('reminder_sent_at'),
     manualReminderAt: timestamp('manual_reminder_at'),
+    /** Coach (reviewer) assigné lors de la dernière notification. */
+    notifiedReviewerName: varchar('notified_reviewer_name', { length: 255 }),
     lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
   },
   (table) => ({
