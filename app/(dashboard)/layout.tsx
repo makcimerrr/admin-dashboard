@@ -10,6 +10,10 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth-options'; // ton NextAuth config
 import type React from 'react';
 
+// Dashboard authentifié : rendu à la demande (jamais prérendu au build).
+// Évite d'exécuter l'auth/DB pendant le build de l'image Docker.
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardLayout({
   children
 }: {
