@@ -3,7 +3,8 @@ import {getPromoStatus} from "@/lib/status";
 
 export async function POST(req: NextRequest) {
   try {
-    const response = await fetch('https://admin-dashboard-blue-one.vercel.app/api/timeline_project', {
+    const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hub.zone01normandie.org';
+    const response = await fetch(`${base}/api/timeline_project`, {
       method: 'GET'
     });
 

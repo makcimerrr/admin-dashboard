@@ -6,7 +6,7 @@ import {
   type AdaptiveElement,
 } from './teams';
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://admin-dashboard-blue-one.vercel.app';
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hub.zone01normandie.org';
 
 function frDate(iso: string): string {
   return new Date(iso + 'T00:00:00Z').toLocaleDateString('fr-FR', {
