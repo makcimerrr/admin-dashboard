@@ -10,6 +10,9 @@ import { stackServerApp } from '@/lib/stack-server';
 import { unifiedSignOut } from '@/lib/unified-signout';
 import { redirect } from 'next/navigation';
 
+// Layout authentifié (Stack serveur) : rendu à la demande, pas de prerender build.
+export const dynamic = 'force-dynamic';
+
 export default async function Layout({
   children
 }: {
