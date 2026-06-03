@@ -1,8 +1,13 @@
 {
   "redirects": [
     {
-      "source": "/:path*",
-      "destination": "https://hub.zone01normandie.org/:path*",
+      "source": "/",
+      "destination": "https://hub.zone01normandie.org/",
+      "permanent": false
+    },
+    {
+      "source": "/:path+",
+      "destination": "https://hub.zone01normandie.org/:path+",
       "permanent": false
     }
   ]
