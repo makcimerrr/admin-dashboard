@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getActiveStudentLogins,
   upsertGiteaProfile,
+  replaceStudentSkills,
 } from '@/lib/db/services/studentSkills';
 import {
   fetchGiteaInfo,
   computeActivityMetrics,
   fetchGiteaLanguages,
+  deriveLanguageSkills,
 } from '@/lib/services/gitea';
 
 export const maxDuration = 300;
@@ -68,6 +70,15 @@ export async function GET(request: NextRequest) {
             languages: lang?.languages ?? null,
             raw: info ?? null,
           });
+
+          // Dérive et remplace les skills "langage" (déterministe, sans IA).
+          if (lang?.languages) {
+            const skills = deriveLanguageSkills(lang.languages, metrics.engagementScore);
+            await replaceStudentSkills(
+              login,
+              skills.map((s) => ({ login, ...s })),
+            );
+          }
 
           scanned += 1;
           if (metrics.totalContributions > 0) withActivity += 1;

@@ -131,7 +131,7 @@ export function StudentSkillsPanel({ login }: { login: string }) {
               </div>
             ) : (
               <p className="text-xs text-muted-foreground italic">
-                Détail par langage à venir (nécessite l'accès Gitea — Palier 2).
+                Aucun langage détecté (pas de repo, ou étudiant pas encore scanné).
               </p>
             )}
 

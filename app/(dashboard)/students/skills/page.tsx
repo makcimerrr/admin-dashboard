@@ -108,7 +108,7 @@ export default function SkillsPage() {
       <PageHeader
         icon={Sparkles}
         title="Compétences & appétence"
-        description="Engagement Gitea par étudiant. Le détail par langage arrive avec l'accès Gitea (Palier 2)."
+        description="Engagement Gitea et langages par étudiant. Clique sur un étudiant pour le détail."
       />
 
       <StudentsSubnav />
