@@ -3,12 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { List, GraduationCap, MessageSquare } from 'lucide-react';
+import { List, GraduationCap, MessageSquare, Sparkles } from 'lucide-react';
 
 /**
- * Segmented nav shown at the top of /students, /students/specialties and
- * /students/discord. Lets users switch between views without going through
- * the sidebar.
+ * Segmented nav shown at the top of the /students sub-pages. Lets users switch
+ * between views without going through the sidebar.
  */
 export function StudentsSubnav() {
   const pathname = usePathname();
@@ -16,6 +15,7 @@ export function StudentsSubnav() {
     { href: '/students', label: 'Liste', icon: List },
     { href: '/students/specialties', label: 'Par spécialité', icon: GraduationCap },
     { href: '/students/discord', label: 'Discord', icon: MessageSquare },
+    { href: '/students/skills', label: 'Compétences', icon: Sparkles },
   ];
 
   return (

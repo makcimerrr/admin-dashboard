@@ -37,6 +37,7 @@ import { PILL } from '@/lib/status-pills';
 import { LoadingCard } from '@/components/ui/loading-card';
 import { StudentAudits } from '@/components/student-audits';
 import { StudentPendingAudits } from '@/components/student-pending-audits';
+import { StudentSkillsPanel } from '@/components/students/skills-panel';
 
 type Student = {
   id: number;
@@ -509,6 +510,9 @@ export default function StudentPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Compétences & appétence (Gitea) */}
+      <StudentSkillsPanel login={student.login} />
 
       {/* Tracks Progress */}
       <div className="grid gap-4 md:grid-cols-2">
