@@ -21,6 +21,7 @@ interface GiteaProfile {
   engagementScore: number;
   affinityLabel: string;
   languages: Record<string, number> | null;
+  aiSummary: string | null;
 }
 
 interface Skill {
@@ -81,6 +82,13 @@ export function StudentSkillsPanel({ login }: { login: string }) {
           </div>
         ) : (
           <>
+            {/* Narratif IA (si généré) */}
+            {profile.aiSummary && (
+              <p className="text-sm rounded-lg border bg-muted/30 p-3 italic">
+                {profile.aiSummary}
+              </p>
+            )}
+
             {/* Engagement + appétence */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">

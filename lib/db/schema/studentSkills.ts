@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   timestamp,
+  text,
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
@@ -49,6 +50,10 @@ export const studentGiteaProfiles = pgTable(
     // ── Palier 2 : enrichissement token Gitea (null tant que non branché) ──
     reposCount: integer('repos_count'),
     languages: jsonb('languages').$type<GiteaLanguageBreakdown | null>(),
+
+    // ── Synthèse IA (opt-in) : narratif court généré par LLM ──
+    aiSummary: text('ai_summary'),
+    aiSummaryAt: timestamp('ai_summary_at'),
 
     /** Réponse brute conservée pour debug / ré-analyse. */
     raw: jsonb('raw'),

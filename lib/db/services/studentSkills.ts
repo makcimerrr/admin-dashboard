@@ -8,7 +8,7 @@ import {
   type StudentSkill,
 } from '../schema/studentSkills';
 import { students } from '../schema/students';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { countableStudentsWhereNoJoin } from '../filters';
 
 /** Upsert (1 ligne par login) du snapshot Gitea. */
@@ -55,6 +55,32 @@ export async function replaceStudentSkills(login: string, rows: NewStudentSkill[
     await tx.delete(studentSkills).where(eq(studentSkills.login, login));
     if (rows.length > 0) await tx.insert(studentSkills).values(rows);
   });
+}
+
+/**
+ * Remplace les skills d'un étudiant pour UNE source donnée ('gitea' = langages
+ * déterministes, 'ai' = frameworks/domaines IA). Permet de recalculer les
+ * langages à chaque scan sans effacer la synthèse IA (et inversement).
+ */
+export async function replaceSkillsForSource(
+  login: string,
+  source: string,
+  rows: NewStudentSkill[],
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(studentSkills)
+      .where(and(eq(studentSkills.login, login), eq(studentSkills.source, source)));
+    if (rows.length > 0) await tx.insert(studentSkills).values(rows);
+  });
+}
+
+/** Met à jour le narratif IA d'un profil Gitea. */
+export async function updateGiteaAiSummary(login: string, summary: string): Promise<void> {
+  await db
+    .update(studentGiteaProfiles)
+    .set({ aiSummary: summary, aiSummaryAt: new Date() })
+    .where(eq(studentGiteaProfiles.login, login));
 }
 
 export interface StudentSkillRow {

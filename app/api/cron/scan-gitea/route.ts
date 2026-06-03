@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getActiveStudentLogins,
   upsertGiteaProfile,
-  replaceStudentSkills,
+  replaceSkillsForSource,
+  updateGiteaAiSummary,
 } from '@/lib/db/services/studentSkills';
 import {
   fetchGiteaInfo,
@@ -10,6 +11,7 @@ import {
   fetchGiteaLanguages,
   deriveLanguageSkills,
 } from '@/lib/services/gitea';
+import { synthesizeSkills, isAiSynthesisAvailable } from '@/lib/services/skills-ai';
 
 export const maxDuration = 300;
 
@@ -40,9 +42,15 @@ export async function GET(request: NextRequest) {
   const single = request.nextUrl.searchParams.get('login');
   const logins = single ? [single] : await getActiveStudentLogins();
 
+  // Synthèse IA opt-in (coût) : ?ai=1 ou SKILLS_AI_SYNTHESIS=1, si provider dispo.
+  const aiRequested =
+    request.nextUrl.searchParams.get('ai') === '1' || process.env.SKILLS_AI_SYNTHESIS === '1';
+  const runAi = aiRequested && isAiSynthesisAvailable();
+
   const nowSec = Math.floor(Date.now() / 1000);
   let scanned = 0;
   let withActivity = 0;
+  let aiSynthesized = 0;
   const errors: { login: string; error: string }[] = [];
 
   // Traitement par lots pour ne pas saturer l'API deno.
@@ -74,10 +82,27 @@ export async function GET(request: NextRequest) {
           // Dérive et remplace les skills "langage" (déterministe, sans IA).
           if (lang?.languages) {
             const skills = deriveLanguageSkills(lang.languages, metrics.engagementScore);
-            await replaceStudentSkills(
+            await replaceSkillsForSource(
               login,
+              'gitea',
               skills.map((s) => ({ login, ...s })),
             );
+          }
+
+          // Synthèse IA optionnelle : frameworks/domaines + narratif.
+          if (runAi && lang?.languages && lang.reposCount > 0) {
+            const ai = await synthesizeSkills({
+              login,
+              languages: lang.languages,
+              repoNames: lang.repoNames,
+              engagementScore: metrics.engagementScore,
+              affinityLabel: metrics.affinityLabel,
+            });
+            if (ai) {
+              await replaceSkillsForSource(login, 'ai', ai.skills.map((s) => ({ login, ...s })));
+              await updateGiteaAiSummary(login, ai.narrative);
+              aiSynthesized += 1;
+            }
           }
 
           scanned += 1;
@@ -98,7 +123,9 @@ export async function GET(request: NextRequest) {
     total: logins.length,
     scanned,
     withActivity,
-    palier2: Boolean(process.env.GITEA_URL && process.env.GITEA_TOKEN),
+    aiRequested,
+    aiAvailable: isAiSynthesisAvailable(),
+    aiSynthesized,
     errors,
   });
 }

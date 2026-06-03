@@ -206,7 +206,7 @@ async function giteaFetch(path: string, timeoutMs = 8_000): Promise<Response | n
  */
 export async function fetchGiteaLanguages(
   login: string,
-): Promise<{ languages: GiteaLanguageBreakdown; reposCount: number } | null> {
+): Promise<{ languages: GiteaLanguageBreakdown; reposCount: number; repoNames: string[] } | null> {
   if (!isGiteaTokenConfigured()) return null;
 
   // 1. Lister les repos (paginé, borné).
@@ -221,7 +221,8 @@ export async function fetchGiteaLanguages(
   }
 
   const codeRepos = repos.filter((r) => !r.empty && !r.fork && r.owner?.login);
-  if (codeRepos.length === 0) return { languages: {}, reposCount: 0 };
+  const repoNames = codeRepos.map((r) => r.name);
+  if (codeRepos.length === 0) return { languages: {}, reposCount: 0, repoNames };
 
   // 2. Agréger les langages (octets) par lots concurrents.
   const languages: GiteaLanguageBreakdown = {};
@@ -242,7 +243,7 @@ export async function fetchGiteaLanguages(
     }
   }
 
-  return { languages, reposCount: codeRepos.length };
+  return { languages, reposCount: codeRepos.length, repoNames };
 }
 
 /** Langages à ignorer dans la dérivation de skills (config/markup/bruit). */
