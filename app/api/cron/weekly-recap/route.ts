@@ -39,10 +39,9 @@ export async function GET(request: NextRequest) {
   }
 
   if (!isTeamsConfigured()) {
-    return NextResponse.json(
-      { success: false, error: 'TEAMS_WEBHOOK_URL non configuré.', teamsConfigured: false },
-      { status: 400 },
-    );
+    // Pas d'erreur : le cron ne doit pas apparaître en échec tant que le
+    // webhook Teams n'est pas branché.
+    return NextResponse.json({ success: true, skipped: true, reason: 'TEAMS_WEBHOOK_URL non configuré', teamsConfigured: false });
   }
 
   const posted = await sendTeamsCard(card);
