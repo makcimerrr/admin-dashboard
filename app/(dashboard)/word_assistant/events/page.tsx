@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Eye, PenIcon, Plus, Trash2 } from "lucide-react";
@@ -11,6 +11,7 @@ import { fr } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WordAssistantSubnav } from "@/components/hub/word-assistant-subnav";
+import { useData } from "@/lib/client-cache";
 
 interface Event {
   id: string;
@@ -24,25 +25,13 @@ interface Event {
 
 export default function EventsPage() {
   const router = useRouter();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/hub/events");
-      const data = await res.json();
-      setEvents(data);
-    } catch (err) {
-      toast.error("Erreur lors du chargement des événements");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading, error, mutate } = useData<Event[]>("/api/hub/events");
+  const events = data ?? [];
+  const loading = isLoading;
 
   useEffect(() => {
-    load();
-  }, []);
+    if (error) toast.error("Erreur lors du chargement des événements");
+  }, [error]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Voulez-vous vraiment supprimer cet événement ?")) return;
@@ -50,7 +39,7 @@ export default function EventsPage() {
     const res = await fetch(`/api/hub/events/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Événement supprimé");
-      load();
+      mutate();
     } else {
       toast.error("Erreur lors de la suppression");
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useData } from '@/lib/client-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,10 +41,22 @@ interface PromoInfo {
 }
 
 export default function ReviewerManagement() {
-  const [reviewers, setReviewers] = useState<Reviewer[]>([]);
-  const [promos, setPromos] = useState<PromoInfo[]>([]);
-  const [allTracks, setAllTracks] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: reviewersData,
+    isLoading: loading,
+    error: reviewersError,
+    mutate: fetchReviewers,
+  } = useData<{ success: boolean; reviewers: Reviewer[] }>('/api/reviewers?all=true');
+  const reviewers = reviewersData?.success ? reviewersData.reviewers : [];
+
+  const { data: projectsData } = useData<Record<string, unknown>>('/api/projects');
+  const allTracks = projectsData && typeof projectsData === 'object' ? Object.keys(projectsData) : [];
+
+  const { data: promotionsData } = useData<{ success: boolean; promotions: any[] }>('/api/promotions');
+  const promos: PromoInfo[] = promotionsData?.success
+    ? promotionsData.promotions.map((p: any) => ({ key: p.key, title: p.title || p.key }))
+    : [];
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Reviewer | null>(null);
   const [saving, setSaving] = useState(false);
@@ -59,40 +72,8 @@ export default function ReviewerManagement() {
   const [excludedPromos, setExcludedPromos] = useState<string[]>([]);
 
   useEffect(() => {
-    Promise.all([fetchReviewers(), fetchPromos(), fetchTracks()]);
-  }, []);
-
-  async function fetchReviewers() {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/reviewers?all=true');
-      const data = await res.json();
-      if (data.success) setReviewers(data.reviewers);
-    } catch {
-      toast.error('Erreur lors du chargement des reviewers');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchTracks() {
-    try {
-      const res = await fetch('/api/projects');
-      const data = await res.json();
-      // data is { Golang: [...], Javascript: [...], ... }
-      if (data && typeof data === 'object') {
-        setAllTracks(Object.keys(data));
-      }
-    } catch {}
-  }
-
-  async function fetchPromos() {
-    try {
-      const res = await fetch('/api/promotions');
-      const data = await res.json();
-      if (data.success) setPromos(data.promotions.map((p: any) => ({ key: p.key, title: p.title || p.key })));
-    } catch {}
-  }
+    if (reviewersError) toast.error('Erreur lors du chargement des reviewers');
+  }, [reviewersError]);
 
   function openCreate() {
     setEditing(null);

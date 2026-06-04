@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
+import { useData, mutateKey } from '@/lib/client-cache';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import { ChatSidebar, ChatSidebarMobile } from '@/components/assistant/chat-sidebar';
@@ -26,37 +27,24 @@ export default function AssistantPage() {
   const user = useUser();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [currentConversationId, setCurrentConversationId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const userId = user?.primaryEmail || 'anonymous';
+  const isKnownUser = !!userId && userId !== 'anonymous';
+  const conversationsKey = isKnownUser
+    ? `/api/conversations?userId=${encodeURIComponent(userId)}`
+    : null;
 
-  // Load conversations on mount
-  useEffect(() => {
-    if (userId && userId !== 'anonymous') {
-      loadConversations();
-    } else {
-      setIsLoadingConversations(false);
-    }
-  }, [userId]);
-
-  const loadConversations = useCallback(async () => {
-    setIsLoadingConversations(true);
-    try {
-      const response = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}`);
-      const data = await response.json();
-      if (data.success) {
-        setConversations(data.conversations);
-      }
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-    } finally {
-      setIsLoadingConversations(false);
-    }
-  }, [userId]);
+  const {
+    data: conversationsData,
+    isLoading: conversationsFetching,
+    mutate: loadConversations,
+  } = useData<{ success: boolean; conversations: Conversation[] }>(conversationsKey);
+  const conversations = conversationsData?.success ? conversationsData.conversations : [];
+  // Aligne le comportement précédent : pas de chargement pour un user anonyme.
+  const isLoadingConversations = isKnownUser && conversationsFetching;
 
   const handleNewChat = () => {
     setCurrentConversationId(null);
@@ -72,7 +60,13 @@ export default function AssistantPage() {
         method: 'DELETE',
       });
       if (response.ok) {
-        setConversations(conversations.filter((c) => c.id !== conversationId));
+        if (conversationsKey) {
+          const next = {
+            success: true,
+            conversations: conversations.filter((c) => c.id !== conversationId),
+          };
+          mutateKey(conversationsKey, () => Promise.resolve(next));
+        }
         if (currentConversationId === conversationId) {
           handleNewChat();
         }

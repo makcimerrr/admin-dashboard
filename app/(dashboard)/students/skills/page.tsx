@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useData } from '@/lib/client-cache';
 import { PageHeader } from '@/components/page-header';
 import { StudentsSubnav } from '../_components/students-subnav';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,29 +56,19 @@ interface Promo {
 }
 
 export default function SkillsPage() {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [promos, setPromos] = useState<Promo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedPromo, setSelectedPromo] = useState('all');
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetch('/api/promotions/active')
-      .then((r) => r.json())
-      .then((d) => d.success && setPromos(d.promotions))
-      .catch(() => {});
-  }, []);
+  const { data: promosData } = useData<{ success: boolean; promotions: Promo[] }>(
+    '/api/promotions/active',
+  );
+  const promos = promosData?.success ? promosData.promotions : [];
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/students/skills?promo=${encodeURIComponent(selectedPromo)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setRows(d.students);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [selectedPromo]);
+  const { data: skillsData, isLoading: loading } = useData<{
+    success: boolean;
+    students: Row[];
+  }>(`/api/students/skills?promo=${encodeURIComponent(selectedPromo)}`);
+  const rows = skillsData?.success ? skillsData.students : [];
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

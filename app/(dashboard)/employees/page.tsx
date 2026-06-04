@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useData, mutateKey } from "@/lib/client-cache";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,9 +21,14 @@ const colors = [
   "#6366F1", "#EC4899", "#14B8A6", "#F97316", "#84CC16",
 ];
 
+const EMPLOYEES_KEY = "/api/employees";
+
 export default function EmployeesPage() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading, error: employeesError } = useData<Employee[]>(EMPLOYEES_KEY);
+  const employees = data ?? [];
+  // Met à jour le cache localement (optimiste) sans refetch — préserve le comportement existant.
+  const setEmployees = (next: Employee[]) =>
+    mutateKey<Employee[]>(EMPLOYEES_KEY, () => Promise.resolve(next));
   const [newEmployee, setNewEmployee] = useState({
     name: "", initial: "", role: "", email: "", phone: "",
   });
@@ -38,22 +44,10 @@ export default function EmployeesPage() {
     : 'reader';
 
   useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const fetchEmployees = async () => {
-    try {
-      const response = await fetch("/api/employees");
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
-      }
-    } catch (error) {
+    if (employeesError) {
       toast({ title: "Erreur", description: "Impossible de charger les employés", variant: "destructive" });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [employeesError, toast]);
 
   const handleAddEmployee = async () => {
     if (!newEmployee.name.trim() || !newEmployee.role.trim()) {

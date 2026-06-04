@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useData, mutateKey } from "@/lib/client-cache";
 import { useSearchParams } from "next/navigation";
 import {
   Card,
@@ -100,11 +101,34 @@ export default function AlternantsPage() {
   const searchParams = useSearchParams();
   const preselectedStudentId = searchParams.get("student");
 
-  const [alternants, setAlternants] = useState<Alternant[]>([]);
-  const [stats, setStats] = useState<AlternantStats | null>(null);
-  const [companies, setCompanies] = useState<string[]>([]);
-  const [promos, setPromos] = useState<{ key: string; title: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: alternantsData, isLoading: alternantsLoading } = useData<{
+    success: boolean;
+    alternants: Alternant[];
+  }>("/api/alternants");
+  const { data: statsData } = useData<{ success: boolean; stats: AlternantStats }>(
+    "/api/alternants?stats=true"
+  );
+  const { data: companiesData } = useData<{ success: boolean; companies: string[] }>(
+    "/api/alternants?companies=true"
+  );
+  const { data: promosData } = useData<{ success: boolean; promotions: { key: string; title: string }[] }>(
+    "/api/promotions/active"
+  );
+
+  const alternants = alternantsData?.success ? alternantsData.alternants : [];
+  const stats = statsData?.success ? statsData.stats : null;
+  const companies = companiesData?.success ? companiesData.companies : [];
+  const promos = promosData?.success ? promosData.promotions : [];
+  const loading = alternantsLoading;
+
+  // Revalide les 4 listes après une mutation (ex. ajout d'un alternant).
+  const fetchData = () => {
+    mutateKey("/api/alternants");
+    mutateKey("/api/alternants?stats=true");
+    mutateKey("/api/alternants?companies=true");
+    mutateKey("/api/promotions/active");
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPromo, setSelectedPromo] = useState<string>("all");
   const [selectedCompany, setSelectedCompany] = useState<string>("all");
@@ -117,43 +141,6 @@ export default function AlternantsPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [alternantsRes, statsRes, companiesRes, promosRes] = await Promise.all([
-        fetch("/api/alternants"),
-        fetch("/api/alternants?stats=true"),
-        fetch("/api/alternants?companies=true"),
-        fetch("/api/promotions/active"),
-      ]);
-
-      const alternantsData = await alternantsRes.json();
-      const statsData = await statsRes.json();
-      const companiesData = await companiesRes.json();
-      const promosData = await promosRes.json();
-
-      if (alternantsData.success) setAlternants(alternantsData.alternants);
-      if (statsData.success) setStats(statsData.stats);
-      if (companiesData.success) setCompanies(companiesData.companies);
-      if (promosData.success) setPromos(promosData.promotions);
-
-      // If preselected student, open their detail
-      if (preselectedStudentId && alternantsData.success) {
-        const student = alternantsData.alternants.find(
-          (a: Alternant) => a.id === parseInt(preselectedStudentId)
-        );
-        if (student) {
-          setSelectedAlternant(student);
-          fetchAlternantDetail(student.id);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching alternants:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchAlternantDetail = async (studentId: number) => {
     setLoadingDetail(true);
@@ -175,9 +162,19 @@ export default function AlternantsPage() {
     }
   };
 
+  // Si un étudiant est présélectionné dans l'URL, ouvre son détail une fois la liste chargée.
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (preselectedStudentId && alternantsData?.success && !selectedAlternant) {
+      const student = alternantsData.alternants.find(
+        (a: Alternant) => a.id === parseInt(preselectedStudentId)
+      );
+      if (student) {
+        setSelectedAlternant(student);
+        fetchAlternantDetail(student.id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedStudentId, alternantsData]);
 
   const handleSelectAlternant = (alternant: Alternant) => {
     setSelectedAlternant(alternant);

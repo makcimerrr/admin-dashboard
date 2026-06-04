@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useData } from '@/lib/client-cache';
 import { PageHeader } from '@/components/page-header';
 import { StudentsSubnav } from '../_components/students-subnav';
 import {
@@ -84,46 +85,33 @@ type LinkFilter = 'all' | 'linked' | 'unlinked';
 const looksLikeEmail = (login: string) => login.includes('@');
 
 export default function DiscordLinkPage() {
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [orphans, setOrphans] = useState<OrphanRow[]>([]);
-  const [promos, setPromos] = useState<Promo[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const [selectedPromo, setSelectedPromo] = useState<string>('all');
   const [linkFilter, setLinkFilter] = useState<LinkFilter>('all');
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetch('/api/promotions/active')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setPromos(d.promotions);
-      })
-      .catch(() => {});
-  }, []);
+  const { data: promosData } = useData<{ success: boolean; promotions: Promo[] }>(
+    '/api/promotions/active',
+  );
+  const promos = promosData?.success ? promosData.promotions : [];
 
-  const load = async (promo: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/discord/manage?promo=${encodeURIComponent(promo)}`);
-      const data = await res.json();
-      if (data.success) {
-        setStudents(data.students);
-        setOrphans(data.orphans ?? []);
-      } else {
-        toast.error(data.error || 'Erreur de chargement.');
-      }
-    } catch {
-      toast.error('Impossible de charger les liaisons Discord.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: manageData,
+    error: manageError,
+    isLoading: loading,
+    mutate,
+  } = useData<{ success: boolean; students: StudentRow[]; orphans?: OrphanRow[]; error?: string }>(
+    `/api/discord/manage?promo=${encodeURIComponent(selectedPromo)}`,
+  );
+  const students = manageData?.success ? manageData.students : [];
+  const orphans = manageData?.success ? manageData.orphans ?? [] : [];
 
+  // Preserve the original toast-on-error behaviour.
   useEffect(() => {
-    load(selectedPromo);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPromo]);
+    if (manageError) toast.error('Impossible de charger les liaisons Discord.');
+    else if (manageData && !manageData.success) toast.error(manageData.error || 'Erreur de chargement.');
+  }, [manageData, manageError]);
+
+  const refresh = () => { mutate(); };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -161,8 +149,6 @@ export default function DiscordLinkPage() {
       .map(([promo, v]) => ({ promo, ...v, pct: v.total ? Math.round((v.linked / v.total) * 100) : 0 }))
       .sort((a, b) => a.promo.localeCompare(b.promo));
   }, [students, selectedPromo]);
-
-  const refresh = () => load(selectedPromo);
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">

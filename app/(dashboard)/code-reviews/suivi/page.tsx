@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
+import { useData } from '@/lib/client-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -143,12 +144,6 @@ function whyBadge(
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function SuiviPage() {
-  const [rows, setRows] = useState<SuiviRow[]>([]);
-  // Promo info indexed by eventId (as string). We keep both `title` (long
-  // form used for display) and `key` (short form like "P1 2025") so the
-  // search bar can match either.
-  const [promos, setPromos] = useState<Map<string, { title: string; key: string }>>(new Map());
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
   const [confirmDeleteRowState, setConfirmDeleteRowState] = useState<SuiviRow | null>(null);
@@ -171,26 +166,49 @@ export default function SuiviPage() {
     return () => window.removeEventListener('mouseup', onMouseUp);
   }, []);
 
-  const fetchRows = useCallback(async () => {
-    try {
-      const [suiviRes, promosRes] = await Promise.all([
-        fetch('/api/code-reviews/suivi'),
-        fetch('/api/promotions/active'),
-      ]);
-      const [suiviData, promosData] = await Promise.all([suiviRes.json(), promosRes.json()]);
-      if (suiviData?.success) setRows(suiviData.data.rows);
-      if (promosData?.success) {
-        const map = new Map<string, { title: string; key: string }>();
-        for (const p of promosData.promotions as PromoInfo[]) {
-          map.set(String(p.eventId), { title: p.title || p.key, key: p.key });
-        }
-        setPromos(map);
-      }
-    } catch { toast.error('Erreur lors du chargement'); }
-    finally { setLoading(false); }
-  }, []);
+  // Both reads are independent and fetched in parallel by the cache layer.
+  const {
+    data: suiviData,
+    error: suiviError,
+    isLoading: suiviLoading,
+    mutate: mutateSuivi,
+  } = useData<{ success: boolean; data: { rows: SuiviRow[] } }>('/api/code-reviews/suivi');
+  const {
+    data: promosData,
+    error: promosError,
+    isLoading: promosLoading,
+    mutate: mutatePromos,
+  } = useData<{ success: boolean; promotions: PromoInfo[] }>('/api/promotions/active');
 
-  useEffect(() => { fetchRows(); }, [fetchRows]);
+  const rows = useMemo<SuiviRow[]>(
+    () => (suiviData?.success ? suiviData.data.rows : []),
+    [suiviData],
+  );
+
+  // Promo info indexed by eventId (as string). We keep both `title` (long
+  // form used for display) and `key` (short form like "P1 2025") so the
+  // search bar can match either.
+  const promos = useMemo<Map<string, { title: string; key: string }>>(() => {
+    const map = new Map<string, { title: string; key: string }>();
+    if (promosData?.success) {
+      for (const p of promosData.promotions) {
+        map.set(String(p.eventId), { title: p.title || p.key, key: p.key });
+      }
+    }
+    return map;
+  }, [promosData]);
+
+  const loading = suiviLoading || promosLoading;
+
+  // Reload both reads after a mutation (mirrors the old fetchRows()).
+  const fetchRows = useCallback(async () => {
+    await Promise.all([mutateSuivi(), mutatePromos()]);
+  }, [mutateSuivi, mutatePromos]);
+
+  // Preserve the original toast-on-error behaviour.
+  useEffect(() => {
+    if (suiviError || promosError) toast.error('Erreur lors du chargement');
+  }, [suiviError, promosError]);
 
   const setRowLoading = (id: number, on: boolean) =>
     setLoadingIds(prev => { const s = new Set(prev); on ? s.add(id) : s.delete(id); return s; });

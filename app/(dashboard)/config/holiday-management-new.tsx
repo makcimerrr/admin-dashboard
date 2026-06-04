@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useData } from '@/lib/client-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -44,8 +45,10 @@ interface DateRange {
 }
 
 export default function HolidayManagement() {
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: holidaysResponse, isLoading: loading, error: holidaysError, mutate } = useData<{
+    success: boolean;
+    data?: Record<string, DateRange[]>;
+  }>('/api/holidays');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -56,33 +59,28 @@ export default function HolidayManagement() {
     end: '',
   });
 
-  useEffect(() => {
-    fetchHolidays();
-  }, []);
-
-  const fetchHolidays = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/holidays');
-      const data = await response.json();
-      if (data.success && data.data) {
-        const holidaysArray = Object.entries(data.data).map(([name, dates]) => {
-          const dateRanges = dates as DateRange[];
-          return {
-            name,
-            start: dateRanges[0].start,
-            end: dateRanges[0].end,
-          };
-        });
-        setHolidays(holidaysArray);
-      }
-    } catch (error) {
-      console.error('Erreur lors de la récupération des vacances :', error);
-      toast.error('Impossible de charger les vacances.');
-    } finally {
-      setLoading(false);
+  const holidays: Holiday[] = useMemo(() => {
+    if (holidaysResponse?.success && holidaysResponse.data) {
+      return Object.entries(holidaysResponse.data).map(([name, dates]) => {
+        const dateRanges = dates as DateRange[];
+        return {
+          name,
+          start: dateRanges[0].start,
+          end: dateRanges[0].end,
+        };
+      });
     }
-  };
+    return [];
+  }, [holidaysResponse]);
+
+  useEffect(() => {
+    if (holidaysError) {
+      console.error('Erreur lors de la récupération des vacances :', holidaysError);
+      toast.error('Impossible de charger les vacances.');
+    }
+  }, [holidaysError]);
+
+  const fetchHolidays = mutate;
 
   const handleAdd = async () => {
     const { name, start, end } = newHoliday;

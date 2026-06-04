@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useData } from '@/lib/client-cache';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,26 +48,22 @@ interface Cockpit {
 }
 
 export default function CockpitPage() {
-  const [data, setData] = useState<Cockpit | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: raw,
+    error,
+    isLoading: loading,
+    mutate,
+  } = useData<Cockpit & { success: boolean; error?: string }>('/api/code-reviews/cockpit');
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/code-reviews/cockpit');
-      const d = await res.json();
-      if (d.success) setData(d);
-      else toast.error(d.error || 'Erreur de chargement.');
-    } catch {
-      toast.error('Impossible de charger le cockpit.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const data: Cockpit | null = raw?.success ? raw : null;
 
+  // Preserve the original toast-on-error behaviour.
   useEffect(() => {
-    load();
-  }, []);
+    if (error) toast.error('Impossible de charger le cockpit.');
+    else if (raw && !raw.success) toast.error(raw.error || 'Erreur de chargement.');
+  }, [raw, error]);
+
+  const load = () => { mutate(); };
 
   const totals = data?.totals;
   const weekDelta = totals ? totals.auditsThisWeek - totals.auditsLastWeek : 0;

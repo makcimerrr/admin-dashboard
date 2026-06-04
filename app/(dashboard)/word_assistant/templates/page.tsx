@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingCard } from "@/components/ui/loading-card";
 import { WordAssistantSubnav } from "@/components/hub/word-assistant-subnav";
+import { useData } from "@/lib/client-cache";
 
 interface Template {
   id: string;
@@ -24,25 +25,13 @@ interface Template {
 }
 
 export default function TemplatesPage() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/hub/templates");
-      const data = await res.json();
-      setTemplates(data);
-    } catch (err) {
-      toast.error("Erreur lors du chargement des modèles");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading, error, mutate } = useData<Template[]>("/api/hub/templates");
+  const templates = data ?? [];
+  const loading = isLoading;
 
   useEffect(() => {
-    load();
-  }, []);
+    if (error) toast.error("Erreur lors du chargement des modèles");
+  }, [error]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Voulez-vous vraiment supprimer ce modèle ?")) return;
@@ -51,7 +40,7 @@ export default function TemplatesPage() {
       const res = await fetch(`/api/hub/templates/${id}`, { method: "DELETE" });
       if (res.ok) {
         toast.success("Modèle supprimé");
-        load();
+        mutate();
       } else {
         const data = await res.json();
         toast.error(data.error || "Erreur lors de la suppression");

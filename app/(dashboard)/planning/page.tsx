@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, LayoutTemplate, Users, Clock, List, Grid } from 'lucide-react';
@@ -88,53 +88,113 @@ export default function PlanningPage() {
   const isPiscine = !!piscineWeeks[currentWeekKey];
   const weekNumber = useMemo(() => getWeekNumber(currentWeekDates[0]), [currentWeekDates]);
 
-  // Load employees — sorted alphabetically so the order is stable across
-  // sessions, weeks, days and viewports (desktop grid/person/table + mobile).
-  useEffect(() => {
-    fetch('/api/employees')
-      .then((res) => res.ok ? res.json() : [])
-      .then((data: Employee[]) => {
-        const sorted = [...data].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-        setEmployees(sorted.map((e) => ({ ...e, schedule: {} })));
-      })
-      .catch(() => toast({ title: 'Erreur', description: 'Impossible de charger les employés', variant: 'destructive' }));
+  // Apply a freshly-fetched schedules map onto state. Splitting the network
+  // fetch from this merge lets us load employees + schedules in PARALLEL on
+  // first paint (decascade) instead of waiting for employees before firing
+  // the schedules request.
+  const applySchedulesMap = useCallback((schedulesMap: Record<string, TimeSlot[]>, weekKey: string) => {
+    setSchedules(schedulesMap);
+    setEmployees((prev) =>
+      prev.map((emp) => ({
+        ...emp,
+        schedule: {
+          ...emp.schedule,
+          [weekKey]: daysOfWeek.reduce((acc, day) => {
+            acc[day] = schedulesMap[`${emp.id}-${day}`] || [];
+            return acc;
+          }, {} as Record<string, TimeSlot[]>),
+        },
+      }))
+    );
   }, []);
 
-  // Load schedules
+  // Fetch the raw schedules for a week (no state dependency → safe to run in
+  // parallel with the employees fetch).
+  const fetchSchedulesMap = useCallback(async (weekKey: string): Promise<Record<string, TimeSlot[]>> => {
+    const response = await fetch(`/api/schedules?weekKey=${weekKey}`);
+    if (!response.ok) throw new Error('Failed');
+    const data = await response.json();
+    const schedulesMap: Record<string, TimeSlot[]> = {};
+    if (Array.isArray(data)) {
+      data.forEach((s: any) => {
+        schedulesMap[`${s.employeeId}-${s.day}`] = Array.isArray(s.timeSlots) ? s.timeSlots : [];
+      });
+    }
+    return schedulesMap;
+  }, []);
+
+  // Tracks the week we last merged schedules for, so the week-change effect
+  // doesn't redundantly re-fetch the week already loaded by the initial
+  // parallel load.
+  const loadedWeekRef = useRef<string | null>(null);
+
+  // Initial load — employees AND schedules fired together (decascade), plus
+  // hackaton/piscine/holidays which were already independent of employees.
+  // Sort employees alphabetically so the order is stable across sessions,
+  // weeks, days and viewports (desktop grid/person/table + mobile).
+  useEffect(() => {
+    let cancelled = false;
+    const weekKey = currentWeekKey;
+    setLoading(true);
+    Promise.all([
+      fetch('/api/employees').then((res) => (res.ok ? res.json() : [])) as Promise<Employee[]>,
+      fetchSchedulesMap(weekKey).catch(() => null),
+    ])
+      .then(([employeesData, schedulesMap]) => {
+        if (cancelled) return;
+        const sorted = [...employeesData].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+        if (schedulesMap) {
+          setSchedules(schedulesMap);
+          setEmployees(
+            sorted.map((e) => ({
+              ...e,
+              schedule: {
+                [weekKey]: daysOfWeek.reduce((acc, day) => {
+                  acc[day] = schedulesMap[`${e.id}-${day}`] || [];
+                  return acc;
+                }, {} as Record<string, TimeSlot[]>),
+              },
+            }))
+          );
+          loadedWeekRef.current = weekKey;
+        } else {
+          setEmployees(sorted.map((e) => ({ ...e, schedule: {} })));
+          toast({ title: 'Erreur', description: 'Impossible de charger les plannings', variant: 'destructive' });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) toast({ title: 'Erreur', description: 'Impossible de charger les employés', variant: 'destructive' });
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+    // Initial-load-only: subsequent week changes are handled by the schedules
+    // effect below. (currentWeekKey is captured for the first paint.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reload schedules — used on week change and after saves. Relies on the
+  // already-loaded employees list to merge onto.
   const loadSchedules = useCallback(async () => {
     if (employees.length === 0) return;
     setLoading(true);
     try {
-      const response = await fetch(`/api/schedules?weekKey=${currentWeekKey}`);
-      if (!response.ok) throw new Error('Failed');
-      const data = await response.json();
-      const schedulesMap: Record<string, TimeSlot[]> = {};
-      if (Array.isArray(data)) {
-        data.forEach((s: any) => {
-          schedulesMap[`${s.employeeId}-${s.day}`] = Array.isArray(s.timeSlots) ? s.timeSlots : [];
-        });
-      }
-      setSchedules(schedulesMap);
-      setEmployees((prev) =>
-        prev.map((emp) => ({
-          ...emp,
-          schedule: {
-            ...emp.schedule,
-            [currentWeekKey]: daysOfWeek.reduce((acc, day) => {
-              acc[day] = schedulesMap[`${emp.id}-${day}`] || [];
-              return acc;
-            }, {} as Record<string, TimeSlot[]>),
-          },
-        }))
-      );
+      const schedulesMap = await fetchSchedulesMap(currentWeekKey);
+      applySchedulesMap(schedulesMap, currentWeekKey);
+      loadedWeekRef.current = currentWeekKey;
     } catch {
       toast({ title: 'Erreur', description: 'Impossible de charger les plannings', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, [currentWeekKey, employees.length]);
+  }, [currentWeekKey, employees.length, fetchSchedulesMap, applySchedulesMap]);
 
-  useEffect(() => { loadSchedules(); }, [loadSchedules]);
+  // Reload schedules when the selected week changes (the initial week is
+  // already covered by the parallel load above).
+  useEffect(() => {
+    if (employees.length === 0) return;
+    if (loadedWeekRef.current === currentWeekKey) return;
+    loadSchedules();
+  }, [currentWeekKey, employees.length, loadSchedules]);
 
   // Load hackaton & piscine state
   useEffect(() => {

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { toast } from 'sonner';
+import { useData } from '@/lib/client-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -83,12 +84,6 @@ function progressColor(pct: number): string {
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function SpecialtiesPage() {
-  // Data
-  const [specialties, setSpecialties] = useState<SpecialtyDef[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [projectsList, setProjectsList] = useState<string[]>([]);
-  const [promos, setPromos] = useState<PromoInfo[]>([]);
-
   // Filters
   const [selectedSpec, setSelectedSpec] = useState<string>('');
   const [selectedPromo, setSelectedPromo] = useState<string>('all');
@@ -102,53 +97,58 @@ export default function SpecialtiesPage() {
   // Expand
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  // Loading
-  const [loading, setLoading] = useState(true);
-  const [loadingStudents, setLoadingStudents] = useState(false);
+  // ── Init: specialties + promos (independent, fetched in parallel) ──────────
 
-  // ── Init ──────────────────────────────────────────────────────────────────
+  const { data: specRaw, error: specError } = useData<SpecialtyDef[] | { specialties: SpecialtyDef[] }>(
+    '/api/specialties',
+  );
+  const { data: promoRaw, error: promoError } = useData<{ promotions: PromoInfo[] }>(
+    '/api/promotions/active',
+  );
+
+  const specialties = useMemo<SpecialtyDef[]>(
+    () => (Array.isArray(specRaw) ? specRaw : specRaw?.specialties || []),
+    [specRaw],
+  );
+  const promos = promoRaw?.promotions || [];
+  // Initial page skeleton shows until both init calls have resolved.
+  const loading = specRaw === undefined || promoRaw === undefined;
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/specialties').then((r) => r.json()),
-      fetch('/api/promotions/active').then((r) => r.json()),
-    ])
-      .then(([specData, promoData]) => {
-        const specs: SpecialtyDef[] = Array.isArray(specData) ? specData : specData.specialties || [];
-        setSpecialties(specs);
-        if (specs.length > 0) setSelectedSpec(specs[0].name);
-        setPromos(promoData.promotions || []);
-      })
-      .catch(() => toast.error('Impossible de charger les données'))
-      .finally(() => setLoading(false));
-  }, []);
+    if (specError || promoError) toast.error('Impossible de charger les données');
+  }, [specError, promoError]);
+
+  // Default the spec selector to the first specialty once they load.
+  useEffect(() => {
+    if (!selectedSpec && specialties.length > 0) setSelectedSpec(specialties[0].name);
+  }, [specialties, selectedSpec]);
 
   // ── Fetch students ────────────────────────────────────────────────────────
 
-  const loadStudents = useCallback(async () => {
-    if (!selectedSpec) return;
-    setLoadingStudents(true);
-    setExpandedRows(new Set());
-    try {
-      const params = new URLSearchParams();
-      if (selectedPromo !== 'all') params.set('eventId', selectedPromo);
-      const res = await fetch(`/api/specialties/${encodeURIComponent(selectedSpec)}/students?${params}`);
-      if (!res.ok) throw new Error('Fetch failed');
-      const data = await res.json();
-      setStudents(data.students || []);
-      setProjectsList(data.projectsList || []);
-    } catch {
-      toast.error('Impossible de charger les étudiants');
-      setStudents([]);
-      setProjectsList([]);
-    } finally {
-      setLoadingStudents(false);
-    }
+  const studentsKey = useMemo(() => {
+    if (!selectedSpec) return null;
+    const params = new URLSearchParams();
+    if (selectedPromo !== 'all') params.set('eventId', selectedPromo);
+    return `/api/specialties/${encodeURIComponent(selectedSpec)}/students?${params}`;
   }, [selectedSpec, selectedPromo]);
 
+  const {
+    data: studentsData,
+    error: studentsError,
+    isLoading: loadingStudents,
+  } = useData<{ students?: Student[]; projectsList?: string[] }>(studentsKey);
+
+  const students = studentsData?.students || [];
+  const projectsList = studentsData?.projectsList || [];
+
   useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
+    if (studentsError) toast.error('Impossible de charger les étudiants');
+  }, [studentsError]);
+
+  // Collapse expanded rows whenever the underlying student query changes.
+  useEffect(() => {
+    setExpandedRows(new Set());
+  }, [studentsKey]);
 
   // ── Filter + Sort ─────────────────────────────────────────────────────────
 

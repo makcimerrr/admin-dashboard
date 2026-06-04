@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useData, mutateKey } from '@/lib/client-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,9 +49,11 @@ interface ProjectsByTech {
   [tech: string]: Project[];
 }
 
+const PROJECTS_KEY = '/api/projects';
+
 export default function ProjectManagement() {
-  const [projectsByTech, setProjectsByTech] = useState<ProjectsByTech>({});
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading, error: projectsError } = useData<ProjectsByTech>(PROJECTS_KEY);
+  const projectsByTech: ProjectsByTech = data ?? {};
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [movingId, setMovingId] = useState<number | null>(null);
@@ -62,22 +65,13 @@ export default function ProjectManagement() {
     tech: ''
   });
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
+  // Met à jour le cache avec la nouvelle valeur renvoyée par une mutation (sans refetch).
+  const setProjectsByTech = (next: ProjectsByTech) =>
+    mutateKey<ProjectsByTech>(PROJECTS_KEY, () => Promise.resolve(next));
 
-  const fetchProjects = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/projects');
-      const data = await response.json();
-      setProjectsByTech(data);
-    } catch (error) {
-      toast.error('Erreur lors du chargement des projets.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (projectsError) toast.error('Erreur lors du chargement des projets.');
+  }, [projectsError]);
 
   const handleAdd = async () => {
     const { name, project_time_week, tech } = newProject;

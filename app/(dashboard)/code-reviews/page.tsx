@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import { useData } from '@/lib/client-cache';
 import {
   Card,
   CardContent,
@@ -38,44 +39,19 @@ interface Promo {
   dates: { start: string; end: string };
 }
 
-async function safeFetch<T>(path: string): Promise<T | null> {
-  try {
-    const res = await fetch(path);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
 export default function CodeReviewsPage() {
-  const [pendingStats, setPendingStats] = useState<PendingStats | null>(null);
-  const [promotions, setPromotions] = useState<Promo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: pendingRes, isLoading: pendingLoading } = useData<{
+    success: boolean;
+    stats: PendingStats;
+  }>('/api/code-reviews/pending');
+  const { data: promosRes, isLoading: promosLoading } = useData<{
+    success: boolean;
+    promotions: Promo[];
+  }>('/api/promotions/active');
 
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      const [pendingRes, promosRes] = await Promise.all([
-        safeFetch<{ success: boolean; stats: PendingStats }>(
-          '/api/code-reviews/pending',
-        ),
-        safeFetch<{ success: boolean; promotions: Promo[] }>(
-          '/api/promotions/active',
-        ),
-      ]);
-      if (!mounted) return;
-
-      if (pendingRes?.success) setPendingStats(pendingRes.stats);
-      if (promosRes?.success) setPromotions(promosRes.promotions ?? []);
-      setLoading(false);
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const pendingStats = pendingRes?.success ? pendingRes.stats : null;
+  const promotions = promosRes?.success ? promosRes.promotions ?? [] : [];
+  const loading = pendingLoading || promosLoading;
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
