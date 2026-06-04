@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronLeftIcon, LayoutDashboard } from "lucide-react"
+import { ChevronLeftIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import { NavUser } from "@/components/nav-user"
 import { cn } from "@/lib/utils"
@@ -178,7 +178,12 @@ export function AppSidebar({ user }: { user?: User | null }) {
           )}
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground shrink-0">
-            <LayoutDashboard className="h-[18px] w-[18px]" />
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden="true">
+              <rect x="3" y="3" width="8" height="8" rx="1.6" />
+              <rect x="13" y="3" width="8" height="8" rx="1.6" />
+              <rect x="3" y="13" width="8" height="8" rx="1.6" />
+              <rect x="13" y="13" width="8" height="8" rx="1.6" />
+            </svg>
           </span>
           {expanded && (
             <span className="text-sm font-semibold tracking-tight text-sidebar-accent-foreground">Zone01</span>
