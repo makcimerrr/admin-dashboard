@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronLeftIcon } from "lucide-react"
+import { ChevronLeftIcon, LayoutDashboard } from "lucide-react"
 import { useTheme } from "next-themes"
 import { NavUser } from "@/components/nav-user"
 import { cn } from "@/lib/utils"
@@ -14,7 +14,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-  IconZone01Logo,
   IconSun,
   IconMoon,
 } from "@/components/icons/zone-apps"
@@ -179,7 +178,7 @@ export function AppSidebar({ user }: { user?: User | null }) {
           )}
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground shrink-0">
-            <IconZone01Logo size={18} />
+            <LayoutDashboard className="h-[18px] w-[18px]" />
           </span>
           {expanded && (
             <span className="text-sm font-semibold tracking-tight text-sidebar-accent-foreground">Zone01</span>

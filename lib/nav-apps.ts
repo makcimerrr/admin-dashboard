@@ -2,6 +2,7 @@ import {
   BarChartIcon,
   BellIcon,
   BriefcaseIcon,
+  CalendarDaysIcon,
   CalendarIcon,
   CalendarX2Icon,
   ClipboardCheckIcon,
@@ -9,21 +10,18 @@ import {
   FileBarChartIcon,
   FileIcon,
   FolderArchiveIcon,
+  GraduationCapIcon,
+  LayersIcon,
+  LayoutDashboardIcon,
   LayoutGridIcon,
+  NetworkIcon,
+  Settings2Icon,
+  SettingsIcon,
+  SignatureIcon,
   UsersIcon,
+  WrenchIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import {
-  Icon01Deck,
-  IconConfig,
-  IconDashboard,
-  IconEmargement,
-  IconIntra,
-  IconOutils,
-  IconParametres,
-  IconPedagogie,
-  IconPlanning,
-} from '@/components/icons/zone-apps';
 
 // Accept either a Lucide icon or a custom component with { size?, className? }
 type NavIcon = LucideIcon | React.ComponentType<{ size?: number; className?: string }>;
@@ -66,13 +64,13 @@ export const NAV_APPS: NavApp[] = [
   {
     key: 'dashboard',
     label: 'Tableau de bord',
-    icon: IconDashboard,
+    icon: LayoutDashboardIcon,
     url: '/',
   },
   {
     key: 'pedagogie',
     label: 'Pédagogie',
-    icon: IconPedagogie,
+    icon: GraduationCapIcon,
     defaultUrl: '/students',
     adminOnly: true,
     items: [
@@ -87,7 +85,7 @@ export const NAV_APPS: NavApp[] = [
   {
     key: 'planning',
     label: 'Planning',
-    icon: IconPlanning,
+    icon: CalendarDaysIcon,
     defaultUrl: '/planning',
     adminOnly: true,
     items: [
@@ -101,7 +99,7 @@ export const NAV_APPS: NavApp[] = [
   {
     key: 'outils',
     label: 'Outils',
-    icon: IconOutils,
+    icon: WrenchIcon,
     defaultUrl: '/01deck',
     adminOnly: true,
     items: [
@@ -112,21 +110,21 @@ export const NAV_APPS: NavApp[] = [
   {
     key: '01deck-app',
     label: '01 Deck',
-    icon: Icon01Deck,
+    icon: LayersIcon,
     url: 'https://01deck.zone01rouennormandie.org/',
     external: true,
   },
   {
     key: 'emargement',
     label: 'Émargement',
-    icon: IconEmargement,
+    icon: SignatureIcon,
     url: 'https://emargement.zone01rouennormandie.org/',
     external: true,
   },
   {
     key: 'intra',
     label: 'Intra',
-    icon: IconIntra,
+    icon: NetworkIcon,
     url: 'https://intra.zone01rouennormandie.org/',
     external: true,
   },
@@ -134,8 +132,8 @@ export const NAV_APPS: NavApp[] = [
 
 /** Bottom nav (config, settings) — always direct links */
 export const NAV_BOTTOM: NavApp[] = [
-  { key: 'config', label: 'Configuration', icon: IconConfig, url: '/config', adminOnly: true },
-  { key: 'settings', label: 'Paramètres', icon: IconParametres, url: '/settings' },
+  { key: 'config', label: 'Configuration', icon: Settings2Icon, url: '/config', adminOnly: true },
+  { key: 'settings', label: 'Paramètres', icon: SettingsIcon, url: '/settings' },
 ];
 
 /** Check if a path matches a nav item (exact or deeper) */
