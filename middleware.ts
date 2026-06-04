@@ -39,8 +39,88 @@ function shouldUseSecureCookies() {
   return process.env.NODE_ENV === 'production';
 }
 
+/**
+ * Résout le rôle de l'appelant (Stack Auth ou NextAuth/Authentik) côté Edge,
+ * sans faire confiance au cookie non-httpOnly `role` (falsifiable). Renvoie
+ * `null` si non authentifié. Utilisé pour garder les mutations exposées en API.
+ */
+async function resolveRole(req: NextRequest): Promise<string | null> {
+  const cookies = req.cookies;
+  const stackProjectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID;
+  const stackAccessToken = cookies.get('stack-access') || cookies.get('stack-access-token');
+  const stackAccessProject = cookies.get(`stack-access-${stackProjectId}--default`);
+  const refreshCookie = cookies.get(`stack-refresh-${stackProjectId}--default`);
+  const accessToken = stackAccessToken || stackAccessProject;
+
+  if (accessToken || refreshCookie) {
+    const stackRoleCookie = cookies.get('stack-role'); // httpOnly, posé par ce middleware
+    if (stackRoleCookie && stackRoleCookie.value !== 'user') {
+      return stackRoleCookie.value;
+    }
+    if (accessToken) {
+      try {
+        const r = await fetch('https://api.stack-auth.com/api/v1/users/me', {
+          headers: {
+            'Authorization': `Bearer ${accessToken.value}`,
+            'x-stack-project-id': process.env.NEXT_PUBLIC_STACK_PROJECT_ID!,
+            'x-stack-publishable-client-key': process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
+          },
+        });
+        if (r.ok) {
+          const u = await r.json();
+          return (
+            u.server_metadata?.role ||
+            u.client_read_only_metadata?.role ||
+            u.client_metadata?.role ||
+            'user'
+          );
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return 'user'; // authentifié mais rôle indéterminé
+  }
+
+  const token = await getToken({
+    req,
+    secret: NEXTAUTH_SECRET,
+    secureCookie: shouldUseSecureCookies(),
+  });
+  if (token) {
+    if (Array.isArray(token.groups) && token.groups.includes('authentik Admins')) {
+      return 'admin';
+    }
+    return 'user';
+  }
+  return null;
+}
+
+const ADMIN_ROLES = ['Admin', 'Super Admin', 'admin'];
+
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.pathname;
+
+  // ========================================
+  // 0. MUTATIONS DE CONFIG EXPOSÉES EN API
+  // ========================================
+  // Le matcher exclut /api : ces routes de config n'auraient sinon AUCUNE garde
+  // (mutations DB ouvertes). On gate uniquement les écritures ; les GET restent
+  // ouverts (lecture utilisée par d'autres pages). Réponse JSON, pas de redirect.
+  const protectedApiConfig = ['/api/projects', '/api/holidays'];
+  if (protectedApiConfig.some((p) => url === p || url.startsWith(p + '/'))) {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+      return NextResponse.next();
+    }
+    const role = await resolveRole(req);
+    if (role === null) {
+      return NextResponse.json({ error: 'Authentification requise' }, { status: 401 });
+    }
+    if (!ADMIN_ROLES.includes(role)) {
+      return NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 });
+    }
+    return NextResponse.next();
+  }
 
   // ========================================
   // 1. ROUTES PUBLIQUES (pas d'auth requise)
@@ -203,6 +283,9 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     // Protéger toutes les routes sauf les fichiers statiques et API
-    '/((?!api|_next/static|_next/image|favicon.ico).*)'
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    // Exceptions : on inclut explicitement les mutations de config exposées en API
+    '/api/projects/:path*',
+    '/api/holidays/:path*'
   ]
 };

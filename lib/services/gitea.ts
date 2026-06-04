@@ -12,9 +12,9 @@
 import type { AffinityLabel, GiteaLanguageBreakdown } from '@/lib/db/schema/studentSkills';
 
 const DENO_API = 'https://api-zone01-rouen.deno.dev/api/v1';
-// Côté serveur on préfère ACCESS_TOKEN ; fallback sur la variable publique
+// Token Zone01 (admin Gitea) — server-only, jamais exposé au client
 // utilisée par le front si besoin.
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN ?? process.env.NEXT_PUBLIC_ACCESS_TOKEN;
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 
 // L'API deno proxifie déjà l'API Gitea de l'org en utilisant CE token : on peut
 // donc l'appeler directement pour les repos/langages, sans secret dédié. Le
