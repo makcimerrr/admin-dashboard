@@ -72,7 +72,11 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            set -e
             cd ~/sites/${{ steps.env.outputs.site }}
+            # Image GHCR publique : forcer le pull anonyme (un token ghcr périmé
+            # stocké sur le VPS renverrait 'denied' et laisserait l'ancienne image).
+            docker logout ghcr.io || true
             docker compose -f ${{ steps.env.outputs.compose }} pull
             docker compose -f ${{ steps.env.outputs.compose }} up -d
             docker image prune -f
