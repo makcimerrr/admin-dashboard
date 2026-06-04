@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PILL } from "@/lib/status-pills";
-import { type Alternant } from "../page";
+import { type Alternant } from "../types";
 
 export function AlternantsTable({
   filteredAlternants,

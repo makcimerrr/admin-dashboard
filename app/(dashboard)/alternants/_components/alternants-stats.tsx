@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Briefcase, Building2, Clock, Users } from "lucide-react";
-import { type AlternantStats } from "../page";
+import { type AlternantStats } from "../types";
 
 export function AlternantsStats({
   stats,

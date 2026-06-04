@@ -27,7 +27,7 @@ import {
   type Document,
   CONTRACT_TYPE_LABELS,
   DOCUMENT_TYPE_LABELS,
-} from "../page";
+} from "../types";
 import { AddContractDialog } from "./add-contract-dialog";
 import { AddDocumentDialog } from "./add-document-dialog";
 

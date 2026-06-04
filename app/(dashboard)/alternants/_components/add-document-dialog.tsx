@@ -22,7 +22,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus } from "lucide-react";
-import { type Contract, CONTRACT_TYPE_LABELS } from "../page";
+import { type Contract, CONTRACT_TYPE_LABELS } from "../types";
 
 export function AddDocumentDialog({
   studentId,
