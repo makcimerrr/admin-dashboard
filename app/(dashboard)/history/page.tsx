@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Clock, Loader2, RotateCcw, History as HistoryIcon } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { FilterToolbar } from "@/components/planning/filter-toolbar";
+import { FilterToolbar } from "@/components/dashboard/filter-toolbar";
 import { EmptyState } from "@/components/ui/empty-state";
 
 interface HistoryEntry {
