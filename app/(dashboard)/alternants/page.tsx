@@ -136,33 +136,36 @@ export default function AlternantsPage() {
 
   // Detail panel state
   const [selectedAlternant, setSelectedAlternant] = useState<Alternant | null>(null);
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loadingDetail, setLoadingDetail] = useState(false);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
 
-  const fetchAlternantDetail = async (studentId: number) => {
-    setLoadingDetail(true);
-    try {
-      const [contractsRes, documentsRes] = await Promise.all([
-        fetch(`/api/alternants/${studentId}/contracts`),
-        fetch(`/api/alternants/${studentId}/documents`),
-      ]);
+  // Détail alternant via le cache maison : rouvrir un alternant déjà consulté est instantané.
+  // Clés dérivées de l'alternant sélectionné (null => pas de fetch).
+  const selectedId = selectedAlternant?.id ?? null;
+  const contractsKey = selectedId ? `/api/alternants/${selectedId}/contracts` : null;
+  const documentsKey = selectedId ? `/api/alternants/${selectedId}/documents` : null;
 
-      const contractsData = await contractsRes.json();
-      const documentsData = await documentsRes.json();
+  const { data: contractsData, isLoading: contractsLoading } = useData<{
+    success: boolean;
+    contracts: Contract[];
+  }>(contractsKey);
+  const { data: documentsData, isLoading: documentsLoading } = useData<{
+    success: boolean;
+    documents: Document[];
+  }>(documentsKey);
 
-      if (contractsData.success) setContracts(contractsData.contracts || []);
-      if (documentsData.success) setDocuments(documentsData.documents || []);
-    } catch (error) {
-      console.error("Error fetching alternant detail:", error);
-    } finally {
-      setLoadingDetail(false);
-    }
+  const contracts = contractsData?.success ? contractsData.contracts ?? [] : [];
+  const documents = documentsData?.success ? documentsData.documents ?? [] : [];
+  const loadingDetail = contractsLoading || documentsLoading;
+
+  // Revalide le détail (contrats + documents) de l'alternant donné.
+  const refreshAlternantDetail = (studentId: number) => {
+    mutateKey(`/api/alternants/${studentId}/contracts`);
+    mutateKey(`/api/alternants/${studentId}/documents`);
   };
 
   // Si un étudiant est présélectionné dans l'URL, ouvre son détail une fois la liste chargée.
+  // (le détail est fetché automatiquement par useData via les clés dérivées)
   useEffect(() => {
     if (preselectedStudentId && alternantsData?.success && !selectedAlternant) {
       const student = alternantsData.alternants.find(
@@ -170,7 +173,6 @@ export default function AlternantsPage() {
       );
       if (student) {
         setSelectedAlternant(student);
-        fetchAlternantDetail(student.id);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,13 +180,10 @@ export default function AlternantsPage() {
 
   const handleSelectAlternant = (alternant: Alternant) => {
     setSelectedAlternant(alternant);
-    fetchAlternantDetail(alternant.id);
   };
 
   const handleCloseDetail = () => {
     setSelectedAlternant(null);
-    setContracts([]);
-    setDocuments([]);
   };
 
   const filteredAlternants = alternants.filter((alt) => {
@@ -310,7 +309,7 @@ export default function AlternantsPage() {
         isDocumentDialogOpen={isDocumentDialogOpen}
         onDocumentDialogOpenChange={setIsDocumentDialogOpen}
         onClose={handleCloseDetail}
-        onRefreshDetail={fetchAlternantDetail}
+        onRefreshDetail={refreshAlternantDetail}
         formatDate={formatDate}
       />
     </div>

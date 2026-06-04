@@ -24,6 +24,11 @@ type Conversation = {
   updated_at: string;
 };
 
+type ConversationDetail = {
+  success: boolean;
+  messages?: { id: number; role: string; content: string; student_ids?: number[]; suggestions?: string[] }[];
+};
+
 export default function ConversationPage() {
   const params = useParams();
   const router = useRouter();
@@ -31,9 +36,11 @@ export default function ConversationPage() {
   const conversationId = parseInt(params.id as string);
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Vrai dès qu'on touche `messages` localement (envoi optimiste). Empêche
+  // l'effet de resync cache→state d'écraser des messages pas encore persistés.
+  const hasLocalEditsRef = useRef(false);
 
   const userId = user?.primaryEmail || 'anonymous';
   const isKnownUser = !!userId && userId !== 'anonymous';
@@ -49,40 +56,54 @@ export default function ConversationPage() {
   const conversations = conversationsData?.success ? conversationsData.conversations : [];
   const isLoadingConversations = isKnownUser && conversationsFetching;
 
-  // Load messages for this conversation
+  // Historique de la conversation via le cache client (clé par conversation).
+  // Réouvrir une conv déjà visitée → `data` est déjà en cache → rendu instantané,
+  // puis revalidation en arrière-plan (stale-while-revalidate).
+  // Note : on conserve le fetcher par défaut (GET JSON, throw si !ok). L'API
+  // peut aussi répondre 200 avec `{ success: false }` → traité ci-dessous comme un échec.
+  const conversationKey = conversationId ? `/api/conversations/${conversationId}` : null;
+  const {
+    data: conversationData,
+    error: conversationError,
+    isLoading: conversationFetching,
+    mutate: revalidateConversation,
+  } = useData<ConversationDetail>(conversationKey);
+
+  // Loader uniquement quand on n'a encore RIEN à afficher pour cette conv
+  // (ni cache, ni état local). Sur réouverture, cache présent → pas de loader.
+  const isLoadingMessages = conversationFetching && messages.length === 0;
+
+  // Redirect-on-fail : erreur réseau (fetcher a throw) OU réponse success:false.
   useEffect(() => {
-    if (conversationId) {
-      loadConversation();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId]);
-
-  const loadConversation = async () => {
-    setIsLoadingMessages(true);
-    try {
-      const response = await fetch(`/api/conversations/${conversationId}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setMessages(
-          data.messages.map((msg: { id: number; role: string; content: string; student_ids?: number[]; suggestions?: string[] }) => ({
-            id: msg.id.toString(),
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content,
-            studentIds: msg.student_ids,
-            suggestions: msg.suggestions,
-          }))
-        );
-      } else {
-        router.push('/assistant');
-      }
-    } catch (error) {
-      console.error('Error loading conversation:', error);
+    if (!conversationId) return;
+    if (conversationError || (conversationData && conversationData.success === false)) {
       router.push('/assistant');
-    } finally {
-      setIsLoadingMessages(false);
     }
-  };
+  }, [conversationId, conversationError, conversationData, router]);
+
+  // Sync cache → state local d'affichage. On ne resynchronise PAS tant qu'une
+  // édition optimiste locale est en cours, pour ne pas écraser un message non
+  // encore persité côté serveur.
+  useEffect(() => {
+    if (!conversationData?.success || !conversationData.messages) return;
+    if (hasLocalEditsRef.current) return;
+    setMessages(
+      conversationData.messages.map((msg) => ({
+        id: msg.id.toString(),
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        studentIds: msg.student_ids,
+        suggestions: msg.suggestions,
+      }))
+    );
+  }, [conversationData]);
+
+  // Changement de conversation : on repart d'un état local propre et on
+  // réautorise la resync depuis le cache de la nouvelle conv.
+  useEffect(() => {
+    hasLocalEditsRef.current = false;
+    setMessages([]);
+  }, [conversationId]);
 
   const handleNewChat = () => {
     router.push('/assistant');
@@ -121,6 +142,7 @@ export default function ConversationPage() {
       role: 'user',
       content: messageText,
     };
+    hasLocalEditsRef.current = true;
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
@@ -158,6 +180,12 @@ export default function ConversationPage() {
         ...prev,
         { id: assistantMessageId, role: 'assistant', content: data.response },
       ]);
+
+      // L'échange est persisté côté serveur : on réautorise la resync et on
+      // revalide le cache de l'historique en fond pour récupérer les vrais ids /
+      // métadonnées (studentIds, suggestions). Pas de loader (cache déjà peuplé).
+      hasLocalEditsRef.current = false;
+      revalidateConversation();
 
       // Reload conversations
       loadConversations();

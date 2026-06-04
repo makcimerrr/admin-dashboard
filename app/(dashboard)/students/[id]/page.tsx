@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useData } from '@/lib/client-cache';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -134,66 +135,86 @@ export default function StudentPage() {
   const router = useRouter();
   const studentId = params?.id ?? null;
 
-  const [student, setStudent] = useState<Student | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [externalData, setExternalData] = useState<ExternalUserData | null>(null);
-  const [studentPromoConfig, setStudentPromoConfig] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  // Both initial fetches are kicked off as soon as the student lands; mark
-  // them as loading from mount so the dependent sections show their
-  // skeletons instead of "Non disponible" while they're in flight.
-  const [loadingExternal, setLoadingExternal] = useState(true);
   const [loadingAlternant, setLoadingAlternant] = useState(false);
+  // Override optimiste du statut alternant : posé au moment du toggle pour
+  // garder l'instantanéité, puis nettoyé quand le `data` cache reflète la
+  // même valeur (après revalidation).
+  const [alternantOverride, setAlternantOverride] = useState<boolean | null>(null);
 
+  // Données principales étudiant — via cache maison (stale-while-revalidate +
+  // dédup). Le fetcher par défaut throw sur !ok → 404 part dans `error`.
+  const {
+    data: studentData,
+    error: studentError,
+    isLoading: studentLoading,
+    mutate: mutateStudent,
+  } = useData<{ success: boolean; student: Student; projects: Project[] }>(
+    studentId ? `/api/student/${studentId}` : null
+  );
+  // Garde le skeleton tant qu'on n'a pas d'id (le temps de rediriger), comme
+  // le `loading=true` initial d'origine.
+  const loading = !studentId || studentLoading;
+
+  const baseStudent = studentData?.success ? studentData.student : null;
+  const projects: Project[] = studentData?.success ? (studentData.projects ?? []) : [];
+  const login = baseStudent?.login ?? null;
+
+  // Applique l'override optimiste alternant par-dessus la donnée du cache.
+  const student: Student | null = useMemo(() => {
+    if (!baseStudent) return null;
+    if (alternantOverride === null) return baseStudent;
+    return { ...baseStudent, isAlternant: alternantOverride };
+  }, [baseStudent, alternantOverride]);
+
+  // Dès que le cache reflète l'override (ou si l'étudiant disparaît), on
+  // libère l'override pour redonner la main au cache.
   useEffect(() => {
-    if (!studentId) {
-      router.push('/students');
-      return;
+    if (alternantOverride === null) return;
+    if (!baseStudent || (baseStudent.isAlternant ?? false) === alternantOverride) {
+      setAlternantOverride(null);
     }
+  }, [baseStudent, alternantOverride]);
 
-    const fetchStudentData = async () => {
-      try {
-        const response = await fetch(`/api/student/${studentId}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setStudent(data.student);
-            setProjects(data.projects);
-            // Charger données externes et config promo en parallèle
-            fetchExternalDataInternal(data.student.login);
-            fetch('/api/promotions').then(r => r.json()).then(cfg => {
-              if (cfg.success) {
-                setStudentPromoConfig(cfg.promotions.find((p: any) => p.key === data.student.promoName) ?? null);
-              }
-            }).catch(() => {});
-          }
-        } else {
-          toast.error('Étudiant introuvable');
-          router.push('/students');
-        }
-      } catch (error) {
-        console.error('Error fetching student data:', error);
-        toast.error('Erreur lors du chargement des données');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Config promo — clé conditionnelle, mais l'URL/endpoint reste identique.
+  const { data: promoData } = useData<{ success: boolean; promotions: any[] }>(
+    '/api/promotions'
+  );
+  const studentPromoConfig = useMemo(() => {
+    if (!promoData?.success || !baseStudent) return null;
+    return promoData.promotions.find((p: any) => p.key === baseStudent.promoName) ?? null;
+  }, [promoData, baseStudent]);
 
-    fetchStudentData();
+  // Redirect-on-404 préservé : le fetcher par défaut throw si !ok.
+  useEffect(() => {
+    if (studentError) {
+      toast.error('Étudiant introuvable');
+      router.push('/students');
+    }
+  }, [studentError, router]);
+
+  // Redirect immédiat si pas d'id (comportement d'origine).
+  useEffect(() => {
+    if (!studentId) router.push('/students');
   }, [studentId, router]);
 
-  const fetchExternalDataInternal = async (login: string) => {
-    setLoadingExternal(true);
-    try {
+  // Données externes (gitea/zone01) — cache maison avec fetcher custom qui
+  // conserve EXACTEMENT le retry/timeout (fetchWithRetry) et la transformation
+  // (heatmap → dernière contribution). Clé conditionnelle : seulement quand le
+  // login est connu, donc la cascade student→external est préservée.
+  const externalFetcher = useMemo(
+    () => async (): Promise<ExternalUserData> => {
       // Le token Zone01 (admin Gitea) reste côté serveur : on passe par un
       // proxy interne au lieu d'appeler l'API Deno directement depuis le
       // navigateur (anciennement avec NEXT_PUBLIC_ACCESS_TOKEN, ce qui exposait
       // le token dans le bundle client).
-      const externalResponse = await fetchWithRetry(`/api/zone01/external/${encodeURIComponent(login)}`, {
-        tag: 'zone01-external',
-        timeoutMs: 8_000,
-        retries: 1,
-      });
+      const externalResponse = await fetchWithRetry(
+        `/api/zone01/external/${encodeURIComponent(login as string)}`,
+        {
+          tag: 'zone01-external',
+          timeoutMs: 8_000,
+          retries: 1,
+        }
+      );
 
       if (!externalResponse.ok) {
         throw new Error('Failed to fetch external data');
@@ -215,7 +236,7 @@ export default function StudentPage() {
         );
       }
 
-      const userData = {
+      const userData: ExternalUserData = {
         id: userFindData.user[0].id,
         login: userFindData.user[0].login,
         firstName: userFindData.user[0].firstName,
@@ -229,17 +250,25 @@ export default function StudentPage() {
         last_contribution: timeMessage,
       };
 
-      setExternalData(userData);
-    } catch (error) {
-      console.error('Error fetching external data:', error);
-    } finally {
-      setLoadingExternal(false);
-    }
-  };
+      return userData;
+    },
+    [login]
+  );
+
+  const { data: externalDataRaw, isLoading: externalLoading } = useData<ExternalUserData>(
+    login ? `/api/zone01/external/${encodeURIComponent(login)}` : null,
+    { fetcher: externalFetcher, enabled: !!login }
+  );
+  const externalData = externalDataRaw ?? null;
+  // Tant que le login (donc la cascade) n'est pas prêt, on reste en chargement
+  // des données externes — comme le `loadingExternal=true` initial d'origine.
+  const loadingExternal = !login || externalLoading;
 
   const toggleAlternantStatus = async (isAlternant: boolean) => {
     if (!student) return;
 
+    // Maj optimiste instantanée (override par-dessus le cache).
+    setAlternantOverride(isAlternant);
     setLoadingAlternant(true);
     try {
       const response = await fetch('/api/alternants', {
@@ -253,19 +282,23 @@ export default function StudentPage() {
 
       const data = await response.json();
       if (data.success) {
-        setStudent((prev) =>
-          prev ? { ...prev, isAlternant } : null
-        );
+        // L'override optimiste reste en place ; on revalide la donnée de fond
+        // pour que le cache rattrape la valeur, après quoi l'override est
+        // automatiquement libéré (useEffect de réconciliation).
+        mutateStudent?.();
         toast.success(
           isAlternant
             ? 'Étudiant marqué comme alternant'
             : 'Statut alternant retiré'
         );
       } else {
+        // Échec : on annule la maj optimiste (retour à la valeur du cache).
+        setAlternantOverride(null);
         toast.error(data.error || 'Erreur lors de la mise à jour');
       }
     } catch (error) {
       console.error('Error toggling alternant status:', error);
+      setAlternantOverride(null);
       toast.error('Erreur lors de la mise à jour');
     } finally {
       setLoadingAlternant(false);
