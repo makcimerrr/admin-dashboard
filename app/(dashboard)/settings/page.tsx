@@ -313,8 +313,8 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Mail className="h-5 w-5 text-blue-500" />
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Mail className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <Label htmlFor="email-notifs" className="text-sm font-medium">
@@ -334,8 +334,8 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
-                    <BellRing className="h-5 w-5 text-orange-500" />
+                  <div className="p-2 bg-warning/10 rounded-lg">
+                    <BellRing className="h-5 w-5 text-warning" />
                   </div>
                   <div>
                     <Label htmlFor="browser-notifs" className="text-sm font-medium">
@@ -361,14 +361,14 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-blue-500/30 bg-blue-500/10">
+          <Card className="border-primary/30 bg-primary/10">
             <CardContent className="flex items-start gap-3 pt-6">
-              <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              <Info className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                <p className="text-sm font-medium text-primary">
                   À propos des notifications
                 </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                <p className="text-xs text-primary/80 mt-1">
                   Les notifications vous informent des nouvelles revues de code, des mises à jour de planning
                   et des événements importants. Vous pouvez modifier ces préférences à tout moment.
                 </p>

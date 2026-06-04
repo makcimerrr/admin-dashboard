@@ -291,8 +291,8 @@ export default function AlternantsPage() {
                 <CardTitle className="text-sm font-medium">
                   Total Alternants
                 </CardTitle>
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Users className="h-4 w-4 text-blue-700 dark:text-blue-400" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Users className="h-4 w-4 text-primary" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -308,12 +308,12 @@ export default function AlternantsPage() {
                 <CardTitle className="text-sm font-medium">
                   Contrats Actifs
                 </CardTitle>
-                <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <Briefcase className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
+                <div className="p-2 bg-success/10 rounded-lg">
+                  <Briefcase className="h-4 w-4 text-success" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
+                <div className="text-3xl font-bold text-success">
                   {stats?.activeContracts || 0}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -327,12 +327,12 @@ export default function AlternantsPage() {
                 <CardTitle className="text-sm font-medium">
                   Fin Prochaine
                 </CardTitle>
-                <div className="p-2 bg-orange-500/10 rounded-lg">
-                  <Clock className="h-4 w-4 text-orange-700 dark:text-orange-400" />
+                <div className="p-2 bg-warning/10 rounded-lg">
+                  <Clock className="h-4 w-4 text-warning" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-orange-700 dark:text-orange-400">
+                <div className="text-3xl font-bold text-warning">
                   {stats?.endingSoon || 0}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -346,8 +346,8 @@ export default function AlternantsPage() {
                 <CardTitle className="text-sm font-medium">
                   Entreprises
                 </CardTitle>
-                <div className="p-2 bg-violet-500/10 rounded-lg">
-                  <Building2 className="h-4 w-4 text-violet-700 dark:text-violet-400" />
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Building2 className="h-4 w-4 text-primary" />
                 </div>
               </CardHeader>
               <CardContent>

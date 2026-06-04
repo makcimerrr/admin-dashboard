@@ -253,7 +253,7 @@ export default function DiscordLinkPage() {
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    className="h-full rounded-full bg-success transition-all"
                     style={{ width: `${p.pct}%` }}
                   />
                 </div>
@@ -319,10 +319,10 @@ function StatTile({
   loading?: boolean;
 }) {
   const toneText: Record<string, string> = {
-    blue: 'text-blue-700 dark:text-blue-400',
-    emerald: 'text-emerald-700 dark:text-emerald-400',
-    amber: 'text-amber-700 dark:text-amber-400',
-    rose: 'text-rose-700 dark:text-rose-400',
+    blue: 'text-primary',
+    emerald: 'text-success',
+    amber: 'text-warning',
+    rose: 'text-destructive',
   };
   return (
     <Card className="p-3">
@@ -340,7 +340,7 @@ function StatTile({
 function StudentTableRow({ student, onChange }: { student: StudentRow; onChange: () => void }) {
   const emailLogin = looksLikeEmail(student.login);
   return (
-    <TableRow className={cn(emailLogin && 'bg-rose-500/5')}>
+    <TableRow className={cn(emailLogin && 'bg-destructive/5')}>
       <TableCell>
         <div className="font-medium">
           {student.firstName} {student.lastName}
@@ -383,7 +383,7 @@ function StudentTableRow({ student, onChange }: { student: StudentRow; onChange:
 function StudentMobileCard({ student, onChange }: { student: StudentRow; onChange: () => void }) {
   const emailLogin = looksLikeEmail(student.login);
   return (
-    <li className={cn('p-3 space-y-2', emailLogin && 'bg-rose-500/5')}>
+    <li className={cn('p-3 space-y-2', emailLogin && 'bg-destructive/5')}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="font-medium truncate">
@@ -507,7 +507,7 @@ function DiscordIdEditor({
           }}
         />
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={save} disabled={busy}>
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-emerald-600" />}
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-success" />}
         </Button>
         <Button
           size="icon"
@@ -592,10 +592,10 @@ function DiscordIdEditor({
 /** Orphan mappings (login matches no student) — editable login + discord id. */
 function OrphanSection({ orphans, onChange }: { orphans: OrphanRow[]; onChange: () => void }) {
   return (
-    <Card className="border-amber-500/40">
+    <Card className="border-warning/40">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertTriangle className="h-4 w-4 text-warning" />
           Liaisons orphelines ({orphans.length})
         </CardTitle>
         <CardDescription>

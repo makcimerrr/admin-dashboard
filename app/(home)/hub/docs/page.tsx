@@ -48,13 +48,13 @@ export default function DocsPage() {
     <div className="space-y-8">
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Badge className="bg-blue-600 hover:bg-blue-700">API</Badge>
+          <Badge className="bg-primary hover:bg-primary/90">API</Badge>
           <Badge variant="outline">v1.0</Badge>
         </div>
         <h1 className="text-4xl font-bold tracking-tight">
           Documentation de l'API
         </h1>
-        <p className="text-xl text-gray-500 dark:text-gray-400">
+        <p className="text-xl text-muted-foreground">
           Guide complet pour intégrer et utiliser notre API REST
         </p>
       </div>
@@ -72,7 +72,7 @@ export default function DocsPage() {
                   <li key={j}>
                     <Link
                       href={link.href}
-                      className="text-blue-600 dark:text-blue-400 hover:underline flex items-center"
+                      className="text-primary hover:underline flex items-center"
                     >
                       <ChevronRight className="h-4 w-4 mr-1" />
                       {link.title}
@@ -99,11 +99,11 @@ export default function DocsPage() {
             <div>
               <h3 className="text-lg font-semibold flex items-center">
                 v1.0
-                <Badge className="ml-2 bg-green-600 hover:bg-green-700">
+                <Badge className="ml-2 bg-success hover:bg-success/90">
                   Active
                 </Badge>
               </h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Fin de support : Décembre 2026
               </p>
               <p className="mt-2">Version stable et complète de notre API.</p>
@@ -117,7 +117,7 @@ export default function DocsPage() {
                   Beta
                 </Badge>
               </h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 En cours de développement
               </p>
               <p className="mt-2">

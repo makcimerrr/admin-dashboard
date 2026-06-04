@@ -72,7 +72,7 @@ function PeriodBlock({
           </div>
           <div className="flex justify-between border-t pt-0.5">
             <span className="text-muted-foreground">Reste dû</span>
-            <span className="font-semibold font-mono text-amber-600 dark:text-amber-400">{formatHM(remaining)}</span>
+            <span className="font-semibold font-mono text-warning">{formatHM(remaining)}</span>
           </div>
         </div>
       </div>
@@ -142,7 +142,7 @@ export function EmargementWidget() {
               <div key={log.date} className="flex items-center justify-between text-[10px] font-mono">
                 <span className="text-muted-foreground w-10">{log.date}</span>
                 <span>
-                  <span className="text-emerald-600 dark:text-emerald-400">{log.in}</span>
+                  <span className="text-success">{log.in}</span>
                   <span className="text-muted-foreground/40 mx-1">→</span>
                   <span className="text-destructive">{log.out}</span>
                 </span>

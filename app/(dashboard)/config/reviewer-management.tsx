@@ -373,7 +373,7 @@ export default function ReviewerManagement() {
                     <p className="truncate">Calendar: {reviewer.calendarId}</p>
                   )}
                   {reviewer.excludedPromos.length > 0 && (
-                    <p className="text-red-500 dark:text-red-400">
+                    <p className="text-destructive">
                       Exclu de : {reviewer.excludedPromos.join(', ')}
                     </p>
                   )}

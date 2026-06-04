@@ -348,7 +348,7 @@ export function PlanningSidebar({
                     className={cn(
                       'flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-xs transition-all',
                       rotationMode === 'piscine'
-                        ? 'border-cyan-500/30 bg-cyan-500/5 font-semibold text-cyan-700'
+                        ? 'border-primary/30 bg-primary/5 font-semibold text-primary'
                         : 'border-border hover:border-muted-foreground/30 text-muted-foreground'
                     )}
                   >

@@ -183,7 +183,7 @@ export function NovaSettingsTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BrainCircuit className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+            <BrainCircuit className="h-5 w-5 text-primary" />
             À propos de Nova
           </CardTitle>
         </CardHeader>

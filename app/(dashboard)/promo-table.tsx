@@ -80,7 +80,7 @@ export default function PromoTable({ promos, onDelete, isConfirmingDelete, cance
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="text-sm text-red-200 hover:text-red-800 transition-colors"
+                  className="text-sm text-destructive-foreground hover:text-destructive-foreground/80 transition-colors"
                   onClick={() => onDelete(promo.key)}
                 >
                   Supprimer

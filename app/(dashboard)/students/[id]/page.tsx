@@ -464,13 +464,13 @@ export default function StudentPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-blue-500/5">
+        <Card className="bg-primary/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Progression</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div className="text-2xl font-bold text-primary">
               {completedTracks}/{totalTracksToDisplay}
             </div>
             <p className="text-xs text-muted-foreground">Troncs complétés</p>
@@ -516,7 +516,7 @@ export default function StudentPage() {
                   {track.name}
                 </span>
                 {track.completed ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <CheckCircle2 className="h-5 w-5 text-success" />
                 ) : (
                   <XCircle className="h-5 w-5 text-muted-foreground" />
                 )}
@@ -549,8 +549,8 @@ export default function StudentPage() {
                     <span
                       className={`text-sm font-medium ${
                         track.completed
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-orange-600 dark:text-orange-400'
+                          ? 'text-success'
+                          : 'text-warning'
                       }`}
                     >
                       {track.completed ? 'Complété' : 'En cours'}
@@ -683,7 +683,7 @@ export default function StudentPage() {
       <StudentAudits studentId={student.id} />
 
       {/* Alternant Section */}
-      <Card className="bg-orange-500/5">
+      <Card className="bg-warning/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Briefcase className="h-5 w-5" />
@@ -764,7 +764,7 @@ export default function StudentPage() {
       </Card>
 
       {/* Contact Actions */}
-      <Card className="bg-violet-500/5">
+      <Card className="bg-primary/5">
         <CardHeader>
           <CardTitle>Actions</CardTitle>
           <CardDescription>

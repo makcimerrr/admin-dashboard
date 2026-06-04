@@ -131,7 +131,7 @@ export function StudentMobileCard({ student, promoConfig }: StudentMobileCardPro
       onClick={handleClick}
       className={cn(
         'group rounded-lg border bg-card p-3 cursor-pointer active:bg-muted/50 transition-colors',
-        isDropout && 'bg-red-500/5 opacity-80'
+        isDropout && 'bg-destructive/5 opacity-80'
       )}
     >
       <div className="flex items-start justify-between gap-2">

@@ -352,7 +352,7 @@ export default async function PromoGroupsIndexPage(props: any) {
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
                                   Groupe #{g.groupId} — Priorité:
-                                  <span className="font-medium text-amber-700 dark:text-amber-400 ml-1">
+                                  <span className="font-medium text-warning ml-1">
                                     {g.priority}
                                   </span>
                                 </div>
@@ -364,7 +364,7 @@ export default async function PromoGroupsIndexPage(props: any) {
                               <div className="flex flex-col items-end gap-2 text-xs text-muted-foreground">
                                 En attente
                                 {g.priority === 'urgent' && (
-                                  <span className="text-red-600 dark:text-red-400 font-semibold">
+                                  <span className="text-destructive font-semibold">
                                     Urgent
                                   </span>
                                 )}
@@ -456,7 +456,7 @@ export default async function PromoGroupsIndexPage(props: any) {
                                 </div>
                               </div>
                               <div className="flex flex-col items-end gap-2 text-xs">
-                                <div className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                <div className="text-success font-medium">
                                   Audité
                                 </div>
                                 {g.auditDate && (

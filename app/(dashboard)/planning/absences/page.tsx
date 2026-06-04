@@ -153,9 +153,9 @@ function countWeeks(start: string, end: string) {
 }
 
 function getTypeBadgeClasses(type: string) {
-  if (type === 'vacation') return 'bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200 dark:border-orange-800';
-  if (type === 'sick') return 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 border-red-200 dark:border-red-800';
-  return 'bg-purple-100 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 border-purple-200 dark:border-purple-800';
+  if (type === 'vacation') return 'bg-warning/10 text-warning border-warning/30';
+  if (type === 'sick') return 'bg-destructive/10 text-destructive border-destructive/30';
+  return 'bg-muted text-muted-foreground border-border';
 }
 
 export default function AbsencesPage() {
@@ -391,7 +391,7 @@ export default function AbsencesPage() {
         icon={Calendar}
         title="Absences"
         description="Ajoutez et gérez les absences de votre équipe"
-        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-success/15 text-success border-success/30' : 'bg-warning/15 text-warning border-warning/30'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       >
         {grouped.length > 0 && (
           <Badge variant="secondary" className="text-[10px] px-1.5 h-5">

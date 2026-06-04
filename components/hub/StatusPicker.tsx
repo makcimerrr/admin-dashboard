@@ -21,8 +21,8 @@ interface StatusPickerProps {
 
 const statuses: { label: string; value: TaskStatus; icon: typeof Check; color: string }[] = [
   { label: "À faire", value: "NOT_STARTED", icon: Circle, color: "text-muted-foreground" },
-  { label: "En cours", value: "IN_PROGRESS", icon: Clock, color: "text-orange-500" },
-  { label: "Terminé", value: "COMPLETED", icon: Check, color: "text-green-500" },
+  { label: "En cours", value: "IN_PROGRESS", icon: Clock, color: "text-warning" },
+  { label: "Terminé", value: "COMPLETED", icon: Check, color: "text-success" },
 ];
 
 export const StatusPicker = ({ task, onStatusChange }: StatusPickerProps) => {

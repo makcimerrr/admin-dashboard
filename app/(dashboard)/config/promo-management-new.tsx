@@ -355,7 +355,7 @@ export default function PromoManagement() {
                       {promo.incomplete && (
                         <Badge
                           variant="outline"
-                          className="bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400"
+                          className="bg-warning/15 text-warning border-warning/30"
                           title="Existe dans la table promotions mais sans configuration de dates. Ajoute-la via le formulaire pour compléter."
                         >
                           Configuration incomplète

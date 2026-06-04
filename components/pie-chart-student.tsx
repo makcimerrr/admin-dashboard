@@ -170,7 +170,7 @@ export function Component({ title, eventID, keyPromo }: PieChartProps) {
   if (error) {
     return (
       <Card className="flex items-center justify-center h-64">
-        <p className="text-lg font-medium text-red-500">
+        <p className="text-lg font-medium text-destructive">
           Erreur : {error}. Veuillez réessayer.
         </p>
       </Card>

@@ -26,16 +26,16 @@ interface PromoStatusDisplayProps {
 
 function percentageBadgeClass(pct: number): string {
   if (pct >= 80)
-    return 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400';
+    return 'bg-success/15 text-success border-success/30';
   if (pct >= 50)
-    return 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400';
-  return 'bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-400';
+    return 'bg-warning/15 text-warning border-warning/30';
+  return 'bg-destructive/15 text-destructive border-destructive/30';
 }
 
 function percentageRingClass(pct: number): string {
-  if (pct >= 80) return 'text-emerald-500';
-  if (pct >= 50) return 'text-amber-500';
-  return 'text-red-500';
+  if (pct >= 80) return 'text-success';
+  if (pct >= 50) return 'text-warning';
+  return 'text-destructive';
 }
 
 interface ProgressStats {
@@ -223,19 +223,19 @@ function SinglePromoView({
   // Formation terminée
   if (typeof project === 'string' && project.toLowerCase() === 'fin') {
     return (
-      <div className="flex items-center gap-4 p-4 rounded-xl border bg-emerald-500/10 border-emerald-500/30">
-        <div className="p-3 rounded-xl bg-emerald-500/15">
-          <Trophy className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+      <div className="flex items-center gap-4 p-4 rounded-xl border bg-success/10 border-success/30">
+        <div className="p-3 rounded-xl bg-success/15">
+          <Trophy className="h-6 w-6 text-success" />
         </div>
         <div className="flex-1">
-          <h3 className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
+          <h3 className="text-lg font-bold text-success">
             Formation Terminée
           </h3>
           <p className="text-sm text-muted-foreground">
             Tous les projets ont été complétés avec succès
           </p>
         </div>
-        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20">
+        <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20">
           <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
           Validé
         </Badge>
@@ -289,21 +289,21 @@ function SinglePromoView({
 
               {/* Stats cards */}
               <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                <div className="p-3 rounded-lg bg-success/10 border border-success/30">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Sur le projet</span>
+                    <CheckCircle2 className="h-4 w-4 text-success" />
+                    <span className="text-xs text-success font-medium">Sur le projet</span>
                   </div>
-                  <p className="text-xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">
+                  <p className="text-xl font-bold text-success mt-1">
                     {stats.onExpectedProject}
                   </p>
                 </div>
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
                   <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                    <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">Hors projet</span>
+                    <AlertCircle className="h-4 w-4 text-warning" />
+                    <span className="text-xs text-warning font-medium">Hors projet</span>
                   </div>
-                  <p className="text-xl font-bold text-amber-700 dark:text-amber-400 mt-1">
+                  <p className="text-xl font-bold text-warning mt-1">
                     {stats.totalStudents - stats.onExpectedProject}
                   </p>
                 </div>
@@ -327,35 +327,35 @@ function SinglePromoView({
                     label="En avance"
                     value={stats.offProjectStats.ahead}
                     icon={TrendingUp}
-                    tone="bg-blue-500/10 text-blue-700 dark:text-blue-400"
+                    tone="bg-primary/10 text-primary"
                   />
                   <OffProjectTile
                     show={stats.offProjectStats.late > 0}
                     label="En retard"
                     value={stats.offProjectStats.late}
                     icon={TrendingDown}
-                    tone="bg-red-500/10 text-red-700 dark:text-red-400"
+                    tone="bg-destructive/10 text-destructive"
                   />
                   <OffProjectTile
                     show={stats.offProjectStats.specialty > 0}
                     label="Spécialité"
                     value={stats.offProjectStats.specialty}
                     icon={Zap}
-                    tone="bg-orange-500/10 text-orange-700 dark:text-orange-400"
+                    tone="bg-warning/10 text-warning"
                   />
                   <OffProjectTile
                     show={stats.offProjectStats.validated > 0}
                     label="Validé"
                     value={stats.offProjectStats.validated}
                     icon={CheckCircle2}
-                    tone="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    tone="bg-success/10 text-success"
                   />
                   <OffProjectTile
                     show={stats.offProjectStats.notValidated > 0}
                     label="Non validé"
                     value={stats.offProjectStats.notValidated}
                     icon={AlertCircle}
-                    tone="bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                    tone="bg-destructive/10 text-destructive"
                   />
                 </div>
               </div>
@@ -462,18 +462,18 @@ function AllPromosView({
             key={promoKey}
             className={cn(
               'flex items-center gap-4 p-3 rounded-xl border transition-colors hover:bg-muted/30',
-              isFin && 'bg-emerald-500/10 border-emerald-500/30',
+              isFin && 'bg-success/10 border-success/30',
             )}
           >
             {/* Icon */}
             <div
               className={cn(
                 'p-2 rounded-lg',
-                isFin ? 'bg-emerald-500/15' : 'bg-primary/10',
+                isFin ? 'bg-success/15' : 'bg-primary/10',
               )}
             >
               {isFin ? (
-                <Trophy className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <Trophy className="h-5 w-5 text-success" />
               ) : isMultiChoice ? (
                 <Workflow className="h-5 w-5 text-primary" />
               ) : (
@@ -489,7 +489,7 @@ function AllPromosView({
             {/* Project info */}
             <div className="flex-1 min-w-0">
               {isFin ? (
-                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                <span className="text-sm font-medium text-success">
                   Formation Terminée
                 </span>
               ) : isMultiChoice ? (
@@ -536,7 +536,7 @@ function AllPromosView({
               className={cn(
                 'shrink-0 w-14 justify-center font-bold',
                 isFin
-                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                  ? 'bg-success/15 text-success border-success/30'
                   : stats
                     ? percentageBadgeClass(stats.percentage)
                     : 'bg-muted text-muted-foreground',

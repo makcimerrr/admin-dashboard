@@ -141,7 +141,7 @@ export default function HolidayManager() {
               variant="destructive"
               size="sm"
               onClick={() => handleDeleteHoliday(name)}
-              className="text-sm text-red-200 hover:text-red-800 transition-colors self-start sm:self-auto shrink-0"
+              className="text-sm text-destructive-foreground hover:text-destructive-foreground/80 transition-colors self-start sm:self-auto shrink-0"
             >
               Supprimer
             </Button>

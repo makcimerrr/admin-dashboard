@@ -202,9 +202,9 @@ function FilterPill({
 }) {
   const toneClass =
     tone === 'urgent'
-      ? 'text-red-700 dark:text-red-400'
+      ? 'text-destructive'
       : tone === 'warning'
-        ? 'text-amber-700 dark:text-amber-400'
+        ? 'text-warning'
         : 'text-foreground';
   return (
     <button
@@ -234,14 +234,14 @@ function ActionRow({ group }: { group: PendingGroup }) {
   const isUrgent = group.priority === 'urgent';
   const isWarning = group.priority === 'warning';
   const rowTint = isUrgent
-    ? 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10'
+    ? 'border-destructive/30 bg-destructive/5 hover:bg-destructive/10'
     : isWarning
-      ? 'border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10'
+      ? 'border-warning/30 bg-warning/5 hover:bg-warning/10'
       : 'hover:bg-muted/30';
   const dotIcon = isUrgent ? (
-    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0" />
+    <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
   ) : isWarning ? (
-    <Flag className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+    <Flag className="h-4 w-4 text-warning shrink-0" />
   ) : (
     <ClipboardCheck className="h-4 w-4 text-muted-foreground shrink-0" />
   );

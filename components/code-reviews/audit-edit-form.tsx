@@ -180,7 +180,7 @@ export default function AuditEditForm({
                         }
                       }}
                     />
-                    {r.absent && <UserX className="h-4 w-4 text-orange-600 dark:text-orange-400" />}
+                    {r.absent && <UserX className="h-4 w-4 text-warning" />}
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-sm">Validé</label>

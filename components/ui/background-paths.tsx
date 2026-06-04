@@ -20,7 +20,7 @@ function FloatingPaths({ position }: { position: number }) {
     return (
         <div className="absolute inset-0 pointer-events-none">
             <svg
-                className="w-full h-full text-slate-950 dark:text-white"
+                className="w-full h-full text-foreground"
                 viewBox="0 0 696 316"
                 fill="none"
             >
@@ -58,7 +58,7 @@ export function BackgroundPaths({
     const words = title.split(" ");
 
     return (
-        <div className="fixed min-h-screen w-full flex items-center justify-center overflow-hidden bg-white dark:bg-slate-950">
+        <div className="fixed min-h-screen w-full flex items-center justify-center overflow-hidden bg-background">
             <div className="absolute inset-0">
                 <FloatingPaths position={1} />
                 <FloatingPaths position={-1} />

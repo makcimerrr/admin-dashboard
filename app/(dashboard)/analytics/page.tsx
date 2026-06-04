@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Activity className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                  <Activity className="h-4 w-4 text-primary" />
                   Performance par tronc
                 </CardTitle>
                 <CardDescription>
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <Target className="h-4 w-4 text-success" />
                   Distribution des statuts
                 </CardTitle>
                 <CardDescription>

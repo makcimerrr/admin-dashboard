@@ -142,8 +142,8 @@ export function PlanningToolbar({
         className={cn(
           'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-2 transition-all duration-150',
           paintMode === 'erase'
-            ? 'border-red-500 bg-red-500 text-white scale-105 shadow-lg'
-            : 'border-border hover:border-red-500/50 hover:bg-red-500/10',
+            ? 'border-destructive bg-destructive text-destructive-foreground scale-105 shadow-lg'
+            : 'border-border hover:border-destructive/50 hover:bg-destructive/10',
           !isEditor && 'opacity-50 cursor-not-allowed'
         )}
         title="Mode gomme — cliquez sur un créneau pour le supprimer"
@@ -194,7 +194,7 @@ export function PlanningToolbar({
         </div>
       )}
       {paintMode === 'erase' && (
-        <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+        <div className="flex items-center gap-2 text-xs text-destructive">
           <Eraser className="h-3 w-3 animate-pulse" />
           <span>Mode gomme actif</span>
         </div>

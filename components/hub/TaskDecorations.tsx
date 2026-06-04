@@ -56,11 +56,11 @@ export const TaskStatusBadge = ({ status }: { status: TaskStatus }) => {
     },
     IN_PROGRESS: {
       label: "En cours",
-      className: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30",
+      className: "bg-warning/15 text-warning border-warning/30",
     },
     COMPLETED: {
       label: "Terminé",
-      className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+      className: "bg-success/15 text-success border-success/30",
     },
   };
 

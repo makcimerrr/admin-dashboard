@@ -146,7 +146,7 @@ export function ActionsCell({
         {isDropout ? (
           <DropdownMenuItem
             onClick={(e) => handleDropoutAction(e, 'reactivate')}
-            className="cursor-pointer text-green-600 focus:text-green-600"
+            className="cursor-pointer text-success focus:text-success"
           >
             <UserCheck className="h-4 w-4 mr-2" />
             Réactiver l'étudiant
@@ -154,7 +154,7 @@ export function ActionsCell({
         ) : (
           <DropdownMenuItem
             onClick={(e) => handleDropoutAction(e, 'dropout')}
-            className="cursor-pointer text-orange-600 focus:text-orange-600"
+            className="cursor-pointer text-warning focus:text-warning"
           >
             <UserX className="h-4 w-4 mr-2" />
             Marquer en perdition
@@ -174,7 +174,7 @@ export function ActionsCell({
         ) : (
           <DropdownMenuItem
             onClick={(e) => handleAlternantAction(e, 'set')}
-            className="cursor-pointer text-blue-600 focus:text-blue-600"
+            className="cursor-pointer text-primary focus:text-primary"
           >
             <Briefcase className="h-4 w-4 mr-2" />
             Marquer alternant
@@ -184,7 +184,7 @@ export function ActionsCell({
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          className="text-red-600 focus:text-red-600 cursor-pointer"
+          className="text-destructive focus:text-destructive cursor-pointer"
           onClick={(e) => e.stopPropagation()}
         >
           <form action={deleteStudent} className="w-full">

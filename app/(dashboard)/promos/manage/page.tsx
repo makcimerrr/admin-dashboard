@@ -612,8 +612,8 @@ export default function PromosManagePage() {
                         <TableRow key={student.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 rounded-full bg-red-500/10 flex items-center justify-center">
-                                <UserX className="h-4 w-4 text-red-600 dark:text-red-400" />
+                              <div className="h-9 w-9 rounded-full bg-destructive/10 flex items-center justify-center">
+                                <UserX className="h-4 w-4 text-destructive" />
                               </div>
                               <div>
                                 <div className="font-medium">
@@ -701,8 +701,8 @@ export default function PromosManagePage() {
                     {dropoutStudents.map((student) => (
                       <li key={student.id} className="px-6 py-3 space-y-2">
                         <div className="flex items-start gap-3">
-                          <div className="h-9 w-9 shrink-0 rounded-full bg-red-500/10 flex items-center justify-center">
-                            <UserX className="h-4 w-4 text-red-600 dark:text-red-400" />
+                          <div className="h-9 w-9 shrink-0 rounded-full bg-destructive/10 flex items-center justify-center">
+                            <UserX className="h-4 w-4 text-destructive" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-2">

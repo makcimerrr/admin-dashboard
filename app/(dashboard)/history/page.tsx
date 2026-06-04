@@ -56,7 +56,7 @@ export default function HistoryPage() {
   }, [type, action, userEmail]);
 
   if (planningPermission !== "editor") {
-    return <div className="p-8 text-center text-lg font-bold text-yellow-700 dark:text-yellow-400">Accès réservé aux éditeurs.</div>;
+    return <div className="p-8 text-center text-lg font-bold text-warning">Accès réservé aux éditeurs.</div>;
   }
 
   function renderUserInfo(entry: HistoryEntry) {
@@ -98,10 +98,10 @@ export default function HistoryPage() {
             return (
               <div key={key} className="flex gap-1.5 items-start">
                 <span className="font-semibold min-w-[60px] text-muted-foreground">{key}</span>
-                <span className="bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 text-red-700 dark:text-red-400 break-all max-w-[150px]">
+                <span className="bg-destructive/10 border border-destructive/30 rounded px-1.5 py-0.5 text-destructive break-all max-w-[150px]">
                   {before[key] === undefined ? "" : JSON.stringify(before[key])}
                 </span>
-                <span className="bg-emerald-500/10 border border-emerald-500/30 rounded px-1.5 py-0.5 text-emerald-700 dark:text-emerald-400 break-all max-w-[150px]">
+                <span className="bg-success/10 border border-success/30 rounded px-1.5 py-0.5 text-success break-all max-w-[150px]">
                   {after[key] === undefined ? "" : JSON.stringify(after[key])}
                 </span>
               </div>
@@ -132,7 +132,7 @@ export default function HistoryPage() {
         icon={Clock}
         title="Historique"
         description="Suivi des modifications du planning"
-        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-success/15 text-success border-success/30' : 'bg-warning/15 text-warning border-warning/30'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       />
 
       <FilterToolbar>

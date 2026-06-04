@@ -184,7 +184,7 @@ export default function ProjectsManager() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDeleteProject(tech, id)}
-                      className="text-sm text-red-200 hover:text-red-800 transition-colors"
+                      className="text-sm text-destructive-foreground hover:text-destructive-foreground/80 transition-colors"
                     >
                       Supprimer
                     </Button>

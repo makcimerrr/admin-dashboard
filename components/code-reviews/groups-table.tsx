@@ -372,13 +372,13 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
             <SelectItem value="all">Toutes priorités</SelectItem>
             <SelectItem value="urgent">
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-3 w-3 text-rose-500" />
+                <AlertTriangle className="h-3 w-3 text-destructive" />
                 Urgent
               </div>
             </SelectItem>
             <SelectItem value="warning">
               <div className="flex items-center gap-2">
-                <Flag className="h-3 w-3 text-amber-500" />
+                <Flag className="h-3 w-3 text-warning" />
                 Warning
               </div>
             </SelectItem>
@@ -478,7 +478,7 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger>
-                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                                <AlertTriangle className="h-4 w-4 text-destructive" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 {group.warningsCount} warning(s)
@@ -512,7 +512,7 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                                       member.isDropout ? 'line-through opacity-50' : ''
                                     }`}
                                   >
-                                    {isCaptain && <Crown className="h-2.5 w-2.5 text-amber-500 flex-shrink-0" />}
+                                    {isCaptain && <Crown className="h-2.5 w-2.5 text-warning flex-shrink-0" />}
                                     {member.login}
                                   </span>
                                 </TooltipTrigger>
@@ -680,16 +680,16 @@ export function GroupsTable({ promoId, groups, stats }: GroupsTableProps) {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onClick={() => handleSetManualPriority(group.groupId, 'urgent')}
-                                  className={getEffectivePriority(group) === 'urgent' ? 'bg-rose-500/10' : ''}
+                                  className={getEffectivePriority(group) === 'urgent' ? 'bg-destructive/10' : ''}
                                 >
-                                  <AlertTriangle className="h-4 w-4 mr-2 text-rose-500" />
+                                  <AlertTriangle className="h-4 w-4 mr-2 text-destructive" />
                                   Urgent
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleSetManualPriority(group.groupId, 'warning')}
-                                  className={getEffectivePriority(group) === 'warning' ? 'bg-amber-500/10' : ''}
+                                  className={getEffectivePriority(group) === 'warning' ? 'bg-warning/10' : ''}
                                 >
-                                  <Flag className="h-4 w-4 mr-2 text-amber-500" />
+                                  <Flag className="h-4 w-4 mr-2 text-warning" />
                                   Warning
                                 </DropdownMenuItem>
                                 <DropdownMenuItem

@@ -109,10 +109,10 @@ function Tile({ label, value, hint, tone, loading }: {
   label: string; value: React.ReactNode; hint?: React.ReactNode; tone?: 'blue' | 'amber' | 'rose' | 'emerald'; loading?: boolean;
 }) {
   const toneText: Record<string, string> = {
-    blue: 'text-blue-700 dark:text-blue-400',
-    amber: 'text-amber-700 dark:text-amber-400',
-    rose: 'text-rose-700 dark:text-rose-400',
-    emerald: 'text-emerald-700 dark:text-emerald-400',
+    blue: 'text-primary',
+    amber: 'text-warning',
+    rose: 'text-destructive',
+    emerald: 'text-success',
   };
   return (
     <Card className="p-3">
@@ -133,7 +133,7 @@ function WeekDelta({ delta }: { delta: number }) {
   if (delta === 0) return <span className="text-xs text-muted-foreground inline-flex items-center"><Minus className="h-3 w-3" /></span>;
   const up = delta > 0;
   return (
-    <span className={cn('text-xs inline-flex items-center gap-0.5', up ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+    <span className={cn('text-xs inline-flex items-center gap-0.5', up ? 'text-success' : 'text-destructive')}>
       {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
       {up ? '+' : ''}{delta}
     </span>
@@ -234,7 +234,7 @@ function PromoRow({ promo, onTargetSaved }: { promo: PromoCockpit; onTargetSaved
                     onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setEditing(false); setTarget(String(promo.weeklyTarget)); } }}
                   />
                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={save} disabled={saving}>
-                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-emerald-600" />}
+                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-success" />}
                   </Button>
                 </div>
               ) : (
@@ -249,7 +249,7 @@ function PromoRow({ promo, onTargetSaved }: { promo: PromoCockpit; onTargetSaved
             </div>
             {hasTarget && (
               <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden w-full max-w-[180px]">
-                <div className={cn('h-full rounded-full', pct >= 100 ? 'bg-emerald-500' : 'bg-primary')} style={{ width: `${pct}%` }} />
+                <div className={cn('h-full rounded-full', pct >= 100 ? 'bg-success' : 'bg-primary')} style={{ width: `${pct}%` }} />
               </div>
             )}
           </div>
@@ -292,7 +292,7 @@ function Metric({ label, value, icon, tone }: { label: string; value: number; ic
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground inline-flex items-center gap-1">{icon}{label}</p>
-      <p className={cn('text-lg font-bold tabular-nums', tone === 'rose' && value > 0 && 'text-rose-700 dark:text-rose-400')}>{value}</p>
+      <p className={cn('text-lg font-bold tabular-nums', tone === 'rose' && value > 0 && 'text-destructive')}>{value}</p>
     </div>
   );
 }

@@ -81,10 +81,10 @@ function shortPromo(name: string): string {
 
 const TAB_CONFIG: { key: Category | 'all'; label: string; icon: React.ElementType; color: string }[] = [
   { key: 'all', label: 'Tous', icon: ClipboardCheck, color: 'text-foreground' },
-  { key: 'overdue', label: 'Dépassement', icon: ShieldAlert, color: 'text-red-600 dark:text-red-400' },
-  { key: 'warning', label: 'Warning', icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400' },
-  { key: 'pending', label: 'En attente', icon: CircleDot, color: 'text-blue-600 dark:text-blue-400' },
-  { key: 'done', label: 'Audité', icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400' },
+  { key: 'overdue', label: 'Dépassement', icon: ShieldAlert, color: 'text-destructive' },
+  { key: 'warning', label: 'Warning', icon: AlertTriangle, color: 'text-warning' },
+  { key: 'pending', label: 'En attente', icon: CircleDot, color: 'text-primary' },
+  { key: 'done', label: 'Audité', icon: CheckCircle2, color: 'text-success' },
 ];
 
 /**
@@ -99,9 +99,9 @@ function whyBadge(
 ): { label: string; tooltip: string; tone: string } | null {
   if (cat === 'done') return null;
   const tonesRed =
-    'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30';
+    'bg-destructive/15 text-destructive border border-destructive/30';
   const tonesAmber =
-    'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30';
+    'bg-warning/15 text-warning border border-warning/30';
   if (!row.captainLogin) {
     return {
       label: 'Pas de capitaine',
@@ -634,7 +634,7 @@ export default function SuiviPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-[12px]">{row.captainLogin}</span>
                           <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${
-                            row.hasDiscordId ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                            row.hasDiscordId ? 'bg-success' : 'bg-muted-foreground/30'
                           }`} title={row.hasDiscordId ? 'Discord lié' : 'Sans Discord'} />
                         </div>
                       ) : <span className="text-muted-foreground">—</span>}
@@ -645,9 +645,9 @@ export default function SuiviPage() {
                       {cat === 'done' ? (
                         <span className="text-muted-foreground/40">—</span>
                       ) : !row.captainLogin ? (
-                        <span className="text-amber-600 dark:text-amber-400 text-[10px]">Pas de capitaine</span>
+                        <span className="text-warning text-[10px]">Pas de capitaine</span>
                       ) : !row.hasDiscordId ? (
-                        <span className="text-amber-600 dark:text-amber-400 text-[10px]" title="Le capitaine n'a pas lié son Discord">
+                        <span className="text-warning text-[10px]" title="Le capitaine n'a pas lié son Discord">
                           Pas de Discord
                         </span>
                       ) : !row.notifiedAuditAt ? (
@@ -694,8 +694,8 @@ export default function SuiviPage() {
                           const days = Math.floor(daysSinceNotified(row));
                           if (days === 0) return <span className="text-muted-foreground/40">—</span>;
                           const left = 14 - days;
-                          if (days >= 14) return <span className="text-red-600 dark:text-red-400 font-semibold text-[11px]">{days}j</span>;
-                          if (days >= 10) return <span className="text-amber-600 dark:text-amber-400 text-[11px]">{days}j <span className="text-muted-foreground">({left}j rest.)</span></span>;
+                          if (days >= 14) return <span className="text-destructive font-semibold text-[11px]">{days}j</span>;
+                          if (days >= 10) return <span className="text-warning text-[11px]">{days}j <span className="text-muted-foreground">({left}j rest.)</span></span>;
                           return <span className="text-muted-foreground text-[11px]">{days}j</span>;
                         })()}
                       </TableCell>
@@ -706,7 +706,7 @@ export default function SuiviPage() {
                       <TableCell>
                         {row.auditId ? (
                           <div>
-                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400">{fmtShort(row.auditCreatedAt)}</span>
+                            <span className="text-[11px] text-success">{fmtShort(row.auditCreatedAt)}</span>
                             {row.auditorName && <span className="text-[10px] text-muted-foreground ml-1">({row.auditorName})</span>}
                           </div>
                         ) : (
@@ -813,7 +813,7 @@ export default function SuiviPage() {
                         <span className="inline-flex items-center gap-1 text-xs">
                           <span className="font-mono">{row.captainLogin}</span>
                           <span
-                            className={`inline-block h-1.5 w-1.5 rounded-full ${row.hasDiscordId ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`}
+                            className={`inline-block h-1.5 w-1.5 rounded-full ${row.hasDiscordId ? 'bg-success' : 'bg-muted-foreground/30'}`}
                             title={row.hasDiscordId ? 'Discord lié' : 'Sans Discord'}
                           />
                         </span>
@@ -830,15 +830,15 @@ export default function SuiviPage() {
                       )}
                       {showDelayColumn && days > 0 && (
                         <span className={`text-[10px] ${
-                          days >= 14 ? 'text-red-600 dark:text-red-400 font-semibold'
-                          : days >= 10 ? 'text-amber-600 dark:text-amber-400'
+                          days >= 14 ? 'text-destructive font-semibold'
+                          : days >= 10 ? 'text-warning'
                           : 'text-muted-foreground'
                         }`}>
                           {days}j
                         </span>
                       )}
                       {showDoneColumns && row.auditId && (
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                        <span className="text-[10px] text-success">
                           ✓ {fmtShort(row.auditCreatedAt)}
                           {row.auditorName && <span className="text-muted-foreground"> ({row.auditorName})</span>}
                         </span>

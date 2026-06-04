@@ -192,7 +192,7 @@ export default function SkillsPage() {
                     <TableCell>
                       {r.profile && r.profile.currentStreakDays > 0 ? (
                         <span className="inline-flex items-center gap-1 text-sm">
-                          <Flame className="h-3.5 w-3.5 text-orange-500" />
+                          <Flame className="h-3.5 w-3.5 text-warning" />
                           {r.profile.currentStreakDays}j
                         </span>
                       ) : (
@@ -233,7 +233,7 @@ export default function SkillsPage() {
                         )}
                         {r.profile && r.profile.currentStreakDays > 0 && (
                           <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                            <Flame className="h-3 w-3 text-orange-500" />
+                            <Flame className="h-3 w-3 text-warning" />
                             {r.profile.currentStreakDays}j
                           </span>
                         )}
@@ -268,7 +268,7 @@ function Stat({ label, value, loading }: { label: string; value: React.ReactNode
 }
 
 function EngagementBar({ score }: { score: number }) {
-  const tone = score >= 75 ? 'bg-emerald-500' : score >= 50 ? 'bg-blue-500' : score >= 25 ? 'bg-amber-500' : 'bg-orange-500';
+  const tone = score >= 75 ? 'bg-success' : score >= 50 ? 'bg-primary' : score >= 25 ? 'bg-warning' : 'bg-warning';
   return (
     <div className="flex items-center gap-2">
       <div className="h-2 w-20 bg-muted rounded-full overflow-hidden">

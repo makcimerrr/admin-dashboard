@@ -78,7 +78,7 @@ const components = {
   li: (props: any) => <li className="mt-2" {...props} />,
   a: (props: any) => (
     <a
-      className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+      className="font-medium text-primary hover:underline"
       {...props}
     />
   ),
@@ -88,32 +88,32 @@ const components = {
   table: (props: any) => (
     <div className="my-6 w-full overflow-y-auto">
       <table
-        className="w-full border-collapse border border-gray-300 dark:border-gray-700"
+        className="w-full border-collapse border border-border"
         {...props}
       />
     </div>
   ),
   tr: (props: any) => (
     <tr
-      className="m-0 border-t border-gray-300 dark:border-gray-700 p-0 even:bg-gray-100 dark:even:bg-gray-800"
+      className="m-0 border-t border-border p-0 even:bg-muted/50"
       {...props}
     />
   ),
   th: (props: any) => (
     <th
-      className="border px-4 py-2 text-left font-bold bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 [&[align=center]]:text-center [&[align=right]]:text-right"
+      className="border px-4 py-2 text-left font-bold bg-muted text-foreground [&[align=center]]:text-center [&[align=right]]:text-right"
       {...props}
     />
   ),
   td: (props: any) => (
     <td
-      className="border px-4 py-2 text-left text-gray-800 dark:text-gray-200 [&[align=center]]:text-center [&[align=right]]:text-right"
+      className="border px-4 py-2 text-left text-foreground [&[align=center]]:text-center [&[align=right]]:text-right"
       {...props}
     />
   ),
   pre: (props: any) => (
     <pre
-      className="mb-6 mt-6 overflow-x-auto rounded-lg border p-4 bg-gray-50 dark:bg-gray-900"
+      className="mb-6 mt-6 overflow-x-auto rounded-lg border p-4 bg-muted/50"
       {...props}
     />
   ),
@@ -133,7 +133,7 @@ const components = {
   ),
   CodeBlock: ({ language, code }: { language: string; code: string }) => (
     <Card className="my-6">
-      <CardHeader className="flex flex-row items-center justify-between bg-gray-100 dark:bg-gray-800 rounded-t-lg">
+      <CardHeader className="flex flex-row items-center justify-between bg-muted rounded-t-lg">
         <div className="flex items-center">
           <Terminal className="h-4 w-4 mr-2" />
           <CardTitle className="text-sm">{language}</CardTitle>
@@ -143,8 +143,8 @@ const components = {
         </Button>
       </CardHeader>
       <CardContent className="p-0">
-        <pre className="p-4 overflow-auto bg-gray-50 dark:bg-gray-900 rounded-b-lg">
-          <code className="text-sm text-gray-800 dark:text-gray-200">
+        <pre className="p-4 overflow-auto bg-muted/50 rounded-b-lg">
+          <code className="text-sm text-foreground">
             {code}
           </code>
         </pre>
@@ -156,7 +156,7 @@ const components = {
       className={
         props.variant === 'outline'
           ? 'variant-outline'
-          : 'bg-blue-600 hover:bg-blue-700'
+          : 'bg-primary hover:bg-primary/90'
       }
     >
       {props.children}
@@ -192,11 +192,11 @@ export default async function DocPage({ params }: PageProps) {
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Badge className="bg-blue-600 hover:bg-blue-700">API</Badge>
+          <Badge className="bg-primary hover:bg-primary/90">API</Badge>
           <Badge variant="outline">v1.0</Badge>
         </div>
         <h1 className="text-4xl font-bold tracking-tight">{data.title}</h1>
-        <p className="text-lg text-gray-500 dark:text-gray-400">
+        <p className="text-lg text-muted-foreground">
           {data.description}
         </p>
       </div>

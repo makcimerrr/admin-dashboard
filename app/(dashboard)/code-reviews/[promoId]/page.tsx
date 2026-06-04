@@ -159,13 +159,13 @@ async function PromoOverview({ promoId }: { promoId: string }) {
                 Groupes finished
               </p>
             </div>
-            <div className="text-center p-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+            <div className="text-center p-4 rounded-lg border border-success/30 bg-success/10 text-success">
               <p className="text-2xl md:text-3xl font-bold tabular-nums">
                 {auditedGroups}
               </p>
               <p className="text-xs opacity-80 mt-1">Audités</p>
             </div>
-            <div className="text-center p-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+            <div className="text-center p-4 rounded-lg border border-warning/30 bg-warning/10 text-warning">
               <p className="text-2xl md:text-3xl font-bold tabular-nums">
                 {pendingGroups}
               </p>

@@ -139,7 +139,7 @@ export default function EmployeesPage() {
         icon={Users}
         title="Employés"
         description="Ajoutez et gérez les membres de votre équipe"
-        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-success/15 text-success border-success/30' : 'bg-warning/15 text-warning border-warning/30'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       >
         <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
           {activeCount} actif{activeCount > 1 ? 's' : ''}

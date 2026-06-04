@@ -226,9 +226,9 @@ function StatTile({
 }) {
   const toneClass =
     tone === 'urgent'
-      ? 'text-red-600 dark:text-red-400'
+      ? 'text-destructive'
       : tone === 'warning'
-        ? 'text-amber-600 dark:text-amber-400'
+        ? 'text-warning'
         : 'text-muted-foreground';
   return (
     <Card className="p-3">

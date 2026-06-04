@@ -31,10 +31,10 @@ interface EmployeeWithSchedule extends Employee {
 const daysOfWeek = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 
 const slotTypeConfig: Record<string, { label: string; bgColor: string; borderColor: string; textColor: string }> = {
-  work: { label: 'Travail', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/30', textColor: 'text-blue-700 dark:text-blue-400' },
-  vacation: { label: 'Congés', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/30', textColor: 'text-orange-700 dark:text-orange-400' },
-  sick: { label: 'Arrêt maladie', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', textColor: 'text-red-700 dark:text-red-400' },
-  personal: { label: 'Personnel', bgColor: 'bg-violet-500/10', borderColor: 'border-violet-500/30', textColor: 'text-violet-700 dark:text-violet-400' },
+  work: { label: 'Travail', bgColor: 'bg-primary/10', borderColor: 'border-primary/30', textColor: 'text-primary' },
+  vacation: { label: 'Congés', bgColor: 'bg-warning/10', borderColor: 'border-warning/30', textColor: 'text-warning' },
+  sick: { label: 'Arrêt maladie', bgColor: 'bg-destructive/10', borderColor: 'border-destructive/30', textColor: 'text-destructive' },
+  personal: { label: 'Personnel', bgColor: 'bg-muted', borderColor: 'border-border', textColor: 'text-muted-foreground' },
 };
 
 export default function PlanningPage() {
@@ -316,7 +316,7 @@ export default function PlanningPage() {
         description={isEditor ? 'Cliquez sur un crayon puis peignez la grille' : 'Consultation'}
         badge={
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>
+            <Badge variant="outline" className={planningPermission === 'editor' ? 'bg-success/15 text-success border-success/30' : 'bg-warning/15 text-warning border-warning/30'}>
               {planningPermission === 'editor' ? 'EDITOR' : 'READER'}
             </Badge>
             {savingCount > 0 && (
@@ -342,18 +342,18 @@ export default function PlanningPage() {
                 type="checkbox"
                 checked={isHackaton}
                 onChange={(e) => handleToggleHackaton(e.target.checked)}
-                className="accent-pink-600 w-4 h-4"
+                className="accent-warning w-4 h-4"
               />
-              <span className="font-semibold text-pink-600 dark:text-pink-400">Hackaton</span>
+              <span className="font-semibold text-warning">Hackaton</span>
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer text-xs">
               <input
                 type="checkbox"
                 checked={isPiscine}
                 onChange={(e) => handleTogglePiscine(e.target.checked)}
-                className="accent-cyan-600 w-4 h-4"
+                className="accent-primary w-4 h-4"
               />
-              <span className="font-semibold text-cyan-600 dark:text-cyan-400">Piscine</span>
+              <span className="font-semibold text-primary">Piscine</span>
             </label>
           </>
         )}
