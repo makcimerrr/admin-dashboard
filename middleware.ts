@@ -102,6 +102,23 @@ export async function middleware(req: NextRequest) {
   const url = req.nextUrl.pathname;
 
   // ========================================
+  // 0a. PROXY DONNÉES ÉTUDIANTS (admin only, toutes méthodes)
+  // ========================================
+  // /api/zone01/* (ex. /api/zone01/external/[login]) renvoie des données
+  // gitea/Zone01 par étudiant ; ces pages sont admin-only → on protège aussi le
+  // proxy (sinon données exposées sans auth). GET inclus.
+  if (url.startsWith('/api/zone01/')) {
+    const role = await resolveRole(req);
+    if (role === null) {
+      return NextResponse.json({ error: 'Authentification requise' }, { status: 401 });
+    }
+    if (!ADMIN_ROLES.includes(role)) {
+      return NextResponse.json({ error: 'Accès réservé aux administrateurs' }, { status: 403 });
+    }
+    return NextResponse.next();
+  }
+
+  // ========================================
   // 0. MUTATIONS DE CONFIG EXPOSÉES EN API
   // ========================================
   // Le matcher exclut /api : ces routes de config n'auraient sinon AUCUNE garde
@@ -286,6 +303,7 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
     // Exceptions : on inclut explicitement les mutations de config exposées en API
     '/api/projects/:path*',
-    '/api/holidays/:path*'
+    '/api/holidays/:path*',
+    '/api/zone01/:path*'
   ]
 };
