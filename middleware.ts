@@ -307,7 +307,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     // Protéger toutes les routes sauf les fichiers statiques et API
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|icon.svg).*)',
     // Exceptions : on inclut explicitement les mutations de config exposées en API
     '/api/projects/:path*',
     '/api/holidays/:path*',
