@@ -234,6 +234,13 @@ export async function middleware(req: NextRequest) {
             path: '/',
           });
 
+          // ⚠️ Cookie `role` UI-ONLY (volontairement NON httpOnly).
+          // Il sert uniquement à l'affichage côté Server/Client Components ;
+          // il N'EST JAMAIS source de vérité pour une décision d'autorisation.
+          // L'autorisation serveur s'appuie sur stackServerApp.getUser() /
+          // getServerSession(), et le gating Edge sur resolveRole() (qui ne fait
+          // confiance qu'au cookie httpOnly `stack-role`, re-validé via Stack Auth).
+          // Ne PAS le passer en httpOnly (casserait l'UI).
           response.cookies.set('role', role, { path: '/' });
 
           /*if (stackRoleCookie && stackRoleCookie.value !== role) {
