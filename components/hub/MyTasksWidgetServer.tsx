@@ -110,9 +110,9 @@ async function getMyTasks(userId: string, displayName?: string | null): Promise<
 function getStatusIcon(status: MyTask["status"]) {
   switch (status) {
     case "COMPLETED":
-      return <CheckSquare className="h-4 w-4 text-green-500" />;
+      return <CheckSquare className="h-4 w-4 text-success" />;
     case "IN_PROGRESS":
-      return <Clock className="h-4 w-4 text-orange-500" />;
+      return <Clock className="h-4 w-4 text-warning" />;
     default:
       return <Circle className="h-4 w-4 text-muted-foreground" />;
   }

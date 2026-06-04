@@ -426,10 +426,10 @@ export function PlanningGrid({
             return (
               <div key={day} className="flex flex-col min-h-0 border-r last:border-r-0">
                 {/* Day header */}
-                <div className={cn('h-14 border-b flex flex-col items-center justify-center px-1 flex-shrink-0', holidayName && 'bg-red-500/10')}>
+                <div className={cn('h-14 border-b flex flex-col items-center justify-center px-1 flex-shrink-0', holidayName && 'bg-destructive/10')}>
                   <div className="text-xs font-bold capitalize">{day}</div>
                   <div className="text-[10px] text-muted-foreground">{formatDate(currentWeekDates[dayIndex])}</div>
-                  {holidayName && <div className="text-[9px] text-red-600 dark:text-red-400 font-medium truncate max-w-full">{holidayName}</div>}
+                  {holidayName && <div className="text-[9px] text-destructive font-medium truncate max-w-full">{holidayName}</div>}
                   {isWeekend && isEditor && (
                     <Select value={weekendWorker?.id ?? 'none'} onValueChange={(empId) => handleSaturdayEmployeeChange(empId === 'none' ? '' : empId, day)}>
                       <SelectTrigger className="h-5 text-[10px] w-full max-w-[100px] px-1 border-0 bg-transparent"><SelectValue placeholder="Personne" /></SelectTrigger>
@@ -465,8 +465,8 @@ export function PlanningGrid({
                         className={cn(
                           'flex-1 border-b border-border/30',
                           isPaintModeActive && !isInteracting && 'hover:bg-muted/40',
-                          isPaintModeActive && paintMode === 'erase' && !isInteracting && 'hover:bg-red-500/10',
-                          holidayName && 'bg-red-500/5'
+                          isPaintModeActive && paintMode === 'erase' && !isInteracting && 'hover:bg-destructive/10',
+                          holidayName && 'bg-destructive/5'
                         )}
                         style={isPaintPreview && activeEmployee ? { backgroundColor: paintMode === 'erase' ? '#ef444420' : `${activeEmployee.color}30` } : undefined}
                       />
@@ -523,8 +523,8 @@ export function PlanningGrid({
                         onDragStart={(e) => e.preventDefault()}
                         className={cn(
                           'absolute rounded-md shadow-sm overflow-hidden group',
-                          isDragging && 'ring-2 ring-green-400/60 shadow-xl opacity-90',
-                          resizeSlot?.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && 'ring-2 ring-blue-400/60 shadow-xl'
+                          isDragging && 'ring-2 ring-success/60 shadow-xl opacity-90',
+                          resizeSlot?.employeeId === employee.id && resizeSlot.day === day && resizeSlot.slotIndex === slotIndex && 'ring-2 ring-primary/60 shadow-xl'
                         )}
                         style={{
                           top: isDragging && dragGhostTime
@@ -587,15 +587,15 @@ export function PlanningGrid({
 
                         {/* Delete button */}
                         {isEditor && !isPaintModeActive && (
-                          <button type="button" data-action="delete" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); handleSlotDelete(employee.id, day, slotIndex); }} className="absolute top-0.5 right-0.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-white/80 dark:bg-black/40 hover:bg-red-100 dark:hover:bg-red-900/50 z-50 shadow-sm">
-                            <Trash2 className="h-2.5 w-2.5 text-red-600" />
+                          <button type="button" data-action="delete" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); handleSlotDelete(employee.id, day, slotIndex); }} className="absolute top-0.5 right-0.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-background/80 hover:bg-destructive/20 z-50 shadow-sm">
+                            <Trash2 className="h-2.5 w-2.5 text-destructive" />
                           </button>
                         )}
 
                         {/* Drag preview */}
                         {isDragging && dragGhostTime && (() => {
                           const ghostEnd = timeToMinutes(dragGhostTime) + dragSlot.duration;
-                          return (<div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap shadow z-50 pointer-events-none">{dragGhostTime} - {minutesToTime(ghostEnd)}</div>);
+                          return (<div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-success text-success-foreground text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap shadow z-50 pointer-events-none">{dragGhostTime} - {minutesToTime(ghostEnd)}</div>);
                         })()}
                       </div>
                     );
@@ -648,7 +648,7 @@ export function PlanningGrid({
           <div className="border-t my-1" />
           <button
             type="button"
-            className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-red-500/10 text-red-600 dark:text-red-400 text-left"
+            className="w-full flex items-center gap-2 px-3 py-1.5 hover:bg-destructive/10 text-destructive text-left"
             onClick={() => { handleSlotDelete(contextMenu.employeeId, contextMenu.day, contextMenu.slotIndex); setContextMenu(null); }}
           >
             <Trash2 className="h-3.5 w-3.5" />

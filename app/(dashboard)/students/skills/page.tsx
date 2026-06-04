@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useData } from '@/lib/client-cache';
 import { PageHeader } from '@/components/page-header';
 import { StudentsSubnav } from '../_components/students-subnav';
 import { Card, CardContent } from '@/components/ui/card';
@@ -55,29 +56,19 @@ interface Promo {
 }
 
 export default function SkillsPage() {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [promos, setPromos] = useState<Promo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedPromo, setSelectedPromo] = useState('all');
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetch('/api/promotions/active')
-      .then((r) => r.json())
-      .then((d) => d.success && setPromos(d.promotions))
-      .catch(() => {});
-  }, []);
+  const { data: promosData } = useData<{ success: boolean; promotions: Promo[] }>(
+    '/api/promotions/active',
+  );
+  const promos = promosData?.success ? promosData.promotions : [];
 
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/students/skills?promo=${encodeURIComponent(selectedPromo)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setRows(d.students);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [selectedPromo]);
+  const { data: skillsData, isLoading: loading } = useData<{
+    success: boolean;
+    students: Row[];
+  }>(`/api/students/skills?promo=${encodeURIComponent(selectedPromo)}`);
+  const rows = skillsData?.success ? skillsData.students : [];
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -192,7 +183,7 @@ export default function SkillsPage() {
                     <TableCell>
                       {r.profile && r.profile.currentStreakDays > 0 ? (
                         <span className="inline-flex items-center gap-1 text-sm">
-                          <Flame className="h-3.5 w-3.5 text-orange-500" />
+                          <Flame className="h-3.5 w-3.5 text-warning" />
                           {r.profile.currentStreakDays}j
                         </span>
                       ) : (
@@ -233,7 +224,7 @@ export default function SkillsPage() {
                         )}
                         {r.profile && r.profile.currentStreakDays > 0 && (
                           <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                            <Flame className="h-3 w-3 text-orange-500" />
+                            <Flame className="h-3 w-3 text-warning" />
                             {r.profile.currentStreakDays}j
                           </span>
                         )}
@@ -268,7 +259,7 @@ function Stat({ label, value, loading }: { label: string; value: React.ReactNode
 }
 
 function EngagementBar({ score }: { score: number }) {
-  const tone = score >= 75 ? 'bg-emerald-500' : score >= 50 ? 'bg-blue-500' : score >= 25 ? 'bg-amber-500' : 'bg-orange-500';
+  const tone = score >= 75 ? 'bg-success' : score >= 50 ? 'bg-primary' : score >= 25 ? 'bg-warning' : 'bg-warning';
   return (
     <div className="flex items-center gap-2">
       <div className="h-2 w-20 bg-muted rounded-full overflow-hidden">

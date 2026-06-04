@@ -1,6 +1,6 @@
 // Zone01 cross-app icons, inspired from @01normandie/launcher v2.0.0
-// Reworked to use our theme's CSS variables (var(--primary)) instead of
-// the hardcoded blue from the original.
+// Reworked to inherit `currentColor` only — no hardcoded accent colors — so the
+// icons tint with the active sidebar token (blue when active, muted otherwise).
 
 interface IconProps {
   size?: number;
@@ -19,14 +19,14 @@ export function Icon01Deck({ size = 22, className }: IconProps) {
     >
       <rect x="0" y="3" width="16" height="11" rx="2" fill="currentColor" fillOpacity="0.25" />
       <rect x="2" y="1.5" width="16" height="11" rx="2" fill="currentColor" fillOpacity="0.45" />
-      <rect x="4" y="0" width="16" height="12" rx="2" fill="currentColor" />
+      <rect x="4" y="0" width="16" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.4" />
       <text
         x="12"
         y="9.5"
         textAnchor="middle"
         fontSize="7"
         fontWeight="900"
-        fill="white"
+        fill="currentColor"
         fontFamily="monospace"
       >
         01
@@ -59,8 +59,8 @@ export function IconEmargement({ size = 22, className }: IconProps) {
       />
       <line x1="7" y1="8" x2="15" y2="8" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.2" strokeLinecap="round" />
       <line x1="7" y1="11" x2="13" y2="11" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.2" strokeLinecap="round" />
-      <circle cx="15.5" cy="15.5" r="3.5" fill="#10b981" />
-      <path d="M13.8 15.5l1.1 1.1 1.9-2" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="15.5" cy="15.5" r="3.5" fill="currentColor" />
+      <path d="M13.8 15.5l1.1 1.1 1.9-2" stroke="hsl(var(--sidebar-background))" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -80,7 +80,7 @@ export function IconIntra({ size = 22, className }: IconProps) {
       <circle cx="18" cy="5" r="2.5" fill="currentColor" />
       <path d="M6 16L9.5 12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" opacity="0.5" />
       <path d="M13 9.5L16.5 6.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="18" cy="5" r="1.2" fill="white" />
+      <circle cx="18" cy="5" r="1.2" fill="hsl(var(--sidebar-background))" />
     </svg>
   );
 }
@@ -94,7 +94,6 @@ export function IconDashboard({ size = 22, className }: IconProps) {
       <rect x="12" y="3" width="7" height="6" rx="1.5" fill="currentColor" />
       <rect x="3" y="14" width="7" height="5" rx="1.5" fill="currentColor" fillOpacity="0.3" />
       <rect x="12" y="11" width="7" height="8" rx="1.5" fill="currentColor" fillOpacity="0.7" />
-      <circle cx="15.5" cy="6" r="0.9" fill="white" />
     </svg>
   );
 }
@@ -108,8 +107,7 @@ export function IconPedagogie({ size = 22, className }: IconProps) {
       <path d="M3 9 L11 5.5 L19 9 L11 12.5 Z" fill="currentColor" />
       {/* Tassel */}
       <path d="M17 9 L17 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-      <circle cx="17" cy="14.5" r="1.3" fill="#10b981" />
-      <circle cx="17" cy="14.5" r="0.5" fill="white" />
+      <circle cx="17" cy="14.5" r="1.3" fill="currentColor" />
     </svg>
   );
 }
@@ -122,7 +120,7 @@ export function IconPlanning({ size = 22, className }: IconProps) {
       <line x1="7" y1="2.5" x2="7" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       <line x1="15" y1="2.5" x2="15" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       <rect x="6" y="11" width="3" height="3" rx="0.5" fill="currentColor" fillOpacity="0.45" />
-      <rect x="11" y="11" width="5" height="3" rx="0.5" fill="#10b981" />
+      <rect x="11" y="11" width="5" height="3" rx="0.5" fill="currentColor" />
       <rect x="6" y="15.5" width="6" height="2.2" rx="0.5" fill="currentColor" fillOpacity="0.4" />
     </svg>
   );
@@ -138,7 +136,7 @@ export function IconOutils({ size = 22, className }: IconProps) {
         fillOpacity="0.55"
       />
       <circle cx="11" cy="9.5" r="2.4" fill="currentColor" />
-      <circle cx="11" cy="9.5" r="1" fill="white" />
+      <circle cx="11" cy="9.5" r="1" fill="hsl(var(--sidebar-background))" />
       {/* Sparkle */}
       <path d="M17 16 L18 18 L17 20 L16 18 Z" fill="currentColor" fillOpacity="0.7" />
       <path d="M14 18 L15 18.5 L14 19 L13.5 18.5 Z" fill="currentColor" fillOpacity="0.5" />
@@ -154,8 +152,8 @@ export function IconConfig({ size = 22, className }: IconProps) {
       {/* Folder body */}
       <path d="M3 9 L19 9 L19 17 Q19 18.5 17.5 18.5 L4.5 18.5 Q3 18.5 3 17 Z" fill="currentColor" />
       {/* Lines */}
-      <rect x="6" y="12" width="10" height="1.2" rx="0.6" fill="white" fillOpacity="0.5" />
-      <rect x="6" y="15" width="6" height="1.2" rx="0.6" fill="white" fillOpacity="0.5" />
+      <rect x="6" y="12" width="10" height="1.2" rx="0.6" fill="hsl(var(--sidebar-background))" fillOpacity="0.6" />
+      <rect x="6" y="15" width="6" height="1.2" rx="0.6" fill="hsl(var(--sidebar-background))" fillOpacity="0.6" />
     </svg>
   );
 }
@@ -169,9 +167,9 @@ export function IconParametres({ size = 22, className }: IconProps) {
       <circle cx="14" cy="6" r="2.2" fill="currentColor" />
       <circle cx="8" cy="11" r="2.2" fill="currentColor" />
       <circle cx="15" cy="16" r="2.2" fill="currentColor" />
-      <circle cx="14" cy="6" r="0.7" fill="white" />
-      <circle cx="8" cy="11" r="0.7" fill="white" />
-      <circle cx="15" cy="16" r="0.7" fill="white" />
+      <circle cx="14" cy="6" r="0.7" fill="hsl(var(--sidebar-background))" />
+      <circle cx="8" cy="11" r="0.7" fill="hsl(var(--sidebar-background))" />
+      <circle cx="15" cy="16" r="0.7" fill="hsl(var(--sidebar-background))" />
     </svg>
   );
 }
@@ -182,7 +180,6 @@ export function IconSun({ size = 18, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 22 22" fill="none" aria-hidden="true" className={className}>
       <circle cx="11" cy="11" r="4.2" fill="currentColor" />
-      <circle cx="11" cy="11" r="1.6" fill="white" fillOpacity="0.7" />
       <g stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
         <line x1="11" y1="2.5" x2="11" y2="4.5" />
         <line x1="11" y1="17.5" x2="11" y2="19.5" />

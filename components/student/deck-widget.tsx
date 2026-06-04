@@ -74,7 +74,7 @@ export function DeckWidget() {
                 <p className="text-xs font-semibold leading-tight">Apprenti du Deck</p>
               </div>
             </div>
-            <Badge className="text-[9px] h-4 px-1.5 bg-orange-500/15 text-orange-700 dark:text-orange-400 hover:bg-orange-500/20 gap-0.5">
+            <Badge className="text-[9px] h-4 px-1.5 bg-warning/15 text-warning hover:bg-warning/20 gap-0.5">
               <Flame className="h-2.5 w-2.5" />
               {MOCK_DECK.streak}j
             </Badge>
@@ -113,7 +113,7 @@ export function DeckWidget() {
           <div className="rounded-lg border p-2">
             <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Classement</p>
             <div className="flex items-baseline gap-1">
-              <Trophy className="h-3 w-3 text-amber-500" />
+              <Trophy className="h-3 w-3 text-warning" />
               <span className="text-sm font-bold">#{MOCK_DECK.weeklyRank}</span>
               <span className="text-[10px] text-muted-foreground">hebdo</span>
             </div>

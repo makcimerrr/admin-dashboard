@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { toast } from 'sonner';
+import { useData } from '@/lib/client-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -75,20 +76,14 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'second
 };
 
 function progressColor(pct: number): string {
-  if (pct >= 75) return 'bg-emerald-500';
-  if (pct >= 50) return 'bg-orange-500';
-  return 'bg-red-500';
+  if (pct >= 75) return 'bg-success';
+  if (pct >= 50) return 'bg-warning';
+  return 'bg-destructive';
 }
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function SpecialtiesPage() {
-  // Data
-  const [specialties, setSpecialties] = useState<SpecialtyDef[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [projectsList, setProjectsList] = useState<string[]>([]);
-  const [promos, setPromos] = useState<PromoInfo[]>([]);
-
   // Filters
   const [selectedSpec, setSelectedSpec] = useState<string>('');
   const [selectedPromo, setSelectedPromo] = useState<string>('all');
@@ -102,53 +97,58 @@ export default function SpecialtiesPage() {
   // Expand
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  // Loading
-  const [loading, setLoading] = useState(true);
-  const [loadingStudents, setLoadingStudents] = useState(false);
+  // ── Init: specialties + promos (independent, fetched in parallel) ──────────
 
-  // ── Init ──────────────────────────────────────────────────────────────────
+  const { data: specRaw, error: specError } = useData<SpecialtyDef[] | { specialties: SpecialtyDef[] }>(
+    '/api/specialties',
+  );
+  const { data: promoRaw, error: promoError } = useData<{ promotions: PromoInfo[] }>(
+    '/api/promotions/active',
+  );
+
+  const specialties = useMemo<SpecialtyDef[]>(
+    () => (Array.isArray(specRaw) ? specRaw : specRaw?.specialties || []),
+    [specRaw],
+  );
+  const promos = promoRaw?.promotions || [];
+  // Initial page skeleton shows until both init calls have resolved.
+  const loading = specRaw === undefined || promoRaw === undefined;
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/specialties').then((r) => r.json()),
-      fetch('/api/promotions/active').then((r) => r.json()),
-    ])
-      .then(([specData, promoData]) => {
-        const specs: SpecialtyDef[] = Array.isArray(specData) ? specData : specData.specialties || [];
-        setSpecialties(specs);
-        if (specs.length > 0) setSelectedSpec(specs[0].name);
-        setPromos(promoData.promotions || []);
-      })
-      .catch(() => toast.error('Impossible de charger les données'))
-      .finally(() => setLoading(false));
-  }, []);
+    if (specError || promoError) toast.error('Impossible de charger les données');
+  }, [specError, promoError]);
+
+  // Default the spec selector to the first specialty once they load.
+  useEffect(() => {
+    if (!selectedSpec && specialties.length > 0) setSelectedSpec(specialties[0].name);
+  }, [specialties, selectedSpec]);
 
   // ── Fetch students ────────────────────────────────────────────────────────
 
-  const loadStudents = useCallback(async () => {
-    if (!selectedSpec) return;
-    setLoadingStudents(true);
-    setExpandedRows(new Set());
-    try {
-      const params = new URLSearchParams();
-      if (selectedPromo !== 'all') params.set('eventId', selectedPromo);
-      const res = await fetch(`/api/specialties/${encodeURIComponent(selectedSpec)}/students?${params}`);
-      if (!res.ok) throw new Error('Fetch failed');
-      const data = await res.json();
-      setStudents(data.students || []);
-      setProjectsList(data.projectsList || []);
-    } catch {
-      toast.error('Impossible de charger les étudiants');
-      setStudents([]);
-      setProjectsList([]);
-    } finally {
-      setLoadingStudents(false);
-    }
+  const studentsKey = useMemo(() => {
+    if (!selectedSpec) return null;
+    const params = new URLSearchParams();
+    if (selectedPromo !== 'all') params.set('eventId', selectedPromo);
+    return `/api/specialties/${encodeURIComponent(selectedSpec)}/students?${params}`;
   }, [selectedSpec, selectedPromo]);
 
+  const {
+    data: studentsData,
+    error: studentsError,
+    isLoading: loadingStudents,
+  } = useData<{ students?: Student[]; projectsList?: string[] }>(studentsKey);
+
+  const students = studentsData?.students || [];
+  const projectsList = studentsData?.projectsList || [];
+
   useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
+    if (studentsError) toast.error('Impossible de charger les étudiants');
+  }, [studentsError]);
+
+  // Collapse expanded rows whenever the underlying student query changes.
+  useEffect(() => {
+    setExpandedRows(new Set());
+  }, [studentsKey]);
 
   // ── Filter + Sort ─────────────────────────────────────────────────────────
 
@@ -332,7 +332,7 @@ export default function SpecialtiesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</div>
+            <div className="text-2xl font-bold text-primary">{stats.active}</div>
           </CardContent>
         </Card>
         <Card>
@@ -342,7 +342,7 @@ export default function SpecialtiesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.completed}</div>
+            <div className="text-2xl font-bold text-success">{stats.completed}</div>
           </CardContent>
         </Card>
         <Card>
@@ -506,8 +506,8 @@ function ExpandedProjectList({
               key={projName}
               className={cn(
                 'flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors',
-                isFinished && 'bg-emerald-500/5 border-emerald-500/20',
-                isWorking && 'bg-blue-500/5 border-blue-500/20',
+                isFinished && 'bg-success/5 border-success/20',
+                isWorking && 'bg-primary/5 border-primary/20',
                 notStarted && 'bg-muted/30 border-border text-muted-foreground/60'
               )}
             >
@@ -515,8 +515,8 @@ function ExpandedProjectList({
                 {idx + 1}.
               </span>
 
-              {isFinished && <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />}
-              {isWorking && <Circle className="h-4 w-4 text-blue-500 fill-blue-500/20 flex-shrink-0" />}
+              {isFinished && <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />}
+              {isWorking && <Circle className="h-4 w-4 text-primary fill-primary/20 flex-shrink-0" />}
               {notStarted && <Lock className="h-4 w-4 text-muted-foreground/40 flex-shrink-0" />}
 
               <span className={cn('flex-1 truncate', notStarted && 'italic')}>
@@ -524,12 +524,12 @@ function ExpandedProjectList({
               </span>
 
               {isFinished && proj?.grade != null && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500/30 text-emerald-700 dark:text-emerald-400">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-success/30 text-success">
                   {proj.grade}
                 </Badge>
               )}
               {isWorking && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-500/30 text-blue-700 dark:text-blue-400">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
                   En cours
                 </Badge>
               )}

@@ -205,14 +205,14 @@ export function AuditForm({
                                 <Badge
                                     key={index}
                                     variant="outline"
-                                    className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 pr-1"
+                                    className="bg-warning/15 text-warning border-warning/30 pr-1"
                                 >
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     {warning}
                                     <button
                                         type="button"
                                         onClick={() => removeGlobalWarning(index)}
-                                        className="ml-1 p-0.5 hover:bg-amber-500/20 rounded"
+                                        className="ml-1 p-0.5 hover:bg-warning/20 rounded"
                                     >
                                         <X className="h-3 w-3" />
                                     </button>
@@ -322,7 +322,7 @@ function StudentResultCard({
                                     <span
                                         className={
                                             field.value
-                                                ? 'text-orange-600 dark:text-orange-400 font-medium'
+                                                ? 'text-warning font-medium'
                                                 : 'text-muted-foreground'
                                         }
                                     >
@@ -351,7 +351,7 @@ function StudentResultCard({
                                             result.absent
                                                 ? 'text-muted-foreground/50'
                                                 : field.value
-                                                  ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+                                                  ? 'text-success font-medium'
                                                   : 'text-muted-foreground'
                                         }
                                     >
@@ -418,14 +418,14 @@ function StudentResultCard({
                                 <Badge
                                     key={wIndex}
                                     variant="outline"
-                                    className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs pr-1"
+                                    className="bg-warning/15 text-warning border-warning/30 text-xs pr-1"
                                 >
                                     <AlertTriangle className="h-3 w-3 mr-1" />
                                     {warning}
                                     <button
                                         type="button"
                                         onClick={() => onRemoveWarning(wIndex)}
-                                        className="ml-1 p-0.5 hover:bg-amber-500/20 rounded"
+                                        className="ml-1 p-0.5 hover:bg-warning/20 rounded"
                                     >
                                         <X className="h-3 w-3" />
                                     </button>

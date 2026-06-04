@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useData, mutateKey } from "@/lib/client-cache";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,9 +21,14 @@ const colors = [
   "#6366F1", "#EC4899", "#14B8A6", "#F97316", "#84CC16",
 ];
 
+const EMPLOYEES_KEY = "/api/employees";
+
 export default function EmployeesPage() {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading, error: employeesError } = useData<Employee[]>(EMPLOYEES_KEY);
+  const employees = data ?? [];
+  // Met à jour le cache localement (optimiste) sans refetch — préserve le comportement existant.
+  const setEmployees = (next: Employee[]) =>
+    mutateKey<Employee[]>(EMPLOYEES_KEY, () => Promise.resolve(next));
   const [newEmployee, setNewEmployee] = useState({
     name: "", initial: "", role: "", email: "", phone: "",
   });
@@ -38,22 +44,10 @@ export default function EmployeesPage() {
     : 'reader';
 
   useEffect(() => {
-    fetchEmployees();
-  }, []);
-
-  const fetchEmployees = async () => {
-    try {
-      const response = await fetch("/api/employees");
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
-      }
-    } catch (error) {
+    if (employeesError) {
       toast({ title: "Erreur", description: "Impossible de charger les employés", variant: "destructive" });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [employeesError, toast]);
 
   const handleAddEmployee = async () => {
     if (!newEmployee.name.trim() || !newEmployee.role.trim()) {
@@ -139,7 +133,7 @@ export default function EmployeesPage() {
         icon={Users}
         title="Employés"
         description="Ajoutez et gérez les membres de votre équipe"
-        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-success/15 text-success border-success/30' : 'bg-warning/15 text-warning border-warning/30'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       >
         <Badge variant="secondary" className="text-[10px] px-1.5 h-5">
           {activeCount} actif{activeCount > 1 ? 's' : ''}

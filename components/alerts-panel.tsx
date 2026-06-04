@@ -109,11 +109,11 @@ export default function AlertsPanel({
   const getAlertIcon = (type: Alert['type']) => {
     switch (type) {
       case 'danger':
-        return <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
+        return <AlertCircle className="h-5 w-5 text-destructive" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />;
+        return <AlertTriangle className="h-5 w-5 text-warning" />;
       case 'info':
-        return <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />;
+        return <Info className="h-5 w-5 text-primary" />;
     }
   };
 
@@ -148,13 +148,13 @@ export default function AlertsPanel({
   const CollapsedView = () => (
     <Card
       className={`border-2 flex items-center justify-between px-4 py-3 ${
-        hasCriticalAlerts ? 'border-red-500/50 shadow-md shadow-red-500/10' : ''
+        hasCriticalAlerts ? 'border-destructive/50 shadow-md shadow-destructive/10' : ''
       }`}
     >
       <div className="flex items-center gap-3">
         <div className="p-1">
           {hasCriticalAlerts ? (
-            <BellRing className="h-5 w-5 text-red-600 dark:text-red-400 animate-pulse" />
+            <BellRing className="h-5 w-5 text-destructive animate-pulse" />
           ) : (
             <Bell className="h-5 w-5 text-muted-foreground" />
           )}
@@ -199,13 +199,13 @@ export default function AlertsPanel({
   if (compact) {
     return (
       <Card
-        className={hasCriticalAlerts ? 'border-red-500/50 bg-red-500/5' : ''}
+        className={hasCriticalAlerts ? 'border-destructive/50 bg-destructive/5' : ''}
       >
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {hasCriticalAlerts ? (
-                <BellRing className="h-5 w-5 text-red-600 dark:text-red-400 animate-pulse" />
+                <BellRing className="h-5 w-5 text-destructive animate-pulse" />
               ) : (
                 <Bell className="h-5 w-5 text-muted-foreground" />
               )}
@@ -295,14 +295,14 @@ export default function AlertsPanel({
   // Full expanded view
   return (
     <Card
-      className={hasCriticalAlerts ? 'border-red-500/50' : ''}
+      className={hasCriticalAlerts ? 'border-destructive/50' : ''}
     >
-      <CardHeader className={hasCriticalAlerts ? 'bg-red-500/5' : ''}>
+      <CardHeader className={hasCriticalAlerts ? 'bg-destructive/5' : ''}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500/10 rounded-lg">
+            <div className="p-2 bg-destructive/10 rounded-lg">
               {hasCriticalAlerts ? (
-                <BellRing className="h-6 w-6 text-red-600 dark:text-red-400 animate-pulse" />
+                <BellRing className="h-6 w-6 text-destructive animate-pulse" />
               ) : (
                 <Bell className="h-6 w-6 text-muted-foreground" />
               )}
@@ -348,9 +348,9 @@ export default function AlertsPanel({
                 key={alert.id}
                 className={`flex items-start gap-4 p-4 rounded-lg border-2 transition-colors group hover:bg-muted/30 ${
                   alert.severity === 'critical'
-                    ? 'bg-red-500/10 border-red-500/30'
+                    ? 'bg-destructive/10 border-destructive/30'
                     : alert.severity === 'high'
-                      ? 'bg-orange-500/10 border-orange-500/30'
+                      ? 'bg-warning/10 border-warning/30'
                       : 'bg-muted/30 border-border'
                 }`}
               >

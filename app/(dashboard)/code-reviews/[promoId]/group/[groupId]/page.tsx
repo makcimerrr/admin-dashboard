@@ -180,19 +180,19 @@ export default async function GroupDetailPage({ params }: PageProps) {
             <div className="text-sm text-muted-foreground">Statuts</div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
                 <div className="text-sm font-medium">{validatedCount} validé</div>
               </div>
               <div className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                <XCircle className="h-4 w-4 text-destructive" />
                 <div className="text-sm font-medium">{notValidatedCount} non validé</div>
               </div>
               <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <AlertTriangle className="h-4 w-4 text-warning" />
                 <div className="text-sm font-medium">{warningsCount} warnings</div>
               </div>
               <div className="flex items-center gap-2">
-                <UserX className="h-4 w-4 text-orange-500" />
+                <UserX className="h-4 w-4 text-warning" />
                 <div className="text-sm font-medium">{absentCount} absent(s)</div>
               </div>
             </div>
@@ -260,12 +260,12 @@ export default async function GroupDetailPage({ params }: PageProps) {
                           <>
                             <div className="flex items-center gap-1.5">
                               {absent ? (
-                                <UserX className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                                <UserX className="h-4 w-4 text-warning flex-shrink-0" />
                               ) : (
                                 <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               )}
-                              <span className={`truncate max-w-[11rem] ${absent ? 'text-orange-600 dark:text-orange-400' : ''}`}>{name}</span>
-                              {isCaptain && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
+                              <span className={`truncate max-w-[11rem] ${absent ? 'text-warning' : ''}`}>{name}</span>
+                              {isCaptain && <Crown className="h-3 w-3 text-warning flex-shrink-0" />}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -273,7 +273,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger>
-                                      <span className="text-amber-600 dark:text-amber-400 text-xs cursor-default" aria-hidden>
+                                      <span className="text-warning text-xs cursor-default" aria-hidden>
                                         ⚠
                                       </span>
                                     </TooltipTrigger>
@@ -285,9 +285,9 @@ export default async function GroupDetailPage({ params }: PageProps) {
                               ) : null}
 
                               {absent ? (
-                                <Badge variant="outline" className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30 text-xs">ABS</Badge>
+                                <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30 text-xs">ABS</Badge>
                               ) : validated ? (
-                                <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs">V</Badge>
+                                <Badge variant="outline" className="bg-success/15 text-success border-success/30 text-xs">V</Badge>
                               ) : (
                                 <Badge variant="destructive" className="text-xs">NV</Badge>
                               )}
@@ -309,7 +309,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                   </div>
 
               {(audit.warnings?.length ?? 0) > 0 ? (
-                <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400">
+                <div className="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/30 text-warning">
                   <p className="font-medium flex items-center gap-2 mb-2">
                     <AlertTriangle className="h-4 w-4" />
                     Warnings globaux
@@ -350,7 +350,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                           <div className="font-medium flex items-center gap-1.5">
                             {result.studentLogin}
                             {captainLogin !== null && result.studentLogin === captainLogin && (
-                              <Crown className="h-3.5 w-3.5 text-amber-500" />
+                              <Crown className="h-3.5 w-3.5 text-warning" />
                             )}
                           </div>
                         </div>
@@ -358,17 +358,17 @@ export default async function GroupDetailPage({ params }: PageProps) {
 
                       <div className="flex items-center gap-2">
                         {result.absent ? (
-                          <Badge variant="outline" className="bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30">
+                          <Badge variant="outline" className="bg-warning/15 text-warning border-warning/30">
                             <UserX className="h-3 w-3 mr-1" />
                             Absent
                           </Badge>
                         ) : result.validated ? (
-                          <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">Validé</Badge>
+                          <Badge variant="outline" className="bg-success/15 text-success border-success/30">Validé</Badge>
                         ) : (
                           <Badge variant="destructive">Non validé</Badge>
                         )}
                         {(result.warnings?.length ?? 0) > 0 && (
-                          <Badge variant="outline" className="text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">{result.warnings?.length} W</Badge>
+                          <Badge variant="outline" className="text-warning border-warning/30 bg-warning/10">{result.warnings?.length} W</Badge>
                         )}
                       </div>
                     </div>
@@ -388,7 +388,7 @@ export default async function GroupDetailPage({ params }: PageProps) {
                             <Badge
                               key={i}
                               variant="outline"
-                              className="text-xs bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400"
+                              className="text-xs bg-warning/15 text-warning border-warning/30"
                             >
                               <AlertTriangle className="h-3 w-3 mr-1" />
                               {w}

@@ -338,14 +338,14 @@ const AdminScreen: React.FC = () => {
         {/* Complément */}
         {selectedType === 'complement' && (
           <div>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Définition:</strong>{' '}
               {formData.definition || 'Aucune définition'}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Réponse:</strong> {formData.answer || 'Aucune réponse'}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Indices:</strong>{' '}
               {formData.hints
                 ? formData.hints.split(',').join(', ')
@@ -357,17 +357,17 @@ const AdminScreen: React.FC = () => {
         {/* Définition */}
         {selectedType === 'definition' && (
           <div>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Options:</strong>{' '}
               {formData.options
                 ? formData.options.split(';').join(', ')
                 : 'Aucune option'}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Index de la bonne réponse:</strong>{' '}
               {formData.correctOptionIndex || 'Pas de réponse spécifiée'}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Explication:</strong>{' '}
               {formData.explanation || 'Aucune explication'}
             </p>
@@ -377,21 +377,21 @@ const AdminScreen: React.FC = () => {
         {/* Graphique */}
         {selectedType === 'graphique' && (
           <div>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Options:</strong>{' '}
               {formData.options
                 ? formData.options.split(';').join(', ')
                 : 'Aucune option'}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Index de la bonne réponse:</strong>{' '}
               {formData.correctOptionIndex || 'Pas de réponse spécifiée'}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Explication:</strong>{' '}
               {formData.explanation || 'Aucune explication'}
             </p>
-            <div className="text-sm text-gray-700 dark:text-gray-400">
+            <div className="text-sm text-muted-foreground">
               <strong>Image:</strong>{' '}
               {formData.imageUrl ? (
                 <img
@@ -409,17 +409,17 @@ const AdminScreen: React.FC = () => {
         {/* Trou */}
         {selectedType === 'trou' && (
           <div>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Phrase avec des trous:</strong>{' '}
               {formData.sentence || 'Aucune phrase définie'}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Réponses attendues:</strong>{' '}
               {formData.answers
                 ? formData.answers.split(',').join(', ')
                 : 'Aucune réponse attendue'}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               <strong>Indices:</strong>{' '}
               {formData.hints
                 ? formData.hints.split(',').join(', ')

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useData } from '@/lib/client-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,8 +51,8 @@ interface Promo {
 }
 
 export default function PromoManagement() {
-  const [promos, setPromos] = useState<Promo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading: loading, error: promosError, mutate } = useData<{ promos: Promo[] }>('/api/promos');
+  const promos = data?.promos ?? [];
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -71,23 +72,13 @@ export default function PromoManagement() {
   });
 
   useEffect(() => {
-    fetchPromos();
-  }, []);
-
-  const fetchPromos = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/promos');
-      if (!response.ok) throw new Error('Unable to fetch promotions');
-      const data = await response.json();
-      setPromos(data.promos);
-    } catch (error) {
-      console.error('Error fetching promotions:', error);
+    if (promosError) {
+      console.error('Error fetching promotions:', promosError);
       toast.error('Impossible de récupérer les promotions.');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [promosError]);
+
+  const fetchPromos = mutate;
 
   const handleAdd = async () => {
     if (!newPromo.key || !newPromo.eventId || !newPromo.title || !newPromo.dates.start || !newPromo.dates.end) {
@@ -355,7 +346,7 @@ export default function PromoManagement() {
                       {promo.incomplete && (
                         <Badge
                           variant="outline"
-                          className="bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400"
+                          className="bg-warning/15 text-warning border-warning/30"
                           title="Existe dans la table promotions mais sans configuration de dates. Ajoute-la via le formulaire pour compléter."
                         >
                           Configuration incomplète

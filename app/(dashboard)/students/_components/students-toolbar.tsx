@@ -189,7 +189,7 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
                 size="sm"
                 className={
                   currentDropoutFilter === 'dropout'
-                    ? 'bg-red-500 hover:bg-red-600'
+                    ? 'bg-destructive hover:bg-destructive/90'
                     : ''
                 }
               >
@@ -216,13 +216,13 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
               <DropdownMenuItem
                 onClick={() => updateFilter('dropout_filter', 'active')}
               >
-                <UserCheck className="h-4 w-4 mr-2 text-green-600" />
+                <UserCheck className="h-4 w-4 mr-2 text-success" />
                 Étudiants actifs
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => updateFilter('dropout_filter', 'dropout')}
               >
-                <UserX className="h-4 w-4 mr-2 text-red-600" />
+                <UserX className="h-4 w-4 mr-2 text-destructive" />
                 En perdition
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -341,11 +341,11 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
                 Golang
               </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => setTrackFilter('golang', 'true')}>
-                <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 mr-2 text-success" />
                 Golang terminé
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTrackFilter('golang', 'false')}>
-                <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                <Clock className="h-4 w-4 mr-2 text-warning" />
                 Golang en cours
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -356,13 +356,13 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
               <DropdownMenuItem
                 onClick={() => setTrackFilter('javascript', 'true')}
               >
-                <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 mr-2 text-success" />
                 Javascript terminé
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setTrackFilter('javascript', 'false')}
               >
-                <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                <Clock className="h-4 w-4 mr-2 text-warning" />
                 Javascript en cours
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -371,11 +371,11 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
                 Rust
               </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => setTrackFilter('rust', 'true')}>
-                <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 mr-2 text-success" />
                 Rust terminé
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTrackFilter('rust', 'false')}>
-                <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                <Clock className="h-4 w-4 mr-2 text-warning" />
                 Rust en cours
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -384,11 +384,11 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
                 Java
               </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => setTrackFilter('java', 'true')}>
-                <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 mr-2 text-success" />
                 Java terminé
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTrackFilter('java', 'false')}>
-                <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                <Clock className="h-4 w-4 mr-2 text-warning" />
                 Java en cours
               </DropdownMenuItem>
             </DropdownMenuContent>

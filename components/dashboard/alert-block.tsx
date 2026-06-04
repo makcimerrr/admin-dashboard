@@ -18,10 +18,10 @@ const CATEGORY_CONFIG: Record<
 };
 
 const SEVERITY_DOT: Record<string, string> = {
-  critical: 'bg-red-500',
-  high: 'bg-orange-500',
-  medium: 'bg-amber-500',
-  low: 'bg-blue-400',
+  critical: 'bg-destructive',
+  high: 'bg-warning',
+  medium: 'bg-warning',
+  low: 'bg-primary',
 };
 
 interface AlertBlockProps {
@@ -75,7 +75,7 @@ export function AlertBlock({ title, category, maxAlerts = 5 }: AlertBlockProps) 
                 className="flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
               >
                 <span
-                  className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${SEVERITY_DOT[alert.severity] ?? 'bg-gray-400'}`}
+                  className={`mt-1.5 h-1.5 w-1.5 rounded-full shrink-0 ${SEVERITY_DOT[alert.severity] ?? 'bg-muted-foreground'}`}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium leading-snug truncate">{alert.title}</p>

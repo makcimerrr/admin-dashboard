@@ -138,7 +138,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
         <>
           {parts.map((part, index) =>
               part.toLowerCase() === query.toLowerCase()
-                  ? <mark key={index} className="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">{part}</mark>
+                  ? <mark key={index} className="bg-warning/30 text-foreground px-1 rounded">{part}</mark>
                   : part
           )}
         </>
@@ -290,7 +290,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
                               <h3 className="font-medium flex items-center">
                                 {highlightText(result.title, searchQuery)}
                                 {result.isNew && (
-                                    <Badge variant="outline" className="ml-2 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                                    <Badge variant="outline" className="ml-2 bg-success/15 text-success border-success/30">
                                       Nouveau
                                     </Badge>
                                 )}
@@ -314,7 +314,7 @@ export default function DocsLayout({ children }: DocsLayoutProps) {
                                     {result.keywords
                                         .filter(kw => kw.toLowerCase().includes(searchQuery.toLowerCase()))
                                         .map((kw, i) => (
-                                            <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-800">
+                                            <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-muted">
                                   {highlightText(kw, searchQuery)}
                                 </span>
                                         ))}

@@ -5,7 +5,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { ChevronLeftIcon } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useUIPreferences, type ThemeName } from "@/contexts/ui-preferences-context"
 import { NavUser } from "@/components/nav-user"
 import { cn } from "@/lib/utils"
 import {
@@ -15,10 +14,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-  IconZone01Logo,
   IconSun,
   IconMoon,
-  IconPalette,
 } from "@/components/icons/zone-apps"
 
 import {
@@ -33,17 +30,6 @@ import {
 const STORAGE_KEY = 'app-sidebar-expanded'
 const COLLAPSED_W = 'w-16'
 const EXPANDED_W = 'md:w-52'
-
-// ─── Theme picker config ────────────────────────────────────────────────────
-
-const themes: { value: ThemeName; label: string; colors: [string, string, string] }[] = [
-  { value: 'aurora-admin', label: 'Aurora', colors: ['#ede8f5', '#7C3AED', '#6EE7B7'] },
-  { value: 'solar-desk', label: 'Solar', colors: ['#f0e8dc', '#EA580C', '#D97706'] },
-  { value: 'carbon-redline', label: 'Carbon', colors: ['#1a1d22', '#B91C1C', '#64748B'] },
-  { value: 'oceanic-flow', label: 'Oceanic', colors: ['#152535', '#0369A1', '#0891B2'] },
-  { value: 'clay-studio', label: 'Clay', colors: ['#ede6de', '#C2410C', '#6D7B52'] },
-  { value: 'blueprint', label: 'Blueprint', colors: ['#fafafa', '#2563EB', '#e2e8f0'] },
-]
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -75,26 +61,26 @@ function NavRow({
   onActivate?: () => void
 }) {
   const baseClasses = cn(
-    'relative flex items-center h-10 rounded-lg transition-colors group/item',
-    expanded ? 'w-full px-2.5 gap-2.5' : 'w-10 justify-center mx-auto',
+    'relative flex items-center h-9 rounded-md transition-colors group/item',
+    expanded ? 'w-full px-2.5 gap-3' : 'w-9 justify-center mx-auto',
     active
-      ? 'bg-primary/15 text-foreground'
-      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+      ? 'bg-sidebar-accent text-sidebar-primary'
+      : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
   )
 
   const content = (
     <>
       {active && (
-        <span className="absolute -left-2 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-primary" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-sidebar-primary" />
       )}
-      <Icon className={cn('shrink-0', expanded ? 'h-5 w-5' : 'h-5 w-5')} />
+      <Icon className="h-[18px] w-[18px] shrink-0" />
       {expanded && (
         <>
-          <span className={cn('text-[13px] truncate flex-1', active && 'font-medium text-foreground')}>
+          <span className={cn('text-[13px] truncate flex-1', active && 'font-medium')}>
             {label}
           </span>
           {external && (
-            <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">↗</span>
+            <span className="text-[10px] text-sidebar-foreground/60">↗</span>
           )}
         </>
       )}
@@ -136,8 +122,6 @@ function NavRow({
 export function AppSidebar({ user }: { user?: User | null }) {
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
-  const { colorTheme, setColorTheme } = useUIPreferences()
-  const [themePickerOpen, setThemePickerOpen] = React.useState(false)
   const isDark = theme === 'dark'
 
   // Expand/collapse state — persisted, collapsed by default
@@ -187,25 +171,32 @@ export function AppSidebar({ user }: { user?: User | null }) {
           onClick={() => setExpanded((v) => !v)}
           aria-label={expanded ? 'Réduire le menu' : 'Développer le menu'}
           className={cn(
-            'group/logo flex items-center h-12 border-b border-sidebar-border shrink-0',
-            'bg-primary text-primary-foreground',
+            'group/logo flex items-center h-14 border-b border-sidebar-border shrink-0',
+            'text-sidebar-foreground hover:bg-sidebar-accent/50',
             'transition-all duration-200',
-            expanded ? 'px-3 gap-2.5 justify-start' : 'justify-center'
+            expanded ? 'px-3.5 gap-2.5 justify-start' : 'justify-center'
           )}
         >
-          <IconZone01Logo size={20} />
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground shrink-0">
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="currentColor" aria-hidden="true">
+              <rect x="3" y="3" width="8" height="8" rx="1.6" />
+              <rect x="13" y="3" width="8" height="8" rx="1.6" />
+              <rect x="3" y="13" width="8" height="8" rx="1.6" />
+              <rect x="13" y="13" width="8" height="8" rx="1.6" />
+            </svg>
+          </span>
           {expanded && (
-            <span className="text-sm font-bold tracking-tight">Zone01</span>
+            <span className="text-sm font-semibold tracking-tight text-sidebar-accent-foreground">Zone01</span>
           )}
         </button>
 
         {/* Main nav */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2.5 space-y-0.5">
           {internalApps.length > 0 && (
             <>
               {expanded && (
-                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60 px-2 pt-1 pb-1.5">
-                  Outils admin
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/50 px-2 pt-1 pb-2">
+                  Onglets
                 </p>
               )}
               {internalApps.map((app) => (
@@ -223,9 +214,9 @@ export function AppSidebar({ user }: { user?: User | null }) {
 
           {externalApps.length > 0 && (
             <>
-              <div className="my-2 h-px bg-sidebar-border mx-1" />
+              <div className="my-3 h-px bg-sidebar-border mx-1" />
               {expanded && (
-                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60 px-2 pt-1 pb-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/50 px-2 pt-1 pb-2">
                   Outils Zone01
                 </p>
               )}
@@ -245,7 +236,12 @@ export function AppSidebar({ user }: { user?: User | null }) {
         </nav>
 
         {/* Bottom: theme tools + admin nav */}
-        <div className="border-t border-sidebar-border py-2 px-2 space-y-0.5">
+        <div className="border-t border-sidebar-border py-2 px-2.5 space-y-0.5">
+          {expanded && (
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/50 px-2 pt-1 pb-2">
+              Préférences
+            </p>
+          )}
           {/* Theme toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
@@ -253,12 +249,12 @@ export function AppSidebar({ user }: { user?: User | null }) {
                 type="button"
                 onClick={() => setTheme(isDark ? 'light' : 'dark')}
                 className={cn(
-                  'flex items-center h-9 rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors',
-                  expanded ? 'w-full px-2.5 gap-2.5' : 'w-10 justify-center mx-auto'
+                  'flex items-center h-9 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-colors',
+                  expanded ? 'w-full px-2.5 gap-3' : 'w-9 justify-center mx-auto'
                 )}
               >
-                {isDark ? <IconSun size={16} className="shrink-0" /> : <IconMoon size={16} className="shrink-0" />}
-                {expanded && <span className="text-[12px] flex-1 text-left">{isDark ? 'Mode clair' : 'Mode sombre'}</span>}
+                {isDark ? <IconSun size={18} className="shrink-0" /> : <IconMoon size={18} className="shrink-0" />}
+                {expanded && <span className="text-[13px] flex-1 text-left">{isDark ? 'Mode clair' : 'Mode sombre'}</span>}
               </button>
             </TooltipTrigger>
             {!expanded && (
@@ -267,57 +263,6 @@ export function AppSidebar({ user }: { user?: User | null }) {
               </TooltipContent>
             )}
           </Tooltip>
-
-          {/* Theme color picker */}
-          <div className="relative">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setThemePickerOpen((v) => !v)}
-                  className={cn(
-                    'flex items-center h-9 rounded-lg text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors',
-                    expanded ? 'w-full px-2.5 gap-2.5' : 'w-10 justify-center mx-auto'
-                  )}
-                >
-                  <IconPalette size={16} className="shrink-0" />
-                  {expanded && <span className="text-[12px] flex-1 text-left">Thème</span>}
-                  {expanded && (() => {
-                    const c = themes.find((t) => t.value === colorTheme)?.colors
-                    return c ? (
-                      <div className="flex h-3 w-5 overflow-hidden rounded-sm border border-border/60">
-                        <div className="flex-1" style={{ backgroundColor: c[0] }} />
-                        <div className="flex-1" style={{ backgroundColor: c[1] }} />
-                        <div className="flex-1" style={{ backgroundColor: c[2] }} />
-                      </div>
-                    ) : null
-                  })()}
-                </button>
-              </TooltipTrigger>
-              {!expanded && <TooltipContent side="right" sideOffset={8}>Thème</TooltipContent>}
-            </Tooltip>
-            {themePickerOpen && (
-              <div className="absolute left-full bottom-0 ml-2 w-40 rounded-lg border bg-popover p-1.5 shadow-lg z-50">
-                {themes.map((t) => (
-                  <button
-                    key={t.value}
-                    onClick={() => { setColorTheme(t.value); setThemePickerOpen(false) }}
-                    className={cn(
-                      'flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-xs transition-colors',
-                      colorTheme === t.value ? 'bg-accent text-accent-foreground' : 'hover:bg-muted'
-                    )}
-                  >
-                    <div className="flex h-3 w-5 overflow-hidden rounded-sm border">
-                      <div className="flex-1" style={{ backgroundColor: t.colors[0] }} />
-                      <div className="flex-1" style={{ backgroundColor: t.colors[1] }} />
-                      <div className="flex-1" style={{ backgroundColor: t.colors[2] }} />
-                    </div>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
           {/* Admin bottom nav (Config / Settings) */}
           {bottomApps.map((app) => (
@@ -343,7 +288,7 @@ export function AppSidebar({ user }: { user?: User | null }) {
               type="button"
               onClick={() => setExpanded(false)}
               aria-label="Réduire le menu"
-              className="h-7 w-7 rounded-md border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors flex items-center justify-center shrink-0"
+              className="h-7 w-7 rounded-md border border-sidebar-border text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/60 transition-colors flex items-center justify-center shrink-0"
             >
               <ChevronLeftIcon className="h-3.5 w-3.5" />
             </button>

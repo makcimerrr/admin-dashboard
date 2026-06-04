@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useData, mutateKey } from '@/lib/client-cache';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@stackframe/stack';
 import { ChatSidebar, ChatSidebarMobile } from '@/components/assistant/chat-sidebar';
@@ -23,6 +24,11 @@ type Conversation = {
   updated_at: string;
 };
 
+type ConversationDetail = {
+  success: boolean;
+  messages?: { id: number; role: string; content: string; student_ids?: number[]; suggestions?: string[] }[];
+};
+
 export default function ConversationPage() {
   const params = useParams();
   const router = useRouter();
@@ -30,71 +36,74 @@ export default function ConversationPage() {
   const conversationId = parseInt(params.id as string);
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Vrai dès qu'on touche `messages` localement (envoi optimiste). Empêche
+  // l'effet de resync cache→state d'écraser des messages pas encore persistés.
+  const hasLocalEditsRef = useRef(false);
 
   const userId = user?.primaryEmail || 'anonymous';
+  const isKnownUser = !!userId && userId !== 'anonymous';
+  const conversationsKey = isKnownUser
+    ? `/api/conversations?userId=${encodeURIComponent(userId)}`
+    : null;
 
-  // Load conversations
+  const {
+    data: conversationsData,
+    isLoading: conversationsFetching,
+    mutate: loadConversations,
+  } = useData<{ success: boolean; conversations: Conversation[] }>(conversationsKey);
+  const conversations = conversationsData?.success ? conversationsData.conversations : [];
+  const isLoadingConversations = isKnownUser && conversationsFetching;
+
+  // Historique de la conversation via le cache client (clé par conversation).
+  // Réouvrir une conv déjà visitée → `data` est déjà en cache → rendu instantané,
+  // puis revalidation en arrière-plan (stale-while-revalidate).
+  // Note : on conserve le fetcher par défaut (GET JSON, throw si !ok). L'API
+  // peut aussi répondre 200 avec `{ success: false }` → traité ci-dessous comme un échec.
+  const conversationKey = conversationId ? `/api/conversations/${conversationId}` : null;
+  const {
+    data: conversationData,
+    error: conversationError,
+    isLoading: conversationFetching,
+    mutate: revalidateConversation,
+  } = useData<ConversationDetail>(conversationKey);
+
+  // Loader uniquement quand on n'a encore RIEN à afficher pour cette conv
+  // (ni cache, ni état local). Sur réouverture, cache présent → pas de loader.
+  const isLoadingMessages = conversationFetching && messages.length === 0;
+
+  // Redirect-on-fail : erreur réseau (fetcher a throw) OU réponse success:false.
   useEffect(() => {
-    if (userId && userId !== 'anonymous') {
-      loadConversations();
-    } else {
-      setIsLoadingConversations(false);
-    }
-  }, [userId]);
-
-  // Load messages for this conversation
-  useEffect(() => {
-    if (conversationId) {
-      loadConversation();
-    }
-  }, [conversationId]);
-
-  const loadConversations = useCallback(async () => {
-    setIsLoadingConversations(true);
-    try {
-      const response = await fetch(`/api/conversations?userId=${encodeURIComponent(userId)}`);
-      const data = await response.json();
-      if (data.success) {
-        setConversations(data.conversations);
-      }
-    } catch (error) {
-      console.error('Error loading conversations:', error);
-    } finally {
-      setIsLoadingConversations(false);
-    }
-  }, [userId]);
-
-  const loadConversation = async () => {
-    setIsLoadingMessages(true);
-    try {
-      const response = await fetch(`/api/conversations/${conversationId}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setMessages(
-          data.messages.map((msg: { id: number; role: string; content: string; student_ids?: number[]; suggestions?: string[] }) => ({
-            id: msg.id.toString(),
-            role: msg.role as 'user' | 'assistant',
-            content: msg.content,
-            studentIds: msg.student_ids,
-            suggestions: msg.suggestions,
-          }))
-        );
-      } else {
-        router.push('/assistant');
-      }
-    } catch (error) {
-      console.error('Error loading conversation:', error);
+    if (!conversationId) return;
+    if (conversationError || (conversationData && conversationData.success === false)) {
       router.push('/assistant');
-    } finally {
-      setIsLoadingMessages(false);
     }
-  };
+  }, [conversationId, conversationError, conversationData, router]);
+
+  // Sync cache → state local d'affichage. On ne resynchronise PAS tant qu'une
+  // édition optimiste locale est en cours, pour ne pas écraser un message non
+  // encore persité côté serveur.
+  useEffect(() => {
+    if (!conversationData?.success || !conversationData.messages) return;
+    if (hasLocalEditsRef.current) return;
+    setMessages(
+      conversationData.messages.map((msg) => ({
+        id: msg.id.toString(),
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        studentIds: msg.student_ids,
+        suggestions: msg.suggestions,
+      }))
+    );
+  }, [conversationData]);
+
+  // Changement de conversation : on repart d'un état local propre et on
+  // réautorise la resync depuis le cache de la nouvelle conv.
+  useEffect(() => {
+    hasLocalEditsRef.current = false;
+    setMessages([]);
+  }, [conversationId]);
 
   const handleNewChat = () => {
     router.push('/assistant');
@@ -108,7 +117,13 @@ export default function ConversationPage() {
         method: 'DELETE',
       });
       if (response.ok) {
-        setConversations(conversations.filter((c) => c.id !== id));
+        if (conversationsKey) {
+          const next = {
+            success: true,
+            conversations: conversations.filter((c) => c.id !== id),
+          };
+          mutateKey(conversationsKey, () => Promise.resolve(next));
+        }
         if (id === conversationId) {
           router.push('/assistant');
         }
@@ -127,6 +142,7 @@ export default function ConversationPage() {
       role: 'user',
       content: messageText,
     };
+    hasLocalEditsRef.current = true;
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
@@ -164,6 +180,12 @@ export default function ConversationPage() {
         ...prev,
         { id: assistantMessageId, role: 'assistant', content: data.response },
       ]);
+
+      // L'échange est persisté côté serveur : on réautorise la resync et on
+      // revalide le cache de l'historique en fond pour récupérer les vrais ids /
+      // métadonnées (studentIds, suggestions). Pas de loader (cache déjà peuplé).
+      hasLocalEditsRef.current = false;
+      revalidateConversation();
 
       // Reload conversations
       loadConversations();
@@ -203,8 +225,8 @@ export default function ConversationPage() {
           <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center gap-4 text-muted-foreground">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
-                  <BrainCircuit className="h-4 w-4 text-white" />
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/70">
+                  <BrainCircuit className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <Loader2 className="h-5 w-5 animate-spin" />
               </div>

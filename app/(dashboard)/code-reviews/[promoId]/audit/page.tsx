@@ -165,9 +165,9 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
     if (!groupId || !projectName || !track) {
         return (
             <div className="p-6">
-                <Card className="bg-red-500/10 border-red-500/30">
+                <Card className="bg-destructive/10 border-destructive/30">
                     <CardContent className="p-4">
-                        <p className="text-red-700 dark:text-red-400">Paramètres manquants. Veuillez sélectionner un groupe depuis la liste.</p>
+                        <p className="text-destructive">Paramètres manquants. Veuillez sélectionner un groupe depuis la liste.</p>
                         <Button variant="outline" className="mt-4" asChild>
                             <Link href={`/code-reviews/${promoId}/group`}>
                                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -192,9 +192,9 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
     if (error || !groupData) {
         return (
             <div className="p-6">
-                <Card className="bg-red-500/10 border-red-500/30">
+                <Card className="bg-destructive/10 border-destructive/30">
                     <CardContent className="p-4">
-                        <p className="text-red-700 dark:text-red-400">{error || 'Groupe non trouvé'}</p>
+                        <p className="text-destructive">{error || 'Groupe non trouvé'}</p>
                         <Button variant="outline" className="mt-4" asChild>
                             <Link href={`/code-reviews/${promoId}/group`}>
                                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -265,7 +265,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
 
                     <div>
                         <Label className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-amber-500" />
+                            <AlertTriangle className="h-4 w-4 text-warning" />
                             Warnings globaux
                         </Label>
                         <p className="text-xs text-muted-foreground mt-1 mb-2">
@@ -294,7 +294,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                 {validatedCount} validé{validatedCount > 1 ? 's' : ''}
                             </Badge>
                             {absentCount > 0 && (
-                                <Badge variant="outline" className="text-orange-700 dark:text-orange-400 border-orange-500/30">
+                                <Badge variant="outline" className="text-warning border-warning/30">
                                     {absentCount} absent{absentCount > 1 ? 's' : ''}
                                 </Badge>
                             )}
@@ -315,26 +315,26 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                 key={result.login}
                                 className={`p-4 rounded-lg border space-y-3 transition-colors ${
                                     result.absent
-                                        ? 'bg-orange-500/5 border-orange-500/20'
+                                        ? 'bg-warning/5 border-warning/20'
                                         : 'bg-card'
                                 }`}
                             >
                                 <div className="flex items-center justify-between gap-3 flex-wrap">
                                     <div className="flex items-center gap-2 min-w-0">
                                         {result.absent ? (
-                                            <UserX className="h-4 w-4 text-orange-500 shrink-0" />
+                                            <UserX className="h-4 w-4 text-warning shrink-0" />
                                         ) : (
                                             <User className="h-4 w-4 text-muted-foreground shrink-0" />
                                         )}
                                         <span
                                             className={`font-medium truncate ${
-                                                result.absent ? 'text-orange-700 dark:text-orange-400' : ''
+                                                result.absent ? 'text-warning' : ''
                                             }`}
                                         >
                                             {result.login}
                                         </span>
                                         {isCaptain && (
-                                            <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                            <Crown className="h-3.5 w-3.5 text-warning shrink-0" />
                                         )}
                                         {member.firstName && (
                                             <span className="text-sm text-muted-foreground truncate">
@@ -377,7 +377,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                                     result.absent
                                                         ? 'text-muted-foreground/50'
                                                         : result.validated
-                                                            ? 'text-emerald-700 dark:text-emerald-400 font-medium'
+                                                            ? 'text-success font-medium'
                                                             : ''
                                                 }`}
                                             >

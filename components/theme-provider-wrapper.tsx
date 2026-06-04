@@ -15,7 +15,7 @@ export default function ThemeProviderWrapper({ children }: { children: React.Rea
     }
 
     return (
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
             {children}
         </ThemeProvider>
     );

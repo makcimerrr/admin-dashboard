@@ -216,7 +216,7 @@ export default function ExtractionPage() {
       key: 'vacationDays' as keyof ExtractionRow,
       header: 'Congés',
       render: (value: number) => (
-        <Badge className="text-[10px] px-1.5 py-0 h-5 bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border border-orange-200 dark:border-orange-800" variant="outline">
+        <Badge className="text-[10px] px-1.5 py-0 h-5 bg-warning/10 text-warning border border-warning/30" variant="outline">
           {value}j
         </Badge>
       ),
@@ -225,7 +225,7 @@ export default function ExtractionPage() {
       key: 'sickDays' as keyof ExtractionRow,
       header: 'Maladie',
       render: (value: number) => (
-        <Badge className="text-[10px] px-1.5 py-0 h-5 bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-800" variant="outline">
+        <Badge className="text-[10px] px-1.5 py-0 h-5 bg-destructive/10 text-destructive border border-destructive/30" variant="outline">
           {value}j
         </Badge>
       ),
@@ -239,7 +239,7 @@ export default function ExtractionPage() {
       key: 'overtime' as keyof ExtractionRow,
       header: 'Heures sup.',
       render: (value: number) => (
-        <span className={`text-xs font-bold ${value > 0 ? 'text-green-600 dark:text-green-400' : value < 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+        <span className={`text-xs font-bold ${value > 0 ? 'text-success' : value < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
           {value > 0 ? '+' : ''}{value}h
         </span>
       ),
@@ -252,7 +252,7 @@ export default function ExtractionPage() {
         icon={FileBarChart}
         title="Extraction"
         description="Extraction des heures et statistiques"
-        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400' : 'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
+        badge={<Badge variant="outline" className={planningPermission === 'editor' ? 'bg-success/15 text-success border-success/30' : 'bg-warning/15 text-warning border-warning/30'}>{planningPermission === 'editor' ? 'EDITOR' : 'READER'}</Badge>}
       >
         <Button
           size="sm"

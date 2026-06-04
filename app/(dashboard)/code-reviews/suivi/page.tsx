@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
+import { useData } from '@/lib/client-cache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -81,10 +82,10 @@ function shortPromo(name: string): string {
 
 const TAB_CONFIG: { key: Category | 'all'; label: string; icon: React.ElementType; color: string }[] = [
   { key: 'all', label: 'Tous', icon: ClipboardCheck, color: 'text-foreground' },
-  { key: 'overdue', label: 'Dépassement', icon: ShieldAlert, color: 'text-red-600 dark:text-red-400' },
-  { key: 'warning', label: 'Warning', icon: AlertTriangle, color: 'text-amber-600 dark:text-amber-400' },
-  { key: 'pending', label: 'En attente', icon: CircleDot, color: 'text-blue-600 dark:text-blue-400' },
-  { key: 'done', label: 'Audité', icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400' },
+  { key: 'overdue', label: 'Dépassement', icon: ShieldAlert, color: 'text-destructive' },
+  { key: 'warning', label: 'Warning', icon: AlertTriangle, color: 'text-warning' },
+  { key: 'pending', label: 'En attente', icon: CircleDot, color: 'text-primary' },
+  { key: 'done', label: 'Audité', icon: CheckCircle2, color: 'text-success' },
 ];
 
 /**
@@ -99,9 +100,9 @@ function whyBadge(
 ): { label: string; tooltip: string; tone: string } | null {
   if (cat === 'done') return null;
   const tonesRed =
-    'bg-red-500/15 text-red-700 dark:text-red-400 border border-red-500/30';
+    'bg-destructive/15 text-destructive border border-destructive/30';
   const tonesAmber =
-    'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30';
+    'bg-warning/15 text-warning border border-warning/30';
   if (!row.captainLogin) {
     return {
       label: 'Pas de capitaine',
@@ -143,12 +144,6 @@ function whyBadge(
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function SuiviPage() {
-  const [rows, setRows] = useState<SuiviRow[]>([]);
-  // Promo info indexed by eventId (as string). We keep both `title` (long
-  // form used for display) and `key` (short form like "P1 2025") so the
-  // search bar can match either.
-  const [promos, setPromos] = useState<Map<string, { title: string; key: string }>>(new Map());
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
   const [confirmDeleteRowState, setConfirmDeleteRowState] = useState<SuiviRow | null>(null);
@@ -171,26 +166,49 @@ export default function SuiviPage() {
     return () => window.removeEventListener('mouseup', onMouseUp);
   }, []);
 
-  const fetchRows = useCallback(async () => {
-    try {
-      const [suiviRes, promosRes] = await Promise.all([
-        fetch('/api/code-reviews/suivi'),
-        fetch('/api/promotions/active'),
-      ]);
-      const [suiviData, promosData] = await Promise.all([suiviRes.json(), promosRes.json()]);
-      if (suiviData?.success) setRows(suiviData.data.rows);
-      if (promosData?.success) {
-        const map = new Map<string, { title: string; key: string }>();
-        for (const p of promosData.promotions as PromoInfo[]) {
-          map.set(String(p.eventId), { title: p.title || p.key, key: p.key });
-        }
-        setPromos(map);
-      }
-    } catch { toast.error('Erreur lors du chargement'); }
-    finally { setLoading(false); }
-  }, []);
+  // Both reads are independent and fetched in parallel by the cache layer.
+  const {
+    data: suiviData,
+    error: suiviError,
+    isLoading: suiviLoading,
+    mutate: mutateSuivi,
+  } = useData<{ success: boolean; data: { rows: SuiviRow[] } }>('/api/code-reviews/suivi');
+  const {
+    data: promosData,
+    error: promosError,
+    isLoading: promosLoading,
+    mutate: mutatePromos,
+  } = useData<{ success: boolean; promotions: PromoInfo[] }>('/api/promotions/active');
 
-  useEffect(() => { fetchRows(); }, [fetchRows]);
+  const rows = useMemo<SuiviRow[]>(
+    () => (suiviData?.success ? suiviData.data.rows : []),
+    [suiviData],
+  );
+
+  // Promo info indexed by eventId (as string). We keep both `title` (long
+  // form used for display) and `key` (short form like "P1 2025") so the
+  // search bar can match either.
+  const promos = useMemo<Map<string, { title: string; key: string }>>(() => {
+    const map = new Map<string, { title: string; key: string }>();
+    if (promosData?.success) {
+      for (const p of promosData.promotions) {
+        map.set(String(p.eventId), { title: p.title || p.key, key: p.key });
+      }
+    }
+    return map;
+  }, [promosData]);
+
+  const loading = suiviLoading || promosLoading;
+
+  // Reload both reads after a mutation (mirrors the old fetchRows()).
+  const fetchRows = useCallback(async () => {
+    await Promise.all([mutateSuivi(), mutatePromos()]);
+  }, [mutateSuivi, mutatePromos]);
+
+  // Preserve the original toast-on-error behaviour.
+  useEffect(() => {
+    if (suiviError || promosError) toast.error('Erreur lors du chargement');
+  }, [suiviError, promosError]);
 
   const setRowLoading = (id: number, on: boolean) =>
     setLoadingIds(prev => { const s = new Set(prev); on ? s.add(id) : s.delete(id); return s; });
@@ -634,7 +652,7 @@ export default function SuiviPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-[12px]">{row.captainLogin}</span>
                           <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${
-                            row.hasDiscordId ? 'bg-emerald-500' : 'bg-muted-foreground/30'
+                            row.hasDiscordId ? 'bg-success' : 'bg-muted-foreground/30'
                           }`} title={row.hasDiscordId ? 'Discord lié' : 'Sans Discord'} />
                         </div>
                       ) : <span className="text-muted-foreground">—</span>}
@@ -645,9 +663,9 @@ export default function SuiviPage() {
                       {cat === 'done' ? (
                         <span className="text-muted-foreground/40">—</span>
                       ) : !row.captainLogin ? (
-                        <span className="text-amber-600 dark:text-amber-400 text-[10px]">Pas de capitaine</span>
+                        <span className="text-warning text-[10px]">Pas de capitaine</span>
                       ) : !row.hasDiscordId ? (
-                        <span className="text-amber-600 dark:text-amber-400 text-[10px]" title="Le capitaine n'a pas lié son Discord">
+                        <span className="text-warning text-[10px]" title="Le capitaine n'a pas lié son Discord">
                           Pas de Discord
                         </span>
                       ) : !row.notifiedAuditAt ? (
@@ -694,8 +712,8 @@ export default function SuiviPage() {
                           const days = Math.floor(daysSinceNotified(row));
                           if (days === 0) return <span className="text-muted-foreground/40">—</span>;
                           const left = 14 - days;
-                          if (days >= 14) return <span className="text-red-600 dark:text-red-400 font-semibold text-[11px]">{days}j</span>;
-                          if (days >= 10) return <span className="text-amber-600 dark:text-amber-400 text-[11px]">{days}j <span className="text-muted-foreground">({left}j rest.)</span></span>;
+                          if (days >= 14) return <span className="text-destructive font-semibold text-[11px]">{days}j</span>;
+                          if (days >= 10) return <span className="text-warning text-[11px]">{days}j <span className="text-muted-foreground">({left}j rest.)</span></span>;
                           return <span className="text-muted-foreground text-[11px]">{days}j</span>;
                         })()}
                       </TableCell>
@@ -706,7 +724,7 @@ export default function SuiviPage() {
                       <TableCell>
                         {row.auditId ? (
                           <div>
-                            <span className="text-[11px] text-emerald-600 dark:text-emerald-400">{fmtShort(row.auditCreatedAt)}</span>
+                            <span className="text-[11px] text-success">{fmtShort(row.auditCreatedAt)}</span>
                             {row.auditorName && <span className="text-[10px] text-muted-foreground ml-1">({row.auditorName})</span>}
                           </div>
                         ) : (
@@ -813,7 +831,7 @@ export default function SuiviPage() {
                         <span className="inline-flex items-center gap-1 text-xs">
                           <span className="font-mono">{row.captainLogin}</span>
                           <span
-                            className={`inline-block h-1.5 w-1.5 rounded-full ${row.hasDiscordId ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`}
+                            className={`inline-block h-1.5 w-1.5 rounded-full ${row.hasDiscordId ? 'bg-success' : 'bg-muted-foreground/30'}`}
                             title={row.hasDiscordId ? 'Discord lié' : 'Sans Discord'}
                           />
                         </span>
@@ -830,15 +848,15 @@ export default function SuiviPage() {
                       )}
                       {showDelayColumn && days > 0 && (
                         <span className={`text-[10px] ${
-                          days >= 14 ? 'text-red-600 dark:text-red-400 font-semibold'
-                          : days >= 10 ? 'text-amber-600 dark:text-amber-400'
+                          days >= 14 ? 'text-destructive font-semibold'
+                          : days >= 10 ? 'text-warning'
                           : 'text-muted-foreground'
                         }`}>
                           {days}j
                         </span>
                       )}
                       {showDoneColumns && row.auditId && (
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400">
+                        <span className="text-[10px] text-success">
                           ✓ {fmtShort(row.auditCreatedAt)}
                           {row.auditorName && <span className="text-muted-foreground"> ({row.auditorName})</span>}
                         </span>

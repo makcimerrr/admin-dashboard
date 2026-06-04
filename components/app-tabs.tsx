@@ -30,7 +30,7 @@ export function AppTabs() {
               className={cn(
                 'flex items-center gap-1.5 px-3 h-full text-xs font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
                 isActive
-                  ? 'text-foreground border-primary'
+                  ? 'text-primary border-primary'
                   : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
               )}
             >

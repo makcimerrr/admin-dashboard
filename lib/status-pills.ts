@@ -19,45 +19,59 @@ export type Tone =
   | 'violet'
   | 'cyan';
 
+// Single palette (noir/blanc/bleu) — legacy tones are remapped onto the
+// semantic tokens so existing call sites keep working:
+//   emerald            → success
+//   amber / orange     → warning
+//   red / rose         → destructive
+//   blue / cyan / violet → primary (info)
+
+const PILL_SUCCESS = 'bg-success/15 text-success border-success/30';
+const PILL_WARNING = 'bg-warning/15 text-warning border-warning/30';
+const PILL_DESTRUCTIVE = 'bg-destructive/15 text-destructive border-destructive/30';
+const PILL_PRIMARY = 'bg-primary/15 text-primary border-primary/30';
+
 export const PILL: Record<Tone, string> = {
-  emerald:
-    'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400',
-  amber:
-    'bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400',
-  rose: 'bg-rose-500/15 text-rose-700 border-rose-500/30 dark:text-rose-400',
-  red: 'bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-400',
-  blue: 'bg-blue-500/15 text-blue-700 border-blue-500/30 dark:text-blue-400',
-  orange:
-    'bg-orange-500/15 text-orange-700 border-orange-500/30 dark:text-orange-400',
-  violet:
-    'bg-violet-500/15 text-violet-700 border-violet-500/30 dark:text-violet-400',
-  cyan: 'bg-cyan-500/15 text-cyan-700 border-cyan-500/30 dark:text-cyan-400',
+  emerald: PILL_SUCCESS,
+  amber: PILL_WARNING,
+  orange: PILL_WARNING,
+  rose: PILL_DESTRUCTIVE,
+  red: PILL_DESTRUCTIVE,
+  blue: PILL_PRIMARY,
+  cyan: PILL_PRIMARY,
+  violet: PILL_PRIMARY,
 };
+
+const TILE_SUCCESS = 'border-success/30 bg-success/10 text-success';
+const TILE_WARNING = 'border-warning/30 bg-warning/10 text-warning';
+const TILE_DESTRUCTIVE = 'border-destructive/30 bg-destructive/10 text-destructive';
+const TILE_PRIMARY = 'border-primary/30 bg-primary/10 text-primary';
 
 export const TILE: Record<Tone, string> = {
-  emerald:
-    'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-  amber:
-    'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  rose: 'border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400',
-  red: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400',
-  blue: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400',
-  orange:
-    'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400',
-  violet:
-    'border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400',
-  cyan: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-400',
+  emerald: TILE_SUCCESS,
+  amber: TILE_WARNING,
+  orange: TILE_WARNING,
+  rose: TILE_DESTRUCTIVE,
+  red: TILE_DESTRUCTIVE,
+  blue: TILE_PRIMARY,
+  cyan: TILE_PRIMARY,
+  violet: TILE_PRIMARY,
 };
 
+const ROW_SUCCESS = 'bg-success/5 hover:bg-success/10';
+const ROW_WARNING = 'bg-warning/5 hover:bg-warning/10';
+const ROW_DESTRUCTIVE = 'bg-destructive/5 hover:bg-destructive/10';
+const ROW_PRIMARY = 'bg-primary/5 hover:bg-primary/10';
+
 export const ROW: Record<Tone, string> = {
-  emerald: 'bg-emerald-500/5 hover:bg-emerald-500/10',
-  amber: 'bg-amber-500/5 hover:bg-amber-500/10',
-  rose: 'bg-rose-500/5 hover:bg-rose-500/10',
-  red: 'bg-red-500/5 hover:bg-red-500/10',
-  blue: 'bg-blue-500/5 hover:bg-blue-500/10',
-  orange: 'bg-orange-500/5 hover:bg-orange-500/10',
-  violet: 'bg-violet-500/5 hover:bg-violet-500/10',
-  cyan: 'bg-cyan-500/5 hover:bg-cyan-500/10',
+  emerald: ROW_SUCCESS,
+  amber: ROW_WARNING,
+  orange: ROW_WARNING,
+  rose: ROW_DESTRUCTIVE,
+  red: ROW_DESTRUCTIVE,
+  blue: ROW_PRIMARY,
+  cyan: ROW_PRIMARY,
+  violet: ROW_PRIMARY,
 };
 
 /** emerald ≥ 80, amber ≥ 50, red otherwise. */

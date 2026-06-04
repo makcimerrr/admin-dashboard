@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useData } from '@/lib/client-cache';
 import { PageHeader } from '@/components/page-header';
 import { StudentsSubnav } from '../_components/students-subnav';
 import {
@@ -84,46 +85,33 @@ type LinkFilter = 'all' | 'linked' | 'unlinked';
 const looksLikeEmail = (login: string) => login.includes('@');
 
 export default function DiscordLinkPage() {
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [orphans, setOrphans] = useState<OrphanRow[]>([]);
-  const [promos, setPromos] = useState<Promo[]>([]);
-  const [loading, setLoading] = useState(true);
-
   const [selectedPromo, setSelectedPromo] = useState<string>('all');
   const [linkFilter, setLinkFilter] = useState<LinkFilter>('all');
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetch('/api/promotions/active')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setPromos(d.promotions);
-      })
-      .catch(() => {});
-  }, []);
+  const { data: promosData } = useData<{ success: boolean; promotions: Promo[] }>(
+    '/api/promotions/active',
+  );
+  const promos = promosData?.success ? promosData.promotions : [];
 
-  const load = async (promo: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/discord/manage?promo=${encodeURIComponent(promo)}`);
-      const data = await res.json();
-      if (data.success) {
-        setStudents(data.students);
-        setOrphans(data.orphans ?? []);
-      } else {
-        toast.error(data.error || 'Erreur de chargement.');
-      }
-    } catch {
-      toast.error('Impossible de charger les liaisons Discord.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: manageData,
+    error: manageError,
+    isLoading: loading,
+    mutate,
+  } = useData<{ success: boolean; students: StudentRow[]; orphans?: OrphanRow[]; error?: string }>(
+    `/api/discord/manage?promo=${encodeURIComponent(selectedPromo)}`,
+  );
+  const students = manageData?.success ? manageData.students : [];
+  const orphans = manageData?.success ? manageData.orphans ?? [] : [];
 
+  // Preserve the original toast-on-error behaviour.
   useEffect(() => {
-    load(selectedPromo);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPromo]);
+    if (manageError) toast.error('Impossible de charger les liaisons Discord.');
+    else if (manageData && !manageData.success) toast.error(manageData.error || 'Erreur de chargement.');
+  }, [manageData, manageError]);
+
+  const refresh = () => { mutate(); };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -161,8 +149,6 @@ export default function DiscordLinkPage() {
       .map(([promo, v]) => ({ promo, ...v, pct: v.total ? Math.round((v.linked / v.total) * 100) : 0 }))
       .sort((a, b) => a.promo.localeCompare(b.promo));
   }, [students, selectedPromo]);
-
-  const refresh = () => load(selectedPromo);
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
@@ -253,7 +239,7 @@ export default function DiscordLinkPage() {
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
+                    className="h-full rounded-full bg-success transition-all"
                     style={{ width: `${p.pct}%` }}
                   />
                 </div>
@@ -319,10 +305,10 @@ function StatTile({
   loading?: boolean;
 }) {
   const toneText: Record<string, string> = {
-    blue: 'text-blue-700 dark:text-blue-400',
-    emerald: 'text-emerald-700 dark:text-emerald-400',
-    amber: 'text-amber-700 dark:text-amber-400',
-    rose: 'text-rose-700 dark:text-rose-400',
+    blue: 'text-primary',
+    emerald: 'text-success',
+    amber: 'text-warning',
+    rose: 'text-destructive',
   };
   return (
     <Card className="p-3">
@@ -340,7 +326,7 @@ function StatTile({
 function StudentTableRow({ student, onChange }: { student: StudentRow; onChange: () => void }) {
   const emailLogin = looksLikeEmail(student.login);
   return (
-    <TableRow className={cn(emailLogin && 'bg-rose-500/5')}>
+    <TableRow className={cn(emailLogin && 'bg-destructive/5')}>
       <TableCell>
         <div className="font-medium">
           {student.firstName} {student.lastName}
@@ -383,7 +369,7 @@ function StudentTableRow({ student, onChange }: { student: StudentRow; onChange:
 function StudentMobileCard({ student, onChange }: { student: StudentRow; onChange: () => void }) {
   const emailLogin = looksLikeEmail(student.login);
   return (
-    <li className={cn('p-3 space-y-2', emailLogin && 'bg-rose-500/5')}>
+    <li className={cn('p-3 space-y-2', emailLogin && 'bg-destructive/5')}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="font-medium truncate">
@@ -507,7 +493,7 @@ function DiscordIdEditor({
           }}
         />
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={save} disabled={busy}>
-          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-emerald-600" />}
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-success" />}
         </Button>
         <Button
           size="icon"
@@ -592,10 +578,10 @@ function DiscordIdEditor({
 /** Orphan mappings (login matches no student) — editable login + discord id. */
 function OrphanSection({ orphans, onChange }: { orphans: OrphanRow[]; onChange: () => void }) {
   return (
-    <Card className="border-amber-500/40">
+    <Card className="border-warning/40">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <AlertTriangle className="h-4 w-4 text-warning" />
           Liaisons orphelines ({orphans.length})
         </CardTitle>
         <CardDescription>

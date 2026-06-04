@@ -64,7 +64,7 @@ export function StudentSkillsPanel({ login }: { login: string }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+          <Sparkles className="h-5 w-5 text-primary" />
           Compétences & appétence
         </CardTitle>
         <CardDescription>Engagement Gitea — synthèse d'activité</CardDescription>
@@ -99,7 +99,7 @@ export function StudentSkillsPanel({ login }: { login: string }) {
               </div>
               {profile.currentStreakDays > 0 && (
                 <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                  <Flame className="h-4 w-4 text-orange-500" />
+                  <Flame className="h-4 w-4 text-warning" />
                   {profile.currentStreakDays}j de série
                 </span>
               )}
@@ -156,7 +156,7 @@ export function StudentSkillsPanel({ login }: { login: string }) {
                         <span className="text-muted-foreground tabular-nums">{s.level}%</span>
                       </div>
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className={cn('h-full rounded-full bg-violet-500')} style={{ width: `${s.level}%` }} />
+                        <div className={cn('h-full rounded-full bg-primary')} style={{ width: `${s.level}%` }} />
                       </div>
                     </div>
                   ))}

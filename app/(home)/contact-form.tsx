@@ -35,8 +35,8 @@ export default function MyForm() {
     try {
       console.log(values);
       toast(
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(values, null, 2)}</code>
+        <pre className="mt-2 w-[340px] rounded-md bg-muted p-4">
+          <code className="text-foreground">{JSON.stringify(values, null, 2)}</code>
         </pre>
       );
     } catch (error) {

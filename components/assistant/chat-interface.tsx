@@ -130,8 +130,8 @@ export function ChatInterface({
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto px-6 py-16">
               <div className="mb-6">
-                <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/20 mb-4">
-                  <BrainCircuit className="h-7 w-7 text-white" />
+                <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 shadow-lg shadow-primary/20 mb-4">
+                  <BrainCircuit className="h-7 w-7 text-primary-foreground" />
                 </div>
                 <h2 className="text-xl font-semibold tracking-tight mb-1">
                   Comment puis-je vous aider ?
@@ -169,8 +169,8 @@ export function ChatInterface({
                 className={cn("flex gap-3", message.role === 'user' && "justify-end")}
               >
                 {message.role === 'assistant' && (
-                  <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shrink-0 mt-0.5">
-                    <BrainCircuit className="h-3.5 w-3.5 text-white" />
+                  <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 shrink-0 mt-0.5">
+                    <BrainCircuit className="h-3.5 w-3.5 text-primary-foreground" />
                   </div>
                 )}
 
@@ -249,8 +249,8 @@ export function ChatInterface({
 
             {isLoading && (
               <div className="flex gap-3">
-                <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shrink-0">
-                  <BrainCircuit className="h-3.5 w-3.5 text-white" />
+                <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 shrink-0">
+                  <BrainCircuit className="h-3.5 w-3.5 text-primary-foreground" />
                 </div>
                 <div className="flex items-center gap-2 bg-muted/60 rounded-2xl px-3.5 py-2.5">
                   <div className="flex gap-1">
@@ -281,7 +281,7 @@ export function ChatInterface({
                     onClick={() => handleSlashSelect(cmd)}
                     className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent transition-colors"
                   >
-                    <code className="text-xs font-mono text-violet-500 bg-violet-500/10 px-1.5 py-0.5 rounded">{cmd.cmd}</code>
+                    <code className="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">{cmd.cmd}</code>
                     <span className="text-xs text-muted-foreground">{cmd.description}</span>
                   </button>
                 ))}
@@ -298,7 +298,7 @@ export function ChatInterface({
               className={cn(
                 "w-full resize-none rounded-xl px-4 py-2.5 pr-11",
                 "bg-muted/50 border-0 ring-1 ring-border/50",
-                "focus:outline-none focus:ring-2 focus:ring-violet-500/30",
+                "focus:outline-none focus:ring-2 focus:ring-primary/30",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
                 "text-sm leading-relaxed placeholder:text-muted-foreground/50"
               )}
@@ -310,7 +310,7 @@ export function ChatInterface({
               size="icon"
               className={cn(
                 "absolute right-1.5 bottom-1.5 h-7 w-7 rounded-lg",
-                "bg-violet-600 hover:bg-violet-700 text-white",
+                "bg-primary hover:bg-primary/90 text-primary-foreground",
                 "disabled:bg-muted disabled:text-muted-foreground"
               )}
             >

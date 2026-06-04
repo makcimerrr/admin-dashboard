@@ -99,7 +99,7 @@ export function PromoStrip() {
                     className={cn(
                       'h-full p-3 rounded-md border transition-colors',
                       urgent > 0
-                        ? 'border-red-500/30 hover:bg-red-500/5'
+                        ? 'border-destructive/30 hover:bg-destructive/5'
                         : 'hover:border-primary/50 hover:bg-muted/30',
                     )}
                   >
@@ -131,7 +131,7 @@ export function PromoStrip() {
                         {urgent > 0 && (
                           <Badge
                             variant="outline"
-                            className="h-5 px-1.5 bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30"
+                            className="h-5 px-1.5 bg-destructive/15 text-destructive border-destructive/30"
                           >
                             {urgent} urgent{urgent > 1 ? 's' : ''}
                           </Badge>

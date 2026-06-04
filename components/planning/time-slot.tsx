@@ -12,30 +12,30 @@ interface TimeSlotProps {
 const slotConfig = {
   work: {
     icon: Clock,
-    bgColor: "bg-blue-500/10",
-    borderColor: "border-blue-500/30",
-    textColor: "text-blue-700 dark:text-blue-400",
+    bgColor: "bg-primary/10",
+    borderColor: "border-primary/30",
+    textColor: "text-primary",
     badgeVariant: "default" as const
   },
   vacation: {
     icon: Plane,
-    bgColor: "bg-orange-500/10",
-    borderColor: "border-orange-500/30",
-    textColor: "text-orange-700 dark:text-orange-400",
+    bgColor: "bg-warning/10",
+    borderColor: "border-warning/30",
+    textColor: "text-warning",
     badgeVariant: "secondary" as const
   },
   sick: {
     icon: AlertCircle,
-    bgColor: "bg-red-500/10",
-    borderColor: "border-red-500/30",
-    textColor: "text-red-700 dark:text-red-400",
+    bgColor: "bg-destructive/10",
+    borderColor: "border-destructive/30",
+    textColor: "text-destructive",
     badgeVariant: "destructive" as const
   },
   personal: {
     icon: Coffee,
-    bgColor: "bg-violet-500/10",
-    borderColor: "border-violet-500/30",
-    textColor: "text-violet-700 dark:text-violet-400",
+    bgColor: "bg-muted",
+    borderColor: "border-border",
+    textColor: "text-muted-foreground",
     badgeVariant: "outline" as const
   }
 }

@@ -274,9 +274,9 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
 
                 {/* Warnings individuels */}
                 {audit.warnings.length > 0 && (
-                  <div className="mb-2 p-3 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-700 dark:text-orange-400">
+                  <div className="mb-2 p-3 rounded-lg bg-warning/10 border border-warning/30 text-warning">
                     <div className="flex items-start gap-2">
-                      <div className="p-1.5 bg-orange-500/15 rounded">
+                      <div className="p-1.5 bg-warning/15 rounded">
                         <AlertTriangle className="h-4 w-4" />
                       </div>
                       <div className="flex-1">
@@ -298,8 +298,8 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
 
                 {/* Global Summary */}
                 {audit.globalSummary && (
-                  <div className="mt-2 p-3 rounded bg-blue-500/5 border border-blue-500/20">
-                    <p className="text-sm text-blue-700 dark:text-blue-400 font-medium mb-2">Compte rendu du groupe</p>
+                  <div className="mt-2 p-3 rounded bg-primary/5 border border-primary/20">
+                    <p className="text-sm text-primary font-medium mb-2">Compte rendu du groupe</p>
                     <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
                         {audit.globalSummary}
@@ -310,19 +310,19 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
 
                 {/* Global Warnings */}
                 {audit.globalWarnings.length > 0 && (
-                  <div className="mt-2 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30">
+                  <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
                     <div className="flex items-start gap-2">
-                      <div className="p-1.5 bg-red-100 dark:bg-red-900/30 rounded">
-                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                      <div className="p-1.5 bg-destructive/15 rounded">
+                        <AlertTriangle className="h-4 w-4 text-destructive" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">
+                        <p className="text-sm font-medium text-destructive mb-2">
                           Problèmes du groupe ({audit.globalWarnings.length})
                         </p>
                         <ul className="text-sm space-y-1.5">
                           {audit.globalWarnings.map((warning, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-red-700 dark:text-red-400">
-                              <span className="text-red-400 mt-1">•</span>
+                            <li key={idx} className="flex items-start gap-2 text-destructive">
+                              <span className="text-destructive/70 mt-1">•</span>
                               <span className="flex-1">{warning}</span>
                             </li>
                           ))}

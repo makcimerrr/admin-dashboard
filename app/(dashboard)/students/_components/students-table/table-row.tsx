@@ -152,7 +152,7 @@ export function StudentTableRow({ student, promoConfig }: StudentTableRowProps) 
       onClick={handleRowClick}
       className={cn(
         'transition-colors hover:bg-muted/50 cursor-pointer group',
-        isDropout && 'bg-red-500/5 hover:bg-red-500/10 opacity-75'
+        isDropout && 'bg-destructive/5 hover:bg-destructive/10 opacity-75'
       )}
     >
       {/* Student cell */}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useData } from '@/lib/client-cache';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,35 +37,28 @@ interface Project {
 interface Promo { key: string; title: string; eventId: number }
 
 export default function AuditReportsPage() {
-  const [promos, setPromos] = useState<Promo[]>([]);
   const [selectedPromo, setSelectedPromo] = useState<string>('');
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(false);
 
+  const { data: promosData } = useData<{ success: boolean; promotions: Promo[] }>(
+    '/api/promotions/active',
+  );
+  const promos = promosData?.success ? promosData.promotions : [];
+
+  const {
+    data: reportsData,
+    error: reportsError,
+    isLoading: loading,
+  } = useData<{ success: boolean; projects: Project[]; error?: string }>(
+    selectedPromo ? `/api/audit-reports?promo=${encodeURIComponent(selectedPromo)}` : null,
+  );
+  const projects = reportsData?.success ? reportsData.projects : [];
+
+  // Preserve the original toast-on-error behaviour (network failure or
+  // success:false response) without driving render off the cache state.
   useEffect(() => {
-    fetch('/api/promotions/active')
-      .then((r) => r.json())
-      .then((d) => { if (d.success) setPromos(d.promotions); })
-      .catch(() => {});
-  }, []);
-
-  const load = (promo: string) => {
-    if (!promo) return;
-    setLoading(true);
-    fetch(`/api/audit-reports?promo=${encodeURIComponent(promo)}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setProjects(d.projects);
-        else toast.error(d.error || 'Erreur de chargement.');
-      })
-      .catch(() => toast.error('Impossible de charger les audits.'))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    if (selectedPromo) load(selectedPromo);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPromo]);
+    if (reportsError) toast.error('Impossible de charger les audits.');
+    else if (reportsData && !reportsData.success) toast.error(reportsData.error || 'Erreur de chargement.');
+  }, [reportsData, reportsError]);
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">

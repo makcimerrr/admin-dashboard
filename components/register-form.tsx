@@ -115,7 +115,7 @@ export function RegisterForm({
                   required
                 />
               </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error && <p className="text-destructive text-sm">{error}</p>}
               <Button type="submit" className="w-full">
                 Register
               </Button>

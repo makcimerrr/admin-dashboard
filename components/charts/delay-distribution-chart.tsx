@@ -20,10 +20,10 @@ const DELAY_CHART_VARS: Record<string, string> = {
 
 function useDelayColors() {
   const [colors, setColors] = useState<Record<string, string>>({
-    'bien': '#22c55e',
-    'en retard': '#ef4444',
+    'bien': '#ef4444',
+    'en retard': '#64748b',
     'Validé': '#3b82f6',
-    'Non Validé': '#f43f5e',
+    'Non Validé': '#0ea5e9',
   });
   useEffect(() => {
     function read() {

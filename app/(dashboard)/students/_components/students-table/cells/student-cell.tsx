@@ -36,14 +36,14 @@ export function StudentCell({
       <Avatar
         className={cn(
           'h-10 w-10 border-2',
-          isDropout ? 'border-red-500/40 opacity-60' : 'border-border'
+          isDropout ? 'border-destructive/40 opacity-60' : 'border-border'
         )}
       >
         <AvatarFallback
           className={cn(
             'font-medium text-sm',
             isDropout
-              ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+              ? 'bg-destructive/10 text-destructive'
               : 'bg-primary/10 text-primary'
           )}
         >
@@ -58,7 +58,7 @@ export function StudentCell({
             <TooltipProvider>
               <Tooltip delayDuration={200}>
                 <TooltipTrigger>
-                  <AlertTriangle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                  <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs font-medium">Étudiant en perdition</p>
@@ -77,7 +77,7 @@ export function StudentCell({
             <TooltipProvider>
               <Tooltip delayDuration={200}>
                 <TooltipTrigger>
-                  <Briefcase className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                  <Briefcase className="h-3.5 w-3.5 text-primary shrink-0" />
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="text-xs font-medium">Alternant</p>
@@ -96,7 +96,7 @@ export function StudentCell({
             className={cn(
               'font-medium text-sm transition-colors truncate',
               isDropout
-                ? 'text-red-700 dark:text-red-400 line-through'
+                ? 'text-destructive line-through'
                 : 'text-foreground group-hover:text-primary'
             )}
           >
