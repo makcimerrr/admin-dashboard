@@ -58,7 +58,6 @@ jobs:
           build-args: |
             NEXT_PUBLIC_STACK_PROJECT_ID=${{ secrets.NEXT_PUBLIC_STACK_PROJECT_ID }}
             NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=${{ secrets.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY }}
-            NEXT_PUBLIC_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_ACCESS_TOKEN }}
             NEXT_PUBLIC_BASE_URL=${{ secrets.NEXT_PUBLIC_BASE_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -7,7 +7,7 @@
  */
 
 const DOMAIN = process.env.ZONE01_DOMAIN ?? 'https://zone01normandie.org';
-const ACCESS_TOKEN = process.env.ACCESS_TOKEN ?? process.env.NEXT_PUBLIC_ACCESS_TOKEN;
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN;
 
 let cachedJwt: { token: string; expMs: number } | null = null;
 

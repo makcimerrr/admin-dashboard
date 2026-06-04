@@ -185,30 +185,21 @@ export default function StudentPage() {
   const fetchExternalDataInternal = async (login: string) => {
     setLoadingExternal(true);
     try {
-      const authHeaders = {
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_ACCESS_TOKEN}`,
-      };
-      const [giteaResponse, userFindResponse] = await Promise.all([
-        fetchWithRetry(`https://api-zone01-rouen.deno.dev/api/v1/gitea-info/${login}`, {
-          headers: authHeaders,
-          tag: 'gitea',
-          timeoutMs: 8_000,
-          retries: 1,
-        }),
-        fetchWithRetry(`https://api-zone01-rouen.deno.dev/api/v1/user-info/${login}`, {
-          headers: authHeaders,
-          tag: 'zone01-user',
-          timeoutMs: 8_000,
-          retries: 1,
-        }),
-      ]);
+      // Le token Zone01 (admin Gitea) reste côté serveur : on passe par un
+      // proxy interne au lieu d'appeler l'API Deno directement depuis le
+      // navigateur (anciennement avec NEXT_PUBLIC_ACCESS_TOKEN, ce qui exposait
+      // le token dans le bundle client).
+      const externalResponse = await fetchWithRetry(`/api/zone01/external/${encodeURIComponent(login)}`, {
+        tag: 'zone01-external',
+        timeoutMs: 8_000,
+        retries: 1,
+      });
 
-      if (!giteaResponse.ok || !userFindResponse.ok) {
+      if (!externalResponse.ok) {
         throw new Error('Failed to fetch external data');
       }
 
-      const giteaData = await giteaResponse.json();
-      const userFindData = await userFindResponse.json();
+      const { gitea: giteaData, user: userFindData } = await externalResponse.json();
 
       let timeMessage = 'Aucune contribution';
 
