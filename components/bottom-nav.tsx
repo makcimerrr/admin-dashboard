@@ -21,7 +21,7 @@ export function BottomNav({ user }: BottomNavProps) {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch justify-around bg-sidebar border-t shadow-[0_-2px_8px_rgba(0,0,0,0.04)]"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex items-stretch justify-around bg-sidebar border-t border-sidebar-border"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {apps.map((app) => {
@@ -29,8 +29,8 @@ export function BottomNav({ user }: BottomNavProps) {
         const active = isAppActive(app);
         const href = app.url ?? app.defaultUrl ?? '#';
         const className = cn(
-          'flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-2 px-1 transition-colors',
-          active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+          'flex flex-col items-center justify-center gap-1 flex-1 min-w-0 py-2 px-1 transition-colors',
+          active ? 'text-sidebar-primary' : 'text-sidebar-foreground hover:text-sidebar-accent-foreground'
         );
 
         const label = (
@@ -44,8 +44,8 @@ export function BottomNav({ user }: BottomNavProps) {
           </a>
         ) : (
           <Link key={app.key} href={href} className={className}>
-            <div className="relative">
-              {active && <span className="absolute -inset-1 bg-primary/10 rounded-lg -z-10" />}
+            <div className="relative flex items-center justify-center">
+              {active && <span className="absolute -inset-1.5 bg-sidebar-accent rounded-lg -z-10" />}
               <Icon className="h-5 w-5 shrink-0" />
             </div>
             {label}
