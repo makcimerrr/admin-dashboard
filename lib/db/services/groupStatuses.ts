@@ -3,6 +3,7 @@ import { groupStatuses } from '../schema/groupStatuses';
 import { eq, and, isNull, or, isNotNull, inArray, count, sql } from 'drizzle-orm';
 import { discordUsers } from '../schema/discordUsers';
 import { audits } from '../schema/audits';
+import { projects } from '../schema/projects';
 import { getTrackByProjectName } from '@/lib/config/projects';
 import { buildProjectGroups, fetchPromotionProgressions } from '@/lib/services/zone01';
 
@@ -21,6 +22,7 @@ export async function upsertGroupStatus(
       projectName,
       status,
       captainLogin: captainLogin ?? null,
+      setupAt: (status === 'setup' || status === 'in_progress') ? new Date() : null,
       lastSeenAt: new Date(),
     })
     .onConflictDoUpdate({
@@ -32,6 +34,7 @@ export async function upsertGroupStatus(
         // would resurrect archived rows in /code-reviews/suivi.
         status: sql`CASE WHEN ${groupStatuses.status} = 'archived' THEN 'archived' ELSE ${status} END`,
         captainLogin: captainLogin ?? null,
+        setupAt: sql`COALESCE(${groupStatuses.setupAt}, CASE WHEN ${status} IN ('setup','in_progress') THEN now() ELSE NULL END)`,
         lastSeenAt: new Date(),
       },
     });
@@ -53,6 +56,56 @@ export async function markAuditNotified(id: number, reviewerName?: string): Prom
       notifiedAuditAt: new Date(),
       ...(reviewerName ? { notifiedReviewerName: reviewerName } : {}),
     })
+    .where(eq(groupStatuses.id, id));
+}
+
+export interface MilestoneCheckRow {
+  id: number;
+  groupId: string;
+  promoId: string;
+  projectName: string;
+  captainLogin: string | null;
+  setupAt: Date | null;
+  notified30At: Date | null;
+  notified50At: Date | null;
+  notified70At: Date | null;
+  projectTimeWeek: number | null;
+  discordId: string | null;
+}
+
+export async function getGroupsForMilestoneCheck(): Promise<MilestoneCheckRow[]> {
+  return db
+    .select({
+      id: groupStatuses.id,
+      groupId: groupStatuses.groupId,
+      promoId: groupStatuses.promoId,
+      projectName: groupStatuses.projectName,
+      captainLogin: groupStatuses.captainLogin,
+      setupAt: groupStatuses.setupAt,
+      notified30At: groupStatuses.notified30At,
+      notified50At: groupStatuses.notified50At,
+      notified70At: groupStatuses.notified70At,
+      projectTimeWeek: projects.projectTimeWeek,
+      discordId: discordUsers.discordId,
+    })
+    .from(groupStatuses)
+    .leftJoin(projects, sql`lower(${projects.name}) = lower(${groupStatuses.projectName})`)
+    .leftJoin(discordUsers, eq(discordUsers.login, groupStatuses.captainLogin))
+    .where(
+      and(
+        inArray(groupStatuses.status, ['setup', 'in_progress']),
+        isNotNull(groupStatuses.setupAt),
+        isNotNull(groupStatuses.captainLogin)
+      )
+    );
+}
+
+export async function markMilestoneNotified(id: number, milestone: 30 | 50 | 70): Promise<void> {
+  const field =
+    milestone === 30 ? 'notified30At' : milestone === 50 ? 'notified50At' : 'notified70At';
+  await db
+    .update(groupStatuses)
+    .set({ [field]: new Date() })
     .where(eq(groupStatuses.id, id));
 }
 
