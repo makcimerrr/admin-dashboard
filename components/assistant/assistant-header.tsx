@@ -9,11 +9,11 @@ export function AssistantHeader() {
     <header className="border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="flex items-center justify-between px-4 lg:px-6 h-12">
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-sm">
-            <BrainCircuit className="h-4 w-4 text-white" />
+          <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-gradient-to-br from-primary to-primary/70 shadow-sm">
+            <BrainCircuit className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="font-semibold text-base tracking-tight">Nova</span>
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
             AI
           </span>
         </div>

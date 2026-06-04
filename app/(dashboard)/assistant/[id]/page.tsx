@@ -203,8 +203,8 @@ export default function ConversationPage() {
           <div className="flex-1 flex items-center justify-center">
             <div className="flex flex-col items-center gap-4 text-muted-foreground">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600">
-                  <BrainCircuit className="h-4 w-4 text-white" />
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/70">
+                  <BrainCircuit className="h-4 w-4 text-primary-foreground" />
                 </div>
                 <Loader2 className="h-5 w-5 animate-spin" />
               </div>
