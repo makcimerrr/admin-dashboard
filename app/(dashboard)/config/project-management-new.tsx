@@ -37,8 +37,8 @@ import {
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Briefcase, Code2, Loader2 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Briefcase, Code2, Loader2, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Project {
   id: number;
@@ -68,6 +68,16 @@ export default function ProjectManagement() {
     tech: '',
     optional: false
   });
+
+  // Édition en place d'un projet existant.
+  const [editing, setEditing] = useState(false);
+  const [editProject, setEditProject] = useState<{
+    id: number;
+    name: string;
+    project_time_week: number;
+    tech: string;
+    isNewTech: boolean;
+  } | null>(null);
 
   // Met à jour le cache avec la nouvelle valeur renvoyée par une mutation (sans refetch).
   const setProjectsByTech = (next: ProjectsByTech) =>
@@ -119,6 +129,55 @@ export default function ProjectManagement() {
       toast.error('Erreur lors de la mise à jour du projet.');
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const openEditDialog = (tech: string, project: Project) => {
+    setEditProject({
+      id: project.id,
+      name: project.name,
+      project_time_week: project.project_time_week,
+      tech,
+      isNewTech: false,
+    });
+  };
+
+  const handleEdit = async () => {
+    if (!editProject) return;
+    const { id, name, project_time_week, tech } = editProject;
+
+    if (!name.trim()) {
+      toast.error('Le nom du projet est requis.');
+      return;
+    }
+    if (!(project_time_week >= 1)) {
+      toast.error('La durée doit être d\'au moins 1 semaine.');
+      return;
+    }
+    if (!tech.trim()) {
+      toast.error('La technologie est requise.');
+      return;
+    }
+
+    setEditing(true);
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name: name.trim(), project_time_week, tech: tech.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        toast.error(data?.error ?? 'Erreur lors de la modification du projet.');
+        return;
+      }
+      setProjectsByTech(data.projects);
+      toast.success('Projet modifié avec succès.');
+      setEditProject(null);
+    } catch (error) {
+      toast.error('Erreur lors de la modification du projet.');
+    } finally {
+      setEditing(false);
     }
   };
 
@@ -391,8 +450,18 @@ export default function ProjectManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => openEditDialog(tech, project)}
+                          className="h-8 w-8"
+                          aria-label="Modifier le projet"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setDeleteProject({ tech, id: project.id })}
                           className="h-8 w-8 text-destructive hover:text-destructive"
+                          aria-label="Supprimer le projet"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -405,6 +474,123 @@ export default function ProjectManagement() {
           ))}
         </div>
       )}
+
+      {/* Dialog d'édition en place */}
+      <Dialog
+        open={!!editProject}
+        onOpenChange={(open) => {
+          if (!open && !editing) setEditProject(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le projet</DialogTitle>
+            <DialogDescription>
+              Renommez le projet, ajustez sa durée ou changez de technologie
+            </DialogDescription>
+          </DialogHeader>
+          {editProject && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-project-name">Nom du projet *</Label>
+                <Input
+                  id="edit-project-name"
+                  placeholder="ex: ascii-art"
+                  value={editProject.name}
+                  onChange={(e) =>
+                    setEditProject((prev) => (prev ? { ...prev, name: e.target.value } : prev))
+                  }
+                  aria-invalid={editProject.name.trim() === ''}
+                />
+                {editProject.name.trim() === '' && (
+                  <p className="text-xs text-destructive">Le nom est requis.</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-project-duration">Durée (en semaines) *</Label>
+                <Input
+                  id="edit-project-duration"
+                  type="number"
+                  min="1"
+                  placeholder="ex: 2"
+                  value={editProject.project_time_week || ''}
+                  onChange={(e) =>
+                    setEditProject((prev) =>
+                      prev ? { ...prev, project_time_week: Number(e.target.value) } : prev
+                    )
+                  }
+                  aria-invalid={!(editProject.project_time_week >= 1)}
+                />
+                {!(editProject.project_time_week >= 1) && (
+                  <p className="text-xs text-destructive">La durée doit être d&apos;au moins 1 semaine.</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-project-tech">Technologie *</Label>
+                <Select
+                  value={editProject.isNewTech ? '__new__' : editProject.tech}
+                  onValueChange={(value) =>
+                    setEditProject((prev) =>
+                      prev
+                        ? value === '__new__'
+                          ? { ...prev, tech: '', isNewTech: true }
+                          : { ...prev, tech: value, isNewTech: false }
+                        : prev
+                    )
+                  }
+                >
+                  <SelectTrigger id="edit-project-tech">
+                    <SelectValue placeholder="Sélectionnez une technologie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(projectsByTech).map((tech) => (
+                      <SelectItem key={tech} value={tech}>
+                        {tech}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__new__">+ Nouvelle technologie</SelectItem>
+                  </SelectContent>
+                </Select>
+                {editProject.isNewTech && (
+                  <Input
+                    className="mt-2"
+                    placeholder="Nom de la nouvelle technologie"
+                    value={editProject.tech}
+                    onChange={(e) =>
+                      setEditProject((prev) => (prev ? { ...prev, tech: e.target.value } : prev))
+                    }
+                    aria-invalid={editProject.tech.trim() === ''}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditProject(null)} disabled={editing}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleEdit}
+              disabled={
+                editing ||
+                !editProject ||
+                editProject.name.trim() === '' ||
+                !(editProject.project_time_week >= 1) ||
+                editProject.tech.trim() === ''
+              }
+            >
+              {editing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                'Enregistrer'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de confirmation de suppression */}
       <AlertDialog open={!!deleteProject} onOpenChange={() => setDeleteProject(null)}>

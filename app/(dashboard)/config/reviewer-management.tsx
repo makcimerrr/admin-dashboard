@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2, Loader2, ExternalLink, Calendar } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, ExternalLink, Calendar, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { trackChipStyle } from '@/lib/track-colors';
 import { LoadingCard } from '@/components/ui/loading-card';
@@ -31,6 +31,7 @@ interface Reviewer {
   calendarId: string | null;
   eventPrefix: string | null;
   excludedPromos: string[];
+  discordId: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -70,6 +71,7 @@ export default function ReviewerManagement() {
   const [calendarId, setCalendarId] = useState('');
   const [eventPrefix, setEventPrefix] = useState('');
   const [excludedPromos, setExcludedPromos] = useState<string[]>([]);
+  const [discordId, setDiscordId] = useState('');
 
   useEffect(() => {
     if (reviewersError) toast.error('Erreur lors du chargement des reviewers');
@@ -83,6 +85,7 @@ export default function ReviewerManagement() {
     setCalendarId('');
     setEventPrefix('');
     setExcludedPromos([]);
+    setDiscordId('');
     setDialogOpen(true);
   }
 
@@ -94,12 +97,30 @@ export default function ReviewerManagement() {
     setCalendarId(reviewer.calendarId || '');
     setEventPrefix(reviewer.eventPrefix || '');
     setExcludedPromos(reviewer.excludedPromos || []);
+    setDiscordId(reviewer.discordId || '');
     setDialogOpen(true);
   }
 
+  function isValidUrl(value: string): boolean {
+    try {
+      const u = new URL(value);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
+
   async function handleSave() {
-    if (!name.trim() || !planningUrl.trim()) {
-      toast.error('Nom et URL de planning requis');
+    if (!name.trim()) {
+      toast.error('Le nom est requis');
+      return;
+    }
+    if (!planningUrl.trim()) {
+      toast.error("L'URL de planning est requise");
+      return;
+    }
+    if (!isValidUrl(planningUrl.trim())) {
+      toast.error("L'URL de planning n'est pas valide (http(s)://…)");
       return;
     }
     if (tracks.length === 0) {
@@ -116,6 +137,7 @@ export default function ReviewerManagement() {
         calendarId: calendarId.trim() || null,
         eventPrefix: eventPrefix.trim() || null,
         excludedPromos,
+        discordId: discordId.trim() || null,
       };
 
       const res = editing
@@ -251,6 +273,19 @@ export default function ReviewerManagement() {
                   Seuls les événements commençant par ce texte seront affichés. Laisser vide = tous les événements.
                 </p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="discordId">Discord ID (coach)</Label>
+                <Input
+                  id="discordId"
+                  value={discordId}
+                  onChange={e => setDiscordId(e.target.value)}
+                  placeholder="Ex: 123456789012345678"
+                  inputMode="numeric"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Optionnel — pour le DM « CR pris » envoyé au coach quand le capitaine valide.
+                </p>
+              </div>
               {promos.length > 0 && (
                 <div className="space-y-2">
                   <Label>Promotions</Label>
@@ -353,6 +388,14 @@ export default function ReviewerManagement() {
                   {reviewer.calendarId && (
                     <p className="truncate">Calendar: {reviewer.calendarId}</p>
                   )}
+                  <p className="flex items-center gap-1">
+                    <MessageSquare className="h-3 w-3" />
+                    {reviewer.discordId ? (
+                      <span className="truncate">DM Discord activé</span>
+                    ) : (
+                      <span className="text-muted-foreground/60">Pas de DM Discord</span>
+                    )}
+                  </p>
                   {reviewer.excludedPromos.length > 0 && (
                     <p className="text-destructive">
                       Exclu de : {reviewer.excludedPromos.join(', ')}

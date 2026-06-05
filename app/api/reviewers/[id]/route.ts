@@ -24,7 +24,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, planningUrl, tracks, calendarId, eventPrefix, excludedPromos, isActive } = body;
+    const { name, planningUrl, tracks, calendarId, eventPrefix, excludedPromos, discordId, isActive } = body;
 
     const updated = await updateReviewer(parseInt(id, 10), {
       ...(name !== undefined && { name }),
@@ -33,6 +33,7 @@ export async function PUT(
       ...(calendarId !== undefined && { calendarId }),
       ...(eventPrefix !== undefined && { eventPrefix }),
       ...(excludedPromos !== undefined && { excludedPromos }),
+      ...(discordId !== undefined && { discordId }),
       ...(isActive !== undefined && { isActive }),
     });
 

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, planningUrl, tracks, calendarId, eventPrefix, excludedPromos } = body;
+    const { name, planningUrl, tracks, calendarId, eventPrefix, excludedPromos, discordId } = body;
 
     if (!name || !planningUrl) {
       return NextResponse.json({ error: 'name et planningUrl requis' }, { status: 400 });
@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
       calendarId: calendarId || null,
       eventPrefix: eventPrefix || null,
       excludedPromos: excludedPromos || [],
+      discordId: discordId || null,
       isActive: true,
     });
 

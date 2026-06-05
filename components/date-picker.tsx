@@ -20,8 +20,20 @@ interface DatePickerDemoProps {
   className?: string; // Permet de personnaliser la largeur du bouton
 }
 
+function parseValue(value?: string): Date | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
 export function DatePickerDemo({ value, onChange, id, className }: DatePickerDemoProps) {
-  const [date, setDate] = React.useState<Date | undefined>();
+  const [date, setDate] = React.useState<Date | undefined>(() => parseValue(value));
+
+  // Keep the displayed date in sync when the parent changes `value`
+  // (e.g. pre-filling the edit dialog or resetting the create form).
+  React.useEffect(() => {
+    setDate(parseValue(value));
+  }, [value]);
 
   const handleDateChange = (selectedDate: Date | undefined) => {
     if (selectedDate) {

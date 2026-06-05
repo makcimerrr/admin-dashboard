@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { projects } from '@/lib/db/schema/projects';
-import { getAllProjects, addProject, deleteProject, setProjectOptional } from '@/lib/db/services/projects';
+import { getAllProjects, addProject, deleteProject, setProjectOptional, updateProject } from '@/lib/db/services/projects';
 import { dbProjectsToConfig } from '@/lib/config/projects';
 import { eq, asc } from 'drizzle-orm';
 import { CACHE_TAGS, invalidate } from '@/lib/cache';
@@ -71,6 +71,8 @@ export async function DELETE(req: Request) {
  * « optionnel » d'un projet selon le payload reçu.
  *
  * - `{ id, optional }`         → met à jour le flag `optional` du projet.
+ * - `{ id, name?, project_time_week?, tech? }` → édite le projet
+ *   (renommage, durée, changement de track) de façon non destructive.
  * - `{ tech, reorderedProjects }` → réordonne les projets de la techno.
  */
 export async function PATCH(req: Request) {
@@ -79,6 +81,8 @@ export async function PATCH(req: Request) {
     reorderedProjects?: number[];
     id?: number;
     optional?: boolean;
+    name?: string;
+    project_time_week?: number;
   } = await req.json();
 
   // Branche 1 : bascule du flag optionnel.
@@ -91,7 +95,34 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ message: 'Project updated.', projects: grouped });
   }
 
-  // Branche 2 : réorganisation.
+  // Branche 2 : édition non destructive (nom, durée, track).
+  if (
+    typeof body.id === 'number' &&
+    (body.name !== undefined || body.project_time_week !== undefined || body.tech !== undefined)
+  ) {
+    if (body.name !== undefined && body.name.trim() === '') {
+      return NextResponse.json({ error: 'Project name cannot be empty.' }, { status: 400 });
+    }
+    if (body.project_time_week !== undefined && !(body.project_time_week > 0)) {
+      return NextResponse.json({ error: 'Project duration must be greater than 0.' }, { status: 400 });
+    }
+    if (body.tech !== undefined && body.tech.trim() === '') {
+      return NextResponse.json({ error: 'Technology cannot be empty.' }, { status: 400 });
+    }
+
+    await updateProject(body.id, {
+      name: body.name !== undefined ? body.name.trim() : undefined,
+      projectTimeWeek: body.project_time_week,
+      category: body.tech !== undefined ? body.tech.trim() : undefined,
+    });
+    invalidate(CACHE_TAGS.projects);
+
+    const rows = await getAllProjects();
+    const grouped = dbProjectsToConfig(rows);
+    return NextResponse.json({ message: 'Project updated.', projects: grouped });
+  }
+
+  // Branche 3 : réorganisation.
   const { tech, reorderedProjects } = body;
 
   if (!tech || !reorderedProjects) {
