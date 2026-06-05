@@ -4,6 +4,7 @@ import {
   markMilestoneNotified,
 } from '@/lib/db/services/groupStatuses';
 import { sendDiscordDM } from '@/lib/services/discord';
+import { notifyViaBot } from '@/lib/services/bot-notify';
 import { getTrackByProjectName } from '@/lib/config/projects';
 import { getReviewerForRoundRobin, type Reviewer } from '@/lib/db/services/reviewers';
 
@@ -92,7 +93,31 @@ export async function GET(request: NextRequest) {
       MILESTONE_PCT,
       reviewer
     );
-    const ok = await sendDiscordDM(row.discordId, msg);
+
+    // Émission via le bot (bouton Répondre uniquement). Fallback DM texte.
+    const bot = await notifyViaBot({
+      type: 'milestone',
+      recipientDiscordId: row.discordId,
+      title: 'Palier 50% — point d\'avancement',
+      body: msg,
+      facts: [
+        { name: 'Projet', value: row.projectName },
+        { name: 'Avancement', value: `${MILESTONE_PCT}%` },
+        { name: 'Coach', value: reviewer.name },
+      ],
+      url: reviewer.planningUrl,
+      actions: { rdvReaction: false, replyButton: true },
+      context: {
+        type: 'milestone',
+        source_label: 'Palier 50%',
+        groupId: row.groupId,
+        promoId: row.promoId,
+        projectName: row.projectName,
+        captainLogin: row.captainLogin ?? undefined,
+      },
+    });
+
+    const ok = bot.ok ? true : await sendDiscordDM(row.discordId, msg);
 
     if (ok) {
       await markMilestoneNotified(row.id, MILESTONE_PCT);

@@ -2,10 +2,11 @@ import { db } from '../config';
 import { students } from '../schema/students';
 import { discordUsers } from '../schema/discordUsers';
 import { auditReportRequests } from '../schema/auditReportRequests';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, isNull } from 'drizzle-orm';
 import { zone01Graphql } from '@/lib/services/zone01-graphql';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getArchivedPromoNames } from '@/lib/db/filters';
+import { isOlderThanBusinessDays } from '@/lib/utils/business-days';
 
 const SINCE_DAYS_DEFAULT = 60;
 
@@ -203,4 +204,82 @@ export async function getFinishedAuditorsToRequest(sinceDays = 7): Promise<Audit
   return out;
 }
 
-export { SINCE_DAYS_DEFAULT };
+/** Nombre de jours ouvrés sans réponse avant escalade (Feature 7). */
+const ESCALATE_AFTER_BUSINESS_DAYS = 2;
+
+/**
+ * Feature 6 — enregistre la réponse d'un auditeur à la demande de compte-rendu
+ * (modal du bot). Set `responded_at = now`, `response_status`, `response_comment`
+ * pour la paire (auditorLogin, groupId). No-op si la demande n'existe pas.
+ */
+export async function markAuditResponded(
+  auditorLogin: string,
+  groupId: string,
+  status: string,
+  comment: string | null,
+): Promise<void> {
+  await db
+    .update(auditReportRequests)
+    .set({
+      respondedAt: new Date(),
+      responseStatus: status.slice(0, 50),
+      responseComment: comment ? comment.slice(0, 2000) : null,
+    })
+    .where(
+      and(
+        eq(auditReportRequests.auditorLogin, auditorLogin),
+        eq(auditReportRequests.groupId, groupId),
+      ),
+    );
+}
+
+export interface AuditRequestToEscalate {
+  id: number;
+  auditorLogin: string;
+  groupId: string;
+  projectName: string | null;
+  requestedAt: Date;
+}
+
+/**
+ * Feature 7 — demandes de compte-rendu à escalader : `requested_at` plus vieux
+ * que {@link ESCALATE_AFTER_BUSINESS_DAYS} jours ouvrés, sans réponse, et pas
+ * encore escaladées. Le filtre « jours ouvrés » est appliqué en JS (week-ends +
+ * jours fériés/vacances) car non exprimable en SQL pur.
+ */
+export async function getAuditRequestsToEscalate(): Promise<AuditRequestToEscalate[]> {
+  const rows = await db
+    .select({
+      id: auditReportRequests.id,
+      auditorLogin: auditReportRequests.auditorLogin,
+      groupId: auditReportRequests.groupId,
+      projectName: auditReportRequests.projectName,
+      requestedAt: auditReportRequests.requestedAt,
+    })
+    .from(auditReportRequests)
+    .where(
+      and(
+        isNull(auditReportRequests.respondedAt),
+        isNull(auditReportRequests.escalatedAt),
+      ),
+    );
+
+  const out: AuditRequestToEscalate[] = [];
+  for (const r of rows) {
+    // eslint-disable-next-line no-await-in-loop
+    if (await isOlderThanBusinessDays(r.requestedAt, ESCALATE_AFTER_BUSINESS_DAYS)) {
+      out.push(r);
+    }
+  }
+  return out;
+}
+
+/** Feature 7 — marque une demande comme escaladée (Teams envoyé). */
+export async function markAuditEscalated(id: number): Promise<void> {
+  await db
+    .update(auditReportRequests)
+    .set({ escalatedAt: new Date() })
+    .where(eq(auditReportRequests.id, id));
+}
+
+export { SINCE_DAYS_DEFAULT, ESCALATE_AFTER_BUSINESS_DAYS };

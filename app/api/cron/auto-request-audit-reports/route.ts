@@ -5,6 +5,7 @@ import {
   buildAuditReportMessage,
 } from '@/lib/db/services/auditReports';
 import { sendDiscordDM } from '@/lib/services/discord';
+import { notifyViaBot } from '@/lib/services/bot-notify';
 
 export const maxDuration = 60;
 
@@ -60,8 +61,29 @@ export async function GET(request: NextRequest) {
   let sent = 0;
   const errors: { auditorLogin: string; groupId: string }[] = [];
   for (const t of targets) {
+    const message = buildAuditReportMessage(t.auditorLogin, t.project);
+    // Émission via le bot (bouton Répondre uniquement). Fallback DM texte.
     // eslint-disable-next-line no-await-in-loop
-    const ok = await sendDiscordDM(t.discordId, buildAuditReportMessage(t.auditorLogin, t.project));
+    const bot = await notifyViaBot({
+      type: 'audit_report',
+      recipientDiscordId: t.discordId,
+      title: 'Rapport d\'audit demandé',
+      body: message,
+      facts: [
+        { name: 'Auditeur', value: t.auditorLogin },
+        { name: 'Projet', value: t.project },
+      ],
+      actions: { rdvReaction: false, replyButton: true },
+      context: {
+        type: 'audit_report',
+        source_label: "Rapport d'audit",
+        auditorLogin: t.auditorLogin,
+        groupId: t.groupId,
+        projectName: t.project,
+      },
+    });
+    // eslint-disable-next-line no-await-in-loop
+    const ok = bot.ok ? true : await sendDiscordDM(t.discordId, message);
     if (ok) {
       // eslint-disable-next-line no-await-in-loop
       await recordAuditReportRequest(t.auditorLogin, t.groupId, t.project);

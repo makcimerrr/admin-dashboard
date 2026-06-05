@@ -23,6 +23,7 @@ import {
   CheckCircle2, Send, ExternalLink, Archive, Trash2, X,
   Loader2, RefreshCw, AlertTriangle, ClipboardCheck,
   MoreHorizontal, ShieldAlert, CircleDot, ArrowUpDown, ArrowUp, ArrowDown,
+  CalendarCheck,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { PdfExportButton } from '@/components/code-reviews/pdf-export-button';
@@ -35,14 +36,15 @@ interface SuiviRow {
   id: number; groupId: string; promoId: string; projectName: string; status: string;
   captainLogin: string | null; notifiedAuditAt: string | null; lastSeenAt: string;
   slotDate: string | null; slotBookedAt: string | null; slotEventId: string | null;
-  slotAttendeeEmail: string | null; hasDiscordId: boolean; track: string | null;
+  slotAttendeeEmail: string | null; rdvConfirmedAt: string | null;
+  hasDiscordId: boolean; track: string | null;
   auditId: number | null; auditCreatedAt: string | null; auditorName: string | null;
   manualReminderAt: string | null;
 }
 
 interface PromoInfo { eventId: number; title: string; key: string; }
 
-type Category = 'overdue' | 'warning' | 'pending' | 'done';
+type Category = 'overdue' | 'warning' | 'pending' | 'booked' | 'done';
 type SortKey = 'project' | 'captain' | 'notif' | 'delay' | 'review';
 type SortDir = 'asc' | 'desc';
 
@@ -58,8 +60,15 @@ function daysSinceNotified(row: SuiviRow): number {
   return (Date.now() - new Date(row.notifiedAuditAt).getTime()) / 86_400_000;
 }
 
+/** RDV confirmé (réaction ✅ du bot) ou créneau réservé côté planning. */
+function isBooked(row: SuiviRow): boolean {
+  return Boolean(row.rdvConfirmedAt || row.slotBookedAt);
+}
+
 function categorize(row: SuiviRow): Category {
   if (row.auditId) return 'done';
+  // RDV pris / créneau réservé → sort des relances (pending/warning/overdue).
+  if (isBooked(row)) return 'booked';
   const days = daysSinceNotified(row);
   if (days >= 14) return 'overdue';
   if (days >= 10) return 'warning';
@@ -70,6 +79,7 @@ const STATUS_BADGE: Record<Category, { label: string; class: string }> = {
   overdue: { label: 'Dépassé', class: PILL.red },
   warning: { label: 'Warning', class: PILL.amber },
   pending: { label: 'Attente', class: PILL.blue },
+  booked: { label: 'Réservé', class: PILL.emerald },
   done: { label: 'Audité', class: PILL.emerald },
 };
 
@@ -85,6 +95,7 @@ const TAB_CONFIG: { key: Category | 'all'; label: string; icon: React.ElementTyp
   { key: 'overdue', label: 'Dépassement', icon: ShieldAlert, color: 'text-destructive' },
   { key: 'warning', label: 'Warning', icon: AlertTriangle, color: 'text-warning' },
   { key: 'pending', label: 'En attente', icon: CircleDot, color: 'text-primary' },
+  { key: 'booked', label: 'Réservé', icon: CalendarCheck, color: 'text-success' },
   { key: 'done', label: 'Audité', icon: CheckCircle2, color: 'text-success' },
 ];
 
@@ -98,7 +109,7 @@ function whyBadge(
   row: SuiviRow,
   cat: Category,
 ): { label: string; tooltip: string; tone: string } | null {
-  if (cat === 'done') return null;
+  if (cat === 'done' || cat === 'booked') return null;
   const tonesRed =
     'bg-destructive/15 text-destructive border border-destructive/30';
   const tonesAmber =
@@ -316,7 +327,7 @@ export default function SuiviPage() {
     setBulkLoading(true);
     const idSet = selectedIds;
     const eligibleRows = rows.filter(
-      (r) => idSet.has(r.id) && r.captainLogin && r.hasDiscordId && !r.auditId,
+      (r) => idSet.has(r.id) && r.captainLogin && r.hasDiscordId && !r.auditId && !isBooked(r),
     );
     const skipped = idSet.size - eligibleRows.length;
     if (eligibleRows.length === 0) {
@@ -449,14 +460,14 @@ export default function SuiviPage() {
       (r.track ?? '').toLowerCase().includes(q);
   });
 
-  const grouped: Record<Category, SuiviRow[]> = { overdue: [], warning: [], pending: [], done: [] };
+  const grouped: Record<Category, SuiviRow[]> = { overdue: [], warning: [], pending: [], booked: [], done: [] };
   filtered.forEach(r => grouped[categorize(r)].push(r));
 
-  const counts = { total: active.length, overdue: grouped.overdue.length, warning: grouped.warning.length, pending: grouped.pending.length, done: grouped.done.length };
+  const counts = { total: active.length, overdue: grouped.overdue.length, warning: grouped.warning.length, pending: grouped.pending.length, booked: grouped.booked.length, done: grouped.done.length };
 
   const visibleRows = useMemo(() => {
     const categories: Category[] = activeTab === 'all'
-      ? ['overdue', 'warning', 'pending', 'done']
+      ? ['overdue', 'warning', 'pending', 'booked', 'done']
       : [activeTab as Category];
     const list = categories.flatMap(cat => grouped[cat]);
 
@@ -474,7 +485,9 @@ export default function SuiviPage() {
   }, [activeTab, grouped, sortKey, sortDir]);
 
   const showDoneColumns = activeTab === 'done' || activeTab === 'all';
-  const showDelayColumn = activeTab !== 'done';
+  const showDelayColumn = activeTab !== 'done' && activeTab !== 'booked';
+  // « RDV confirmé » : pertinent partout sauf l'onglet Audité (déjà clos).
+  const showRdvColumn = activeTab !== 'done';
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
@@ -573,6 +586,7 @@ export default function SuiviPage() {
                 <SortHeader label="Projet" sortId="project" />
                 <SortHeader label="Capitaine" sortId="captain" />
                 <SortHeader label="Notification" sortId="notif" />
+                {showRdvColumn && <TableHead>RDV confirmé</TableHead>}
                 {showDelayColumn && <SortHeader label="Délai" sortId="delay" />}
                 {showDoneColumns && <SortHeader label="Review" sortId="review" />}
                 <TableHead className="w-8" />
@@ -660,7 +674,7 @@ export default function SuiviPage() {
 
                     {/* Notification — smart unified action */}
                     <TableCell>
-                      {cat === 'done' ? (
+                      {cat === 'done' || cat === 'booked' ? (
                         <span className="text-muted-foreground/40">—</span>
                       ) : !row.captainLogin ? (
                         <span className="text-warning text-[10px]">Pas de capitaine</span>
@@ -704,6 +718,25 @@ export default function SuiviPage() {
                         </div>
                       )}
                     </TableCell>
+
+                    {/* RDV confirmé */}
+                    {showRdvColumn && (
+                      <TableCell>
+                        {row.rdvConfirmedAt ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-success" title={`RDV confirmé le ${fmtShort(row.rdvConfirmedAt)}`}>
+                            <CheckCircle2 className="h-3 w-3" />
+                            {fmtShort(row.rdvConfirmedAt)}
+                          </span>
+                        ) : row.slotBookedAt ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-success" title={`Créneau réservé le ${fmtShort(row.slotBookedAt)}`}>
+                            <CalendarCheck className="h-3 w-3" />
+                            {fmtShort(row.slotBookedAt)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/40">—</span>
+                        )}
+                      </TableCell>
+                    )}
 
                     {/* Délai */}
                     {showDelayColumn && (
@@ -861,12 +894,22 @@ export default function SuiviPage() {
                           {row.auditorName && <span className="text-muted-foreground"> ({row.auditorName})</span>}
                         </span>
                       )}
+                      {!row.auditId && row.rdvConfirmedAt && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-success" title={`RDV confirmé le ${fmtShort(row.rdvConfirmedAt)}`}>
+                          <CheckCircle2 className="h-3 w-3" /> RDV {fmtShort(row.rdvConfirmedAt)}
+                        </span>
+                      )}
+                      {!row.auditId && !row.rdvConfirmedAt && row.slotBookedAt && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-success" title={`Créneau réservé le ${fmtShort(row.slotBookedAt)}`}>
+                          <CalendarCheck className="h-3 w-3" /> {fmtShort(row.slotBookedAt)}
+                        </span>
+                      )}
                     </div>
 
                     {/* Actions row */}
                     <div className="flex items-center justify-between gap-2 pt-1">
                       <div className="flex items-center gap-1.5">
-                        {cat !== 'done' && row.captainLogin && row.hasDiscordId && (
+                        {cat !== 'done' && cat !== 'booked' && row.captainLogin && row.hasDiscordId && (
                           !row.notifiedAuditAt ? (
                             <Button
                               size="sm"

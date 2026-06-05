@@ -14,6 +14,8 @@ export const groupStatuses = pgTable(
     notified30At: timestamp('notified_30_at'),
     notified50At: timestamp('notified_50_at'),
     notified70At: timestamp('notified_70_at'),
+    /** Quand le capitaine a coché ✅ « RDV pris » sur le message du bot (Feature 1). */
+    rdvConfirmedAt: timestamp('rdv_confirmed_at'),
     slotDate: timestamp('slot_date'),
     slotBookedAt: timestamp('slot_booked_at'),
     slotEventId: varchar('slot_event_id', { length: 200 }),

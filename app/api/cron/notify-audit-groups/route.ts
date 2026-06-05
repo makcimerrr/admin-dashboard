@@ -12,8 +12,10 @@ import {
 } from '@/lib/db/services/groupStatuses';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
+import { notifyViaBot } from '@/lib/services/bot-notify';
+import { sendTeamsCard, buildRelanceCard } from '@/lib/services/teams';
 import { getTrackByProjectName, getAllProjects } from '@/lib/config/projects';
-import { getReviewerForRoundRobin, type Reviewer } from '@/lib/db/services/reviewers';
+import { getReviewerForRoundRobin } from '@/lib/db/services/reviewers';
 import type { Track } from '@/lib/db/schema/audits';
 
 export const maxDuration = 60;
@@ -171,11 +173,54 @@ export async function GET(request: NextRequest) {
           promoName,
           reviewer
         );
-        const sent = await sendDiscordDM(discordId, message);
+
+        const facts = [
+          { name: 'Projet', value: group.projectName },
+          { name: 'Promo', value: promoName },
+          { name: 'Coach', value: reviewer.name },
+        ];
+
+        // Émission via le bot (embed interactif : réaction ✅ + bouton Répondre).
+        // coachDiscordId = Discord du reviewer assigné (null si non renseigné).
+        const bot = await notifyViaBot({
+          type: 'cr_rdv',
+          recipientDiscordId: discordId,
+          title: 'Code review à réserver',
+          body: message,
+          facts,
+          url: reviewer.planningUrl,
+          actions: { rdvReaction: true, replyButton: true },
+          coachDiscordId: reviewer.discordId ?? null,
+          context: {
+            type: 'cr_rdv',
+            source_label: 'Code review',
+            groupId: group.groupId,
+            promoId: group.promoId,
+            projectName: group.projectName,
+            captainLogin: group.captainLogin,
+          },
+        });
+
+        // Fallback DM texte simple si le bot est injoignable.
+        const sent = bot.ok ? true : await sendDiscordDM(discordId, message);
 
         if (sent) {
           assignmentIndex++;
           await markAuditNotified(group.id, reviewer.name);
+          // Feature 5 : relance émise en parallèle sur Teams.
+          await sendTeamsCard(
+            buildRelanceCard({
+              title: 'Relance — Code review à réserver',
+              facts: [
+                { title: 'Capitaine', value: group.captainLogin },
+                { title: 'Projet', value: group.projectName },
+                { title: 'Promo', value: promoName },
+                { title: 'Coach', value: reviewer.name },
+              ],
+              url: reviewer.planningUrl,
+              urlLabel: 'Ouvrir le planning',
+            }),
+          );
         }
         results.push({ outcome: sent ? 'notified' : 'error' });
       } catch (err) {
@@ -216,7 +261,31 @@ export async function GET(request: NextRequest) {
           `Si tu as des difficultés, n'hésite pas à contacter le staff. 💪`
         ].join('\n');
 
-        const sent = await sendDiscordDM(discordId, reminderMessage);
+        // Émission via le bot (bouton Répondre ; pas de réaction ✅ ni coach
+        // ici car le rappel ne ré-assigne pas de reviewer). Fallback DM.
+        const bot = await notifyViaBot({
+          type: 'cr_rdv',
+          recipientDiscordId: discordId,
+          title: 'Rappel — code review en attente',
+          body: reminderMessage,
+          facts: [
+            { name: 'Projet', value: group.projectName },
+            { name: 'Promo', value: pName },
+            { name: 'En attente depuis', value: `${days} jours` },
+          ],
+          actions: { rdvReaction: false, replyButton: true },
+          coachDiscordId: null,
+          context: {
+            type: 'cr_rdv',
+            source_label: 'Code review',
+            groupId: group.groupId,
+            promoId: group.promoId,
+            projectName: group.projectName,
+            captainLogin: group.captainLogin,
+          },
+        });
+
+        const sent = bot.ok ? true : await sendDiscordDM(discordId, reminderMessage);
         if (sent) reminders++;
         await markReminderSent(group.id);
       } catch (err) {

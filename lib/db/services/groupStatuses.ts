@@ -155,6 +155,7 @@ export interface SuiviRow {
   slotBookedAt: Date | null;
   slotEventId: string | null;
   slotAttendeeEmail: string | null;
+  rdvConfirmedAt: Date | null;
   hasDiscordId: boolean;
   track: string | null;
   auditId: number | null;
@@ -241,6 +242,7 @@ export async function getAllForSuivi(): Promise<SuiviRow[]> {
       slotBookedAt: r.slotBookedAt,
       slotEventId: r.slotEventId,
       slotAttendeeEmail: r.slotAttendeeEmail,
+      rdvConfirmedAt: r.rdvConfirmedAt,
       hasDiscordId: r.captainLogin ? discordSet.has(r.captainLogin) : false,
       track: trackByProject.get(r.projectName) ?? null,
       auditId: audit?.id ?? null,
@@ -250,6 +252,30 @@ export async function getAllForSuivi(): Promise<SuiviRow[]> {
       notifiedReviewerName: r.notifiedReviewerName ?? null,
     };
   });
+}
+
+/**
+ * Marque le RDV de code review comme confirmé (réaction ✅ côté bot).
+ * Set `rdv_confirmed_at = now()` uniquement si null (idempotent : une 2e
+ * confirmation ne remet pas la date à jour). Scope (groupId, promoId,
+ * projectName), insensible à la casse du projet pour matcher le suivi.
+ */
+export async function markRdvConfirmed(
+  groupId: string,
+  promoId: string,
+  projectName: string,
+): Promise<void> {
+  await db
+    .update(groupStatuses)
+    .set({ rdvConfirmedAt: new Date() })
+    .where(
+      and(
+        eq(groupStatuses.groupId, groupId),
+        eq(groupStatuses.promoId, promoId),
+        sql`lower(${groupStatuses.projectName}) = lower(${projectName})`,
+        isNull(groupStatuses.rdvConfirmedAt),
+      ),
+    );
 }
 
 export async function updateSlot(

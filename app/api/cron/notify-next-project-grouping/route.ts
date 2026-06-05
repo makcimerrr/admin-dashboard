@@ -6,6 +6,8 @@ import { getAllProjects } from '@/lib/config/projects';
 import { TRACKS, type Track } from '@/lib/db/schema/audits';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
+import { notifyViaBot } from '@/lib/services/bot-notify';
+import { sendTeamsCard, buildRelanceCard } from '@/lib/services/teams';
 import {
   upsertDetection,
   markNextProjectNotified,
@@ -234,9 +236,43 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        if (await sendDiscordDM(discordId, msg)) {
+        // Émission via le bot (bouton Répondre uniquement). Fallback DM texte.
+        const bot = await notifyViaBot({
+          type: 'grouping',
+          recipientDiscordId: discordId,
+          title: 'Regroupement — projet suivant',
+          body: msg,
+          facts: [
+            { name: 'Projet précédent', value: prevProject },
+            { name: 'Projet suivant', value: nextProject },
+            { name: 'Étudiants dispo', value: String(peers.length) },
+          ],
+          actions: { rdvReaction: false, replyButton: true },
+          context: {
+            type: 'grouping',
+            source_label: 'Regroupement projet suivant',
+            login,
+            promoId,
+            nextProjectName: nextProject,
+          },
+        });
+
+        const ok = bot.ok ? true : await sendDiscordDM(discordId, msg);
+
+        if (ok) {
           await markNextProjectNotified(login, promoId, nextProject);
           sent.push({ login, prevProject, nextProject, peers: peers.length });
+          // Feature 5 : relance émise en parallèle sur Teams.
+          await sendTeamsCard(
+            buildRelanceCard({
+              title: 'Relance — Regroupement projet suivant',
+              facts: [
+                { title: 'Étudiant', value: login },
+                { title: 'Projet précédent', value: prevProject },
+                { title: 'Projet suivant', value: nextProject },
+              ],
+            }),
+          );
         }
       }
     }

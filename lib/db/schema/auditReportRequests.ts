@@ -13,6 +13,12 @@ export const auditReportRequests = pgTable(
     groupId: varchar('group_id', { length: 100 }).notNull(),
     projectName: varchar('project_name', { length: 100 }),
     requestedAt: timestamp('requested_at').defaultNow().notNull(),
+    /** Réponse de l'auditeur via le modal du bot (Feature 6/7). */
+    respondedAt: timestamp('responded_at'),
+    responseStatus: varchar('response_status', { length: 50 }),
+    responseComment: varchar('response_comment', { length: 2000 }),
+    /** Message Teams d'escalade envoyé (Feature 7 — 2 jours ouvrés sans réponse). */
+    escalatedAt: timestamp('escalated_at'),
   },
   (table) => ({
     uniqueReq: uniqueIndex('idx_audit_report_req_unique').on(table.auditorLogin, table.groupId),
