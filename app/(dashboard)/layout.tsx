@@ -98,7 +98,7 @@ export default async function DashboardLayout({
   // Non-admins see the same shell but only with apps they have access to
   // (filtered in AppSidebar via filterAppsByRole)
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="fixed inset-0 flex overflow-hidden">
       <AppSidebar user={user} />
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <SiteHeader />
