@@ -15,3 +15,7 @@ export async function addProject(data: NewProject) {
 export async function deleteProject(id: number) {
   await db.delete(projects).where(eq(projects.id, id));
 }
+
+export async function setProjectOptional(id: number, optional: boolean) {
+  await db.update(projects).set({ optional }).where(eq(projects.id, id));
+}

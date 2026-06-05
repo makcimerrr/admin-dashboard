@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown, Briefcase, Code2, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -43,6 +44,7 @@ interface Project {
   id: number;
   name: string;
   project_time_week: number;
+  optional?: boolean;
 }
 
 interface ProjectsByTech {
@@ -57,12 +59,14 @@ export default function ProjectManagement() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [movingId, setMovingId] = useState<number | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteProject, setDeleteProject] = useState<{ tech: string; id: number } | null>(null);
   const [newProject, setNewProject] = useState<Omit<Project, 'id'> & { tech: string }>({
     name: '',
     project_time_week: 0,
-    tech: ''
+    tech: '',
+    optional: false
   });
 
   // Met à jour le cache avec la nouvelle valeur renvoyée par une mutation (sans refetch).
@@ -74,7 +78,7 @@ export default function ProjectManagement() {
   }, [projectsError]);
 
   const handleAdd = async () => {
-    const { name, project_time_week, tech } = newProject;
+    const { name, project_time_week, tech, optional } = newProject;
 
     if (!name || !project_time_week || !tech) {
       toast.error('Veuillez remplir tous les champs obligatoires.');
@@ -86,17 +90,35 @@ export default function ProjectManagement() {
       const response = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, project_time_week, tech })
+        body: JSON.stringify({ name, project_time_week, tech, optional: optional ?? false })
       });
       const data = await response.json();
       setProjectsByTech(data.projects);
       toast.success('Projet ajouté avec succès.');
-      setNewProject({ name: '', project_time_week: 0, tech: '' });
+      setNewProject({ name: '', project_time_week: 0, tech: '', optional: false });
       setIsDialogOpen(false);
     } catch (error) {
       toast.error('Erreur lors de l\'ajout du projet.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleOptional = async (id: number, optional: boolean) => {
+    setTogglingId(id);
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, optional })
+      });
+      const data = await response.json();
+      setProjectsByTech(data.projects);
+      toast.success(optional ? 'Projet marqué comme optionnel.' : 'Projet marqué comme obligatoire.');
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour du projet.');
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -235,6 +257,19 @@ export default function ProjectManagement() {
                   />
                 )}
               </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="project-optional">Projet optionnel</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Exclu des relances de regroupement et de code-review
+                  </p>
+                </div>
+                <Switch
+                  id="project-optional"
+                  checked={newProject.optional ?? false}
+                  onCheckedChange={(checked) => setNewProject((prev) => ({ ...prev, optional: checked }))}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
@@ -298,13 +333,35 @@ export default function ProjectManagement() {
                       <div className="flex items-center gap-3">
                         <GripVertical className="h-4 w-4 text-muted-foreground" />
                         <div>
-                          <p className="font-medium">{project.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{project.name}</p>
+                            {project.optional && (
+                              <Badge variant="secondary" className="text-[10px] font-normal">
+                                Optionnel
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {project.project_time_week} semaine{project.project_time_week > 1 ? 's' : ''}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2 pr-2">
+                          <Label htmlFor={`optional-${project.id}`} className="text-xs text-muted-foreground">
+                            Optionnel
+                          </Label>
+                          {togglingId === project.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : (
+                            <Switch
+                              id={`optional-${project.id}`}
+                              checked={project.optional ?? false}
+                              onCheckedChange={(checked) => handleToggleOptional(project.id, checked)}
+                              disabled={togglingId !== null}
+                            />
+                          )}
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"

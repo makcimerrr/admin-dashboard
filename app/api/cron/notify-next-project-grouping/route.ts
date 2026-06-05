@@ -89,9 +89,12 @@ export async function GET(request: NextRequest) {
 
     // Map nom de projet (lower) → track, depuis la config (case-insensitive).
     const projectTrack = new Map<string, Track>();
+    // Ensemble des projets optionnels (lower) : exclus des relances de regroupement.
+    const optionalProjects = new Set<string>();
     for (const track of Object.keys(projectsConfig) as Track[]) {
       for (const project of projectsConfig[track]) {
         projectTrack.set(project.name.toLowerCase(), track);
+        if (project.optional) optionalProjects.add(project.name.toLowerCase());
       }
     }
 
@@ -177,6 +180,9 @@ export async function GET(request: NextRequest) {
           const next = ordered[i + 1];
           const prevEntry = student.entries.get(prev.lower);
           if (!prevEntry || prevEntry.status !== 'finished') continue;
+
+          // Projet suivant optionnel → pas de rappel de regroupement (skip).
+          if (optionalProjects.has(next.lower)) continue;
 
           const nextEntry = student.entries.get(next.lower);
           // Pas groupé sur le suivant = pas d'entrée OU entrée sans groupe.

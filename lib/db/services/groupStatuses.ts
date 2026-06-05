@@ -70,6 +70,7 @@ export interface MilestoneCheckRow {
   notified50At: Date | null;
   notified70At: Date | null;
   projectTimeWeek: number | null;
+  optional: boolean | null;
   discordId: string | null;
 }
 
@@ -86,6 +87,7 @@ export async function getGroupsForMilestoneCheck(): Promise<MilestoneCheckRow[]>
       notified50At: groupStatuses.notified50At,
       notified70At: groupStatuses.notified70At,
       projectTimeWeek: projects.projectTimeWeek,
+      optional: projects.optional,
       discordId: discordUsers.discordId,
     })
     .from(groupStatuses)

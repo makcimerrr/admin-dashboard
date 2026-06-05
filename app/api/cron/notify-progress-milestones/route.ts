@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getGroupsForMilestoneCheck,
   markMilestoneNotified,
-  type MilestoneCheckRow,
 } from '@/lib/db/services/groupStatuses';
 import { sendDiscordDM } from '@/lib/services/discord';
 import { getTrackByProjectName } from '@/lib/config/projects';
@@ -44,24 +43,27 @@ export async function GET(request: NextRequest) {
   let assignmentIndex = 0;
   const sent: Array<Record<string, unknown>> = [];
 
-  const milestones = [
-    { key: 30 as const, frac: 0.3, field: 'notified30At' as const },
-    { key: 50 as const, frac: 0.5, field: 'notified50At' as const },
-    { key: 70 as const, frac: 0.7, field: 'notified70At' as const },
-  ];
+  // Seul le palier 50 % est conservé, et uniquement pour les projets de
+  // ≥ 4 semaines. Les projets optionnels sont ignorés.
+  const MILESTONE_PCT = 50 as const;
+  const MILESTONE_FRAC = 0.5;
 
   for (const row of rows) {
     if (!row.projectTimeWeek || !row.discordId) continue;
 
+    // Ignore les projets courts (< 4 semaines)
+    if (row.projectTimeWeek < 4) continue;
+
+    // Ignore les projets optionnels
+    if (row.optional === true) continue;
+
+    // Idempotence sur le palier 50 %
+    if (row.notified50At != null) continue;
+
     const durationMs = row.projectTimeWeek * 7 * 24 * 3600 * 1000;
     const elapsedMs = Date.now() - new Date(row.setupAt as Date).getTime();
 
-    const crossedUnsent = milestones.filter(
-      (t) => elapsedMs >= durationMs * t.frac && row[t.field as keyof MilestoneCheckRow] == null
-    );
-    if (crossedUnsent.length === 0) continue;
-
-    const highest = crossedUnsent[crossedUnsent.length - 1];
+    if (elapsedMs < durationMs * MILESTONE_FRAC) continue;
 
     const track = await getTrackByProjectName(row.projectName);
     const reviewer = await getReviewerForRoundRobin(track, assignmentIndex);
@@ -76,7 +78,7 @@ export async function GET(request: NextRequest) {
       sent.push({
         captain: row.captainLogin,
         project: row.projectName,
-        pct: highest.key,
+        pct: MILESTONE_PCT,
         coach: reviewer.name,
         dry: true,
       });
@@ -87,20 +89,18 @@ export async function GET(request: NextRequest) {
       row.captainLogin as string,
       row.projectName,
       row.projectTimeWeek,
-      highest.key,
+      MILESTONE_PCT,
       reviewer
     );
     const ok = await sendDiscordDM(row.discordId, msg);
 
     if (ok) {
-      for (const t of crossedUnsent) {
-        await markMilestoneNotified(row.id, t.key);
-      }
+      await markMilestoneNotified(row.id, MILESTONE_PCT);
       assignmentIndex++;
       sent.push({
         captain: row.captainLogin,
         project: row.projectName,
-        pct: highest.key,
+        pct: MILESTONE_PCT,
         coach: reviewer.name,
       });
     }

@@ -12,8 +12,9 @@ import {
 } from '@/lib/db/services/groupStatuses';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
-import { getTrackByProjectName } from '@/lib/config/projects';
+import { getTrackByProjectName, getAllProjects } from '@/lib/config/projects';
 import { getReviewerForRoundRobin, type Reviewer } from '@/lib/db/services/reviewers';
+import type { Track } from '@/lib/db/schema/audits';
 
 export const maxDuration = 60;
 
@@ -51,13 +52,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [promotions, archivedPromos] = await Promise.all([
+    const [promotions, archivedPromos, projectsConfig] = await Promise.all([
       getAllPromotions(),
-      getArchivedPromotions()
+      getArchivedPromotions(),
+      getAllProjects()
     ]);
 
     const archivedNames = new Set(archivedPromos.map((p) => p.name));
     const activePromos = promotions.filter((p) => !archivedNames.has(p.key));
+
+    // Ensemble des projets optionnels (lower) : exclus des relances de code-review.
+    const optionalProjects = new Set<string>();
+    for (const track of Object.keys(projectsConfig) as Track[]) {
+      for (const project of projectsConfig[track]) {
+        if (project.optional) optionalProjects.add(project.name.toLowerCase());
+      }
+    }
 
     // Step 1: Fetch progressions for all promos in parallel
     await Promise.allSettled(
@@ -125,6 +135,12 @@ export async function GET(request: NextRequest) {
 
     for (const group of pending) {
       try {
+        // Projet optionnel → pas de relance de code-review (skip).
+        if (optionalProjects.has(group.projectName.toLowerCase())) {
+          results.push({ outcome: 'skipped' });
+          continue;
+        }
+
         const promo = promotions.find(
           (p) => String(p.eventId) === group.promoId
         );
@@ -180,6 +196,8 @@ export async function GET(request: NextRequest) {
 
     for (const group of overdue) {
       try {
+        // Projet optionnel → pas de relance de code-review (skip).
+        if (optionalProjects.has(group.projectName.toLowerCase())) continue;
         if (!group.captainLogin) continue;
         const discordId = await getDiscordIdByLogin(group.captainLogin);
         if (!discordId) continue;

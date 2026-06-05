@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/config';
 import { projects } from '@/lib/db/schema/projects';
-import { getAllProjects, addProject, deleteProject } from '@/lib/db/services/projects';
+import { getAllProjects, addProject, deleteProject, setProjectOptional } from '@/lib/db/services/projects';
 import { dbProjectsToConfig } from '@/lib/config/projects';
 import { eq, asc } from 'drizzle-orm';
 import { CACHE_TAGS, invalidate } from '@/lib/cache';
@@ -19,7 +19,7 @@ export async function GET() {
  * POST - Ajoute un nouveau projet
  */
 export async function POST(req: Request) {
-  const { name, project_time_week, tech } = await req.json();
+  const { name, project_time_week, tech, optional } = await req.json();
 
   if (!name || !project_time_week || !tech) {
     return NextResponse.json({ error: 'Invalid project data.' }, { status: 400 });
@@ -39,6 +39,7 @@ export async function POST(req: Request) {
     projectTimeWeek: project_time_week,
     category: tech,
     sort_index: nextSortIndex,
+    optional: optional === true,
   });
   invalidate(CACHE_TAGS.projects);
 
@@ -66,10 +67,32 @@ export async function DELETE(req: Request) {
 }
 
 /**
- * PATCH - Réorganise les projets d'une technologie
+ * PATCH - Réorganise les projets d'une technologie, ou bascule l'option
+ * « optionnel » d'un projet selon le payload reçu.
+ *
+ * - `{ id, optional }`         → met à jour le flag `optional` du projet.
+ * - `{ tech, reorderedProjects }` → réordonne les projets de la techno.
  */
 export async function PATCH(req: Request) {
-  const { tech, reorderedProjects }: { tech: string; reorderedProjects: number[] } = await req.json();
+  const body: {
+    tech?: string;
+    reorderedProjects?: number[];
+    id?: number;
+    optional?: boolean;
+  } = await req.json();
+
+  // Branche 1 : bascule du flag optionnel.
+  if (typeof body.id === 'number' && typeof body.optional === 'boolean') {
+    await setProjectOptional(body.id, body.optional);
+    invalidate(CACHE_TAGS.projects);
+
+    const rows = await getAllProjects();
+    const grouped = dbProjectsToConfig(rows);
+    return NextResponse.json({ message: 'Project updated.', projects: grouped });
+  }
+
+  // Branche 2 : réorganisation.
+  const { tech, reorderedProjects } = body;
 
   if (!tech || !reorderedProjects) {
     return NextResponse.json({ error: 'Tech and reorderedProjects required.' }, { status: 400 });

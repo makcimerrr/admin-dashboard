@@ -15,7 +15,7 @@ export function dbProjectsToConfig(rows: any[]): ProjectsConfig {
     const result: any = {};
     for (const row of rows.sort((a, b) => (a.sort_index ?? 0) - (b.sort_index ?? 0))) {
         if (!result[row.category]) result[row.category] = [];
-        result[row.category].push({ id: row.id, name: row.name, project_time_week: row.projectTimeWeek });
+        result[row.category].push({ id: row.id, name: row.name, project_time_week: row.projectTimeWeek, optional: row.optional ?? false });
     }
     return result as ProjectsConfig;
 }
@@ -81,4 +81,14 @@ export async function getTrackDurationWeeks(track: Track): Promise<number> {
 export async function getProjectIndex(projectName: string, track: Track): Promise<number> {
     const config = await getProjectsConfig();
     return config[track]?.findIndex(p => p.name === projectName) ?? -1;
+}
+
+/**
+ * Indique si un projet (par nom, case-insensitive) est marqué comme optionnel.
+ * Les projets optionnels sont exclus des relances de regroupement et des
+ * relances de code-review. Renvoie `false` si le projet est inconnu.
+ */
+export async function isOptionalProject(name: string): Promise<boolean> {
+    const found = await getProjectByName(name);
+    return found?.project.optional ?? false;
 }

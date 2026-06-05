@@ -32,6 +32,7 @@ export interface ProjectConfig {
     id: number;
     name: string;
     project_time_week: number;
+    optional?: boolean;
 }
 
 /**
