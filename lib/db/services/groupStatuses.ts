@@ -130,7 +130,7 @@ export async function getOverdueGroups(): Promise<(typeof groupStatuses.$inferSe
         isNotNull(groupStatuses.notifiedAuditAt),
         isNull(groupStatuses.slotDate),
         isNull(groupStatuses.reminderSentAt),
-        sql`${groupStatuses.notifiedAuditAt} <= ${fourteenDaysAgo}`
+        sql`${groupStatuses.notifiedAuditAt} <= ${fourteenDaysAgo.toISOString()}`
       )
     );
 }
