@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
       reviewer
     );
 
-    // Émission via le bot (bouton Répondre uniquement). Fallback DM texte.
+    // Émission via le bot (DM simple, aucun bouton). Fallback DM texte.
     const bot = await notifyViaBot({
       type: 'milestone',
       recipientDiscordId: row.discordId,
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
         { name: 'Coach', value: reviewer.name },
       ],
       url: reviewer.planningUrl,
-      actions: { rdvReaction: false, replyButton: true },
+      actions: { bookButton: false, replyButton: false },
       context: {
         type: 'milestone',
         source_label: 'Palier 50%',

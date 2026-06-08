@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sent = await sendDiscordDM(discordId, buildAuditReportMessage(auditorLogin, project || 'son projet'));
+    const sent = await sendDiscordDM(discordId, buildAuditReportMessage(auditorLogin, project || 'son projet', groupId));
     if (!sent) {
       return NextResponse.json({ success: false, error: 'Échec de l\'envoi du DM Discord.' }, { status: 502 });
     }

@@ -150,6 +150,28 @@ export function buildRelanceCard(opts: {
   return buildAdaptiveCard(body, actions);
 }
 
+/**
+ * Carte « ✅ RDV pris » — le capitaine a réservé sa code-review (callback
+ * `rdv_confirmed`). Destinée au 2e canal Teams (sendTeamsFormsCard).
+ */
+export function buildBookedCard(opts: {
+  captain: string;
+  project?: string | null;
+  promo?: string | null;
+}): object {
+  const facts = [
+    { title: 'Capitaine', value: opts.captain },
+    ...(opts.project ? [{ title: 'Projet', value: opts.project }] : []),
+    ...(opts.promo ? [{ title: 'Promo', value: opts.promo }] : []),
+  ];
+  const body: AdaptiveElement[] = [
+    textBlock('✅ RDV pris', { size: 'Large', weight: 'Bolder', color: 'Good' }),
+    textBlock('Le capitaine a réservé sa code-review.', { isSubtle: true }),
+    factSet(facts),
+  ];
+  return buildAdaptiveCard(body);
+}
+
 /** Carte d'escalade (Feature 7 — auditeur sans réponse après 2 jours ouvrés). */
 export function buildEscalationCard(opts: {
   auditorLogin: string;

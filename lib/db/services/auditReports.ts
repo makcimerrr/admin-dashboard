@@ -127,12 +127,12 @@ export async function recordAuditReportRequest(
 }
 
 /** Message Discord de demande de compte-rendu d'audit. */
-export function buildAuditReportMessage(auditorLogin: string, project: string): string {
+export function buildAuditReportMessage(auditorLogin: string, project: string, groupId: string): string {
   return [
     `Hey ${auditorLogin} ! 👋`,
     ``,
-    `Tu as réalisé un audit sur le projet **${project}**.`,
-    `Peux-tu nous envoyer un court **compte-rendu** de cet audit : déroulé, points forts/faibles, et soucis éventuels ?`,
+    `Comment s'est passé l'audit de **${project}** (groupe ${groupId}) ?`,
+    `Peux-tu nous envoyer un court **compte-rendu** : déroulé, points forts/faibles, et soucis éventuels ?`,
     ``,
     `Merci pour ton retour, ça aide à suivre la qualité des audits ! 🙏`,
   ].join('\n');

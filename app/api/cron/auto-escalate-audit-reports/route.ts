@@ -3,7 +3,7 @@ import {
   getAuditRequestsToEscalate,
   markAuditEscalated,
 } from '@/lib/db/services/auditReports';
-import { sendTeamsCard, buildEscalationCard } from '@/lib/services/teams';
+import { sendTeamsFormsCard, buildEscalationCard } from '@/lib/services/teams';
 
 export const maxDuration = 60;
 
@@ -13,7 +13,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hub.zone01normandi
 /**
  * Feature 7 (auto) — escalade des rapports d'audit sans réponse après 2 jours
  * ouvrés. Pour chaque demande non répondue/non escaladée assez ancienne, poste
- * une carte Teams (canal principal) puis marque `escalated_at`.
+ * une carte Teams (Canal 2 — formulaires) puis marque `escalated_at`.
  *
  * Auth : Authorization: Bearer <CRON_SECRET> ou ?secret=.
  * ?dry=1 : liste les escalades prévues sans rien envoyer ni marquer.
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   const errors: { id: number; auditorLogin: string }[] = [];
   for (const r of requests) {
     // eslint-disable-next-line no-await-in-loop
-    const ok = await sendTeamsCard(
+    const ok = await sendTeamsFormsCard(
       buildEscalationCard({
         auditorLogin: r.auditorLogin,
         projectName: r.projectName,

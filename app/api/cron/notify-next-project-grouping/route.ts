@@ -7,7 +7,7 @@ import { TRACKS, type Track } from '@/lib/db/schema/audits';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
 import { notifyViaBot } from '@/lib/services/bot-notify';
-import { sendTeamsCard, buildRelanceCard } from '@/lib/services/teams';
+import { sendTeamsFormsCard, buildRelanceCard } from '@/lib/services/teams';
 import {
   upsertDetection,
   markNextProjectNotified,
@@ -236,7 +236,7 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Émission via le bot (bouton Répondre uniquement). Fallback DM texte.
+        // Émission via le bot (DM simple, aucun bouton). Fallback DM texte.
         const bot = await notifyViaBot({
           type: 'grouping',
           recipientDiscordId: discordId,
@@ -247,7 +247,7 @@ export async function GET(request: NextRequest) {
             { name: 'Projet suivant', value: nextProject },
             { name: 'Étudiants dispo', value: String(peers.length) },
           ],
-          actions: { rdvReaction: false, replyButton: true },
+          actions: { bookButton: false, replyButton: false },
           context: {
             type: 'grouping',
             source_label: 'Regroupement projet suivant',
@@ -262,8 +262,8 @@ export async function GET(request: NextRequest) {
         if (ok) {
           await markNextProjectNotified(login, promoId, nextProject);
           sent.push({ login, prevProject, nextProject, peers: peers.length });
-          // Feature 5 : relance émise en parallèle sur Teams.
-          await sendTeamsCard(
+          // Feature 5 : relance émise en parallèle sur Teams (Canal 2).
+          await sendTeamsFormsCard(
             buildRelanceCard({
               title: 'Relance — Regroupement projet suivant',
               facts: [

@@ -1,7 +1,8 @@
 /**
  * Émission des relances interactives via le BOT Discord (au lieu d'un DM texte
- * direct). Le bot envoie un embed en DM, avec éventuellement une réaction ✅
- * et/ou un bouton « Répondre », puis ré-émet le `context` dans ses callbacks.
+ * direct). Le bot envoie un embed en DM, avec éventuellement un bouton vert
+ * « Marquer le CR comme réservé » et/ou un bouton « Répondre », puis ré-émet le
+ * `context` dans ses callbacks.
  *
  * Voir le contrat : POST {BOT_NOTIFY_URL}/api/notify, header X-Api-Key.
  *
@@ -30,9 +31,9 @@ export interface BotNotifyFact {
 
 /** Actions interactives ajoutées au message DM par le bot. */
 export interface BotNotifyActions {
-  /** Ajoute la réaction ✅ (uniquement `cr_rdv`). */
-  rdvReaction: boolean;
-  /** Ajoute le bouton « Répondre » (toutes les relances). */
+  /** Ajoute le bouton VERT « Marquer le CR comme réservé » (uniquement `cr_rdv`). */
+  bookButton: boolean;
+  /** Ajoute le bouton « Répondre » (modal statut + commentaire). */
   replyButton: boolean;
 }
 
@@ -61,8 +62,6 @@ export interface BotNotifyPayload {
   facts?: BotNotifyFact[];
   url?: string;
   actions: BotNotifyActions;
-  /** Discord ID du coach (cr_rdv) qui recevra le DM « CR pris » au ✅. */
-  coachDiscordId?: string | null;
   context: BotNotifyContext;
 }
 
@@ -91,10 +90,9 @@ export async function notifyViaBot(
     ...(payload.facts ? { facts: payload.facts } : {}),
     ...(payload.url ? { url: payload.url } : {}),
     actions: {
-      rdv_reaction: payload.actions.rdvReaction,
+      book_button: payload.actions.bookButton,
       reply_button: payload.actions.replyButton,
     },
-    coach_discord_id: payload.coachDiscordId ?? null,
     context: payload.context,
   };
 

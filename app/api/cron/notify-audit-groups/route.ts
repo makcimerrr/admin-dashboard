@@ -13,7 +13,7 @@ import {
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
 import { notifyViaBot } from '@/lib/services/bot-notify';
-import { sendTeamsCard, buildRelanceCard } from '@/lib/services/teams';
+import { sendTeamsFormsCard, buildRelanceCard } from '@/lib/services/teams';
 import { getTrackByProjectName, getAllProjects } from '@/lib/config/projects';
 import { getReviewerForRoundRobin } from '@/lib/db/services/reviewers';
 import type { Track } from '@/lib/db/schema/audits';
@@ -180,8 +180,8 @@ export async function GET(request: NextRequest) {
           { name: 'Coach', value: reviewer.name },
         ];
 
-        // Émission via le bot (embed interactif : réaction ✅ + bouton Répondre).
-        // coachDiscordId = Discord du reviewer assigné (null si non renseigné).
+        // Émission via le bot (embed interactif : bouton vert « Marquer le CR
+        // comme réservé »). Le reviewer ne sert qu'au texte/URL/nom de coach.
         const bot = await notifyViaBot({
           type: 'cr_rdv',
           recipientDiscordId: discordId,
@@ -189,8 +189,7 @@ export async function GET(request: NextRequest) {
           body: message,
           facts,
           url: reviewer.planningUrl,
-          actions: { rdvReaction: true, replyButton: true },
-          coachDiscordId: reviewer.discordId ?? null,
+          actions: { bookButton: true, replyButton: false },
           context: {
             type: 'cr_rdv',
             source_label: 'Code review',
@@ -207,8 +206,8 @@ export async function GET(request: NextRequest) {
         if (sent) {
           assignmentIndex++;
           await markAuditNotified(group.id, reviewer.name);
-          // Feature 5 : relance émise en parallèle sur Teams.
-          await sendTeamsCard(
+          // Feature 5 : relance émise en parallèle sur Teams (Canal 2).
+          await sendTeamsFormsCard(
             buildRelanceCard({
               title: 'Relance — Code review à réserver',
               facts: [
@@ -261,8 +260,8 @@ export async function GET(request: NextRequest) {
           `Si tu as des difficultés, n'hésite pas à contacter le staff. 💪`
         ].join('\n');
 
-        // Émission via le bot (bouton Répondre ; pas de réaction ✅ ni coach
-        // ici car le rappel ne ré-assigne pas de reviewer). Fallback DM.
+        // Émission via le bot (bouton vert « Marquer le CR comme réservé »).
+        // Fallback DM.
         const bot = await notifyViaBot({
           type: 'cr_rdv',
           recipientDiscordId: discordId,
@@ -273,8 +272,7 @@ export async function GET(request: NextRequest) {
             { name: 'Promo', value: pName },
             { name: 'En attente depuis', value: `${days} jours` },
           ],
-          actions: { rdvReaction: false, replyButton: true },
-          coachDiscordId: null,
+          actions: { bookButton: true, replyButton: false },
           context: {
             type: 'cr_rdv',
             source_label: 'Code review',
@@ -286,7 +284,21 @@ export async function GET(request: NextRequest) {
         });
 
         const sent = bot.ok ? true : await sendDiscordDM(discordId, reminderMessage);
-        if (sent) reminders++;
+        if (sent) {
+          reminders++;
+          // Relance émise en parallèle sur Teams (Canal 2).
+          await sendTeamsFormsCard(
+            buildRelanceCard({
+              title: 'Rappel — Code review en attente',
+              facts: [
+                { title: 'Capitaine', value: group.captainLogin },
+                { title: 'Projet', value: group.projectName },
+                { title: 'Promo', value: pName },
+                { title: 'En attente depuis', value: `${days} jours` },
+              ],
+            }),
+          );
+        }
         await markReminderSent(group.id);
       } catch (err) {
         console.error(`Reminder error for group ${group.id}:`, err);

@@ -61,8 +61,8 @@ export async function GET(request: NextRequest) {
   let sent = 0;
   const errors: { auditorLogin: string; groupId: string }[] = [];
   for (const t of targets) {
-    const message = buildAuditReportMessage(t.auditorLogin, t.project);
-    // Émission via le bot (bouton Répondre uniquement). Fallback DM texte.
+    const message = buildAuditReportMessage(t.auditorLogin, t.project, t.groupId);
+    // Émission via le bot (bouton Répondre → modal). Fallback DM texte.
     // eslint-disable-next-line no-await-in-loop
     const bot = await notifyViaBot({
       type: 'audit_report',
@@ -72,8 +72,9 @@ export async function GET(request: NextRequest) {
       facts: [
         { name: 'Auditeur', value: t.auditorLogin },
         { name: 'Projet', value: t.project },
+        { name: 'Groupe', value: t.groupId },
       ],
-      actions: { rdvReaction: false, replyButton: true },
+      actions: { bookButton: false, replyButton: true },
       context: {
         type: 'audit_report',
         source_label: "Rapport d'audit",
