@@ -25,6 +25,7 @@ interface CallbackContext {
   type?: string;
   source_label?: string;
   groupId?: string;
+  members?: string;
   promoId?: string;
   projectName?: string;
   captainLogin?: string;
@@ -87,11 +88,17 @@ export async function POST(request: NextRequest) {
       const comment = body.data?.comment ?? '';
       const who = context.auditorLogin || context.login || context.captainLogin || 'inconnu';
 
-      // (a) Carte Teams (2e canal) — contexte projet/groupe/promo en facts.
+      // (a) Carte Teams (2e canal) — contexte en facts.
       const cardContext: { title: string; value: string }[] = [];
-      if (context.projectName) cardContext.push({ title: 'Projet', value: context.projectName });
-      if (context.groupId) cardContext.push({ title: 'Groupe', value: context.groupId });
-      if (context.promoId) cardContext.push({ title: 'Promo', value: context.promoId });
+      if (context.type === 'audit_report') {
+        // Rapport d'audit : afficher Projet + Membres du groupe audité (jamais l'ID).
+        cardContext.push({ title: 'Projet', value: context.projectName ?? '—' });
+        cardContext.push({ title: 'Groupe audité', value: context.members ?? '—' });
+      } else {
+        if (context.projectName) cardContext.push({ title: 'Projet', value: context.projectName });
+        if (context.groupId) cardContext.push({ title: 'Groupe', value: context.groupId });
+        if (context.promoId) cardContext.push({ title: 'Promo', value: context.promoId });
+      }
 
       await sendTeamsFormsCard(
         buildReplyCard({

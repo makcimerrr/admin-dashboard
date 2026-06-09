@@ -14,7 +14,11 @@ interface RawAudit {
   auditorLogin: string | null;
   auditedAt: string | null;
   grade: number | null;
-  group: { id: number; object: { name: string } | null } | null;
+  group: {
+    id: number;
+    object: { name: string } | null;
+    members?: { userLogin: string }[] | null;
+  } | null;
 }
 
 export interface AuditorEntry {
@@ -126,13 +130,20 @@ export async function recordAuditReportRequest(
     });
 }
 
-/** Message Discord de demande de compte-rendu d'audit. */
-export function buildAuditReportMessage(auditorLogin: string, project: string, groupId: string): string {
+/**
+ * Message Discord de demande de compte-rendu d'audit.
+ * `members` = noms des membres du groupe AUDITÉ (réalisé par un AUTRE groupe).
+ * Vide → on retombe sur « un autre groupe » sans parenthèse.
+ */
+export function buildAuditReportMessage(auditorLogin: string, project: string, members: string): string {
+  const author = members.trim() ? `un autre groupe (${members.trim()})` : `un autre groupe`;
   return [
     `Hey ${auditorLogin} ! 👋`,
     ``,
-    `Comment s'est passé l'audit de **${project}** (groupe ${groupId}) ?`,
-    `Peux-tu nous envoyer un court **compte-rendu** : déroulé, points forts/faibles, et soucis éventuels ?`,
+    `Tu as récemment **audité** le projet **${project}** réalisé par ${author}.`,
+    `En tant qu'**auditeur**, peux-tu nous envoyer un court **compte-rendu de l'audit que tu as mené** : déroulé, points forts/faibles, soucis éventuels ?`,
+    ``,
+    `(Il s'agit bien de l'audit que TU as fait, pas de ton propre projet.)`,
     ``,
     `Merci pour ton retour, ça aide à suivre la qualité des audits ! 🙏`,
   ].join('\n');
@@ -143,6 +154,8 @@ export interface AuditorToRequest {
   discordId: string;
   groupId: string;
   project: string;
+  /** Noms d'affichage des membres du groupe audité, ex. « Jean Dupont, Marie Martin ». */
+  members: string;
 }
 
 /**
@@ -169,12 +182,13 @@ export async function getFinishedAuditorsToRequest(sinceDays = 7): Promise<Audit
       where:{ auditedAt:{_gte:$s}, auditorLogin:{_is_null:false}, group:{ status:{_eq:finished}, members:{ userLogin:{_in:$l} } } }
       order_by:{ auditedAt: desc }
       limit: 2000
-    ){ auditorLogin group { id object { name } } }
+    ){ auditorLogin group { id object { name } members { userLogin } } }
   }`;
   const data = await zone01Graphql<{ audit: RawAudit[] }>(query, { l: promoLogins, s: since });
 
-  // Dédup (auditorLogin, groupId).
-  const pairs = new Map<string, { auditorLogin: string; groupId: string; project: string }>();
+  // Dédup (auditorLogin, groupId). Collecte aussi les logins des membres du
+  // groupe AUDITÉ (réalisé par un autre groupe) pour résoudre des noms ensuite.
+  const pairs = new Map<string, { auditorLogin: string; groupId: string; project: string; memberLogins: string[] }>();
   for (const a of data.audit) {
     if (!a.group || !a.auditorLogin) continue;
     const gid = String(a.group.id);
@@ -182,24 +196,36 @@ export async function getFinishedAuditorsToRequest(sinceDays = 7): Promise<Audit
       auditorLogin: a.auditorLogin,
       groupId: gid,
       project: a.group.object?.name ?? '—',
+      memberLogins: (a.group.members ?? []).map((m) => m.userLogin).filter(Boolean),
     });
   }
   if (pairs.size === 0) return [];
 
   const logins = [...new Set([...pairs.values()].map((p) => p.auditorLogin))];
-  const [discordRows, reqRows] = await Promise.all([
+  // Tous les logins de membres de groupes audités → résolution Prénom Nom en batch.
+  const memberLogins = [...new Set([...pairs.values()].flatMap((p) => p.memberLogins))];
+  const [discordRows, reqRows, nameRows] = await Promise.all([
     db.select({ login: discordUsers.login, discordId: discordUsers.discordId }).from(discordUsers).where(inArray(discordUsers.login, logins)),
     db.select({ auditorLogin: auditReportRequests.auditorLogin, groupId: auditReportRequests.groupId }).from(auditReportRequests).where(inArray(auditReportRequests.auditorLogin, logins)),
+    memberLogins.length > 0
+      ? db.select({ login: students.login, firstName: students.first_name, lastName: students.last_name }).from(students).where(inArray(students.login, memberLogins))
+      : Promise.resolve([] as { login: string; firstName: string; lastName: string }[]),
   ]);
   const discordByLogin = new Map(discordRows.map((d) => [d.login, d.discordId]));
   const alreadyRequested = new Set(reqRows.map((r) => `${r.auditorLogin}:${r.groupId}`));
+  const nameByLogin = new Map<string, string>();
+  for (const n of nameRows) {
+    const display = [n.firstName, n.lastName].filter(Boolean).join(' ').trim();
+    nameByLogin.set(n.login, display || n.login);
+  }
 
   const out: AuditorToRequest[] = [];
   for (const [key, p] of pairs) {
     if (alreadyRequested.has(key)) continue;
     const discordId = discordByLogin.get(p.auditorLogin);
     if (!discordId) continue; // pas de Discord → on ne peut pas DM (et on ne marque pas)
-    out.push({ auditorLogin: p.auditorLogin, discordId, groupId: p.groupId, project: p.project });
+    const members = p.memberLogins.map((l) => nameByLogin.get(l) ?? l).join(', ');
+    out.push({ auditorLogin: p.auditorLogin, discordId, groupId: p.groupId, project: p.project, members });
   }
   return out;
 }

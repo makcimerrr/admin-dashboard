@@ -51,7 +51,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sent = await sendDiscordDM(discordId, buildAuditReportMessage(auditorLogin, project || 'son projet', groupId));
+    // Pas de membres résolus côté demande manuelle → message « un autre groupe ».
+    const sent = await sendDiscordDM(discordId, buildAuditReportMessage(auditorLogin, project || 'son projet', ''));
     if (!sent) {
       return NextResponse.json({ success: false, error: 'Échec de l\'envoi du DM Discord.' }, { status: 502 });
     }

@@ -46,6 +46,8 @@ export interface BotNotifyContext {
   type: BotNotifyType;
   source_label: string;
   groupId?: string;
+  /** Noms des membres du groupe audité (rapport d'audit) — affiché à la place de l'ID. */
+  members?: string;
   promoId?: string;
   projectName?: string;
   captainLogin?: string;
