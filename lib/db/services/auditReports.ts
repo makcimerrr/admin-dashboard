@@ -300,6 +300,45 @@ export async function getAuditRequestsToEscalate(): Promise<AuditRequestToEscala
   return out;
 }
 
+/**
+ * Résout des logins en « Prénom Nom » via la table `students` (fallback login).
+ */
+export async function getStudentDisplayNames(logins: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const uniq = [...new Set(logins.filter(Boolean))];
+  if (uniq.length === 0) return map;
+  const rows = await db
+    .select({ login: students.login, firstName: students.first_name, lastName: students.last_name })
+    .from(students)
+    .where(inArray(students.login, uniq));
+  for (const r of rows) {
+    const name = [r.firstName, r.lastName].filter(Boolean).join(' ').trim();
+    map.set(r.login, name || r.login);
+  }
+  return map;
+}
+
+/**
+ * Membres d'un groupe (groupId Zone01) en « Prénom Nom » — fallback d'affichage
+ * quand le context ne porte pas déjà les membres. '' si introuvable.
+ */
+export async function getGroupMemberNames(groupId: string): Promise<string> {
+  const gid = Number(groupId);
+  if (!Number.isFinite(gid)) return '';
+  try {
+    const data = await zone01Graphql<{ group: { members: { userLogin: string }[] }[] }>(
+      `query($g: Int!){ group(where:{ id:{_eq:$g} }){ members { userLogin } } }`,
+      { g: gid },
+    );
+    const logins = data.group?.[0]?.members?.map((m) => m.userLogin).filter(Boolean) ?? [];
+    if (logins.length === 0) return '';
+    const names = await getStudentDisplayNames(logins);
+    return logins.map((l) => names.get(l) ?? l).join(', ');
+  } catch {
+    return '';
+  }
+}
+
 /** Feature 7 — marque une demande comme escaladée (Teams envoyé). */
 export async function markAuditEscalated(id: number): Promise<void> {
   await db

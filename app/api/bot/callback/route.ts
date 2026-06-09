@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { markRdvConfirmed } from '@/lib/db/services/groupStatuses';
-import { markAuditResponded } from '@/lib/db/services/auditReports';
+import { markAuditResponded, getStudentDisplayNames, getGroupMemberNames } from '@/lib/db/services/auditReports';
 import { sendTeamsFormsCard, buildReplyCard, buildBookedCard } from '@/lib/services/teams';
 import { getPromotionByEventId } from '@/lib/config/promotions';
 
@@ -86,14 +86,24 @@ export async function POST(request: NextRequest) {
     if (event === 'reply_submitted') {
       const status = body.data?.status ?? '—';
       const comment = body.data?.comment ?? '';
-      const who = context.auditorLogin || context.login || context.captainLogin || 'inconnu';
+
+      // « De » = Prénom Nom (résolu depuis le login), fallback login.
+      const actorLogin = context.auditorLogin || context.login || context.captainLogin;
+      let who = actorLogin || 'inconnu';
+      if (actorLogin) {
+        const names = await getStudentDisplayNames([actorLogin]);
+        who = names.get(actorLogin) || actorLogin;
+      }
 
       // (a) Carte Teams (2e canal) — contexte en facts.
       const cardContext: { title: string; value: string }[] = [];
       if (context.type === 'audit_report') {
-        // Rapport d'audit : afficher Projet + Membres du groupe audité (jamais l'ID).
+        // Rapport d'audit : Projet + Membres du groupe audité (jamais l'ID).
+        // Si le context ne porte pas les membres, on les résout via le groupId.
         cardContext.push({ title: 'Projet', value: context.projectName ?? '—' });
-        cardContext.push({ title: 'Groupe audité', value: context.members ?? '—' });
+        let members = context.members?.trim();
+        if (!members && context.groupId) members = await getGroupMemberNames(context.groupId);
+        cardContext.push({ title: 'Groupe audité', value: members || '—' });
       } else {
         if (context.projectName) cardContext.push({ title: 'Projet', value: context.projectName });
         if (context.groupId) cardContext.push({ title: 'Groupe', value: context.groupId });
