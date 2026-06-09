@@ -11,9 +11,20 @@ import type { Track } from '@/lib/db/schema/audits';
 import type { ProjectConfig, ProjectsConfig } from '@/lib/types/code-reviews';
 import { getAllProjects as getAllProjectsFromDB } from '../db/services/projects';
 
+// Ordre d'affichage canonique des tracks (GOLANG → JAVASCRIPT → RUST → JAVA).
+const TRACK_ORDER = ['Golang', 'Javascript', 'Rust', 'Java'];
+
 export function dbProjectsToConfig(rows: any[]): ProjectsConfig {
+    const sorted = rows.sort((a, b) => (a.sort_index ?? 0) - (b.sort_index ?? 0));
+    const present = Array.from(new Set(sorted.map((r) => r.category)));
+    // Clés dans l'ordre canonique d'abord, puis toute catégorie custom ensuite.
+    const cats = [
+        ...TRACK_ORDER.filter((c) => present.includes(c)),
+        ...present.filter((c) => !TRACK_ORDER.includes(c)),
+    ];
     const result: any = {};
-    for (const row of rows.sort((a, b) => (a.sort_index ?? 0) - (b.sort_index ?? 0))) {
+    for (const c of cats) result[c] = [];
+    for (const row of sorted) {
         if (!result[row.category]) result[row.category] = [];
         result[row.category].push({ id: row.id, name: row.name, project_time_week: row.projectTimeWeek, optional: row.optional ?? false });
     }
@@ -75,7 +86,8 @@ export async function getAllTracks(): Promise<Track[]> {
 
 export async function getTrackDurationWeeks(track: Track): Promise<number> {
     const projects = await getProjectsByTrack(track);
-    return projects.reduce((sum, p) => sum + p.project_time_week, 0);
+    // Les projets optionnels ne comptent pas dans la durée du cursus.
+    return projects.filter((p) => !p.optional).reduce((sum, p) => sum + p.project_time_week, 0);
 }
 
 export async function getProjectIndex(projectName: string, track: Track): Promise<number> {

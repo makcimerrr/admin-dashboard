@@ -24,9 +24,16 @@ export async function GET(request: Request) {
       }
     }
 
+    // Les projets optionnels ne comptent PAS dans le calcul de timeline
+    // (échéance, progression, projet courant) : on les retire avant le calcul.
+    const mandatoryProjects = {} as typeof allProjects;
+    for (const track of Object.keys(allProjects) as (keyof typeof allProjects)[]) {
+      mandatoryProjects[track] = (allProjects[track] || []).filter((p) => !p.optional);
+    }
+
     const results = await Promise.all(
       promos.map(async (promo) => {
-        const result = await displayAgenda(promo, allProjects, holidays);
+        const result = await displayAgenda(promo, mandatoryProjects, holidays);
         const currentStatus = promoStatusMap[promo.key];
         let currentProjects: { rust?: string; java?: string } | null = null;
 
