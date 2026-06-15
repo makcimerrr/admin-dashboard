@@ -293,9 +293,17 @@ export async function displayAgenda(
 
       if (tracks.rust || tracks.java) {
         currentProject = tracks.rust || tracks.java || 'Aucun';
-        progress = 0;
+        // Pendant la piscine Rust/Java : l'échéance estimée = fin de la piscine,
+        // et la progression = avancement dans la fenêtre de piscine (sinon on
+        // affichait « Non spécifié » + 0 %).
+        EndDateEstimated = piscineRustJavaEnd.toISOString().split('T')[0];
+        const totalDays =
+          (piscineRustJavaEnd.getTime() - piscineRustJavaStart.getTime()) / (24 * 60 * 60 * 1000) + 1;
+        const elapsedDays =
+          (current_date.getTime() - piscineRustJavaStart.getTime()) / (24 * 60 * 60 * 1000);
+        progress = totalDays > 0 ? Math.max(0, Math.min(100, (elapsedDays / totalDays) * 100)) : 0;
         console.log(
-          `Current projects - Rust: ${tracks.rust || 'N/A'}, Java: ${tracks.java || 'N/A'}, Progress: 0% for Promo ${promotion.key}`
+          `Piscine Rust/Java - Rust: ${tracks.rust || 'N/A'}, Java: ${tracks.java || 'N/A'}, Progress: ${progress.toFixed(2)}%, Fin: ${EndDateEstimated} for Promo ${promotion.key}`
         );
         await doUpdateMultiTrack(tracks);
       }
@@ -339,6 +347,9 @@ export async function displayAgenda(
     javaStartDate = new Date(startDate);
     let currentTracks: { rust?: string; java?: string } = {};
     let foundCurrentProject = false;
+    // Fin estimée du projet EN COURS de chaque track (pour l'échéance estimée).
+    let rustCurrentEnd: Date | null = null;
+    let javaCurrentEnd: Date | null = null;
 
     for (let i = 0; i < allProjects.Rust.length; i++) {
       const project = allProjects.Rust[i];
@@ -354,6 +365,7 @@ export async function displayAgenda(
       if (compareDates(rustStartDate, projectEndDate, current_date)) {
         currentTracks.rust = project.name;
         foundCurrentProject = true;
+        rustCurrentEnd = new Date(projectEndDate);
       }
       rustStartDate = new Date(projectEndDate);
     }
@@ -372,12 +384,19 @@ export async function displayAgenda(
       if (compareDates(javaStartDate, projectEndDate, current_date)) {
         currentTracks.java = project.name;
         foundCurrentProject = true;
+        javaCurrentEnd = new Date(projectEndDate);
       }
       javaStartDate = new Date(projectEndDate);
     }
 
     if (foundCurrentProject && (currentTracks.rust || currentTracks.java)) {
       currentProject = currentTracks.rust || currentTracks.java || 'Aucun';
+      // Échéance estimée = fin du projet courant le plus tardif des deux tracks.
+      const currentEnd =
+        rustCurrentEnd && javaCurrentEnd
+          ? (rustCurrentEnd > javaCurrentEnd ? rustCurrentEnd : javaCurrentEnd)
+          : (rustCurrentEnd || javaCurrentEnd);
+      if (currentEnd) EndDateEstimated = currentEnd.toISOString().split('T')[0];
       const projectStart = new Date(startDate);
       const projectEnd = rustEndDate > javaEndDate ? rustEndDate : javaEndDate;
       const totalDays =
