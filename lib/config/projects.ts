@@ -104,3 +104,20 @@ export async function isOptionalProject(name: string): Promise<boolean> {
     const found = await getProjectByName(name);
     return found?.project.optional ?? false;
 }
+
+/**
+ * Ensemble (lower-case) des noms de projets **obligatoires du tronc commun** :
+ * présents dans la config ET non optionnels. Exclut donc les optionnels, les
+ * bonus (sous-projets hors config) et les projets piscine/additionnels.
+ * Sert à n'envoyer les cards/relances Teams que sur ces projets.
+ */
+export async function getMandatoryProjectNames(): Promise<Set<string>> {
+    const config = await getProjectsConfig();
+    const set = new Set<string>();
+    for (const track of Object.keys(config) as Track[]) {
+        for (const p of config[track]) {
+            if (!p.optional) set.add(p.name.toLowerCase());
+        }
+    }
+    return set;
+}

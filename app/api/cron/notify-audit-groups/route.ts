@@ -63,11 +63,13 @@ export async function GET(request: NextRequest) {
     const archivedNames = new Set(archivedPromos.map((p) => p.name));
     const activePromos = promotions.filter((p) => !archivedNames.has(p.key));
 
-    // Ensemble des projets optionnels (lower) : exclus des relances de code-review.
-    const optionalProjects = new Set<string>();
+    // Projets OBLIGATOIRES du tronc commun (présents en config, non optionnels) :
+    // seuls ceux-ci déclenchent une relance/card de code-review. Exclut donc
+    // optionnels, bonus (hors config) et projets piscine/additionnels.
+    const mandatoryProjects = new Set<string>();
     for (const track of Object.keys(projectsConfig) as Track[]) {
       for (const project of projectsConfig[track]) {
-        if (project.optional) optionalProjects.add(project.name.toLowerCase());
+        if (!project.optional) mandatoryProjects.add(project.name.toLowerCase());
       }
     }
 
@@ -137,8 +139,8 @@ export async function GET(request: NextRequest) {
 
     for (const group of pending) {
       try {
-        // Projet optionnel → pas de relance de code-review (skip).
-        if (optionalProjects.has(group.projectName.toLowerCase())) {
+        // Hors tronc commun obligatoire (optionnel/bonus/piscine) → pas de relance.
+        if (!mandatoryProjects.has(group.projectName.toLowerCase())) {
           results.push({ outcome: 'skipped' });
           continue;
         }
@@ -240,8 +242,8 @@ export async function GET(request: NextRequest) {
 
     for (const group of overdue) {
       try {
-        // Projet optionnel → pas de relance de code-review (skip).
-        if (optionalProjects.has(group.projectName.toLowerCase())) continue;
+        // Hors tronc commun obligatoire → pas de relance.
+        if (!mandatoryProjects.has(group.projectName.toLowerCase())) continue;
         if (!group.captainLogin) continue;
         const discordId = await getDiscordIdByLogin(group.captainLogin);
         if (!discordId) continue;

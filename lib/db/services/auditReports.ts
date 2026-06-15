@@ -5,6 +5,7 @@ import { auditReportRequests } from '../schema/auditReportRequests';
 import { eq, and, inArray, isNull } from 'drizzle-orm';
 import { zone01Graphql } from '@/lib/services/zone01-graphql';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { getMandatoryProjectNames } from '@/lib/config/projects';
 import { getArchivedPromoNames } from '@/lib/db/filters';
 import { isOlderThanBusinessDays } from '@/lib/utils/business-days';
 
@@ -188,9 +189,13 @@ export async function getFinishedAuditorsToRequest(sinceDays = 7): Promise<Audit
 
   // Dédup (auditorLogin, groupId). Collecte aussi les logins des membres du
   // groupe AUDITÉ (réalisé par un autre groupe) pour résoudre des noms ensuite.
+  // Ne demander des comptes-rendus que pour les projets OBLIGATOIRES du tronc
+  // commun (exclut optionnels, bonus, piscine/additionnels).
+  const mandatory = await getMandatoryProjectNames();
   const pairs = new Map<string, { auditorLogin: string; groupId: string; project: string; memberLogins: string[] }>();
   for (const a of data.audit) {
     if (!a.group || !a.auditorLogin) continue;
+    if (!mandatory.has((a.group.object?.name ?? '').toLowerCase())) continue;
     const gid = String(a.group.id);
     pairs.set(`${a.auditorLogin}:${gid}`, {
       auditorLogin: a.auditorLogin,
