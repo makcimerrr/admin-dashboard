@@ -3,15 +3,21 @@ import { getAllPromotions } from '@/lib/config/promotions';
 import { getAllProjects } from '@/lib/config/projects';
 import { getHolidaysConfig } from '@/lib/config/holidays';
 import { getAllPromoStatus } from '@/lib/db/services/promoStatus';
+import { getArchivedPromotions } from '@/lib/db/services/promotions';
 
 export async function GET(request: Request) {
   try {
-    const [promos, allProjects, holidays, allStatus] = await Promise.all([
+    const [allPromos, allProjects, holidays, allStatus, archivedPromos] = await Promise.all([
       getAllPromotions(),
       getAllProjects(),
       getHolidaysConfig(),
       getAllPromoStatus(),
+      getArchivedPromotions(),
     ]);
+
+    // Exclure les promotions archivées du suivi de timeline (bot /timeline inclus).
+    const archivedNames = new Set(archivedPromos.map((p) => p.name));
+    const promos = allPromos.filter((p) => !archivedNames.has(p.key));
 
     // Build promoStatus map from DB
     const promoStatusMap: Record<string, string | { rust?: string; java?: string }> = {};

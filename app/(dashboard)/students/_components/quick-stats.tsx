@@ -16,8 +16,12 @@ export function QuickStats({
   dropoutStudents,
   archivedStudents = 0,
 }: QuickStatsProps) {
+  // Taux actif = actifs parmi l'effectif "engagé" (actifs + perdition).
+  // Les archivés (sortis des effectifs) sont exclus du dénominateur, sinon le
+  // taux grimpe artificiellement (ex. 99 %).
+  const engaged = activeStudents + dropoutStudents;
   const activePercentage =
-    totalStudents > 0 ? Math.round((activeStudents / totalStudents) * 100) : 0;
+    engaged > 0 ? Math.round((activeStudents / engaged) * 100) : 0;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

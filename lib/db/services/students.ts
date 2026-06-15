@@ -381,37 +381,33 @@ export async function getStudentCounts(
 ): Promise<{ total: number; active: number; dropout: number; archived: number }> {
   const promoFilter = promo ? eq(students.promoName, promo) : undefined;
 
-  // Un archivé n'est plus dans l'effectif : exclu de total ET active.
+  // Trois catégories MUTUELLEMENT EXCLUSIVES (active + dropout + archived = total) :
+  //   - active   : non archivé ET non perdition
+  //   - dropout  : en perdition (peu importe l'archivage émargement) — la
+  //                perdition prime, sinon les dropouts archivés disparaissaient
+  //                des stats, ce qui gonflait le "taux actif" à 99 %.
+  //   - archived : archivé MAIS pas en perdition (sorti des effectifs, motif ≠ abandon)
   const notArchived = sql`(${students.archived} IS NULL OR ${students.archived} = false)`;
-  const isArchived = eq(students.archived, true);
   const notDropout = sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`;
+  const isDropout = eq(students.isDropout, true);
+  const activeCond = and(notArchived, notDropout) as SQL<unknown>;
+  const archivedCond = and(eq(students.archived, true), notDropout) as SQL<unknown>;
 
   const withPromo = (cond: SQL<unknown>): SQL<unknown> =>
     (promoFilter ? and(promoFilter, cond) : cond) as SQL<unknown>;
 
-  const [totalResult, activeResult, archivedResult] = await Promise.all([
-    // total = effectif (non archivé), dropout inclus
-    db
-      .select({ count: count() })
-      .from(students)
-      .where(withPromo(notArchived)),
-    // active = non archivé ET non dropout
-    db
-      .select({ count: count() })
-      .from(students)
-      .where(withPromo(and(notArchived, notDropout) as SQL<unknown>)),
-    // archived = archivés (hors effectif)
-    db
-      .select({ count: count() })
-      .from(students)
-      .where(withPromo(isArchived))
+  const [totalResult, activeResult, dropoutResult, archivedResult] = await Promise.all([
+    db.select({ count: count() }).from(students).where(promoFilter), // total = tous
+    db.select({ count: count() }).from(students).where(withPromo(activeCond)),
+    db.select({ count: count() }).from(students).where(withPromo(isDropout as SQL<unknown>)),
+    db.select({ count: count() }).from(students).where(withPromo(archivedCond)),
   ]);
 
   const total = totalResult[0]?.count ?? 0;
   const active = activeResult[0]?.count ?? 0;
+  const dropout = dropoutResult[0]?.count ?? 0;
   const archived = archivedResult[0]?.count ?? 0;
-  // dropout = total (effectif non archivé) - active
-  return { total, active, dropout: total - active, archived };
+  return { total, active, dropout, archived };
 }
 
 export async function createStudent(
