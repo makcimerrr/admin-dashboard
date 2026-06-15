@@ -31,7 +31,10 @@ export const GET = withAdmin(async () => {
     const stackUsers: PageUser[] = [];
     let cursor: string | undefined;
     for (let guard = 0; guard < 500; guard++) {
-      const page = await app.listUsers({ cursor, limit: 200, orderBy: 'signedUpAt' });
+      // includeAnonymous: true → inclut les comptes « partiels » (email posé
+      // mais sans canal de contact / invitation jamais finalisée), sinon
+      // listUsers les exclut et ils n'apparaissent jamais dans la page.
+      const page = await app.listUsers({ cursor, limit: 200, orderBy: 'signedUpAt', includeAnonymous: true });
       stackUsers.push(...page);
       if (!page.nextCursor) break;
       cursor = page.nextCursor;
@@ -152,20 +155,53 @@ export const POST = withAdmin(async (req: NextRequest) => {
     }
 
     const app = await getStackServerApp();
+    const metadata = { role, planningPermission };
+    const base = process.env.NEXT_PUBLIC_BASE_URL ?? '';
+    const callbackUrl = `${base}/handler/sign-in`;
 
-    // Vérifier si l'email existe déjà
-    const existing = await app.listUsers({ query: email }).catch(() => null);
-    if (Array.isArray(existing)) {
-      const match = existing.find(
-        (u: any) => (u.primaryEmail ?? '').toLowerCase() === email.toLowerCase(),
-      );
-      if (match) {
-        return apiError('CONFLICT', 'Un membre avec cet email existe déjà');
+    // L'email existe-t-il déjà côté Stack ? includeAnonymous → détecte aussi les
+    // comptes « partiels » (email posé mais invitation jamais finalisée), que
+    // listUsers cache par défaut.
+    const existing = await app
+      .listUsers({ query: email, includeAnonymous: true })
+      .catch(() => null);
+    const match = Array.isArray(existing)
+      ? existing.find(
+          (u: any) => (u.primaryEmail ?? '').toLowerCase() === email.toLowerCase(),
+        ) ?? null
+      : null;
+
+    // Cas 1 — déjà existant : on met à jour son accès + on (re)renvoie
+    // l'invitation, au lieu d'échouer. C'est l'intention de l'admin quand il
+    // « rajoute » un membre déjà présent (ex. invitation jamais finalisée).
+    if (match) {
+      try {
+        const prevServer = (match.serverMetadata ?? {}) as Record<string, unknown>;
+        const prevClient = (match.clientReadOnlyMetadata ?? {}) as Record<string, unknown>;
+        await match.setServerMetadata({ ...prevServer, ...metadata });
+        await match.setClientReadOnlyMetadata({ ...prevClient, ...metadata });
+        if (displayName) await match.update({ displayName });
+      } catch (e) {
+        console.error('update existing member error:', e);
       }
+      let invited = true;
+      try {
+        await app.sendSignInInvitationEmail(email, callbackUrl);
+      } catch (e) {
+        console.error('sendSignInInvitationEmail (existing) error:', e);
+        invited = false;
+      }
+      return apiSuccess({
+        member: formatMember(match),
+        updated: true,
+        invited,
+        warning: invited
+          ? 'Ce membre existait déjà : accès mis à jour et invitation renvoyée.'
+          : "Ce membre existait déjà : accès mis à jour, mais l'email d'invitation n'a pas pu être renvoyé.",
+      });
     }
 
-    const metadata = { role, planningPermission };
-
+    // Cas 2 — création
     let created: any;
     try {
       created = await app.createUser({
@@ -178,15 +214,16 @@ export const POST = withAdmin(async (req: NextRequest) => {
       });
     } catch (err: any) {
       const msg = String(err?.message ?? '');
-      if (/exist|already|duplicate|conflict/i.test(msg)) {
-        return apiError('CONFLICT', 'Un membre avec cet email existe déjà');
+      if (/exist|already|duplicate|conflict|USER_EMAIL_ALREADY_EXISTS/i.test(msg)) {
+        return apiError(
+          'CONFLICT',
+          'Un membre avec cet email existe déjà — rechargez la liste, il y apparaît (supprimez-le pour réinviter).',
+        );
       }
       throw err;
     }
 
     // Envoi de l'invitation (email pour définir le mot de passe ou se connecter via OAuth)
-    const base = process.env.NEXT_PUBLIC_BASE_URL ?? '';
-    const callbackUrl = `${base}/handler/sign-in`;
     try {
       await app.sendSignInInvitationEmail(email, callbackUrl);
     } catch (err) {

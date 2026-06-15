@@ -20,7 +20,9 @@ async function findStackUserByEmail(
   app: Awaited<ReturnType<typeof getStackServerApp>>,
   email: string,
 ) {
-  const list = await app.listUsers({ query: email }).catch(() => null);
+  const list = await app
+    .listUsers({ query: email, includeAnonymous: true })
+    .catch(() => null);
   if (!Array.isArray(list)) return null;
   const target = email.toLowerCase();
   return (

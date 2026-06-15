@@ -70,17 +70,32 @@ export async function updateUserAccessByEmail(
 }
 
 /**
- * Supprime un user local par email (case-insensitive).
- * @returns true si une ligne a été supprimée.
+ * Supprime un user local par email (case-insensitive), en détachant d'abord ses
+ * dépendances pour éviter les violations de clé étrangère :
+ *  - `user_settings` (ses préférences) → supprimées.
+ *  - `audits.auditor_id` → mis à NULL (l'historique d'audit est conservé ;
+ *    `audits.auditor_name` est dénormalisé en texte, donc l'affichage survit).
+ * Le tout dans une transaction.
+ * @returns true si l'utilisateur a été supprimé, false s'il n'existait pas.
  */
 export async function deleteUserByEmail(email: string): Promise<boolean> {
-    const result = await db
-        .delete(users)
-        .where(sql`lower(${users.email}) = lower(${email})`)
-        .returning({ id: users.id })
-        .execute();
+    return db.transaction(async (tx) => {
+        const found = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(sql`lower(${users.email}) = lower(${email})`)
+            .limit(1)
+            .execute();
 
-    return result.length > 0;
+        if (found.length === 0) return false;
+        const uid = found[0].id;
+
+        await tx.execute(sql`DELETE FROM user_settings WHERE user_id = ${uid}`);
+        await tx.execute(sql`UPDATE audits SET auditor_id = NULL WHERE auditor_id = ${uid}`);
+        await tx.delete(users).where(eq(users.id, uid)).execute();
+
+        return true;
+    });
 }
 
 /**
