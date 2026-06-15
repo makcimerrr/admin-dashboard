@@ -272,15 +272,24 @@ function ActionRow({ group }: { group: PendingGroup }) {
             {group.promoName}
           </Badge>
         </div>
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5 min-w-0">
+        <div
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground mt-0.5 min-w-0"
+          title={reasonSummary ?? undefined}
+        >
           <Users className="h-3 w-3 shrink-0" />
-          <span className="tabular-nums shrink-0">{group.activeMembers}</span>
-          {reasonSummary && (
-            <>
-              <span className="opacity-50 shrink-0">•</span>
-              <span className="truncate">{reasonSummary}</span>
-            </>
-          )}
+          <span className="truncate">
+            {group.members.length > 0
+              ? group.members.map((m, i) => (
+                  <span
+                    key={m.login}
+                    className={cn(m.isDropout && 'line-through opacity-50')}
+                  >
+                    {m.login}
+                    {i < group.members.length - 1 ? ', ' : ''}
+                  </span>
+                ))
+              : `${group.activeMembers} membre(s)`}
+          </span>
         </div>
       </div>
 
