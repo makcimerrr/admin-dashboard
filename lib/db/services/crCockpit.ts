@@ -214,7 +214,15 @@ export async function getWeeklyRecap(nowMs: number): Promise<WeeklyRecap> {
   const lastMondayMs = lastMonday.getTime();
   const thisMondayMs = thisMonday.getTime();
   const contacted = rows.filter((r) => {
-    if (!r.captainLogin || r.notifiedAuditAt == null || r.slotBookedAt != null || r.auditId != null) {
+    // Exclure : pas de capitaine, pas notifié, créneau réservé (calendrier),
+    // RDV pris via le bouton vert (rdvConfirmedAt), ou audit déjà fait.
+    if (
+      !r.captainLogin ||
+      r.notifiedAuditAt == null ||
+      r.slotBookedAt != null ||
+      r.rdvConfirmedAt != null ||
+      r.auditId != null
+    ) {
       return false;
     }
     const t = new Date(r.notifiedAuditAt as Date).getTime();
