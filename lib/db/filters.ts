@@ -47,6 +47,16 @@ export function invalidateArchivedPromoCache(): void {
 export const notDropoutCondition = eq(students.isDropout, false);
 
 /**
+ * SQL condition: student is NOT archived in émargement. `null` = non archivé
+ * (données legacy). DISTINCT du dropout : appliqué partout via
+ * `countableStudentsWhere`.
+ */
+export const notArchivedStudentCondition: SQL = or(
+  eq(students.archived, false),
+  isNull(students.archived),
+) as SQL;
+
+/**
  * SQL condition: student's promo is NOT archived.
  * Requires the query to JOIN with `promotions` ON
  * `students.promoName = promotions.name`. Returns `true` when no promo
@@ -64,7 +74,12 @@ export const promoNotArchivedCondition: SQL = or(
  * after a `.innerJoin(promotions, eq(students.promoName, promotions.name))`.
  */
 export function countableStudentsWhere(...extra: (SQL | undefined)[]): SQL {
-  const filters: (SQL | undefined)[] = [notDropoutCondition, promoNotArchivedCondition, ...extra];
+  const filters: (SQL | undefined)[] = [
+    notDropoutCondition,
+    notArchivedStudentCondition,
+    promoNotArchivedCondition,
+    ...extra,
+  ];
   return and(...filters.filter(Boolean)) as SQL;
 }
 
@@ -79,6 +94,11 @@ export async function countableStudentsWhereNoJoin(...extra: (SQL | undefined)[]
   const archivedFilter: SQL | undefined = archivedArr.length > 0
     ? sql`${students.promoName} NOT IN (${sql.join(archivedArr.map((n) => sql`${n}`), sql`, `)})`
     : undefined;
-  const filters: (SQL | undefined)[] = [notDropoutCondition, archivedFilter, ...extra];
+  const filters: (SQL | undefined)[] = [
+    notDropoutCondition,
+    notArchivedStudentCondition,
+    archivedFilter,
+    ...extra,
+  ];
   return and(...filters.filter(Boolean)) as SQL;
 }

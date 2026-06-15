@@ -25,6 +25,9 @@ export const students = pgTable('students', {
     promoName: text('promo_name')
         .notNull()
         .references(() => promotions.name),
+    // Archivé côté émargement (apprenant sorti des effectifs). DISTINCT de
+    // isDropout (perdition/abandon) : un archivé est aussi exclu des stats/widgets.
+    archived: boolean('archived').default(false),
     // Champs pour la gestion des étudiants en perdition
     isDropout: boolean('is_dropout').default(false),
     dropoutAt: timestamp('dropout_at'),
