@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWeeklyRecap } from '@/lib/db/services/crCockpit';
-import { buildRecapCard, buildInteractiveRecapCard } from '@/lib/services/teams-recap';
+import { buildRecapCard } from '@/lib/services/teams-recap';
 import { sendTeamsCard, isTeamsConfigured } from '@/lib/services/teams';
-import { isBotConfigured, postCardProactively } from '@/lib/services/teams-bot';
-import { getConversation } from '@/lib/db/services/teamsBot';
 
 export const maxDuration = 60;
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
 /**
- * Chantier C — recap hebdo des code-reviews posté sur Teams (Flux de travail).
+ * Chantier C — recap hebdo des code-reviews posté sur Teams (Flux de travail
+ * Power Automate, webhook à sens unique).
  *
- * Auth : Authorization: Bearer <CRON_SECRET> (envoyé auto par le cron Vercel)
+ * Auth : Authorization: Bearer <CRON_SECRET> (envoyé auto par le cron)
  *        ou ?secret=.
- * ?dry=1 : renvoie la carte sans la poster (preview avant config du webhook).
+ * ?dry=1 : renvoie la carte sans la poster (preview).
  */
 export async function GET(request: NextRequest) {
   if (process.env.NODE_ENV === 'production' && CRON_SECRET) {
@@ -29,29 +28,16 @@ export async function GET(request: NextRequest) {
   const dry = request.nextUrl.searchParams.get('dry') === '1';
 
   const recap = await getWeeklyRecap(Date.now());
-
-  // Mode bot interactif si configuré ET une conversation est enregistrée
-  // (bot ajouté à un canal). Sinon → webhook Power Automate (comportement
-  // actuel inchangé).
-  const conversation = isBotConfigured() ? await getConversation() : null;
-  const useBot = isBotConfigured() && conversation != null;
-
-  const card = useBot ? buildInteractiveRecapCard(recap) : buildRecapCard(recap);
+  const card = buildRecapCard(recap);
 
   if (dry) {
     return NextResponse.json({
       success: true,
       dry: true,
-      mode: useBot ? 'bot' : 'webhook',
-      botConfigured: isBotConfigured(),
+      mode: 'webhook',
       teamsConfigured: isTeamsConfigured(),
       card,
     });
-  }
-
-  if (useBot) {
-    const posted = await postCardProactively(card);
-    return NextResponse.json({ success: posted, posted, mode: 'bot' });
   }
 
   if (!isTeamsConfigured()) {
