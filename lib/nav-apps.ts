@@ -20,7 +20,7 @@ import {
   ShieldCheckIcon,
   SignatureIcon,
   UsersIcon,
-  WrenchIcon,
+  WrenchIcon
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -66,7 +66,7 @@ export const NAV_APPS: NavApp[] = [
     key: 'dashboard',
     label: 'Tableau de bord',
     icon: LayoutDashboardIcon,
-    url: '/',
+    url: '/'
   },
   {
     key: 'pedagogie',
@@ -80,8 +80,8 @@ export const NAV_APPS: NavApp[] = [
       { title: 'Code Reviews', url: '/code-reviews', icon: ClipboardCheckIcon },
       { title: 'Suivi', url: '/code-reviews/suivi', icon: BellIcon },
       { title: 'Gestion Promos', url: '/promos/manage', icon: FolderArchiveIcon },
-      { title: 'Analytics', url: '/analytics', icon: BarChartIcon },
-    ],
+      { title: 'Analytics', url: '/analytics', icon: BarChartIcon }
+    ]
   },
   {
     key: 'planning',
@@ -94,8 +94,8 @@ export const NAV_APPS: NavApp[] = [
       { title: 'Absences', url: '/planning/absences', icon: CalendarX2Icon },
       { title: 'Extraction', url: '/planning/extraction', icon: FileBarChartIcon },
       { title: 'Employés', url: '/employees', icon: UsersIcon },
-      { title: 'Historique', url: '/history', icon: ClockIcon },
-    ],
+      { title: 'Historique', url: '/history', icon: ClockIcon }
+    ]
   },
   {
     key: 'outils',
@@ -105,37 +105,37 @@ export const NAV_APPS: NavApp[] = [
     adminOnly: true,
     items: [
       { title: '01 Deck', url: '/01deck', icon: LayoutGridIcon },
-      { title: 'Word Assistant', url: '/word_assistant', icon: FileIcon },
-    ],
+      { title: 'Word Assistant', url: '/word_assistant', icon: FileIcon }
+    ]
   },
   {
     key: '01deck-app',
     label: '01 Deck',
     icon: LayersIcon,
-    url: 'https://01deck.zone01rouennormandie.org/',
-    external: true,
+    url: 'https://deck.zone01normandie.org/',
+    external: true
   },
   {
     key: 'emargement',
     label: 'Émargement',
     icon: SignatureIcon,
-    url: 'https://emargement.zone01rouennormandie.org/',
-    external: true,
+    url: 'https://emargement.zone01normandie.org/',
+    external: true
   },
   {
     key: 'intra',
     label: 'Intra',
     icon: NetworkIcon,
-    url: 'https://intra.zone01rouennormandie.org/',
-    external: true,
-  },
+    url: 'https://zone01normandie.org/intra/rouen/profile',
+    external: true
+  }
 ];
 
 /** Bottom nav (config, settings) — always direct links */
 export const NAV_BOTTOM: NavApp[] = [
   { key: 'members', label: 'Membres', icon: ShieldCheckIcon, url: '/members', adminOnly: true },
   { key: 'config', label: 'Configuration', icon: Settings2Icon, url: '/config', adminOnly: true },
-  { key: 'settings', label: 'Paramètres', icon: SettingsIcon, url: '/settings' },
+  { key: 'settings', label: 'Paramètres', icon: SettingsIcon, url: '/settings' }
 ];
 
 /** Check if a path matches a nav item (exact or deeper) */
