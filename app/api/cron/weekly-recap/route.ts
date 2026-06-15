@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWeeklyRecap } from '@/lib/db/services/crCockpit';
-import { buildRecapCard } from '@/lib/services/teams-recap';
+import { buildRecapCard, buildInteractiveRecapCard } from '@/lib/services/teams-recap';
 import { sendTeamsCard, isTeamsConfigured } from '@/lib/services/teams';
+import { isBotConfigured, postCardProactively } from '@/lib/services/teams-bot';
+import { getConversation } from '@/lib/db/services/teamsBot';
 
 export const maxDuration = 60;
 
@@ -27,10 +29,29 @@ export async function GET(request: NextRequest) {
   const dry = request.nextUrl.searchParams.get('dry') === '1';
 
   const recap = await getWeeklyRecap(Date.now());
-  const card = buildRecapCard(recap);
+
+  // Mode bot interactif si configuré ET une conversation est enregistrée
+  // (bot ajouté à un canal). Sinon → webhook Power Automate (comportement
+  // actuel inchangé).
+  const conversation = isBotConfigured() ? await getConversation() : null;
+  const useBot = isBotConfigured() && conversation != null;
+
+  const card = useBot ? buildInteractiveRecapCard(recap) : buildRecapCard(recap);
 
   if (dry) {
-    return NextResponse.json({ success: true, dry: true, teamsConfigured: isTeamsConfigured(), card });
+    return NextResponse.json({
+      success: true,
+      dry: true,
+      mode: useBot ? 'bot' : 'webhook',
+      botConfigured: isBotConfigured(),
+      teamsConfigured: isTeamsConfigured(),
+      card,
+    });
+  }
+
+  if (useBot) {
+    const posted = await postCardProactively(card);
+    return NextResponse.json({ success: posted, posted, mode: 'bot' });
   }
 
   if (!isTeamsConfigured()) {
@@ -40,7 +61,7 @@ export async function GET(request: NextRequest) {
   }
 
   const posted = await sendTeamsCard(card);
-  return NextResponse.json({ success: posted, posted, teamsConfigured: true });
+  return NextResponse.json({ success: posted, posted, mode: 'webhook', teamsConfigured: true });
 }
 
 export async function POST(request: NextRequest) {

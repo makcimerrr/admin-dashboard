@@ -278,6 +278,66 @@ export async function markRdvConfirmed(
     );
 }
 
+/**
+ * Annule la confirmation de RDV (remet `rdv_confirmed_at` à NULL).
+ * Inverse de `markRdvConfirmed` — utilisé quand on décoche la case dans la
+ * checklist interactive du recap Teams. Scope (groupId, promoId, projectName).
+ */
+export async function unmarkRdvConfirmed(
+  groupId: string,
+  promoId: string,
+  projectName: string,
+): Promise<void> {
+  await db
+    .update(groupStatuses)
+    .set({ rdvConfirmedAt: null })
+    .where(
+      and(
+        eq(groupStatuses.groupId, groupId),
+        eq(groupStatuses.promoId, promoId),
+        sql`lower(${groupStatuses.projectName}) = lower(${projectName})`,
+      ),
+    );
+}
+
+/**
+ * État courant « RDV confirmé » pour une liste de groupes (scope
+ * groupId+promoId+projectName). Retourne un set des clés
+ * `groupId:promoId:lower(projectName)` actuellement confirmées.
+ * Utilisé pour reconstruire la carte interactive après un toggle.
+ */
+export async function getRdvConfirmedMap(
+  items: { groupId: string; promoId: string; projectName: string }[],
+): Promise<Set<string>> {
+  const confirmed = new Set<string>();
+  if (items.length === 0) return confirmed;
+
+  const groupIds = [...new Set(items.map((i) => i.groupId))];
+  const promoIds = [...new Set(items.map((i) => i.promoId))];
+
+  const rows = await db
+    .select({
+      groupId: groupStatuses.groupId,
+      promoId: groupStatuses.promoId,
+      projectName: groupStatuses.projectName,
+      rdvConfirmedAt: groupStatuses.rdvConfirmedAt,
+    })
+    .from(groupStatuses)
+    .where(
+      and(
+        inArray(groupStatuses.groupId, groupIds),
+        inArray(groupStatuses.promoId, promoIds),
+      ),
+    );
+
+  for (const r of rows) {
+    if (r.rdvConfirmedAt != null) {
+      confirmed.add(`${r.groupId}:${r.promoId}:${r.projectName.toLowerCase()}`);
+    }
+  }
+  return confirmed;
+}
+
 export async function updateSlot(
   id: number,
   slotDate: Date,

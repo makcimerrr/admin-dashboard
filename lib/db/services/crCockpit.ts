@@ -178,7 +178,17 @@ export interface WeeklyRecap {
   /** CR réalisées pendant la semaine écoulée. */
   auditsLastWeek: number;
   /** Chefs de groupe contactés (notifiés) sans CR pris (ni créneau ni audit). */
-  captains: { name: string; promo: string; project: string; track: string | null; coach: string | null }[];
+  captains: {
+    name: string;
+    promo: string;
+    project: string;
+    track: string | null;
+    coach: string | null;
+    /** Identifiants du groupe ciblé (checklist interactive du recap Teams). */
+    groupId: string;
+    promoId: string;
+    projectName: string;
+  }[];
 }
 
 /**
@@ -230,13 +240,22 @@ export async function getWeeklyRecap(nowMs: number): Promise<WeeklyRecap> {
   });
 
   // Dédup par login (garde le contact le plus ancien).
-  const byLogin = new Map<string, { login: string; promoId: string; notifiedAt: number; project: string; track: string | null; coach: string | null }>();
+  const byLogin = new Map<string, { login: string; promoId: string; notifiedAt: number; project: string; track: string | null; coach: string | null; groupId: string; projectName: string }>();
   for (const r of contacted) {
     const login = r.captainLogin as string;
     const notifiedAt = new Date(r.notifiedAuditAt as Date).getTime();
     const existing = byLogin.get(login);
     if (!existing || notifiedAt < existing.notifiedAt) {
-      byLogin.set(login, { login, promoId: r.promoId, notifiedAt, project: r.projectName, track: r.track, coach: r.notifiedReviewerName });
+      byLogin.set(login, {
+        login,
+        promoId: r.promoId,
+        notifiedAt,
+        project: r.projectName,
+        track: r.track,
+        coach: r.notifiedReviewerName,
+        groupId: r.groupId,
+        projectName: r.projectName,
+      });
     }
   }
 
@@ -260,6 +279,9 @@ export async function getWeeklyRecap(nowMs: number): Promise<WeeklyRecap> {
       project: c.project,
       track: c.track,
       coach: c.coach,
+      groupId: c.groupId,
+      promoId: c.promoId,
+      projectName: c.projectName,
     }))
     // Tri par promo puis nom.
     .sort((a, b) => a.promo.localeCompare(b.promo) || a.name.localeCompare(b.name));
