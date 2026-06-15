@@ -11,18 +11,18 @@ export const dynamic = 'force-dynamic';
 export default async function MembersPage() {
   // Gate admin côté serveur (même logique que app/(dashboard)/layout.tsx)
   let role: string | null = null;
-  let currentUserId = '';
+  let currentUserEmail = '';
 
   const stackUser = await stackServerApp.getUser();
   if (stackUser) {
     role = getUserRole(stackUser);
-    currentUserId = stackUser.id;
+    currentUserEmail = stackUser.primaryEmail ?? '';
   } else {
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
       const groups: string[] = (session.user.groups || []) as string[];
       role = groups.includes('authentik Admins') ? 'Admin' : 'user';
-      currentUserId = session.user.id ?? '';
+      currentUserEmail = session.user.email;
     }
   }
 
@@ -31,7 +31,7 @@ export default async function MembersPage() {
 
   return (
     <div className="p-4 md:p-6">
-      <MemberManagement currentUserId={currentUserId} />
+      <MemberManagement currentUserEmail={currentUserEmail} />
     </div>
   );
 }

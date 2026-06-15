@@ -3,6 +3,16 @@ import { withAdmin } from '@/lib/api/with-auth';
 import { apiError, apiSuccess } from '@/lib/api/response';
 import { getStackServerApp } from '@/lib/stack-server';
 import { getUserRole, getUserPlanningPermission } from '@/lib/stack-helpers';
+import { listAllUsers, type LocalUserListItem } from '@/lib/db/services/users';
+import {
+  formatMember,
+  extractOauthProviders,
+  toDate,
+  normalizeRole,
+  normalizePermission,
+  type AuthMethod,
+  type MergedMemberDTO,
+} from '@/lib/api/members-format';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,72 +22,94 @@ const VALID_PERMISSIONS = ['editor', 'reader'] as const;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export interface MemberDTO {
-  id: string;
-  email: string | null;
-  displayName: string | null;
-  role: string;
-  planningPermission: string;
-  hasPassword: boolean;
-  oauthProviders: string[];
-  signedUpAt: string | null;
-  lastActiveAt: string | null;
-}
-
-function toDate(value: unknown): string | null {
-  if (!value) return null;
-  if (value instanceof Date) return value.toISOString();
-  try {
-    const d = new Date(value as string);
-    return Number.isNaN(d.getTime()) ? null : d.toISOString();
-  } catch {
-    return null;
-  }
-}
-
-function extractOauthProviders(user: any): string[] {
-  // Le SDK expose les comptes connectés via oauthProviders / connectedAccounts selon version.
-  const providers: unknown =
-    user.oauthProviders ?? user.connectedAccounts ?? user.connected_accounts;
-  if (Array.isArray(providers)) {
-    return providers
-      .map((p: any) => (typeof p === 'string' ? p : p?.id ?? p?.provider ?? p?.type))
-      .filter((p: unknown): p is string => typeof p === 'string');
-  }
-  return [];
-}
-
-export function formatMember(user: any): MemberDTO {
-  return {
-    id: user.id,
-    email: user.primaryEmail ?? null,
-    displayName: user.displayName ?? null,
-    role: getUserRole(user),
-    planningPermission: getUserPlanningPermission(user),
-    hasPassword: Boolean(user.hasPassword),
-    oauthProviders: extractOauthProviders(user),
-    signedUpAt: toDate(user.signedUpAt),
-    lastActiveAt: toDate(user.lastActiveAt),
-  };
-}
-
 export const GET = withAdmin(async () => {
   try {
     const app = await getStackServerApp();
 
-    // Pagination : listUsers() ne renvoie qu'une page (cursor/nextCursor).
-    // On parcourt toutes les pages pour ne manquer aucun membre.
+    // 1) Users Stack — pagination complète (listUsers renvoie une page à la fois).
     type PageUser = Awaited<ReturnType<typeof app.listUsers>>[number];
-    const users: PageUser[] = [];
+    const stackUsers: PageUser[] = [];
     let cursor: string | undefined;
     for (let guard = 0; guard < 500; guard++) {
       const page = await app.listUsers({ cursor, limit: 200, orderBy: 'signedUpAt' });
-      users.push(...page);
+      stackUsers.push(...page);
       if (!page.nextCursor) break;
       cursor = page.nextCursor;
     }
 
-    const members: MemberDTO[] = users.map(formatMember);
+    // 2) Users locaux (Authentik/SSO + legacy).
+    let localUsers: LocalUserListItem[] = [];
+    try {
+      localUsers = await listAllUsers();
+    } catch (e) {
+      console.error('listAllUsers error (fusion partielle Stack uniquement):', e);
+    }
+
+    // 3) Fusion dédupliquée par email en minuscule.
+    const byEmail = new Map<string, MergedMemberDTO>();
+
+    // 3a) Stack en premier (source d'autorité pour role/permission/dates).
+    for (const u of stackUsers) {
+      const email = (u.primaryEmail ?? '').trim();
+      if (!email) continue;
+      const key = email.toLowerCase();
+      const oauth = extractOauthProviders(u);
+      const hasGoogle = oauth.some((p) => p.toLowerCase() === 'google');
+      const hasPassword = Boolean((u as any).hasPassword);
+      const signedUpAt = toDate(u.signedUpAt);
+      const lastActiveAt = toDate(u.lastActiveAt);
+
+      let authMethod: AuthMethod = 'autre';
+      if (hasGoogle) authMethod = 'google';
+      else if (hasPassword) authMethod = 'password';
+
+      byEmail.set(key, {
+        email,
+        displayName: u.displayName ?? null,
+        role: normalizeRole(getUserRole(u)),
+        planningPermission: normalizePermission(getUserPlanningPermission(u)),
+        sources: { stack: true, local: false },
+        stackId: u.id,
+        authMethod,
+        signedUpAt,
+        lastActiveAt,
+        // Invitation en attente : aucun moyen d'auth ni connexion connue.
+        isPending: !hasPassword && oauth.length === 0 && !lastActiveAt,
+      });
+    }
+
+    // 3b) Users locaux : fusion ou ajout.
+    for (const lu of localUsers) {
+      const email = (lu.email ?? '').trim();
+      if (!email) continue;
+      const key = email.toLowerCase();
+      const existing = byEmail.get(key);
+
+      if (existing) {
+        // Déjà présent via Stack : on enrichit seulement les sources + fallback displayName.
+        existing.sources.local = true;
+        if (!existing.displayName) existing.displayName = lu.name ?? null;
+        continue;
+      }
+
+      // Uniquement local (ex. Vivien Frebourg, Authentik/SSO).
+      // SSO = pas de mot de passe ; sinon mot de passe.
+      const authMethod: AuthMethod = lu.hasPassword ? 'password' : 'sso';
+      byEmail.set(key, {
+        email,
+        displayName: lu.name ?? null,
+        role: normalizeRole(lu.role),
+        planningPermission: normalizePermission(lu.planningPermission),
+        sources: { stack: false, local: true },
+        authMethod,
+        signedUpAt: null,
+        lastActiveAt: null,
+        // SSO considéré non-pending (compte provisionné côté IdP).
+        isPending: false,
+      });
+    }
+
+    const members = Array.from(byEmail.values());
     members.sort((a, b) => {
       const ka = (a.displayName || a.email || '').toLowerCase();
       const kb = (b.displayName || b.email || '').toLowerCase();

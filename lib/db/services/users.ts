@@ -1,8 +1,87 @@
 import { db } from '../config';
 import { users } from '../schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 // @ts-ignore
 import { hash, compare } from 'bcryptjs';
+
+export interface LocalUserListItem {
+    id: number;
+    email: string;
+    name: string | null;
+    username: string | null;
+    hasPassword: boolean;
+    role: string | null;
+    planningPermission: string | null;
+}
+
+/**
+ * Liste toutes les lignes de la table `users` locale (Authentik/SSO + legacy).
+ * `hasPassword` est dérivé de la présence d'un mot de passe (sans l'exposer).
+ */
+export async function listAllUsers(): Promise<LocalUserListItem[]> {
+    const rows = await db
+        .select({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            username: users.username,
+            password: users.password,
+            role: users.role,
+            planningPermission: users.planningPermission,
+        })
+        .from(users)
+        .execute();
+
+    return rows.map((r) => ({
+        id: r.id,
+        email: r.email,
+        name: r.name,
+        username: r.username,
+        hasPassword: r.password != null && r.password !== '',
+        role: r.role,
+        planningPermission: r.planningPermission,
+    }));
+}
+
+/**
+ * Met à jour l'accès d'un user local par email (case-insensitive).
+ * Seuls les champs fournis sont mis à jour.
+ * @returns true si une ligne a été modifiée.
+ */
+export async function updateUserAccessByEmail(
+    email: string,
+    fields: { role?: string; planningPermission?: string; name?: string },
+): Promise<boolean> {
+    const updates: Partial<{ role: string; planningPermission: string; name: string }> = {};
+    if (fields.role !== undefined) updates.role = fields.role;
+    if (fields.planningPermission !== undefined) updates.planningPermission = fields.planningPermission;
+    if (fields.name !== undefined) updates.name = fields.name;
+
+    if (Object.keys(updates).length === 0) return false;
+
+    const result = await db
+        .update(users)
+        .set(updates)
+        .where(sql`lower(${users.email}) = lower(${email})`)
+        .returning({ id: users.id })
+        .execute();
+
+    return result.length > 0;
+}
+
+/**
+ * Supprime un user local par email (case-insensitive).
+ * @returns true si une ligne a été supprimée.
+ */
+export async function deleteUserByEmail(email: string): Promise<boolean> {
+    const result = await db
+        .delete(users)
+        .where(sql`lower(${users.email}) = lower(${email})`)
+        .returning({ id: users.id })
+        .execute();
+
+    return result.length > 0;
+}
 
 /**
  * Creates a new user in the database.

@@ -48,16 +48,19 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+type AuthMethod = 'google' | 'password' | 'sso' | 'autre';
+
 interface Member {
-  id: string;
-  email: string | null;
+  email: string;
   displayName: string | null;
   role: string;
   planningPermission: string;
-  hasPassword: boolean;
-  oauthProviders: string[];
+  sources: { stack: boolean; local: boolean };
+  stackId?: string;
+  authMethod: AuthMethod;
   signedUpAt: string | null;
   lastActiveAt: string | null;
+  isPending: boolean;
 }
 
 type ApiEnvelope<T> = { success: true; data: T } | { success: false; error: { message: string } };
@@ -86,23 +89,20 @@ function formatDate(value: string | null): string {
   }
 }
 
-function isPending(m: Member): boolean {
-  // Invitation en attente : jamais connecté et aucun moyen d'auth configuré
-  return !m.hasPassword && m.oauthProviders.length === 0 && !m.lastActiveAt;
-}
-
 function connectionMethod(m: Member): { label: string; icon: typeof KeyRound } {
-  if (m.oauthProviders.length > 0) {
-    const pretty = m.oauthProviders
-      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-      .join(', ');
-    return { label: pretty, icon: Users };
+  switch (m.authMethod) {
+    case 'google':
+      return { label: 'Google', icon: Users };
+    case 'sso':
+      return { label: 'Authentik (SSO)', icon: ShieldCheck };
+    case 'password':
+      return { label: 'Mot de passe', icon: KeyRound };
+    default:
+      return { label: 'Invitation', icon: Mail };
   }
-  if (m.hasPassword) return { label: 'Mot de passe', icon: KeyRound };
-  return { label: 'Invitation', icon: Mail };
 }
 
-export default function MemberManagement({ currentUserId }: { currentUserId: string }) {
+export default function MemberManagement({ currentUserEmail }: { currentUserEmail: string }) {
   const {
     data,
     isLoading,
@@ -184,7 +184,7 @@ export default function MemberManagement({ currentUserId }: { currentUserId: str
     if (!editing) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/members/${editing.id}`, {
+      const res = await fetch(`/api/members/${encodeURIComponent(editing.email)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -212,7 +212,9 @@ export default function MemberManagement({ currentUserId }: { currentUserId: str
     if (!deleting) return;
     setDeletingBusy(true);
     try {
-      const res = await fetch(`/api/members/${deleting.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/members/${encodeURIComponent(deleting.email)}`, {
+        method: 'DELETE',
+      });
       const json: ApiEnvelope<unknown> = await res.json();
       if (json.success) {
         toast.success('Membre supprimé');
@@ -335,15 +337,17 @@ export default function MemberManagement({ currentUserId }: { currentUserId: str
           {members.map((m) => {
             const method = connectionMethod(m);
             const MethodIcon = method.icon;
-            const pending = isPending(m);
-            const isSelf = m.id === currentUserId;
+            const pending = m.isPending;
+            const isSelf =
+              !!currentUserEmail &&
+              m.email.toLowerCase() === currentUserEmail.toLowerCase();
             return (
-              <Card key={m.id}>
+              <Card key={m.email}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <CardTitle className="text-base truncate">
-                        {m.displayName || m.email || m.id}
+                        {m.displayName || m.email}
                       </CardTitle>
                       {m.email && (
                         <p className="text-xs text-muted-foreground truncate">{m.email}</p>
@@ -383,6 +387,10 @@ export default function MemberManagement({ currentUserId }: { currentUserId: str
                       className="text-[10px]"
                     >
                       {m.planningPermission === 'editor' ? 'Éditeur' : 'Lecteur'}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px] gap-1">
+                      <MethodIcon className="h-3 w-3" />
+                      {method.label}
                     </Badge>
                     {pending && (
                       <Badge variant="secondary" className="text-[10px]">
@@ -483,7 +491,7 @@ export default function MemberManagement({ currentUserId }: { currentUserId: str
             <AlertDialogDescription>
               Cette action est irréversible. Le compte de{' '}
               <strong>{deleting?.displayName || deleting?.email}</strong> sera définitivement
-              supprimé de Stack Auth.
+              supprimé (Stack Auth et/ou base locale).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
