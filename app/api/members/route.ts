@@ -64,9 +64,20 @@ export function formatMember(user: any): MemberDTO {
 export const GET = withAdmin(async () => {
   try {
     const app = await getStackServerApp();
-    const users = await app.listUsers();
 
-    const members: MemberDTO[] = (users ?? []).map(formatMember);
+    // Pagination : listUsers() ne renvoie qu'une page (cursor/nextCursor).
+    // On parcourt toutes les pages pour ne manquer aucun membre.
+    type PageUser = Awaited<ReturnType<typeof app.listUsers>>[number];
+    const users: PageUser[] = [];
+    let cursor: string | undefined;
+    for (let guard = 0; guard < 500; guard++) {
+      const page = await app.listUsers({ cursor, limit: 200, orderBy: 'signedUpAt' });
+      users.push(...page);
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+
+    const members: MemberDTO[] = users.map(formatMember);
     members.sort((a, b) => {
       const ka = (a.displayName || a.email || '').toLowerCase();
       const kb = (b.displayName || b.email || '').toLowerCase();
