@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stackServerApp } from '@/lib/stack-server';
+import { resolveUser } from '@/lib/api/with-auth';
 import {
     archivePromotion,
     unarchivePromotion,
@@ -45,8 +45,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        // Vérifier l'authentification
-        const user = await stackServerApp.getUser();
+        // Vérifier l'authentification (Stack Auth OU Authentik via resolveUser)
+        const user = await resolveUser();
         if (!user) {
             return NextResponse.json(
                 { success: false, error: 'Non authentifié' },
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             message: result,
-            archivedBy: user.displayName || user.primaryEmail
+            archivedBy: user.name || user.email
         });
     } catch (error) {
         console.error('Error archiving promotion:', error);
@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
     try {
-        // Vérifier l'authentification
-        const user = await stackServerApp.getUser();
+        // Vérifier l'authentification (Stack Auth OU Authentik via resolveUser)
+        const user = await resolveUser();
         if (!user) {
             return NextResponse.json(
                 { success: false, error: 'Non authentifié' },
@@ -116,7 +116,7 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({
             success: true,
             message: result,
-            unarchivedBy: user.displayName || user.primaryEmail
+            unarchivedBy: user.name || user.email
         });
     } catch (error) {
         console.error('Error unarchiving promotion:', error);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { stackServerApp } from '@/lib/stack-server';
+import { resolveUser } from '@/lib/api/with-auth';
 import {
     createAudit,
     getRecentAudits,
@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        // Vérifier l'authentification
-        const user = await stackServerApp.getUser();
+        // Vérifier l'authentification (Stack Auth OU Authentik via resolveUser)
+        const user = await resolveUser();
         if (!user) {
             return NextResponse.json(
                 { error: 'Non authentifié' },
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Récupérer ou créer l'utilisateur dans la DB locale
-        const userEmail = user.primaryEmail;
+        const userEmail = user.email;
         if (!userEmail) {
             return NextResponse.json(
                 { error: 'Email utilisateur manquant' },
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
         const auditorId = await getOrCreateUserByEmail(
             userEmail,
-            user.displayName || undefined
+            user.name || undefined
         );
 
         // Créer l'audit
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
             summary: data.summary,
             warnings: data.warnings,
             auditorId, // ID de la table users locale
-            auditorName: user.displayName || user.primaryEmail || 'Anonyme',
+            auditorName: user.name || user.email || 'Anonyme',
             results: data.results.map((r) => ({
                 studentLogin: r.studentLogin,
                 validated: r.validated,

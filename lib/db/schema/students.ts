@@ -107,6 +107,8 @@ export type SelectStudent = {
     javascript_completed: boolean | null;
     rust_completed: boolean | null;
     java_completed: boolean | null;
+    // Archivage (émargement / manuel)
+    archived: boolean | null;
     // Champs perdition
     isDropout: boolean | null;
     dropoutAt: Date | null;

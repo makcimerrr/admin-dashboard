@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { stackServerApp } from '@/lib/stack-server';
+import { resolveUser } from '@/lib/api/with-auth';
 import { getAllAuditsForExport } from '@/lib/db/services/auditsExport';
 import { AuditReportDocument } from '@/lib/pdf/AuditReportDocument';
 import { renderToBuffer, type DocumentProps } from '@react-pdf/renderer';
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const user = await stackServerApp.getUser();
+  const user = await resolveUser();
   if (!user) {
     return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
   }

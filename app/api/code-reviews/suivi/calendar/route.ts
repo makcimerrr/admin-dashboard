@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { stackServerApp } from '@/lib/stack-server';
+import { resolveUser } from '@/lib/api/with-auth';
 import { getUpcomingEventsFromAllReviewers, getUpcomingCalendarEvents, isCalendarConfigured } from '@/lib/services/googleCalendar';
 
 export async function GET() {
-  const user = await stackServerApp.getUser();
+  const user = await resolveUser();
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
   const configured = isCalendarConfigured();

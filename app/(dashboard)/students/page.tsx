@@ -52,11 +52,13 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
     delay_level = null,
     track = null,
     track_completed = null,
-    dropout_filter = 'active'
+    dropout_filter = 'active',
+    archived = undefined
   } = resolvedParams;
 
   const search = q;
   const offsetNumber = Number(offset);
+  const archivedOnly = archived === '1';
 
   // Find selected promo — fall back to allPromos so a deep-link to an
   // archived promo still resolves an eventId for the table header.
@@ -66,12 +68,12 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
 
   // Fetch students data and counts in parallel
   const [studentsData, counts] = await Promise.all([
-    getStudents(search, offsetNumber, promo, filter, direction, status, delay_level, track, track_completed),
+    getStudents(search, offsetNumber, promo, filter, direction, status, delay_level, track, track_completed, 20, dropout_filter as 'active' | 'dropout' | 'all', archivedOnly),
     getStudentCounts(promo)
   ]);
 
   const { students, newOffset, totalStudents, previousOffset, currentOffset } = studentsData;
-  const { total: totalAll, active: totalActive, dropout: totalDropout } = counts;
+  const { total: totalAll, active: totalActive, dropout: totalDropout, archived: totalArchived } = counts;
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
@@ -88,6 +90,7 @@ export default async function StudentsPage({ searchParams }: StudentsPageProps) 
         totalStudents={totalAll}
         activeStudents={totalActive}
         dropoutStudents={totalDropout}
+        archivedStudents={totalArchived}
       />
 
       {/* Track Statistics */}

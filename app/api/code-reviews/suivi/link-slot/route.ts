@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stackServerApp } from '@/lib/stack-server';
+import { resolveUser } from '@/lib/api/with-auth';
 import { updateSlot, unlinkSlot } from '@/lib/db/services/groupStatuses';
 
 export async function POST(request: NextRequest) {
-  const user = await stackServerApp.getUser();
+  const user = await resolveUser();
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
 
   try {

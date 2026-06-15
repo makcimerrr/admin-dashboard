@@ -14,7 +14,7 @@ export interface AuthedUser {
 
 type Handler<Ctx> = (req: NextRequest, ctx: Ctx & { user: AuthedUser }) => Promise<NextResponse>;
 
-async function resolveUser(): Promise<AuthedUser | null> {
+export async function resolveUser(): Promise<AuthedUser | null> {
   const stackUser = await stackServerApp.getUser();
   if (stackUser) {
     return {

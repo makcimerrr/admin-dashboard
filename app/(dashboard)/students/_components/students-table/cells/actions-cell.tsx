@@ -18,7 +18,9 @@ import {
   UserCheck,
   Briefcase,
   Trash2,
-  Loader2
+  Loader2,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { deleteStudent } from '../../../../actions';
@@ -27,12 +29,14 @@ interface ActionsCellProps {
   studentId: number;
   isDropout: boolean;
   isAlternant: boolean;
+  isArchived?: boolean;
 }
 
 export function ActionsCell({
   studentId,
   isDropout,
-  isAlternant
+  isAlternant,
+  isArchived = false
 }: ActionsCellProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -71,6 +75,29 @@ export function ActionsCell({
         } else {
           toast.error('Erreur lors de la réactivation');
         }
+      }
+    } catch (error) {
+      toast.error('Erreur de connexion');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleArchiveAction = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLoading(true);
+    try {
+      const nextArchived = !isArchived;
+      const response = await fetch(`/api/student/${studentId}/archive`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived: nextArchived })
+      });
+      if (response.ok) {
+        toast.success(nextArchived ? 'Apprenant archivé' : 'Apprenant désarchivé');
+        router.refresh();
+      } else {
+        toast.error("Erreur lors de l'archivage");
       }
     } catch (error) {
       toast.error('Erreur de connexion');
@@ -178,6 +205,26 @@ export function ActionsCell({
           >
             <Briefcase className="h-4 w-4 mr-2" />
             Marquer alternant
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuSeparator />
+
+        {isArchived ? (
+          <DropdownMenuItem
+            onClick={handleArchiveAction}
+            className="cursor-pointer text-success focus:text-success"
+          >
+            <ArchiveRestore className="h-4 w-4 mr-2" />
+            Désarchiver
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            onClick={handleArchiveAction}
+            className="cursor-pointer text-muted-foreground focus:text-foreground"
+          >
+            <Archive className="h-4 w-4 mr-2" />
+            Archiver
           </DropdownMenuItem>
         )}
 

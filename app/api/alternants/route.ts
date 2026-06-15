@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stackServerApp } from '@/lib/stack-server';
+import { resolveUser } from '@/lib/api/with-auth';
 import {
     getAlternants,
     getAlternantByLogin,
@@ -101,8 +101,8 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        // Vérifier l'authentification
-        const user = await stackServerApp.getUser();
+        // Vérifier l'authentification (Stack Auth OU Authentik via resolveUser)
+        const user = await resolveUser();
         if (!user) {
             return NextResponse.json(
                 { success: false, error: 'Non authentifié' },
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             alternant: updatedAlternant,
-            updatedBy: user.displayName || user.primaryEmail
+            updatedBy: user.name || user.email
         });
     } catch (error) {
         console.error('Error updating alternant status:', error);

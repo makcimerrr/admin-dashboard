@@ -53,6 +53,7 @@ export function StudentMobileCard({ student, promoConfig }: StudentMobileCardPro
   const router = useRouter();
   const isDropout = student.isDropout === true;
   const isAlternant = student.isAlternant === true;
+  const isArchived = student.archived === true;
 
   const studentPromoConfig = promoConfig?.find((p) => p.key === student.promos);
   const today = new Date();
@@ -202,7 +203,7 @@ export function StudentMobileCard({ student, promoConfig }: StudentMobileCardPro
       </div>
 
       <div className="mt-2 flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
-        <ActionsCell studentId={student.id} isDropout={isDropout} isAlternant={isAlternant} />
+        <ActionsCell studentId={student.id} isDropout={isDropout} isAlternant={isAlternant} isArchived={isArchived} />
       </div>
     </div>
   );

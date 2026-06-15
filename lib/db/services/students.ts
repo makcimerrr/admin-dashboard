@@ -37,7 +37,8 @@ export async function getStudents(
   track: string | null = null,
   trackCompleted: string | null = null,
   limit: number = 20,
-  dropoutFilter: 'active' | 'dropout' | 'all' = 'active' // Par défaut, exclure les dropouts
+  dropoutFilter: 'active' | 'dropout' | 'all' = 'active', // Par défaut, exclure les dropouts
+  archivedOnly: boolean = false // false = exclure les archivés ; true = uniquement les archivés
 ): Promise<{
   students: SelectStudent[];
   newOffset: number | null;
@@ -61,6 +62,12 @@ export async function getStudents(
     dropoutSqlFilter = eq(students.isDropout, true);
   }
   // Si 'all', pas de filtre dropout
+
+  // Filtre archivés : par défaut on EXCLUT les archivés (effectif courant) ;
+  // si archivedOnly, on ne montre QUE les archivés.
+  const archivedSqlFilter: SQL<unknown> = archivedOnly
+    ? (eq(students.archived, true) as SQL<unknown>)
+    : (sql`(${students.archived} IS NULL OR ${students.archived} = false)` as SQL<unknown>);
 
   // Filtre par statut
   const statusFilter = status
@@ -126,6 +133,7 @@ export async function getStudents(
     delayLevelFilter,
     trackFilter,
     dropoutSqlFilter,
+    archivedSqlFilter,
     archivedExclusion,
   ].filter((filter) => filter != null);
   let finalFilter: SQL<unknown> | undefined =
@@ -223,6 +231,8 @@ export async function getStudents(
       javascript_completed: studentSpecialtyProgress.javascript_completed,
       rust_completed: studentSpecialtyProgress.rust_completed,
       java_completed: studentSpecialtyProgress.java_completed,
+      // Archivage (émargement / manuel)
+      archived: students.archived,
       // Champs dropout/perdition
       isDropout: students.isDropout,
       dropoutAt: students.dropoutAt,
@@ -368,27 +378,40 @@ export async function getStudents(
 
 export async function getStudentCounts(
   promo: string
-): Promise<{ total: number; active: number; dropout: number }> {
+): Promise<{ total: number; active: number; dropout: number; archived: number }> {
   const promoFilter = promo ? eq(students.promoName, promo) : undefined;
 
-  const [totalResult, activeResult] = await Promise.all([
+  // Un archivé n'est plus dans l'effectif : exclu de total ET active.
+  const notArchived = sql`(${students.archived} IS NULL OR ${students.archived} = false)`;
+  const isArchived = eq(students.archived, true);
+  const notDropout = sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`;
+
+  const withPromo = (cond: SQL<unknown>): SQL<unknown> =>
+    (promoFilter ? and(promoFilter, cond) : cond) as SQL<unknown>;
+
+  const [totalResult, activeResult, archivedResult] = await Promise.all([
+    // total = effectif (non archivé), dropout inclus
     db
       .select({ count: count() })
       .from(students)
-      .where(promoFilter),
+      .where(withPromo(notArchived)),
+    // active = non archivé ET non dropout
     db
       .select({ count: count() })
       .from(students)
-      .where(
-        promoFilter
-          ? and(promoFilter, sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`)
-          : sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`
-      )
+      .where(withPromo(and(notArchived, notDropout) as SQL<unknown>)),
+    // archived = archivés (hors effectif)
+    db
+      .select({ count: count() })
+      .from(students)
+      .where(withPromo(isArchived))
   ]);
 
   const total = totalResult[0]?.count ?? 0;
   const active = activeResult[0]?.count ?? 0;
-  return { total, active, dropout: total - active };
+  const archived = archivedResult[0]?.count ?? 0;
+  // dropout = total (effectif non archivé) - active
+  return { total, active, dropout: total - active, archived };
 }
 
 export async function createStudent(

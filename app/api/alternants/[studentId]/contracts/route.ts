@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stackServerApp } from '@/lib/stack-server';
+import { resolveUser } from '@/lib/api/with-auth';
 import {
   getContractsByStudentId,
   getActiveContract,
@@ -53,7 +53,7 @@ export async function POST(
   { params }: { params: Promise<{ studentId: string }> }
 ) {
   try {
-    const user = await stackServerApp.getUser();
+    const user = await resolveUser();
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Non authentifié' },
@@ -113,7 +113,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       contract,
-      createdBy: user.displayName || user.primaryEmail,
+      createdBy: user.name || user.email,
     });
   } catch (error) {
     console.error('Error creating contract:', error);

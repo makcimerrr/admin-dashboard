@@ -21,7 +21,8 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Workflow
+  Workflow,
+  Archive
 } from 'lucide-react';
 import { FilterChips, FilterChip } from './filter-chips';
 import debounce from 'lodash.debounce';
@@ -63,6 +64,7 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
   const currentDelayLevel = searchParams.get('delay_level') || '';
   const currentTrack = searchParams.get('track') || '';
   const currentTrackCompleted = searchParams.get('track_completed') || '';
+  const archivedActive = searchParams.get('archived') === '1';
 
   // Build active filters array
   const activeFilters: FilterChip[] = useMemo(() => {
@@ -107,8 +109,16 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
       });
     }
 
+    if (archivedActive) {
+      filters.push({
+        key: 'archived',
+        label: 'Affichage',
+        value: 'Archivés'
+      });
+    }
+
     return filters;
-  }, [currentDropoutFilter, currentStatus, currentDelayLevel, currentTrack, currentTrackCompleted]);
+  }, [currentDropoutFilter, currentStatus, currentDelayLevel, currentTrack, currentTrackCompleted, archivedActive]);
 
   // Filter handlers
   const updateFilter = (key: string, value: string) => {
@@ -138,6 +148,17 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
     router.push(`${pathname}?${query.toString()}`, { scroll: false });
   };
 
+  const toggleArchived = () => {
+    const query = new URLSearchParams(searchParams.toString());
+    if (archivedActive) {
+      query.delete('archived');
+    } else {
+      query.set('archived', '1');
+    }
+    query.set('offset', '0');
+    router.push(`${pathname}?${query.toString()}`, { scroll: false });
+  };
+
   const removeFilter = (key: string) => {
     const query = new URLSearchParams(searchParams.toString());
     query.delete(key);
@@ -155,6 +176,7 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
     query.delete('delay_level');
     query.delete('track');
     query.delete('track_completed');
+    query.delete('archived');
     query.delete('filter');
     query.delete('direction');
     router.push(`${pathname}?${query.toString()}`, { scroll: false });
@@ -393,6 +415,16 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Archived toggle */}
+          <Button
+            variant={archivedActive ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleArchived}
+          >
+            <Archive className="h-4 w-4 mr-1.5" />
+            Archivés
+          </Button>
         </div>
       </div>
 

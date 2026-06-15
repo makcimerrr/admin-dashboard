@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     const limitParam = url.searchParams.get('limit'); // Limite par page (par défaut 20, -1 pour tous)
     const limit = limitParam ? parseInt(limitParam, 10) : 20;
     const dropoutFilter = (url.searchParams.get('dropout_filter') || 'active') as 'active' | 'dropout' | 'all';
+    const archivedOnly = url.searchParams.get('archived') === '1'; // 1 = uniquement les archivés
 
     // Appel à la fonction getStudents dans la base de données
     const {
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
       totalStudents,
       previousOffset,
       currentOffset
-    } = await getStudents(search, offsetNumber, promo, filter, direction, status, delayLevel, track, trackCompleted, limit, dropoutFilter);
+    } = await getStudents(search, offsetNumber, promo, filter, direction, status, delayLevel, track, trackCompleted, limit, dropoutFilter, archivedOnly);
 
     // Envoi des résultats sous forme JSON
     return NextResponse.json({

@@ -290,6 +290,7 @@ export function StudentTableRow({ student, promoConfig }: StudentTableRowProps) 
           studentId={student.id}
           isDropout={isDropout}
           isAlternant={isAlternant}
+          isArchived={student.archived === true}
         />
       </TableCell>
     </TableRow>
