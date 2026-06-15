@@ -17,6 +17,7 @@ import {
   NetworkIcon,
   Settings2Icon,
   SettingsIcon,
+  ShieldCheckIcon,
   SignatureIcon,
   UsersIcon,
   WrenchIcon,
@@ -132,6 +133,7 @@ export const NAV_APPS: NavApp[] = [
 
 /** Bottom nav (config, settings) — always direct links */
 export const NAV_BOTTOM: NavApp[] = [
+  { key: 'members', label: 'Membres', icon: ShieldCheckIcon, url: '/members', adminOnly: true },
   { key: 'config', label: 'Configuration', icon: Settings2Icon, url: '/config', adminOnly: true },
   { key: 'settings', label: 'Paramètres', icon: SettingsIcon, url: '/settings' },
 ];
