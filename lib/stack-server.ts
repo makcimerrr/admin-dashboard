@@ -39,6 +39,50 @@ export async function getStackServerApp() {
   return stackServerAppInstance;
 }
 
+const STACK_API_BASE = 'https://api.stack-auth.com/api/v1';
+
+/**
+ * Envoie un email de connexion (magic-link / OTP) côté serveur via l'API REST
+ * Stack.
+ *
+ * ⚠️ `sendSignInInvitationEmail` N'EXISTE PAS sur `StackServerApp` (c'est une
+ * méthode du StackAdminApp). L'endpoint OTP `auth/otp/send-sign-in-code`
+ * fonctionne avec la simple clé serveur et déclenche le mail de connexion /
+ * inscription. Prérequis : l'email du compte doit être VÉRIFIÉ et l'auth OTP
+ * activée (sinon 409 `USER_EMAIL_ALREADY_EXISTS … not verified`).
+ *
+ * @returns ok + status + message d'erreur éventuel (non bloquant côté appelant).
+ */
+export async function sendSignInCode(
+  email: string,
+  callbackUrl: string,
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  try {
+    const res = await fetch(`${STACK_API_BASE}/auth/otp/send-sign-in-code`, {
+      method: 'POST',
+      headers: {
+        'X-Stack-Access-Type': 'server',
+        'X-Stack-Project-Id': process.env.NEXT_PUBLIC_STACK_PROJECT_ID!,
+        'X-Stack-Secret-Server-Key': process.env.STACK_SECRET_SERVER_KEY!,
+        'X-Stack-Publishable-Client-Key': process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, callback_url: callbackUrl }),
+    });
+    if (res.ok) return { ok: true, status: res.status };
+    let error = `HTTP ${res.status}`;
+    try {
+      const j = await res.json();
+      error = j?.error ?? j?.code ?? error;
+    } catch {
+      /* corps non-JSON */
+    }
+    return { ok: false, status: res.status, error };
+  } catch (e) {
+    return { ok: false, status: 0, error: e instanceof Error ? e.message : 'fetch error' };
+  }
+}
+
 export const stackServerApp = {
   async getUser(options?: { userId?: string }) {
     // Pour le middleware, on ne peut pas utiliser le SDK

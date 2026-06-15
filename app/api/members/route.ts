@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAdmin } from '@/lib/api/with-auth';
 import { apiError, apiSuccess } from '@/lib/api/response';
-import { getStackServerApp } from '@/lib/stack-server';
+import { getStackServerApp, sendSignInCode } from '@/lib/stack-server';
 import { getUserRole, getUserPlanningPermission } from '@/lib/stack-helpers';
 import { listAllUsers, type LocalUserListItem } from '@/lib/db/services/users';
 import {
@@ -156,8 +156,9 @@ export const POST = withAdmin(async (req: NextRequest) => {
 
     const app = await getStackServerApp();
     const metadata = { role, planningPermission };
-    const base = process.env.NEXT_PUBLIC_BASE_URL ?? '';
-    const callbackUrl = `${base}/handler/sign-in`;
+    const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hub.zone01normandie.org';
+    // Callback du magic-link / OTP (handler Stack). Doit être whitelisté côté projet.
+    const callbackUrl = `${base}/handler/magic-link-callback`;
 
     // L'email existe-t-il déjà côté Stack ? includeAnonymous → détecte aussi les
     // comptes « partiels » (email posé mais invitation jamais finalisée), que
@@ -180,24 +181,23 @@ export const POST = withAdmin(async (req: NextRequest) => {
         const prevClient = (match.clientReadOnlyMetadata ?? {}) as Record<string, unknown>;
         await match.setServerMetadata({ ...prevServer, ...metadata });
         await match.setClientReadOnlyMetadata({ ...prevClient, ...metadata });
-        if (displayName) await match.update({ displayName });
+        // Email vérifié requis pour que l'OTP de connexion parte (sinon 409).
+        await match.update({
+          primaryEmailVerified: true,
+          ...(displayName ? { displayName } : {}),
+        });
       } catch (e) {
         console.error('update existing member error:', e);
       }
-      let invited = true;
-      try {
-        await app.sendSignInInvitationEmail(email, callbackUrl);
-      } catch (e) {
-        console.error('sendSignInInvitationEmail (existing) error:', e);
-        invited = false;
-      }
+      const invite = await sendSignInCode(email, callbackUrl);
+      if (!invite.ok) console.error('sendSignInCode (existing) error:', invite.error);
       return apiSuccess({
         member: formatMember(match),
         updated: true,
-        invited,
-        warning: invited
-          ? 'Ce membre existait déjà : accès mis à jour et invitation renvoyée.'
-          : "Ce membre existait déjà : accès mis à jour, mais l'email d'invitation n'a pas pu être renvoyé.",
+        invited: invite.ok,
+        warning: invite.ok
+          ? 'Ce membre existait déjà : accès mis à jour et email de connexion renvoyé.'
+          : `Ce membre existait déjà : accès mis à jour, mais l'email de connexion n'a pas pu être envoyé (${invite.error}).`,
       });
     }
 
@@ -207,6 +207,7 @@ export const POST = withAdmin(async (req: NextRequest) => {
       created = await app.createUser({
         primaryEmail: email,
         primaryEmailAuthEnabled: true,
+        primaryEmailVerified: true, // requis pour que l'OTP de connexion parte
         otpAuthEnabled: true,
         displayName,
         serverMetadata: metadata,
@@ -223,16 +224,15 @@ export const POST = withAdmin(async (req: NextRequest) => {
       throw err;
     }
 
-    // Envoi de l'invitation (email pour définir le mot de passe ou se connecter via OAuth)
-    try {
-      await app.sendSignInInvitationEmail(email, callbackUrl);
-    } catch (err) {
-      console.error('sendSignInInvitationEmail error:', err);
+    // Envoi de l'email de connexion (magic-link / OTP) via l'endpoint serveur.
+    const invite = await sendSignInCode(email, callbackUrl);
+    if (!invite.ok) {
+      console.error('sendSignInCode error:', invite.error);
       // L'utilisateur est créé ; on remonte un avertissement non bloquant.
       return apiSuccess(
         {
           member: formatMember(created),
-          warning: "Membre créé mais l'email d'invitation n'a pas pu être envoyé.",
+          warning: `Membre créé mais l'email de connexion n'a pas pu être envoyé (${invite.error}).`,
         },
         { status: 201 },
       );
