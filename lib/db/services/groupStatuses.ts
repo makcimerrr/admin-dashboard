@@ -129,6 +129,9 @@ export async function getOverdueGroups(): Promise<(typeof groupStatuses.$inferSe
         eq(groupStatuses.status, 'audit'),
         isNotNull(groupStatuses.notifiedAuditAt),
         isNull(groupStatuses.slotDate),
+        // Exclure ceux qui ont confirmé via le bouton vert « RDV pris »
+        // (rdv_confirmed_at) : ils ont déjà réservé, pas de rappel.
+        isNull(groupStatuses.rdvConfirmedAt),
         isNull(groupStatuses.reminderSentAt),
         sql`${groupStatuses.notifiedAuditAt} <= ${fourteenDaysAgo.toISOString()}`
       )
