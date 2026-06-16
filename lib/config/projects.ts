@@ -26,7 +26,7 @@ export function dbProjectsToConfig(rows: any[]): ProjectsConfig {
     for (const c of cats) result[c] = [];
     for (const row of sorted) {
         if (!result[row.category]) result[row.category] = [];
-        result[row.category].push({ id: row.id, name: row.name, project_time_week: row.projectTimeWeek, optional: row.optional ?? false });
+        result[row.category].push({ id: row.id, name: row.name, project_time_week: row.projectTimeWeek, optional: row.optional ?? false, noCodeReview: row.noCodeReview ?? false });
     }
     return result as ProjectsConfig;
 }

@@ -33,6 +33,8 @@ export interface ProjectConfig {
     name: string;
     project_time_week: number;
     optional?: boolean;
+    /** Pas de code-review staff → exclu des relances « Code review à réserver ». */
+    noCodeReview?: boolean;
 }
 
 /**

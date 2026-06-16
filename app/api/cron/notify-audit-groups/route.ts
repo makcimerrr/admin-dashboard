@@ -69,7 +69,11 @@ export async function GET(request: NextRequest) {
     const mandatoryProjects = new Set<string>();
     for (const track of Object.keys(projectsConfig) as Track[]) {
       for (const project of projectsConfig[track]) {
-        if (!project.optional) mandatoryProjects.add(project.name.toLowerCase());
+        // Obligatoire ET soumis à code-review staff (exclut go-reloaded, graphql…
+        // marqués no_code_review) → seuls ceux-ci déclenchent une relance CR.
+        if (!project.optional && !project.noCodeReview) {
+          mandatoryProjects.add(project.name.toLowerCase());
+        }
       }
     }
 
