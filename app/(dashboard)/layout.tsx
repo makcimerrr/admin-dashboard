@@ -125,7 +125,9 @@ export default async function DashboardLayout({
         </div>
         <Analytics />
       </div>
-      <BottomNav user={user} />
+      {/* Non-admin (étudiant) : navigation via la navbar partagée (z01-student-nav),
+          pas la BottomNav admin → évite un double bottom-bar. */}
+      {isAdminRole(user.role) && <BottomNav user={user} />}
       {(user.role === 'Admin' || user.role === 'Super Admin') && (
         <AssistantBubble userId={user.email} />
       )}

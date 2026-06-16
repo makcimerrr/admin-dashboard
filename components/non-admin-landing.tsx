@@ -1,5 +1,7 @@
 'use client';
 
+import { createElement } from 'react';
+import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { Eye, ArrowLeft } from 'lucide-react';
 import { EmargementWidget } from '@/components/student/emargement-widget';
@@ -21,7 +23,7 @@ export function NonAdminLanding({ userName, asLogin, previewName }: NonAdminLand
   const isPreview = Boolean(asLogin);
 
   return (
-    <div className="h-full flex flex-col gap-3 p-3 md:p-4 overflow-hidden">
+    <div className={`h-full flex flex-col gap-3 p-3 md:p-4 overflow-hidden ${isPreview ? '' : 'pb-[68px]'}`}>
       {isPreview && (
         <div className="shrink-0 flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
           <span className="flex items-center gap-2 text-sm">
@@ -67,6 +69,15 @@ export function NonAdminLanding({ userName, asLogin, previewName }: NonAdminLand
           </div>
         </div>
       </div>
+
+      {/* Navbar étudiant partagée (même composant sur hub/émargement/01deck).
+          Masquée en mode aperçu admin. */}
+      {!isPreview && (
+        <>
+          <Script src="/z01-student-nav.js" strategy="afterInteractive" />
+          {createElement('z01-student-nav', { active: 'hub' })}
+        </>
+      )}
     </div>
   );
 }
