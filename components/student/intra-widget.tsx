@@ -1,33 +1,23 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Globe, ArrowUpRight, Zap, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Globe, ExternalLink, Zap, ArrowUpRight, Award } from 'lucide-react';
 
-// Mock data — would be fetched from https://intra.zone01rouennormandie.org/
-const MOCK_INTRA = {
-  cursus: {
-    name: 'Cursus',
-    status: 'IN_PROGRESS',
-    cohort: 'P1 2023',
-  },
-  level: 54,
-  expectedLevel: 59,
-  nextLevel: 55,
-  rank: 'Junior developer',
-  nextRankIn: 1,
-  lastSkill: 'Elementary algorithms',
-  audit: {
-    doneBytes: 5_270_000,
-    receivedBytes: 10_020_000,
-  },
-  whatsUp: [
-    { id: 1, name: 'Piscine Cybersecurity', status: 'in_progress', deadline: '13/11/2027' },
-    { id: 2, name: 'forum-moderation', status: 'in_progress', updated: '18/02/2026' },
-  ],
-};
-
-// Uses theme chart colors 5 & 6
+const INTRA_URL = 'https://zone01normandie.org/';
 const INTRA_COLOR = 'var(--chart-5)';
 const INTRA_COLOR_2 = 'var(--chart-6)';
+
+interface IntraData {
+  found: boolean;
+  login: string;
+  level: number;
+  xp: number;
+  audit: { up: number; down: number; ratio: number | null };
+  skills: { name: string; level: number }[];
+  projects: { name: string; type: string; updatedAt: string }[];
+}
 
 function formatBytes(b: number): string {
   if (b >= 1_000_000) return (b / 1_000_000).toFixed(2) + 'MB';
@@ -35,10 +25,7 @@ function formatBytes(b: number): string {
   return b + 'B';
 }
 
-export function IntraWidget() {
-  const levelRatio = Math.round((MOCK_INTRA.level / MOCK_INTRA.expectedLevel) * 100);
-  const auditRatio = (MOCK_INTRA.audit.doneBytes / MOCK_INTRA.audit.receivedBytes).toFixed(2);
-
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <Card className="border h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between pb-2 pt-3 px-4 shrink-0">
@@ -47,7 +34,7 @@ export function IntraWidget() {
           Intra
         </CardTitle>
         <a
-          href="https://intra.zone01rouennormandie.org/"
+          href={INTRA_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -56,100 +43,141 @@ export function IntraWidget() {
           <ExternalLink className="h-3 w-3" />
         </a>
       </CardHeader>
+      {children}
+    </Card>
+  );
+}
 
+export function IntraWidget() {
+  const [data, setData] = useState<IntraData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/me/intra')
+      .then((r) => r.json())
+      .then((d) => active && setData(d?.success ? d : ({ found: false } as IntraData)))
+      .catch(() => active && setData({ found: false } as IntraData))
+      .finally(() => active && setLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <Shell>
+        <CardContent className="flex-1 min-h-0 flex flex-col gap-3 px-4 pb-3">
+          <Skeleton className="h-16 w-full rounded-lg" />
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </CardContent>
+      </Shell>
+    );
+  }
+
+  if (!data?.found) {
+    return (
+      <Shell>
+        <CardContent className="flex-1 min-h-0 flex flex-col items-center justify-center text-center gap-1.5 px-4 pb-3">
+          <p className="text-xs text-muted-foreground">Aucune donnée intra trouvée pour ton compte.</p>
+          <a href={INTRA_URL} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+            Ouvrir l&apos;intra →
+          </a>
+        </CardContent>
+      </Shell>
+    );
+  }
+
+  const topSkill = data.skills[0];
+
+  return (
+    <Shell>
       <CardContent className="flex-1 min-h-0 flex flex-col gap-3 px-4 pb-3">
-        {/* Current program + level */}
+        {/* Level + XP */}
         <div
-          className="rounded-lg border p-3"
+          className="rounded-lg border p-3 flex items-center justify-between"
           style={{
             backgroundImage: `linear-gradient(135deg, color-mix(in srgb, ${INTRA_COLOR} 6%, transparent), transparent 60%)`,
           }}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-xs font-semibold">{MOCK_INTRA.cursus.name}</span>
-                <Badge
-                  className="text-[9px] h-4 px-1.5 border-0 hover:opacity-80"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, ${INTRA_COLOR} 15%, transparent)`,
-                    color: INTRA_COLOR,
-                  }}
-                >
-                  IN PROGRESS
-                </Badge>
-              </div>
-              <p className="text-[10px] text-muted-foreground">{MOCK_INTRA.cursus.cohort}</p>
-            </div>
-            <div className="text-center shrink-0">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Lvl</p>
-              <p className="text-xl font-bold leading-none" style={{ color: INTRA_COLOR }}>{MOCK_INTRA.level}</p>
-              <p className="text-[9px] text-muted-foreground mt-0.5">att: {MOCK_INTRA.expectedLevel}</p>
-            </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground leading-tight">XP total</p>
+            <p className="text-base font-bold leading-tight">{formatBytes(data.xp)}</p>
           </div>
-          <div className="mt-2 space-y-0.5">
-            <div className="flex items-center justify-between text-[9px] text-muted-foreground">
-              <span>Progression vers {MOCK_INTRA.nextLevel}</span>
-              <span>{levelRatio}%</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div
-                className="h-full transition-all duration-700"
-                style={{
-                  width: `${Math.min(100, levelRatio)}%`,
-                  backgroundImage: `linear-gradient(to right, ${INTRA_COLOR}, ${INTRA_COLOR_2})`,
-                }}
-              />
-            </div>
+          <div className="text-center shrink-0">
+            <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Niveau</p>
+            <p className="text-2xl font-bold leading-none" style={{ color: INTRA_COLOR }}>{data.level}</p>
           </div>
         </div>
 
-        {/* Rank + last skill + audit */}
-        <div className="grid grid-cols-3 gap-1.5">
-          <div className="rounded-lg border p-2">
-            <div className="flex items-center gap-1 mb-0.5">
-              <ShieldCheck className="h-2.5 w-2.5" style={{ color: 'var(--chart-1)' }} />
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Rang</p>
-            </div>
-            <p className="text-[10px] font-semibold leading-tight">{MOCK_INTRA.rank}</p>
-          </div>
+        {/* Top skill + audit */}
+        <div className="grid grid-cols-2 gap-1.5">
           <div className="rounded-lg border p-2">
             <div className="flex items-center gap-1 mb-0.5">
               <Zap className="h-2.5 w-2.5" style={{ color: 'var(--chart-4)' }} />
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Skill</p>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Meilleure compétence</p>
             </div>
-            <p className="text-[10px] font-semibold leading-tight">{MOCK_INTRA.lastSkill}</p>
+            {topSkill ? (
+              <p className="text-[11px] font-semibold leading-tight">
+                {topSkill.name} <span className="text-muted-foreground">· {topSkill.level}%</span>
+              </p>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">—</p>
+            )}
           </div>
           <div className="rounded-lg border p-2">
             <div className="flex items-center gap-1 mb-0.5">
               <ArrowUpRight className="h-2.5 w-2.5" style={{ color: 'var(--chart-2)' }} />
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Audit</p>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Ratio d&apos;audit</p>
             </div>
-            <p className="text-[11px] font-bold leading-tight">{auditRatio}</p>
-            <p className="text-[8px] text-muted-foreground">{formatBytes(MOCK_INTRA.audit.doneBytes)} / {formatBytes(MOCK_INTRA.audit.receivedBytes)}</p>
+            <p className="text-[11px] font-bold leading-tight">{data.audit.ratio ?? '—'}</p>
+            <p className="text-[8px] text-muted-foreground">
+              {formatBytes(data.audit.up)} / {formatBytes(data.audit.down)}
+            </p>
           </div>
         </div>
 
-        {/* What's up */}
+        {/* Skills chips */}
+        {data.skills.length > 1 && (
+          <div className="flex flex-wrap gap-1">
+            {data.skills.slice(0, 6).map((s) => (
+              <span
+                key={s.name}
+                className="text-[9px] px-1.5 py-0.5 rounded-full border"
+                style={{
+                  borderColor: `color-mix(in srgb, ${INTRA_COLOR_2} 30%, transparent)`,
+                  color: INTRA_COLOR_2,
+                }}
+              >
+                {s.name} {s.level}%
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* En cours */}
         <div className="flex-1 min-h-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
+            <Award className="h-3 w-3" />
             En cours
           </p>
           <div className="space-y-1">
-            {MOCK_INTRA.whatsUp.map((p) => (
-              <div key={p.id} className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/30">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: INTRA_COLOR }} />
-                  <span className="text-[11px] font-medium truncate">{p.name}</span>
+            {data.projects.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground">Rien en cours.</p>
+            ) : (
+              data.projects.map((p, i) => (
+                <div key={`${p.name}-${i}`} className="flex items-center justify-between py-1 px-2 rounded-md bg-muted/30">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: INTRA_COLOR }} />
+                    <span className="text-[11px] font-medium truncate">{p.name}</span>
+                  </div>
+                  <span className="text-[9px] text-muted-foreground shrink-0">{p.type}</span>
                 </div>
-                <span className="text-[9px] text-muted-foreground shrink-0">
-                  {p.deadline ? `fin ${p.deadline}` : p.updated ? `maj ${p.updated}` : ''}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </CardContent>
-    </Card>
+    </Shell>
   );
 }

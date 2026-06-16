@@ -58,6 +58,10 @@ export const authOptions: NextAuthOptions = {
 
   session: {
     strategy: "jwt",
+    // Garder l'utilisateur connecté longtemps (30 j) ; rafraîchi à chaque visite
+    // (≤ 24 h). Le SSO inter-apps dépend en plus de la durée de session Authentik.
+    maxAge: 30 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
   },
 
   secret: NEXTAUTH_SECRET,

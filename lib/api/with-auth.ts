@@ -10,6 +10,9 @@ export interface AuthedUser {
   name: string;
   role: string;
   planningPermission: string;
+  /** Login Zone01 (preferred_username Authentik) si dispo — sert à requêter
+   *  les données intra/01-edu de l'utilisateur. Absent pour les comptes Stack. */
+  login?: string;
 }
 
 type Handler<Ctx> = (req: NextRequest, ctx: Ctx & { user: AuthedUser }) => Promise<NextResponse>;
@@ -42,6 +45,8 @@ export async function resolveUser(): Promise<AuthedUser | null> {
       name: session.user.name ?? session.user.email,
       role: groups.includes('authentik Admins') ? 'Admin' : 'user',
       planningPermission: 'reader',
+      // preferred_username Authentik = login Zone01.
+      login: (session.user as { username?: string }).username,
     };
   }
   return null;
