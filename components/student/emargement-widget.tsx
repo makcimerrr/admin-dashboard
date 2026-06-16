@@ -108,13 +108,13 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function EmargementWidget() {
+export function EmargementWidget({ asLogin }: { asLogin?: string }) {
   const [data, setData] = useState<EmargementData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    fetch('/api/me/emargement')
+    fetch(`/api/me/emargement${asLogin ? `?login=${encodeURIComponent(asLogin)}` : ''}`)
       .then((r) => r.json())
       .then((d) => {
         if (active) setData(d?.success ? d : ({ found: false } as EmargementData));
@@ -124,7 +124,7 @@ export function EmargementWidget() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [asLogin]);
 
   if (loading) {
     return (

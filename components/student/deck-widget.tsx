@@ -44,13 +44,13 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function DeckWidget() {
+export function DeckWidget({ asLogin }: { asLogin?: string }) {
   const [data, setData] = useState<DeckData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    fetch('/api/me/deck')
+    fetch(`/api/me/deck${asLogin ? `?login=${encodeURIComponent(asLogin)}` : ''}`)
       .then((r) => r.json())
       .then((d) => active && setData(d?.success ? d : ({ found: false } as DeckData)))
       .catch(() => active && setData({ found: false } as DeckData))
@@ -58,7 +58,7 @@ export function DeckWidget() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [asLogin]);
 
   if (loading) {
     return (

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import postgres from 'postgres';
 import { withAuth } from '@/lib/api/with-auth';
+import { isAdminRole } from '@/lib/nav-apps';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,10 +15,35 @@ export const dynamic = 'force-dynamic';
  * Données : XP total, rang par XP, streak, profil compétitif (ELO + V/D),
  * XP de la semaine.
  */
-export const GET = withAuth(async (_req, ctx) => {
-  const email = (ctx.user.email ?? '').trim().toLowerCase();
+export const GET = withAuth(async (req, ctx) => {
+  // Override admin : ?login= honoré UNIQUEMENT pour un admin (sécurité).
+  const overrideLogin = isAdminRole(ctx.user.role)
+    ? new URL(req.url).searchParams.get('login')?.trim().toLowerCase() || null
+    : null;
+
   const url = process.env.DECK_DATABASE_URL;
   if (!url) return NextResponse.json({ success: true, found: false, reason: 'non configuré' });
+
+  // La table deck "User" n'a pas de login → on résout l'email de l'étudiant via
+  // la base ÉMARGEMENT (qui mappe nickname=login → email), puis on requête deck
+  // par cet email. Sans override : email de l'utilisateur courant.
+  let email = (ctx.user.email ?? '').trim().toLowerCase();
+  if (overrideLogin) {
+    const emgUrl = process.env.EMARGEMENT_DATABASE_URL;
+    if (!emgUrl) return NextResponse.json({ success: true, found: false, reason: 'non configuré' });
+    const emg = postgres(emgUrl, { ssl: false, max: 1 });
+    try {
+      const found = await emg<{ email: string | null }[]>`
+        SELECT email FROM users WHERE lower(nickname) = ${overrideLogin} LIMIT 1
+      `;
+      email = (found[0]?.email ?? '').trim().toLowerCase();
+    } catch (e) {
+      console.error('GET /api/me/deck override email resolution error:', e);
+      email = '';
+    } finally {
+      await emg.end({ timeout: 5 }).catch(() => {});
+    }
+  }
   if (!email) return NextResponse.json({ success: true, found: false, reason: 'email manquant' });
 
   const deck = postgres(url, { ssl: false, max: 1 });

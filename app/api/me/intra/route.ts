@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api/with-auth';
 import { zone01Graphql } from '@/lib/services/zone01-graphql';
+import { isAdminRole } from '@/lib/nav-apps';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -49,8 +50,12 @@ function prettySkill(type: string): string {
   return SKILL_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1).replace(/-/g, ' ');
 }
 
-export const GET = withAuth(async (_req, ctx) => {
-  const login = (ctx.user.login || (ctx.user.email ?? '').split('@')[0]).trim();
+export const GET = withAuth(async (req, ctx) => {
+  // Override admin : ?login= honoré UNIQUEMENT pour un admin (sécurité).
+  const overrideLogin = isAdminRole(ctx.user.role)
+    ? new URL(req.url).searchParams.get('login')?.trim() || null
+    : null;
+  const login = overrideLogin ?? (ctx.user.login || (ctx.user.email ?? '').split('@')[0]).trim();
   if (!login) return NextResponse.json({ success: true, found: false, reason: 'login inconnu' });
 
   try {

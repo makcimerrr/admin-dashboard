@@ -48,13 +48,13 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function IntraWidget() {
+export function IntraWidget({ asLogin }: { asLogin?: string }) {
   const [data, setData] = useState<IntraData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    fetch('/api/me/intra')
+    fetch(`/api/me/intra${asLogin ? `?login=${encodeURIComponent(asLogin)}` : ''}`)
       .then((r) => r.json())
       .then((d) => active && setData(d?.success ? d : ({ found: false } as IntraData)))
       .catch(() => active && setData({ found: false } as IntraData))
@@ -62,7 +62,7 @@ export function IntraWidget() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [asLogin]);
 
   if (loading) {
     return (

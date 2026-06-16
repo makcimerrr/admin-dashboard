@@ -27,6 +27,7 @@ import {
   Building2,
   Loader2,
   ExternalLink,
+  LayoutDashboard,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -445,12 +446,28 @@ export default function StudentPage() {
             </p>
           </div>
         </div>
-        <Badge
-          variant="outline"
-          className={`text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 shrink-0 ${getDelayLevelClass(student.delay_level)}`}
-        >
-          {student.delay_level || 'Statut inconnu'}
-        </Badge>
+        <div className="flex items-center gap-2 shrink-0">
+          {login && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                router.push(
+                  `/students/hub-preview?login=${encodeURIComponent(login)}&name=${encodeURIComponent(`${student.first_name} ${student.last_name}`)}`
+                )
+              }
+            >
+              <LayoutDashboard className="h-4 w-4 mr-2" />
+              Voir son hub
+            </Button>
+          )}
+          <Badge
+            variant="outline"
+            className={`text-xs sm:text-sm px-2 sm:px-3 py-0.5 sm:py-1 ${getDelayLevelClass(student.delay_level)}`}
+          >
+            {student.delay_level || 'Statut inconnu'}
+          </Badge>
+        </div>
       </div>
 
       {/* Quick Stats */}

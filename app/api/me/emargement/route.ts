@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import postgres from 'postgres';
 import { withAuth } from '@/lib/api/with-auth';
+import { isAdminRole } from '@/lib/nav-apps';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,25 +31,40 @@ function workingDaysInMonth(d: Date): number {
   return n;
 }
 
-export const GET = withAuth(async (_req, ctx) => {
+export const GET = withAuth(async (req, ctx) => {
+  // Override admin : un admin peut consulter l'émargement d'un autre étudiant en
+  // passant ?login=. Honoré UNIQUEMENT pour un admin (sécurité : un étudiant ne
+  // doit jamais voir les données d'un autre).
+  const overrideLogin = isAdminRole(ctx.user.role)
+    ? new URL(req.url).searchParams.get('login')?.trim().toLowerCase() || null
+    : null;
+
   const email = (ctx.user.email ?? '').trim().toLowerCase();
   const url = process.env.EMARGEMENT_DATABASE_URL;
   if (!url) {
     return NextResponse.json({ success: true, found: false, reason: 'non configuré' });
   }
-  if (!email) {
+  if (!overrideLogin && !email) {
     return NextResponse.json({ success: true, found: false, reason: 'email manquant' });
   }
 
   const emg = postgres(url, { ssl: false, max: 1 });
   try {
-    // Résolution de l'utilisateur émargement (email d'abord, sinon nickname=login).
-    const login = email.split('@')[0];
-    const users = await emg<{ id: number; nickname: string | null; name: string | null }[]>`
-      SELECT id, nickname, name FROM users
-      WHERE lower(email) = ${email} OR lower(nickname) = ${login}
-      LIMIT 1
-    `;
+    // Résolution de l'utilisateur émargement.
+    // - Override admin : match par login (nickname ou email = overrideLogin).
+    // - Sinon : utilisateur courant (email d'abord, sinon nickname=login local).
+    const login = overrideLogin ?? email.split('@')[0];
+    const users = overrideLogin
+      ? await emg<{ id: number; nickname: string | null; name: string | null }[]>`
+          SELECT id, nickname, name FROM users
+          WHERE lower(nickname) = ${overrideLogin} OR lower(email) = ${overrideLogin}
+          LIMIT 1
+        `
+      : await emg<{ id: number; nickname: string | null; name: string | null }[]>`
+          SELECT id, nickname, name FROM users
+          WHERE lower(email) = ${email} OR lower(nickname) = ${login}
+          LIMIT 1
+        `;
     if (users.length === 0) {
       return NextResponse.json({ success: true, found: false, reason: 'utilisateur introuvable' });
     }
