@@ -146,7 +146,8 @@ export async function middleware(req: NextRequest) {
     '/login', // Page de connexion
     '/register', // Page d'inscription
     '/handler', // Stack Auth handlers
-    '/hub' // Hub public
+    '/hub', // Hub public
+    '/z01-student-nav.js' // Navbar étudiant partagée (chargée cross-origin par émargement/01deck)
   ];
 
   if (publicRoutes.some((route) => url.startsWith(route))) {
