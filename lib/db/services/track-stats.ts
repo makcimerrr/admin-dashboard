@@ -1,7 +1,5 @@
 import { db } from '../config';
-import { students, studentSpecialtyProgress, promotions } from '../schema';
-import { eq, sql } from 'drizzle-orm';
-import { countableStudentsWhere } from '../filters';
+import { sql } from 'drizzle-orm';
 
 export interface TrackStats {
   track: string;
@@ -11,45 +9,91 @@ export interface TrackStats {
   completionRate: number;
 }
 
+/**
+ * Statistiques par track basées sur le PROJET ACTIF de chaque étudiant.
+ *
+ * - `total` / `inProgress` = apprenants ACTIFS sur la track, c.-à-d. ayant un
+ *   projet en cours (`working`/`audit`) sur cette track. Un étudiant n'est
+ *   compté que sur UNE track (priorité Rust > Java > Javascript > Golang). Les
+ *   apprenants en piscine (statut `without group`/`not_started`) ne sont donc
+ *   PAS comptés en Rust/Java tant qu'ils n'ont pas choisi.
+ * - `completed` = apprenants ayant TERMINÉ la track (specialty progress).
+ * - `completionRate` = % terminés parmi ceux ayant touché la track (terminés + actifs).
+ *
+ * Périmètre : apprenants comptables (non perdition, non archivés, promo non
+ * archivée), éventuellement filtré sur une promo.
+ */
 export async function getTrackStatsByPromo(promoName: string | null): Promise<TrackStats[]> {
   try {
-    const promoFilter = promoName ? [eq(students.promoName, promoName)] : [];
+    const promoCond = promoName ? sql`AND s.promo_name = ${promoName}` : sql``;
+    const scopeCond = sql`
+      (s.is_dropout IS NULL OR s.is_dropout = false)
+      AND (s.archived IS NULL OR s.archived = false)
+      AND (p.is_archived = false OR p.is_archived IS NULL)
+      ${promoCond}
+    `;
 
-    const result = await db
-      .select({
-        golang_completed_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.golang_completed} = true)`,
-        golang_in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.golang_completed} = false)`,
-        javascript_completed_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.javascript_completed} = true)`,
-        javascript_in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.javascript_completed} = false)`,
-        rust_completed_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.rust_completed} = true)`,
-        rust_in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.rust_completed} = false)`,
-        java_completed_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.java_completed} = true)`,
-        java_in_progress_count: sql<number>`COUNT(*) FILTER (WHERE ${studentSpecialtyProgress.java_completed} = false)`,
-      })
-      .from(students)
-      .leftJoin(studentSpecialtyProgress, eq(students.id, studentSpecialtyProgress.student_id))
-      .innerJoin(promotions, eq(students.promoName, promotions.name))
-      .where(countableStudentsWhere(...promoFilter))
-      .execute();
+    // Track active par étudiant (une seule, priorité Rust>Java>JS>Golang).
+    const activeRes = await db.execute(sql`
+      WITH act AS (
+        SELECT
+          CASE
+            WHEN scp.rust_project_status IN ('working','audit') THEN 'Rust'
+            WHEN scp.java_project_status IN ('working','audit') THEN 'Java'
+            WHEN scp.javascript_project_status IN ('working','audit') THEN 'Javascript'
+            WHEN scp.golang_project_status IN ('working','audit') THEN 'Golang'
+            ELSE NULL
+          END AS track
+        FROM students s
+        JOIN promotions p ON s.promo_name = p.name
+        LEFT JOIN student_current_projects scp ON scp.student_id = s.id
+        WHERE ${scopeCond}
+      )
+      SELECT track, count(*)::int AS c FROM act WHERE track IS NOT NULL GROUP BY track
+    `);
 
-    const row = result[0];
-    if (!row) return [];
+    // Terminés par track (specialty progress).
+    const compRes = await db.execute(sql`
+      SELECT
+        count(*) FILTER (WHERE ssp.golang_completed)::int     AS golang,
+        count(*) FILTER (WHERE ssp.javascript_completed)::int AS javascript,
+        count(*) FILTER (WHERE ssp.rust_completed)::int       AS rust,
+        count(*) FILTER (WHERE ssp.java_completed)::int       AS java
+      FROM students s
+      JOIN promotions p ON s.promo_name = p.name
+      LEFT JOIN student_specialty_progress ssp ON ssp.student_id = s.id
+      WHERE ${scopeCond}
+    `);
 
-    const tracks = [
-      { name: 'Golang', completed: Number(row.golang_completed_count), inProgress: Number(row.golang_in_progress_count) },
-      { name: 'Javascript', completed: Number(row.javascript_completed_count), inProgress: Number(row.javascript_in_progress_count) },
-      { name: 'Rust', completed: Number(row.rust_completed_count), inProgress: Number(row.rust_in_progress_count) },
-      { name: 'Java', completed: Number(row.java_completed_count), inProgress: Number(row.java_in_progress_count) },
-    ];
+    const activeRows = ((activeRes as unknown as { rows?: unknown[] }).rows ?? activeRes) as {
+      track: string;
+      c: number;
+    }[];
+    const active: Record<string, number> = { Golang: 0, Javascript: 0, Rust: 0, Java: 0 };
+    for (const r of activeRows) active[r.track] = Number(r.c) || 0;
 
-    return tracks.map(({ name, completed, inProgress }) => {
-      const total = completed + inProgress;
+    const compRows = ((compRes as unknown as { rows?: unknown[] }).rows ?? compRes) as Record<
+      string,
+      number
+    >[];
+    const comp = compRows[0] ?? {};
+    const compKey: Record<string, string> = {
+      Golang: 'golang',
+      Javascript: 'javascript',
+      Rust: 'rust',
+      Java: 'java',
+    };
+
+    return (['Golang', 'Javascript', 'Rust', 'Java'] as const).map((track) => {
+      const a = active[track] ?? 0;
+      const c = Number(comp[compKey[track]] ?? 0);
+      const denom = a + c;
       return {
-        track: name,
-        completed,
-        inProgress,
-        total,
-        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+        track,
+        completed: c,
+        inProgress: a,
+        total: a,
+        completionRate: denom > 0 ? Math.round((c / denom) * 100) : 0,
       };
     });
   } catch (error) {

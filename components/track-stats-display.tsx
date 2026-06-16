@@ -53,25 +53,25 @@ export default async function TrackStatsDisplay({ selectedPromo }: TrackStatsDis
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                {stat.total} étudiant{stat.total > 1 ? 's' : ''}
+                {stat.total} actif{stat.total > 1 ? 's' : ''} sur la track
               </p>
             </CardHeader>
             <CardContent className="px-4 pb-3 space-y-2.5">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" style={{ color: accent }} />
-                  <span className="font-medium tabular-nums">{stat.completed}</span>
-                  <span className="text-muted-foreground">terminé{stat.completed > 1 ? 's' : ''}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Clock className="h-3.5 w-3.5" style={{ color: accent }} />
                   <span className="font-medium tabular-nums">{stat.inProgress}</span>
                   <span className="text-muted-foreground">en cours</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium tabular-nums">{stat.completed}</span>
+                  <span className="text-muted-foreground">terminé{stat.completed > 1 ? 's' : ''}</span>
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-[11px]">
-                  <span className="text-muted-foreground">Progression</span>
+                  <span className="text-muted-foreground">Taux de réussite</span>
                   <span className="font-bold tabular-nums" style={{ color: accent }}>
                     {stat.completionRate}%
                   </span>
