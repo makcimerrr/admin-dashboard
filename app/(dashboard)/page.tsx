@@ -30,7 +30,7 @@ async function getCurrentUser() {
     const groups: string[] = (session.user.groups || []) as string[];
     return {
       name: session.user.name ?? session.user.email ?? '',
-      role: groups.includes('authentik Admins') ? 'Admin' : 'user',
+      role: groups.includes('Developers') || groups.includes('authentik Admins') ? 'Admin' : 'user',
     };
   }
   return null;

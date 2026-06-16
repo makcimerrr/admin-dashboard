@@ -87,7 +87,8 @@ export const authOptions: NextAuthOptions = {
         // Determine role from Authentik groups
         const p = profile as any;
         const groups = Array.isArray(p?.groups) ? p.groups : [];
-        const isAdmin = groups.includes("authentik Admins");
+        // Admin = groupe Developers (ou authentik Admins). Sans groupe = étudiant.
+        const isAdmin = groups.includes("Developers") || groups.includes("authentik Admins");
         const role = isAdmin ? "Admin" : "user";
 
         console.log("👥 Authentik groups:", groups, "→ Role:", role);

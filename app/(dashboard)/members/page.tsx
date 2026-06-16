@@ -21,7 +21,7 @@ export default async function MembersPage() {
     const session = await getServerSession(authOptions);
     if (session?.user?.email) {
       const groups: string[] = (session.user.groups || []) as string[];
-      role = groups.includes('authentik Admins') ? 'Admin' : 'user';
+      role = groups.includes('Developers') || groups.includes('authentik Admins') ? 'Admin' : 'user';
       currentUserEmail = session.user.email;
     }
   }

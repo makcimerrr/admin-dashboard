@@ -65,7 +65,8 @@ export default async function DashboardLayout({
     if (session?.user?.email) {
       // Déterminer le rôle à partir des groupes Authentik
       const groups: string[] = (session.user.groups || []) as string[];
-      const isAdmin = groups.includes('authentik Admins');
+      // Admin = groupe Developers (ou authentik Admins). Sans groupe = étudiant.
+      const isAdmin = groups.includes('Developers') || groups.includes('authentik Admins');
 
       user = {
         id: session.user.id ?? '',
