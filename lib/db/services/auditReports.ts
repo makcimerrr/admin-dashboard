@@ -295,8 +295,14 @@ export async function getAuditRequestsToEscalate(): Promise<AuditRequestToEscala
       ),
     );
 
+  // N'escalader que les projets OBLIGATOIRES du tronc commun. D'anciennes
+  // demandes ont pu être créées (avant ce filtre) pour des optionnels/bonus
+  // (ex. make-your-game-different-maps) : on ne les relance pas.
+  const mandatory = await getMandatoryProjectNames();
+
   const out: AuditRequestToEscalate[] = [];
   for (const r of rows) {
+    if (!mandatory.has((r.projectName ?? '').toLowerCase())) continue;
     // eslint-disable-next-line no-await-in-loop
     if (await isOlderThanBusinessDays(r.requestedAt, ESCALATE_AFTER_BUSINESS_DAYS)) {
       out.push(r);

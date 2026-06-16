@@ -95,34 +95,43 @@ export async function POST(request: NextRequest) {
         who = names.get(actorLogin) || actorLogin;
       }
 
-      // (a) Carte Teams (2e canal) — contexte en facts.
-      const cardContext: { title: string; value: string }[] = [];
-      if (context.type === 'audit_report') {
-        // Rapport d'audit : Projet + Membres du groupe audité (jamais l'ID).
-        // Si le context ne porte pas les membres, on les résout via le groupId.
-        cardContext.push({ title: 'Projet', value: context.projectName ?? '—' });
-        let members = context.members?.trim();
-        if (!members && context.groupId) members = await getGroupMemberNames(context.groupId);
-        cardContext.push({ title: 'Groupe audité', value: members || '—' });
-      } else {
-        if (context.projectName) cardContext.push({ title: 'Projet', value: context.projectName });
-        if (context.groupId) cardContext.push({ title: 'Groupe', value: context.groupId });
-        if (context.promoId) cardContext.push({ title: 'Promo', value: context.promoId });
+      // (a) Enregistrer la réponse de l'auditeur EN PREMIER (rapport d'audit) :
+      // ainsi un échec Teams ne fait pas perdre la réponse ni la confirmation.
+      if (context.type === 'audit_report' && context.auditorLogin && context.groupId) {
+        try {
+          await markAuditResponded(context.auditorLogin, context.groupId, status, comment || null);
+        } catch (e) {
+          console.error('[bot/callback] markAuditResponded échec:', e);
+        }
       }
 
-      await sendTeamsFormsCard(
-        buildReplyCard({
-          source: context.source_label || context.type || 'Relance',
-          who,
-          status,
-          comment,
-          context: cardContext,
-        }),
-      );
+      // (b) Carte Teams (2e canal). Non bloquant : si Teams échoue, l'étudiant
+      // reçoit quand même sa confirmation (le callback renvoie 200).
+      try {
+        const cardContext: { title: string; value: string }[] = [];
+        if (context.type === 'audit_report') {
+          // Rapport d'audit : Projet + Membres du groupe audité (jamais l'ID).
+          cardContext.push({ title: 'Projet', value: context.projectName ?? '—' });
+          let members = context.members?.trim();
+          if (!members && context.groupId) members = await getGroupMemberNames(context.groupId);
+          cardContext.push({ title: 'Groupe audité', value: members || '—' });
+        } else {
+          if (context.projectName) cardContext.push({ title: 'Projet', value: context.projectName });
+          if (context.groupId) cardContext.push({ title: 'Groupe', value: context.groupId });
+          if (context.promoId) cardContext.push({ title: 'Promo', value: context.promoId });
+        }
 
-      // (b) Si rapport d'audit → enregistre la réponse de l'auditeur.
-      if (context.type === 'audit_report' && context.auditorLogin && context.groupId) {
-        await markAuditResponded(context.auditorLogin, context.groupId, status, comment || null);
+        await sendTeamsFormsCard(
+          buildReplyCard({
+            source: context.source_label || context.type || 'Relance',
+            who,
+            status,
+            comment,
+            context: cardContext,
+          }),
+        );
+      } catch (e) {
+        console.error('[bot/callback] sendTeamsFormsCard (reply) échec:', e);
       }
 
       return NextResponse.json({ ok: true });
