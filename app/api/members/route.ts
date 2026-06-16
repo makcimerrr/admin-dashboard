@@ -4,6 +4,7 @@ import { apiError, apiSuccess } from '@/lib/api/response';
 import { getStackServerApp, sendSignInCode } from '@/lib/stack-server';
 import { getUserRole, getUserPlanningPermission } from '@/lib/stack-helpers';
 import { listAllUsers, type LocalUserListItem } from '@/lib/db/services/users';
+import { isAdminRole } from '@/lib/nav-apps';
 import {
   formatMember,
   extractOauthProviders,
@@ -95,7 +96,12 @@ export const GET = withAdmin(async () => {
         continue;
       }
 
-      // Uniquement local (ex. Vivien Frebourg, Authentik/SSO).
+      // Uniquement local. La page /members gère les ACCÈS ADMIN/STAFF :
+      // on exclut les comptes étudiants (Authentik sans groupe, sauvés en local
+      // avec role 'user' à leur 1ère connexion) pour ne pas polluer le panel.
+      if (!isAdminRole(normalizeRole(lu.role))) continue;
+
+      // Compte local admin/staff (ex. Vivien Frebourg, Authentik/SSO).
       // SSO = pas de mot de passe ; sinon mot de passe.
       const authMethod: AuthMethod = lu.hasPassword ? 'password' : 'sso';
       byEmail.set(key, {
