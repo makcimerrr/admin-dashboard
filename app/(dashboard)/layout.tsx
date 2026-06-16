@@ -8,6 +8,7 @@ import { stackServerApp } from '@/lib/stack-server';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth-options'; // ton NextAuth config
+import { isAdminRole } from '@/lib/nav-apps';
 import type React from 'react';
 
 // Dashboard authentifié : rendu à la demande (jamais prérendu au build).
@@ -31,6 +32,7 @@ export default async function DashboardLayout({
     image?: string;
     role: string;
     planningPermission: string;
+    provider: 'stack' | 'authentik';
   } | null = null;
 
   if (stackUser) {
@@ -49,7 +51,8 @@ export default async function DashboardLayout({
         stackUser.serverMetadata?.planningPermission ||
         stackUser.clientReadOnlyMetadata?.planningPermission ||
         stackUser.clientMetadata?.planningPermission ||
-        'reader'
+        'reader',
+      provider: 'stack',
     };
 
     /*console.log('✅ Dashboard - Stack Auth utilisateur:', user.email, '- Rôle:', user.role);*/
@@ -70,7 +73,8 @@ export default async function DashboardLayout({
         name: session.user.name ?? session.user.email ?? '',
         image: session.user.image ?? undefined,
         role: isAdmin ? 'Admin' : 'user',
-        planningPermission: 'reader' // par défaut pour Authentik
+        planningPermission: 'reader', // par défaut pour Authentik
+        provider: 'authentik',
       };
 
       console.log(
@@ -90,6 +94,16 @@ export default async function DashboardLayout({
       '⛔ Dashboard - Aucun utilisateur connecté, redirection vers /login'
     );
     redirect('/login');
+  }
+
+  // ===============================
+  // 3 bis. Garde d'accès par provider :
+  //   - Authentik (étudiants + staff) : accès autorisé (admin OU non-admin).
+  //   - Stack Auth (Google / GitHub / e-mail-mdp) : RÉSERVÉ aux admins.
+  //     Un non-admin via Stack est bloqué (les étudiants passent par Authentik).
+  // ===============================
+  if (user.provider === 'stack' && !isAdminRole(user.role)) {
+    redirect('/access-denied');
   }
 
   // ===============================
