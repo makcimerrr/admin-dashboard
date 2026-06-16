@@ -1,0 +1,5594 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Émargement Zone01",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "https://emargement.zone01normandie.org/api"
+    }
+  ],
+  "paths": {
+    "/apprenticeship-hours": {
+      "get": {
+        "operationId": "apprenticeship-hours.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "ApprenticeshipHour"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "apprenticeship-hours.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "ApprenticeshipHour"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer"
+                  },
+                  "month": {
+                    "type": "string"
+                  },
+                  "hours": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  }
+                },
+                "required": [
+                  "user_id",
+                  "month"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/apprenticeship-hours/{apprenticeshipHour}": {
+      "get": {
+        "operationId": "apprenticeship-hours.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "ApprenticeshipHour"
+        ],
+        "parameters": [
+          {
+            "name": "apprenticeshipHour",
+            "in": "path",
+            "required": true,
+            "description": "The apprenticeship hour ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`ApprenticeshipHour`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprenticeshipHour"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/apprenticeship-hours/{apprenticeship_hour}": {
+      "put": {
+        "operationId": "apprenticeship-hours.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "ApprenticeshipHour"
+        ],
+        "parameters": [
+          {
+            "name": "apprenticeship_hour",
+            "in": "path",
+            "required": true,
+            "description": "The apprenticeship hour ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "month": {
+                    "type": "string"
+                  },
+                  "hours": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`ApprenticeshipHour`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprenticeshipHour"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "apprenticeship-hours.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "ApprenticeshipHour"
+        ],
+        "parameters": [
+          {
+            "name": "apprenticeship_hour",
+            "in": "path",
+            "required": true,
+            "description": "The apprenticeship hour ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/apprenticeship/import-planning": {
+      "post": {
+        "operationId": "apprenticeship.import-planning",
+        "tags": [
+          "ApprenticeshipHour"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer"
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "contentMediaType": "application/octet-stream"
+                  }
+                },
+                "required": [
+                  "user_id",
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "user_id": {
+                          "type": "integer"
+                        },
+                        "month": {
+                          "type": "string"
+                        },
+                        "hours": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "user_id",
+                        "month",
+                        "hours"
+                      ]
+                    }
+                  ],
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "additionalItems": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/batch/time-offs": {
+      "post": {
+        "operationId": "batch.timeOffs",
+        "tags": [
+          "Batch"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "paid-time-off",
+                      "sick-leave",
+                      "other"
+                    ]
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "user_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "dates": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "user_ids",
+                  "dates"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "additionalItems": false
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/batch/roles": {
+      "post": {
+        "operationId": "batch.roles",
+        "tags": [
+          "Batch"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "user_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "required": [
+                  "user_ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/batch/promotions": {
+      "post": {
+        "operationId": "batch.promotions",
+        "tags": [
+          "Batch"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "promotion_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "user_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "required": [
+                  "user_ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/batch/time-off-balance": {
+      "post": {
+        "operationId": "batch.timeOffBalance",
+        "tags": [
+          "Batch"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "set",
+                      "increment"
+                    ]
+                  },
+                  "value": {
+                    "type": "integer",
+                    "minimum": -365,
+                    "maximum": 365
+                  },
+                  "user_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "required": [
+                  "mode",
+                  "value",
+                  "user_ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/batch/archive": {
+      "post": {
+        "operationId": "batch.archive",
+        "tags": [
+          "Batch"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "archived": {
+                    "type": "boolean"
+                  },
+                  "user_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "required": [
+                  "archived",
+                  "user_ids"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/candidate-datas": {
+      "get": {
+        "operationId": "candidate-datas.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "CandidateData"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "candidate-datas.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "CandidateData"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "user_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/candidate-datas/{candidateData}": {
+      "get": {
+        "operationId": "candidate-datas.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "CandidateData"
+        ],
+        "parameters": [
+          {
+            "name": "candidateData",
+            "in": "path",
+            "required": true,
+            "description": "The candidate data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`CandidateData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "candidate-datas.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "CandidateData"
+        ],
+        "parameters": [
+          {
+            "name": "candidateData",
+            "in": "path",
+            "required": true,
+            "description": "The candidate data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`CandidateData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "candidate-datas.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "CandidateData"
+        ],
+        "parameters": [
+          {
+            "name": "candidateData",
+            "in": "path",
+            "required": true,
+            "description": "The candidate data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/candidate-data-users": {
+      "get": {
+        "operationId": "candidateData.users",
+        "tags": [
+          "CandidateData"
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promotion",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/create-log-requests": {
+      "get": {
+        "operationId": "create-log-requests.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "CreateLogRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "create-log-requests.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "CreateLogRequest"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "enter_time": {
+                    "type": "string"
+                  },
+                  "exit_time": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "date",
+                  "enter_time"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/create-log-requests/{create_log_request}": {
+      "get": {
+        "operationId": "create-log-requests.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "CreateLogRequest"
+        ],
+        "parameters": [
+          {
+            "name": "create_log_request",
+            "in": "path",
+            "required": true,
+            "description": "The create log request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`CreateLogRequest`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateLogRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "create-log-requests.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "CreateLogRequest"
+        ],
+        "parameters": [
+          {
+            "name": "create_log_request",
+            "in": "path",
+            "required": true,
+            "description": "The create log request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "accepted",
+                      "denied"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "409": {
+            "description": "An error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Error overview.",
+                      "example": "Someone already answered this request"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "create-log-requests.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "CreateLogRequest"
+        ],
+        "parameters": [
+          {
+            "name": "create_log_request",
+            "in": "path",
+            "required": true,
+            "description": "The create log request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/inbox/pending-count": {
+      "get": {
+        "operationId": "inbox.pending-count",
+        "summary": "Count of pending requests across all request types (admin use)",
+        "tags": [
+          "CreateLogRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "create_log": {
+                      "type": "string"
+                    },
+                    "update_log": {
+                      "type": "string"
+                    },
+                    "time_off": {
+                      "type": "integer",
+                      "enum": [
+                        0
+                      ]
+                    }
+                  },
+                  "required": [
+                    "create_log",
+                    "update_log",
+                    "time_off"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/learner-datas": {
+      "get": {
+        "operationId": "learner-datas.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "LearnerData"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "learner-datas.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "LearnerData"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "user_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/learner-datas/{learnerData}": {
+      "get": {
+        "operationId": "learner-datas.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "LearnerData"
+        ],
+        "parameters": [
+          {
+            "name": "learnerData",
+            "in": "path",
+            "required": true,
+            "description": "The learner data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`LearnerData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnerData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "learner-datas.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "LearnerData"
+        ],
+        "parameters": [
+          {
+            "name": "learnerData",
+            "in": "path",
+            "required": true,
+            "description": "The learner data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`LearnerData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnerData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "learner-datas.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "LearnerData"
+        ],
+        "parameters": [
+          {
+            "name": "learnerData",
+            "in": "path",
+            "required": true,
+            "description": "The learner data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/logs": {
+      "get": {
+        "operationId": "logs.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "Log"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "logs.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "Log"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer"
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "enter_time": {
+                    "type": "string"
+                  },
+                  "exit_time": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "enter_time"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/logs/{log}": {
+      "get": {
+        "operationId": "logs.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "Log"
+        ],
+        "parameters": [
+          {
+            "name": "log",
+            "in": "path",
+            "required": true,
+            "description": "The log ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`Log`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Log"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "logs.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "Log"
+        ],
+        "parameters": [
+          {
+            "name": "log",
+            "in": "path",
+            "required": true,
+            "description": "The log ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "enter_time": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "exit_time": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`Log`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Log"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "logs.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "Log"
+        ],
+        "parameters": [
+          {
+            "name": "log",
+            "in": "path",
+            "required": true,
+            "description": "The log ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/promotions": {
+      "get": {
+        "operationId": "promotions.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "Promotion"
+        ],
+        "parameters": [
+          {
+            "name": "statuses",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "not_archived",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": 15
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "promotions.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "Promotion"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "archived": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/promotions/{promotion}": {
+      "get": {
+        "operationId": "promotions.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "Promotion"
+        ],
+        "parameters": [
+          {
+            "name": "promotion",
+            "in": "path",
+            "required": true,
+            "description": "The promotion ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`Promotion`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Promotion"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "promotions.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "Promotion"
+        ],
+        "parameters": [
+          {
+            "name": "promotion",
+            "in": "path",
+            "required": true,
+            "description": "The promotion ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "start_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "archived": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`Promotion`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Promotion"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "promotions.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "Promotion"
+        ],
+        "parameters": [
+          {
+            "name": "promotion",
+            "in": "path",
+            "required": true,
+            "description": "The promotion ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/sanctions": {
+      "get": {
+        "operationId": "sanctions.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "Sanction"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "sanctions.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "Sanction"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "warning",
+                      "temporary",
+                      "permanent"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "start_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/sanctions/{sanction}": {
+      "get": {
+        "operationId": "sanctions.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "Sanction"
+        ],
+        "parameters": [
+          {
+            "name": "sanction",
+            "in": "path",
+            "required": true,
+            "description": "The sanction ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`Sanction`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sanction"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "sanctions.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "Sanction"
+        ],
+        "parameters": [
+          {
+            "name": "sanction",
+            "in": "path",
+            "required": true,
+            "description": "The sanction ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "warning",
+                      "temporary",
+                      "permanent"
+                    ]
+                  },
+                  "start_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`Sanction`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sanction"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "sanctions.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "Sanction"
+        ],
+        "parameters": [
+          {
+            "name": "sanction",
+            "in": "path",
+            "required": true,
+            "description": "The sanction ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/school-closures": {
+      "get": {
+        "operationId": "school-closures.index",
+        "tags": [
+          "SchoolClosure"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "school-closures.store",
+        "tags": [
+          "SchoolClosure"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "start_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "label",
+                  "start_date",
+                  "end_date"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/school-closures/{school_closure}": {
+      "patch": {
+        "operationId": "school-closures.update",
+        "tags": [
+          "SchoolClosure"
+        ],
+        "parameters": [
+          {
+            "name": "school_closure",
+            "in": "path",
+            "required": true,
+            "description": "The school closure ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "start_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`SchoolClosure`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchoolClosure"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "school-closures.destroy",
+        "tags": [
+          "SchoolClosure"
+        ],
+        "parameters": [
+          {
+            "name": "school_closure",
+            "in": "path",
+            "required": true,
+            "description": "The school closure ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/site/enter": {
+      "post": {
+        "operationId": "site.enter",
+        "summary": "Enter site",
+        "tags": [
+          "Site"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "409": {
+            "description": "An error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Error overview.",
+                      "example": "Vous êtes déjà entré."
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/site/exit": {
+      "post": {
+        "operationId": "site.exit",
+        "summary": "Exit site",
+        "tags": [
+          "Site"
+        ],
+        "responses": {
+          "200": {
+            "description": "`Log`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Log"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/site/users": {
+      "get": {
+        "operationId": "site.users",
+        "summary": "Display a listing of users on site",
+        "tags": [
+          "Site"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/site/users-per-days": {
+      "get": {
+        "operationId": "site.users-per-days",
+        "tags": [
+          "Site"
+        ],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/site/live": {
+      "get": {
+        "operationId": "site.live",
+        "tags": [
+          "Site"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Date parameter is required"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/statistics/alerts": {
+      "get": {
+        "operationId": "statistics.alerts",
+        "tags": [
+          "Statistics"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/statistics/users": {
+      "get": {
+        "operationId": "statistics.users",
+        "tags": [
+          "Statistics"
+        ],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "alternance",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "asc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/statistics/full-data-users": {
+      "get": {
+        "operationId": "statistics.",
+        "tags": [
+          "Statistics"
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promotion",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": 15
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/statistics/underhours": {
+      "get": {
+        "operationId": "statistics.underhours",
+        "tags": [
+          "Statistics"
+        ],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "default_expected_hours": {
+                      "type": "string"
+                    },
+                    "promotions": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "default_expected_hours",
+                    "promotions"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/time-offs": {
+      "get": {
+        "operationId": "time-offs.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "TimeOff"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "time-offs.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "TimeOff"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "paid-time-off",
+                      "sick-leave",
+                      "other"
+                    ]
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "dates": {
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "user_id",
+                  "type"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "minItems": 1,
+                      "maxItems": 1,
+                      "additionalItems": false
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Error overview."
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/time-offs/{time_off}": {
+      "get": {
+        "operationId": "time-offs.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "TimeOff"
+        ],
+        "parameters": [
+          {
+            "name": "time_off",
+            "in": "path",
+            "required": true,
+            "description": "The time off ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`TimeOff`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeOff"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "time-offs.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "TimeOff"
+        ],
+        "parameters": [
+          {
+            "name": "time_off",
+            "in": "path",
+            "required": true,
+            "description": "The time off ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "start_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "end_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "paid-time-off",
+                      "sick-leave",
+                      "other"
+                    ]
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`TimeOff`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeOff"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "time-offs.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "TimeOff"
+        ],
+        "parameters": [
+          {
+            "name": "time_off",
+            "in": "path",
+            "required": true,
+            "description": "The time off ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/time-off-requests": {
+      "get": {
+        "operationId": "time-off-requests.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "TimeOffRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "time-off-requests.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "TimeOffRequest"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "paid-time-off",
+                      "sick-leave",
+                      "other"
+                    ]
+                  },
+                  "reason": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "dates": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                },
+                "required": [
+                  "type",
+                  "dates"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "prefixItems": [
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "minItems": 1,
+                      "maxItems": 1,
+                      "additionalItems": false
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Error overview."
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/time-off-requests/{time_off_request}": {
+      "get": {
+        "operationId": "time-off-requests.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "TimeOffRequest"
+        ],
+        "parameters": [
+          {
+            "name": "time_off_request",
+            "in": "path",
+            "required": true,
+            "description": "The time off request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`TimeOffRequest`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeOffRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "time-off-requests.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "TimeOffRequest"
+        ],
+        "parameters": [
+          {
+            "name": "time_off_request",
+            "in": "path",
+            "required": true,
+            "description": "The time off request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "accepted",
+                      "denied"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "time-off-requests.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "TimeOffRequest"
+        ],
+        "parameters": [
+          {
+            "name": "time_off_request",
+            "in": "path",
+            "required": true,
+            "description": "The time off request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/update-log-requests": {
+      "get": {
+        "operationId": "update-log-requests.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "UpdateLogRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "update-log-requests.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "UpdateLogRequest"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "log_id": {
+                    "type": "integer"
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "enter_time": {
+                    "type": "string"
+                  },
+                  "exit_time": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "date",
+                  "enter_time",
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/update-log-requests/{update_log_request}": {
+      "get": {
+        "operationId": "update-log-requests.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "UpdateLogRequest"
+        ],
+        "parameters": [
+          {
+            "name": "update_log_request",
+            "in": "path",
+            "required": true,
+            "description": "The update log request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`UpdateLogRequest`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateLogRequest"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "update-log-requests.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "UpdateLogRequest"
+        ],
+        "parameters": [
+          {
+            "name": "update_log_request",
+            "in": "path",
+            "required": true,
+            "description": "The update log request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "accepted",
+                      "denied"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "409": {
+            "description": "An error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Error overview.",
+                      "example": "Someone already answered this request"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "update-log-requests.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "UpdateLogRequest"
+        ],
+        "parameters": [
+          {
+            "name": "update_log_request",
+            "in": "path",
+            "required": true,
+            "description": "The update log request ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "users.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/users/{user}": {
+      "get": {
+        "operationId": "users.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`User`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "users.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "name": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "email"
+                  },
+                  "promotion_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "time_off_balance": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "role": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "contract_start_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "contract_end_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "contract_type": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "apprentissage",
+                      "professionnalisation"
+                    ]
+                  },
+                  "archived": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`User`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "users.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/users/{user}/logs": {
+      "get": {
+        "operationId": "users.logs",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/users/{user}/time-offs": {
+      "get": {
+        "operationId": "users.time-offs",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default to 15 if not provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/users/{user}/statistics": {
+      "get": {
+        "operationId": "users.statistics",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "logged_seconds": {
+                      "type": "string"
+                    },
+                    "time_offs": {
+                      "type": "string"
+                    },
+                    "apprenticeship_hours": {
+                      "type": "string"
+                    },
+                    "start": {
+                      "type": "string"
+                    },
+                    "end": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "logged_seconds",
+                    "time_offs",
+                    "apprenticeship_hours",
+                    "start",
+                    "end"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/users/{user}/datas": {
+      "get": {
+        "operationId": "users.datas",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/users/{user}/candidate-datas": {
+      "get": {
+        "operationId": "users.candidate-datas",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/users/{user}/learner-datas": {
+      "get": {
+        "operationId": "users.learner-datas",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/users/{user}/attendance-report": {
+      "get": {
+        "operationId": "users.attendance-report",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/alternants/export": {
+      "get": {
+        "operationId": "alternants.export",
+        "summary": "Export all (filtered) alternants to an Excel file.\nAccepts the same name / start / end query params as the global view",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promotion",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "headers": {
+              "Transfer-Encoding": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "chunked"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/learners/export": {
+      "get": {
+        "operationId": "learners.export",
+        "summary": "Export all learners (apprenant + alternant + stagiaire) as an Excel file.\nColumns: Promotion, Nom Prénom, Début contrat, Fin contrat,\n         Hres formation (alternants), Hres alternance (alternants),\n         Heures (non-alternants), Total",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "promotion",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "headers": {
+              "Transfer-Encoding": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "chunked"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/users/{user}/avatar": {
+      "post": {
+        "operationId": "users.avatar.store",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "contentMediaType": "application/octet-stream",
+                    "maxLength": 8192
+                  }
+                },
+                "required": [
+                  "avatar"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          },
+          "500": {
+            "description": "An error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Error overview.",
+                      "example": "Could not store file."
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "users.avatar.index",
+        "tags": [
+          "User"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "path",
+            "required": true,
+            "description": "The user ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/user-datas": {
+      "get": {
+        "operationId": "user-datas.index",
+        "summary": "Display a listing of the resource",
+        "tags": [
+          "UserData"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "user-datas.store",
+        "summary": "Store a newly created resource in storage",
+        "tags": [
+          "UserData"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "integer"
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "male",
+                      "female",
+                      "neutral"
+                    ]
+                  },
+                  "date_of_birth": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "city_of_birth": {
+                    "type": "string"
+                  },
+                  "nationality": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "postal_code": {
+                    "type": "string"
+                  },
+                  "phone_number": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "user_id",
+                  "gender",
+                  "date_of_birth",
+                  "city_of_birth",
+                  "nationality",
+                  "address",
+                  "city",
+                  "postal_code",
+                  "phone_number"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/user-datas/{user_data}": {
+      "get": {
+        "operationId": "user-datas.show",
+        "summary": "Display the specified resource",
+        "tags": [
+          "UserData"
+        ],
+        "parameters": [
+          {
+            "name": "user_data",
+            "in": "path",
+            "required": true,
+            "description": "The user data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`UserData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "user-datas.update",
+        "summary": "Update the specified resource in storage",
+        "tags": [
+          "UserData"
+        ],
+        "parameters": [
+          {
+            "name": "user_data",
+            "in": "path",
+            "required": true,
+            "description": "The user data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "gender": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "male",
+                      "female",
+                      "neutral"
+                    ]
+                  },
+                  "date_of_birth": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "city_of_birth": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "nationality": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "address": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "city": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "postal_code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "phone_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`UserData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "user-datas.destroy",
+        "summary": "Remove the specified resource from storage",
+        "tags": [
+          "UserData"
+        ],
+        "parameters": [
+          {
+            "name": "user_data",
+            "in": "path",
+            "required": true,
+            "description": "The user data ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/user/logs": {
+      "get": {
+        "operationId": "user.logs",
+        "summary": "Logged user's logs",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/user/log-requests": {
+      "get": {
+        "operationId": "user.log-requests",
+        "summary": "Logged user's log requests (create + update) with monthly count",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "create_requests": {
+                      "type": "string"
+                    },
+                    "update_requests": {
+                      "type": "string"
+                    },
+                    "monthly_count": {
+                      "type": "string"
+                    },
+                    "monthly_limit": {
+                      "type": "integer",
+                      "enum": [
+                        3
+                      ]
+                    }
+                  },
+                  "required": [
+                    "create_requests",
+                    "update_requests",
+                    "monthly_count",
+                    "monthly_limit"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/user/time-offs": {
+      "get": {
+        "operationId": "user.time-offs",
+        "summary": "Logged user's time offs",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/user/statistics": {
+      "get": {
+        "operationId": "user.statistics",
+        "summary": "Logged user's statistics",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "logged_seconds": {
+                      "type": "string"
+                    },
+                    "time_offs": {
+                      "type": "string"
+                    },
+                    "apprenticeship_hours": {
+                      "type": "string"
+                    },
+                    "start": {
+                      "type": "string"
+                    },
+                    "end": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "logged_seconds",
+                    "time_offs",
+                    "apprenticeship_hours",
+                    "start",
+                    "end"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/user/datas": {
+      "get": {
+        "operationId": "user.datas.index",
+        "summary": "Logged user's datas",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "`UserData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "user.datas.store",
+        "summary": "Store  logged user's datas",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "`UserData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "user.datas.update",
+        "summary": "Update logged user's datas",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "`UserData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/user/candidate-datas": {
+      "get": {
+        "operationId": "user.candidate-datas.index",
+        "summary": "Logged user's datas",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "`CandidateData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "user.candidate-datas.store",
+        "summary": "Store  logged user's datas",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "`CandidateData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/user/learner-datas": {
+      "get": {
+        "operationId": "user.learner-datas.index",
+        "summary": "Store  logged user's datas",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "`LearnerData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnerData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "user.learner-datas.store",
+        "summary": "Store  logged user's datas",
+        "tags": [
+          "UserResource"
+        ],
+        "responses": {
+          "200": {
+            "description": "`LearnerData`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnerData"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApprenticeshipHour": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "month": {
+            "type": "string"
+          },
+          "hours": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "month",
+          "hours",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ApprenticeshipHour"
+      },
+      "CandidateData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "tutor_1_first_name": {
+            "type": "string"
+          },
+          "tutor_1_last_name": {
+            "type": "string"
+          },
+          "tutor_1_phone_number": {
+            "type": "string"
+          },
+          "tutor_1_address": {
+            "type": "string"
+          },
+          "tutor_1_city": {
+            "type": "string"
+          },
+          "tutor_1_postal_code": {
+            "type": "string"
+          },
+          "tutor_2_first_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tutor_2_last_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tutor_2_phone_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tutor_2_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tutor_2_city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tutor_2_postal_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_diploma": {
+            "type": "string"
+          },
+          "last_job": {
+            "type": "string"
+          },
+          "country_of_residence": {
+            "type": "string"
+          },
+          "how_did_you_know": {
+            "type": "string"
+          },
+          "how_did_you_know_other": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "handicap_status": {
+            "type": "string"
+          },
+          "particular_arrangement": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "treatment": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "advisor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "image_right": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "tutor_1_first_name",
+          "tutor_1_last_name",
+          "tutor_1_phone_number",
+          "tutor_1_address",
+          "tutor_1_city",
+          "tutor_1_postal_code",
+          "tutor_2_first_name",
+          "tutor_2_last_name",
+          "tutor_2_phone_number",
+          "tutor_2_address",
+          "tutor_2_city",
+          "tutor_2_postal_code",
+          "last_diploma",
+          "last_job",
+          "country_of_residence",
+          "how_did_you_know",
+          "how_did_you_know_other",
+          "handicap_status",
+          "particular_arrangement",
+          "treatment",
+          "advisor",
+          "image_right",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CandidateData"
+      },
+      "CreateLogRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "date": {
+            "type": "string"
+          },
+          "enter_time": {
+            "type": "string"
+          },
+          "exit_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "answered_by": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_log_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "date",
+          "enter_time",
+          "exit_time",
+          "reason",
+          "status",
+          "answered_by",
+          "created_at",
+          "updated_at",
+          "created_log_id"
+        ],
+        "title": "CreateLogRequest"
+      },
+      "LearnerData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "family_situation": {
+            "type": "string"
+          },
+          "country_of_birth": {
+            "type": "string"
+          },
+          "department_of_birth": {
+            "type": "string"
+          },
+          "emergency_contact_first_name": {
+            "type": "string"
+          },
+          "emergency_contact_last_name": {
+            "type": "string"
+          },
+          "emergency_contact_link": {
+            "type": "string"
+          },
+          "emergency_contact_link_other": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "emergency_contact_phone_number": {
+            "type": "string"
+          },
+          "education_level": {
+            "type": "integer"
+          },
+          "last_attended_class": {
+            "type": "string"
+          },
+          "diploma_year": {
+            "type": "integer"
+          },
+          "institution": {
+            "type": "string"
+          },
+          "institution_departement": {
+            "type": "string"
+          },
+          "over_six_month_training_output": {
+            "type": "string"
+          },
+          "general_objective": {
+            "type": "string"
+          },
+          "prescription_origin": {
+            "type": "string"
+          },
+          "france_travail": {
+            "type": "string"
+          },
+          "france_travail_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "france_travail_geo_zone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "social_security_number": {
+            "type": "string"
+          },
+          "benificiaire_are": {
+            "type": "string"
+          },
+          "benificiaire_aah": {
+            "type": "string"
+          },
+          "benificiaire_rsa": {
+            "type": "string"
+          },
+          "benificiaire_boe": {
+            "type": "string"
+          },
+          "benificiaire_autre": {
+            "type": "string"
+          },
+          "professional_situation": {
+            "type": "string"
+          },
+          "socio_professional_category": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "family_situation",
+          "country_of_birth",
+          "department_of_birth",
+          "emergency_contact_first_name",
+          "emergency_contact_last_name",
+          "emergency_contact_link",
+          "emergency_contact_link_other",
+          "emergency_contact_phone_number",
+          "education_level",
+          "last_attended_class",
+          "diploma_year",
+          "institution",
+          "institution_departement",
+          "over_six_month_training_output",
+          "general_objective",
+          "prescription_origin",
+          "france_travail",
+          "france_travail_id",
+          "france_travail_geo_zone",
+          "social_security_number",
+          "benificiaire_are",
+          "benificiaire_aah",
+          "benificiaire_rsa",
+          "benificiaire_boe",
+          "benificiaire_autre",
+          "professional_situation",
+          "socio_professional_category",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "LearnerData"
+      },
+      "Log": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "date": {
+            "type": "string"
+          },
+          "enter_time": {
+            "type": "string"
+          },
+          "exit_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "admin_edited_by": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "admin_edited_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "date",
+          "enter_time",
+          "exit_time",
+          "created_at",
+          "updated_at",
+          "admin_edited_by",
+          "admin_edited_at"
+        ],
+        "title": "Log"
+      },
+      "Promotion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "start_date",
+          "end_date",
+          "archived",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Promotion"
+      },
+      "Sanction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "start_date",
+          "end_date",
+          "type",
+          "reason",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Sanction"
+      },
+      "SchoolClosure": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "start_date",
+          "end_date",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SchoolClosure"
+      },
+      "TimeOff": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "type": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "type",
+          "start_date",
+          "end_date",
+          "reason",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TimeOff"
+      },
+      "TimeOffRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "answered_by": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "start_date",
+          "end_date",
+          "type",
+          "reason",
+          "status",
+          "answered_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TimeOffRequest"
+      },
+      "UpdateLogRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "log_id": {
+            "type": "integer"
+          },
+          "date": {
+            "type": "string"
+          },
+          "enter_time": {
+            "type": "string"
+          },
+          "exit_time": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "answered_by": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "original_enter_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "original_exit_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "original_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "log_id",
+          "date",
+          "enter_time",
+          "exit_time",
+          "reason",
+          "status",
+          "answered_by",
+          "created_at",
+          "updated_at",
+          "original_enter_time",
+          "original_exit_time",
+          "original_date"
+        ],
+        "title": "UpdateLogRequest"
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "promotion_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "time_off_balance": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "avatar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contract_start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "contract_end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "contract_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "archived": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "promotion_id",
+          "name",
+          "nickname",
+          "email",
+          "time_off_balance",
+          "created_at",
+          "updated_at",
+          "avatar",
+          "contract_start_date",
+          "contract_end_date",
+          "contract_type",
+          "archived"
+        ],
+        "title": "User"
+      },
+      "UserData": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "user_id": {
+            "type": "integer"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "date_of_birth": {
+            "type": "string"
+          },
+          "city_of_birth": {
+            "type": "string"
+          },
+          "nationality": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "postal_code": {
+            "type": "string"
+          },
+          "phone_number": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "gender",
+          "date_of_birth",
+          "city_of_birth",
+          "nationality",
+          "address",
+          "city",
+          "postal_code",
+          "phone_number",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UserData"
+      }
+    },
+    "responses": {
+      "AuthenticationException": {
+        "description": "Unauthenticated",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "ModelNotFoundException": {
+        "description": "Not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "ValidationException": {
+        "description": "Validation error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Errors overview."
+                },
+                "errors": {
+                  "type": "object",
+                  "description": "A detailed description of each field that failed validation.",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "message",
+                "errors"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

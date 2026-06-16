@@ -34,7 +34,7 @@ export function NonAdminLanding({ userName }: NonAdminLandingProps) {
           }}
         >
           <Sparkles className="h-3 w-3" />
-          Données mockées
+          Deck &amp; Intra : démo
         </div>
       </div>
 
