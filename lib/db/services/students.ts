@@ -393,11 +393,24 @@ export async function getStudentCounts(
   const activeCond = and(notArchived, notDropout) as SQL<unknown>;
   const archivedCond = and(eq(students.archived, true), notDropout) as SQL<unknown>;
 
-  const withPromo = (cond: SQL<unknown>): SQL<unknown> =>
-    (promoFilter ? and(promoFilter, cond) : cond) as SQL<unknown>;
+  // Vue « toutes les promos » : on exclut les promos ARCHIVÉES (cohortes
+  // terminées) pour rester cohérent avec le widget du dashboard. Sur une promo
+  // précise, on compte telle quelle.
+  let notArchivedPromo: SQL<unknown> | undefined;
+  if (!promo) {
+    const archivedNames = Array.from(await getArchivedPromoNames());
+    if (archivedNames.length > 0) {
+      notArchivedPromo = notInArray(students.promoName, archivedNames) as SQL<unknown>;
+    }
+  }
+
+  const withPromo = (cond?: SQL<unknown>): SQL<unknown> => {
+    const parts = [promoFilter, notArchivedPromo, cond].filter(Boolean) as SQL<unknown>[];
+    return (parts.length ? and(...parts) : sql`true`) as SQL<unknown>;
+  };
 
   const [totalResult, activeResult, dropoutResult, archivedResult] = await Promise.all([
-    db.select({ count: count() }).from(students).where(promoFilter), // total = tous
+    db.select({ count: count() }).from(students).where(withPromo()), // total (hors promos archivées)
     db.select({ count: count() }).from(students).where(withPromo(activeCond)),
     db.select({ count: count() }).from(students).where(withPromo(isDropout as SQL<unknown>)),
     db.select({ count: count() }).from(students).where(withPromo(archivedCond)),

@@ -249,15 +249,20 @@ export async function displayAgenda(
     const piscineJsEnd = new Date(promotion.dates['piscine-js-end']);
 
     if (compareDates(piscineJsStart, piscineJsEnd, current_date)) {
-      if (allProjects.Javascript.length > 0) {
-        const nextProject = allProjects.Javascript[0];
-        currentProject = nextProject.name;
-        progress = 0;
-        console.log(
-          `Current project: ${nextProject.name}, Progress: 0% for Promo ${promotion.key}`
-        );
-        await doUpdateStatus(nextProject.name);
-      }
+      // Pendant la piscine JS : on affiche « Piscine Javascript » (pas le 1er
+      // projet du cursus). Échéance = fin de piscine, progression = avancement
+      // dans la fenêtre de piscine.
+      currentProject = 'Piscine Javascript';
+      EndDateEstimated = piscineJsEnd.toISOString().split('T')[0];
+      const totalDays =
+        (piscineJsEnd.getTime() - piscineJsStart.getTime()) / (24 * 60 * 60 * 1000) + 1;
+      const elapsedDays =
+        (current_date.getTime() - piscineJsStart.getTime()) / (24 * 60 * 60 * 1000);
+      progress = totalDays > 0 ? Math.max(0, Math.min(100, (elapsedDays / totalDays) * 100)) : 0;
+      console.log(
+        `Piscine Javascript - Progress: ${progress.toFixed(2)}%, Fin: ${EndDateEstimated} for Promo ${promotion.key}`
+      );
+      await doUpdateStatus('Piscine Javascript');
     }
 
     startDate = new Date(piscineJsEnd);
@@ -282,31 +287,20 @@ export async function displayAgenda(
     const piscineRustJavaEnd = new Date(promotion.dates['piscine-rust-java-end']);
 
     if (compareDates(piscineRustJavaStart, piscineRustJavaEnd, current_date)) {
-      const tracks: { rust?: string; java?: string } = {};
-
-      if (allProjects.Rust.length > 0) {
-        tracks.rust = allProjects.Rust[0].name;
-      }
-      if (allProjects.Java.length > 0) {
-        tracks.java = allProjects.Java[0].name;
-      }
-
-      if (tracks.rust || tracks.java) {
-        currentProject = tracks.rust || tracks.java || 'Aucun';
-        // Pendant la piscine Rust/Java : l'échéance estimée = fin de la piscine,
-        // et la progression = avancement dans la fenêtre de piscine (sinon on
-        // affichait « Non spécifié » + 0 %).
-        EndDateEstimated = piscineRustJavaEnd.toISOString().split('T')[0];
-        const totalDays =
-          (piscineRustJavaEnd.getTime() - piscineRustJavaStart.getTime()) / (24 * 60 * 60 * 1000) + 1;
-        const elapsedDays =
-          (current_date.getTime() - piscineRustJavaStart.getTime()) / (24 * 60 * 60 * 1000);
-        progress = totalDays > 0 ? Math.max(0, Math.min(100, (elapsedDays / totalDays) * 100)) : 0;
-        console.log(
-          `Piscine Rust/Java - Rust: ${tracks.rust || 'N/A'}, Java: ${tracks.java || 'N/A'}, Progress: ${progress.toFixed(2)}%, Fin: ${EndDateEstimated} for Promo ${promotion.key}`
-        );
-        await doUpdateMultiTrack(tracks);
-      }
+      // Pendant la piscine Rust/Java : on affiche « Piscine Rust/Java » (pas les
+      // 1ers projets du cursus). Échéance = fin de piscine, progression =
+      // avancement dans la fenêtre de piscine.
+      currentProject = 'Piscine Rust/Java';
+      EndDateEstimated = piscineRustJavaEnd.toISOString().split('T')[0];
+      const totalDays =
+        (piscineRustJavaEnd.getTime() - piscineRustJavaStart.getTime()) / (24 * 60 * 60 * 1000) + 1;
+      const elapsedDays =
+        (current_date.getTime() - piscineRustJavaStart.getTime()) / (24 * 60 * 60 * 1000);
+      progress = totalDays > 0 ? Math.max(0, Math.min(100, (elapsedDays / totalDays) * 100)) : 0;
+      console.log(
+        `Piscine Rust/Java - Progress: ${progress.toFixed(2)}%, Fin: ${EndDateEstimated} for Promo ${promotion.key}`
+      );
+      await doUpdateStatus('Piscine Rust/Java');
     }
 
     startDate = new Date(piscineRustJavaEnd);
