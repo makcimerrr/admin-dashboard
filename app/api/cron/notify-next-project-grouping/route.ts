@@ -67,6 +67,19 @@ interface StudentState {
   entries: Map<string, StudentEntry>;
 }
 
+/**
+ * Rang d'avancement d'une entrée projet. L'API peut renvoyer plusieurs
+ * progressions pour un même projet (tentatives / groupes différents) ; on garde
+ * la plus avancée pour ne pas qu'une entrée parasite (sans groupe) écrase un
+ * « terminé » ou un « en groupe ».
+ */
+function entryRank(e: StudentEntry): number {
+  if (e.status === 'finished') return 3;
+  if (e.hasGroup) return 2;
+  if (e.status === 'in progress') return 1;
+  return 0;
+}
+
 export async function GET(request: NextRequest) {
   // Auth CRON_SECRET inconditionnelle (Bearer header OU ?secret).
   const authHeader = request.headers.get('authorization');
@@ -143,11 +156,13 @@ export async function GET(request: NextRequest) {
         const hasGroup =
           entry.group?.id != null && status !== 'without group';
 
-        student.entries.set(projectNameLower, {
-          track,
-          status: status ?? '',
-          hasGroup,
-        });
+        // Conserve l'entrée la plus avancée (cf. entryRank) : évite qu'une
+        // progression secondaire sans groupe masque un projet déjà terminé.
+        const candidateEntry: StudentEntry = { track, status: status ?? '', hasGroup };
+        const existingEntry = student.entries.get(projectNameLower);
+        if (!existingEntry || entryRank(candidateEntry) > entryRank(existingEntry)) {
+          student.entries.set(projectNameLower, candidateEntry);
+        }
       }
 
       // --- Pass 1 : candidats ---
@@ -187,9 +202,17 @@ export async function GET(request: NextRequest) {
           if (optionalProjects.has(next.lower)) continue;
 
           const nextEntry = student.entries.get(next.lower);
-          // Pas groupé sur le suivant = pas d'entrée OU entrée sans groupe.
-          const ungrouped = !nextEntry || !nextEntry.hasGroup;
-          if (!ungrouped) continue;
+          // Pas de relance si le projet suivant est déjà PRIS EN CHARGE : en
+          // groupe, en cours, ou TERMINÉ. Sans le garde « finished », un étudiant
+          // ayant fini le projet suivant solo (voire tout le cursus) était
+          // relancé à tort — group.id absent ⇒ hasGroup=false (ex. « fini RT
+          // mais pas de groupe sur Localhost » alors que Localhost est terminé).
+          const nextHandled =
+            !!nextEntry &&
+            (nextEntry.hasGroup ||
+              nextEntry.status === 'finished' ||
+              nextEntry.status === 'in progress');
+          if (nextHandled) continue;
 
           // Garde le frontier dont le prev est le plus avancé (dernier rencontré).
           frontier = {
