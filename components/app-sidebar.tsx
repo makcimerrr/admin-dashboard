@@ -79,9 +79,6 @@ function NavRow({
           <span className={cn('text-[13px] truncate flex-1', active && 'font-medium')}>
             {label}
           </span>
-          {external && (
-            <span className="text-[10px] text-sidebar-foreground/60">↗</span>
-          )}
         </>
       )}
     </>
@@ -95,16 +92,16 @@ function NavRow({
         <span className="inline-flex items-center justify-center">{content}</span>
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={8}>
-        {label}{external && ' ↗'}
+        {label}
       </TooltipContent>
     </Tooltip>
   )
 
   return external ? (
+    // Apps Zone01 (émargement / 01deck / intra) : navigation dans le MÊME
+    // onglet, pour passer d'une app à l'autre sans nouvel onglet.
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
       className={baseClasses}
       onClick={onActivate}
     >
