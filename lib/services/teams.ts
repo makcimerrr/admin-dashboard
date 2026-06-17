@@ -151,6 +151,41 @@ export function buildRelanceCard(opts: {
 }
 
 /**
+ * Carte « digest » des relances de regroupement émises pendant UN run de cron.
+ * Une seule carte récapitule tous les étudiants relancés (au lieu d'une carte
+ * par étudiant), pour ne pas inonder le canal staff. Destinée au 2e canal Teams.
+ */
+export function buildGroupingDigestCard(opts: {
+  items: { name: string; login: string; prevProject: string; nextProject: string; promo: string }[];
+}): object {
+  const MAX = 40; // garde-fou taille de carte
+  const n = opts.items.length;
+  // Tri lisible : par promo puis par nom/login.
+  const sorted = [...opts.items].sort((a, b) => {
+    const p = a.promo.localeCompare(b.promo);
+    if (p !== 0) return p;
+    return (a.name || a.login).localeCompare(b.name || b.login);
+  });
+  const shown = sorted.slice(0, MAX);
+  const facts = shown.map((i) => ({
+    title: i.name || i.login,
+    value: `${i.prevProject} → ${i.nextProject} · ${i.promo}`,
+  }));
+  const body: AdaptiveElement[] = [
+    textBlock(`📣 Relances regroupement — ${n} étudiant${n > 1 ? 's' : ''}`, {
+      size: 'Large',
+      weight: 'Bolder',
+    }),
+    textBlock('Ont terminé un projet sans groupe sur le suivant.', { isSubtle: true }),
+    factSet(facts),
+  ];
+  if (n > MAX) {
+    body.push(textBlock(`… et ${n - MAX} de plus.`, { isSubtle: true, spacing: 'Small' }));
+  }
+  return buildAdaptiveCard(body);
+}
+
+/**
  * Carte « ✅ RDV pris » — le capitaine a réservé sa code-review (callback
  * `rdv_confirmed`). Destinée au 2e canal Teams (sendTeamsFormsCard).
  */

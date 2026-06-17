@@ -7,7 +7,7 @@ import { TRACKS, type Track } from '@/lib/db/schema/audits';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
 import { notifyViaBot } from '@/lib/services/bot-notify';
-import { sendTeamsFormsCard, buildRelanceCard } from '@/lib/services/teams';
+import { sendTeamsFormsCard, buildGroupingDigestCard } from '@/lib/services/teams';
 import {
   upsertDetection,
   markNextProjectNotified,
@@ -120,6 +120,16 @@ export async function GET(request: NextRequest) {
       nextProject: string;
       peers: number;
       dry?: boolean;
+    }> = [];
+
+    // Relances staff agrégées : collectées sur tout le run, envoyées en UNE
+    // seule carte digest à la fin (au lieu d'une carte Teams par étudiant).
+    const relanceDigest: Array<{
+      name: string;
+      login: string;
+      prevProject: string;
+      nextProject: string;
+      promo: string;
     }> = [];
 
     for (const promo of activePromos) {
@@ -285,19 +295,21 @@ export async function GET(request: NextRequest) {
         if (ok) {
           await markNextProjectNotified(login, promoId, nextProject);
           sent.push({ login, prevProject, nextProject, peers: peers.length });
-          // Feature 5 : relance émise en parallèle sur Teams (Canal 2).
-          await sendTeamsFormsCard(
-            buildRelanceCard({
-              title: 'Relance — Regroupement projet suivant',
-              facts: [
-                { title: 'Étudiant', value: login },
-                { title: 'Projet précédent', value: prevProject },
-                { title: 'Projet suivant', value: nextProject },
-              ],
-            }),
-          );
+          // Collecte pour la carte digest staff (envoyée une fois en fin de run).
+          relanceDigest.push({
+            name: students.get(login)?.name ?? '',
+            login,
+            prevProject,
+            nextProject,
+            promo: promo.key,
+          });
         }
       }
+    }
+
+    // Une seule carte Teams récapitulative pour tout le run (canal staff).
+    if (!dry && relanceDigest.length > 0) {
+      await sendTeamsFormsCard(buildGroupingDigestCard({ items: relanceDigest }));
     }
 
     return NextResponse.json({ success: true, checked, sent });
