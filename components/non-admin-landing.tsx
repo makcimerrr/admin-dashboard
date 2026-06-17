@@ -23,7 +23,7 @@ export function NonAdminLanding({ userName, asLogin, previewName }: NonAdminLand
   const isPreview = Boolean(asLogin);
 
   return (
-    <div className={`h-full flex flex-col gap-3 p-3 md:p-4 overflow-hidden ${isPreview ? '' : 'pb-[68px]'}`}>
+    <div className="h-full flex flex-col gap-3 p-3 md:p-4 overflow-hidden">
       {isPreview && (
         <div className="shrink-0 flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
           <span className="flex items-center gap-2 text-sm">

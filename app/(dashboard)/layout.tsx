@@ -110,8 +110,23 @@ export default async function DashboardLayout({
   // ===============================
   // 4. Layout principal
   // ===============================
-  // Non-admins see the same shell but only with apps they have access to
-  // (filtered in AppSidebar via filterAppsByRole)
+  const isStudent = !isAdminRole(user.role);
+
+  // Étudiant : shell minimal (juste le header pour le menu/déconnexion). La
+  // navigation est la navbar PARTAGÉE z01-student-nav (sidebar desktop / bottom
+  // mobile, rendue dans la landing) — identique sur hub/émargement/01deck. On
+  // réserve l'espace : padding gauche (sidebar desktop) / bas (barre mobile).
+  if (isStudent) {
+    return (
+      <div className="fixed inset-0 flex flex-col overflow-hidden md:pl-[76px] pb-[60px] md:pb-0">
+        <SiteHeader />
+        <div className="flex flex-1 flex-col min-h-0 overflow-auto">{children}</div>
+        <Analytics />
+      </div>
+    );
+  }
+
+  // Admin : shell complet (sidebar + onglets + bottom-nav).
   return (
     <div className="fixed inset-0 flex overflow-hidden">
       <AppSidebar user={user} />
@@ -125,9 +140,7 @@ export default async function DashboardLayout({
         </div>
         <Analytics />
       </div>
-      {/* Non-admin (étudiant) : navigation via la navbar partagée (z01-student-nav),
-          pas la BottomNav admin → évite un double bottom-bar. */}
-      {isAdminRole(user.role) && <BottomNav user={user} />}
+      <BottomNav user={user} />
       {(user.role === 'Admin' || user.role === 'Super Admin') && (
         <AssistantBubble userId={user.email} />
       )}
