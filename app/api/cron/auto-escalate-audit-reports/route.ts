@@ -29,7 +29,9 @@ export async function GET(request: NextRequest) {
   }
 
   const dry = request.nextUrl.searchParams.get('dry') === '1';
-  const suiviUrl = `${BASE_URL}/code-reviews/suivi`;
+  // Page de collecte des comptes-rendus d'audit (table audit_report_requests),
+  // PAS /suivi (qui traite la planification des code reviews — autre jeu de données).
+  const suiviUrl = `${BASE_URL}/code-reviews/audit-reports`;
 
   const requests = await getAuditRequestsToEscalate();
 

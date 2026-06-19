@@ -224,7 +224,7 @@ export function buildEscalationCard(opts: {
     textBlock('Aucune réponse de l\'auditeur après 2 jours ouvrés.', { isSubtle: true }),
     factSet(facts),
   ];
-  const actions = opts.suiviUrl ? [openUrlAction('Ouvrir le suivi', opts.suiviUrl)] : [];
+  const actions = opts.suiviUrl ? [openUrlAction('Voir les rapports d\'audit', opts.suiviUrl)] : [];
   return buildAdaptiveCard(body, actions);
 }
 
