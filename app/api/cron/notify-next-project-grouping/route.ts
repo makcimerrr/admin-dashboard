@@ -143,6 +143,8 @@ export async function GET(request: NextRequest) {
       prevProject: string;
       nextProject: string;
       promo: string;
+      /** Jours depuis la 1ʳᵉ détection (fini-précédent + sans-groupe-suivant). */
+      sinceDays: number;
     }> = [];
 
     for (const promo of activePromos) {
@@ -317,6 +319,7 @@ export async function GET(request: NextRequest) {
             prevProject,
             nextProject,
             promo: promo.key,
+            sinceDays: Math.max(0, Math.floor((Date.now() - row.detectedAt.getTime()) / 86_400_000)),
           });
         }
       }

@@ -156,21 +156,31 @@ export function buildRelanceCard(opts: {
  * par étudiant), pour ne pas inonder le canal staff. Destinée au 2e canal Teams.
  */
 export function buildGroupingDigestCard(opts: {
-  items: { name: string; login: string; prevProject: string; nextProject: string; promo: string }[];
+  items: { name: string; login: string; prevProject: string; nextProject: string; promo: string; sinceDays?: number }[];
 }): object {
   const MAX = 40; // garde-fou taille de carte
   const n = opts.items.length;
-  // Tri lisible : par promo puis par nom/login.
+  // « depuis » lisible : jours puis semaines.
+  const fmtSince = (d?: number): string => {
+    if (typeof d !== 'number') return '';
+    if (d < 14) return `depuis ${d} j`;
+    return `depuis ${Math.round(d / 7)} sem`;
+  };
+  // Tri lisible : ancienneté décroissante (les plus vieux d'abord), puis nom.
   const sorted = [...opts.items].sort((a, b) => {
-    const p = a.promo.localeCompare(b.promo);
-    if (p !== 0) return p;
+    const da = a.sinceDays ?? 0;
+    const db = b.sinceDays ?? 0;
+    if (da !== db) return db - da;
     return (a.name || a.login).localeCompare(b.name || b.login);
   });
   const shown = sorted.slice(0, MAX);
-  const facts = shown.map((i) => ({
-    title: i.name || i.login,
-    value: `${i.prevProject} → ${i.nextProject} · ${i.promo}`,
-  }));
+  const facts = shown.map((i) => {
+    const since = fmtSince(i.sinceDays);
+    return {
+      title: i.name || i.login,
+      value: `${i.prevProject} → ${i.nextProject} · ${i.promo}${since ? ` · ${since}` : ''}`,
+    };
+  });
   const body: AdaptiveElement[] = [
     textBlock(`📣 Relances regroupement — ${n} étudiant${n > 1 ? 's' : ''}`, {
       size: 'Large',
