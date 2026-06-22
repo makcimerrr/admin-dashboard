@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useData } from '@/lib/client-cache';
 import { PageHeader } from '@/components/page-header';
 import { StudentsSubnav } from '../_components/students-subnav';
+import { DiscordAutoMatch } from '@/components/students/discord-automatch';
 import {
   Card,
   CardContent,
@@ -206,6 +207,10 @@ export default function DiscordLinkPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8"
           />
+        </div>
+
+        <div className="sm:ml-auto">
+          <DiscordAutoMatch promo={selectedPromo} onApplied={refresh} />
         </div>
       </div>
 
