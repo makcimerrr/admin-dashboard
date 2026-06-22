@@ -150,6 +150,23 @@ export function buildAuditReportMessage(auditorLogin: string, project: string, m
   ].join('\n');
 }
 
+/**
+ * Message Discord de RAPPEL (escalade) — l'auditeur n'a pas répondu après 2
+ * jours ouvrés. Même contexte que la demande initiale, ton « relance ».
+ */
+export function buildAuditReportReminderMessage(auditorLogin: string, project: string, members: string): string {
+  const author = members.trim() ? `un autre groupe (${members.trim()})` : `un autre groupe`;
+  return [
+    `Hey ${auditorLogin} 👋`,
+    ``,
+    `⏰ Petit rappel : on attend toujours ton **compte-rendu** de l'audit que tu as mené sur le projet **${project}** (réalisé par ${author}).`,
+    ``,
+    `Quand tu as 2 min, clique sur **Répondre** pour nous donner : déroulé, points forts/faibles, soucis éventuels.`,
+    ``,
+    `Merci beaucoup ! 🙏`,
+  ].join('\n');
+}
+
 export interface AuditorToRequest {
   auditorLogin: string;
   discordId: string;

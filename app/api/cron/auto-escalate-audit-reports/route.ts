@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getAuditRequestsToEscalate,
   markAuditEscalated,
+  buildAuditReportReminderMessage,
+  getGroupMemberNames,
 } from '@/lib/db/services/auditReports';
 import { sendTeamsFormsCard, buildEscalationCard } from '@/lib/services/teams';
+import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
+import { sendDiscordDM } from '@/lib/services/discord';
+import { notifyViaBot } from '@/lib/services/bot-notify';
 
 export const maxDuration = 60;
 
@@ -49,11 +54,12 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const escalated: { id: number; auditorLogin: string }[] = [];
+  const escalated: { id: number; auditorLogin: string; dmSent: boolean }[] = [];
   const errors: { id: number; auditorLogin: string }[] = [];
   for (const r of requests) {
+    // 1) Alerte Teams staff (source de vérité de l'escalade).
     // eslint-disable-next-line no-await-in-loop
-    const ok = await sendTeamsFormsCard(
+    const teamsOk = await sendTeamsFormsCard(
       buildEscalationCard({
         auditorLogin: r.auditorLogin,
         projectName: r.projectName,
@@ -61,10 +67,46 @@ export async function GET(request: NextRequest) {
         suiviUrl,
       }),
     );
-    if (ok) {
+
+    // 2) Relance DM à l'auditeur (best-effort) avec bouton « Répondre » pour
+    //    renvoyer son compte-rendu directement. N'empêche pas l'escalade.
+    let dmSent = false;
+    // eslint-disable-next-line no-await-in-loop
+    const discordId = await getDiscordIdByLogin(r.auditorLogin);
+    if (discordId) {
+      const project = r.projectName ?? '—';
+      // eslint-disable-next-line no-await-in-loop
+      const members = await getGroupMemberNames(r.groupId);
+      const msg = buildAuditReportReminderMessage(r.auditorLogin, project, members);
+      // eslint-disable-next-line no-await-in-loop
+      const bot = await notifyViaBot({
+        type: 'audit_report',
+        recipientDiscordId: discordId,
+        title: 'Rappel — rapport d\'audit',
+        body: msg,
+        facts: [
+          { name: 'Auditeur', value: r.auditorLogin },
+          { name: 'Projet', value: project },
+          { name: 'Groupe audité', value: members || '—' },
+        ],
+        actions: { bookButton: false, replyButton: true },
+        context: {
+          type: 'audit_report',
+          source_label: "Rapport d'audit",
+          auditorLogin: r.auditorLogin,
+          groupId: r.groupId,
+          members,
+          projectName: project,
+        },
+      });
+      // eslint-disable-next-line no-await-in-loop
+      dmSent = bot.ok ? true : await sendDiscordDM(discordId, msg);
+    }
+
+    if (teamsOk) {
       // eslint-disable-next-line no-await-in-loop
       await markAuditEscalated(r.id);
-      escalated.push({ id: r.id, auditorLogin: r.auditorLogin });
+      escalated.push({ id: r.id, auditorLogin: r.auditorLogin, dmSent });
     } else {
       errors.push({ id: r.id, auditorLogin: r.auditorLogin });
     }
