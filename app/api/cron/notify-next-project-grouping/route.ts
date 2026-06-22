@@ -12,6 +12,9 @@ import {
   upsertDetection,
   markNextProjectNotified,
 } from '@/lib/db/services/nextProjectReminders';
+import { db } from '@/lib/db/config';
+import { students as studentsTable } from '@/lib/db/schema/students';
+import { countableStudentsWhereNoJoin } from '@/lib/db/filters';
 
 export const maxDuration = 60;
 
@@ -113,6 +116,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Apprenants ACTIFS uniquement (non archivés, non dropout, promo non
+    // archivée). La relance se base sur les progressions Zone01 ; SANS ce garde,
+    // d'anciens comptes (archivés, vieilles promos, cursus déjà fini) étaient
+    // relancés à tort. On exclut ces logins des candidats ET des pairs.
+    const activeRows = await db
+      .select({ login: studentsTable.login })
+      .from(studentsTable)
+      .where(await countableStudentsWhereNoJoin());
+    const activeLogins = new Set(activeRows.map((r) => r.login.toLowerCase()));
+
     let checked = 0;
     const sent: Array<{
       login: string;
@@ -147,6 +160,8 @@ export async function GET(request: NextRequest) {
       const students = new Map<string, StudentState>();
       for (const entry of progress) {
         const login = entry.user.login;
+        // Apprenant non actif (archivé / dropout / promo archivée) → ignoré.
+        if (!activeLogins.has(login.toLowerCase())) continue;
         const projectNameLower = entry.object.name.toLowerCase();
         const track = projectTrack.get(projectNameLower);
         // Projet inconnu de la config (case-insensitive) → ignoré pour l'ordre.
