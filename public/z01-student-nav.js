@@ -119,7 +119,10 @@
 
     /* ── Mobile : FAB + mini-menu ── */
     '@media (max-width:767px){' +
-    'nav{left:auto;right:16px;bottom:calc(var(--z01-host-bottom, 16px) + env(safe-area-inset-bottom,0px));' +
+    /* --z01-host-bottom = offset bas COMPLET (inclut la safe-area) ; une app avec
+       sa propre bottom-nav le pose = (hauteur mesurée de sa nav + écart). Défaut
+       (hub/émargement) : 16px + safe-area. */
+    'nav{left:auto;right:16px;bottom:var(--z01-host-bottom, calc(16px + env(safe-area-inset-bottom,0px)));' +
     'flex-direction:column;align-items:flex-end;gap:8px;background:none;border:0;box-shadow:none;padding:0;' +
     'width:auto;max-width:calc(100vw - 32px)}' +
     /* FAB (logo) */
