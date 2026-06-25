@@ -23,7 +23,7 @@ export function NonAdminLanding({ userName, asLogin, previewName }: NonAdminLand
   const isPreview = Boolean(asLogin);
 
   return (
-    <div className="h-full flex flex-col gap-3 p-3 md:p-4 overflow-hidden">
+    <div className="flex flex-col gap-3 p-3 md:p-4 md:h-full md:overflow-hidden">
       {isPreview && (
         <div className="shrink-0 flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
           <span className="flex items-center gap-2 text-sm">
@@ -55,16 +55,17 @@ export function NonAdminLanding({ userName, asLogin, previewName }: NonAdminLand
         </div>
       )}
 
-      {/* Layout: Emargement top full-width, then Deck | Intra below */}
-      <div className="flex-1 min-h-0 grid gap-3 grid-rows-[minmax(0,2fr)_minmax(0,3fr)]">
-        <div className="min-h-0">
+      {/* Mobile : pile verticale qui défile (hauteurs naturelles). Desktop (md+) :
+          grille une-page Émargement haut pleine largeur, puis Deck | Intra. */}
+      <div className="flex-1 min-h-0 flex flex-col gap-3 md:grid md:grid-rows-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="min-h-[240px] md:min-h-0">
           <EmargementWidget asLogin={asLogin} />
         </div>
-        <div className="min-h-0 grid gap-3 md:grid-cols-2">
-          <div className="min-h-0">
+        <div className="flex flex-col gap-3 md:grid md:grid-cols-2 md:min-h-0">
+          <div className="min-h-[260px] md:min-h-0">
             <DeckWidget asLogin={asLogin} />
           </div>
-          <div className="min-h-0">
+          <div className="min-h-[260px] md:min-h-0">
             <IntraWidget asLogin={asLogin} />
           </div>
         </div>
