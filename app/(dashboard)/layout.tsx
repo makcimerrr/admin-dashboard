@@ -118,7 +118,7 @@ export default async function DashboardLayout({
   // réserve l'espace : padding gauche (sidebar desktop) / bas (barre mobile).
   if (isStudent) {
     return (
-      <div className="fixed inset-0 flex flex-col overflow-hidden md:pl-16 pb-[calc(56px+env(safe-area-inset-bottom,0px))] md:pb-0">
+      <div className="fixed inset-0 flex flex-col overflow-hidden pb-[var(--z01-nav-h,0px)]">
         <SiteHeader />
         <div className="flex flex-1 flex-col min-h-0 overflow-auto">{children}</div>
         <Analytics />
