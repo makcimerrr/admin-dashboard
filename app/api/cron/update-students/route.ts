@@ -114,6 +114,11 @@ function findActiveProjectsByTrack(
         (p) => p.projectName.toLowerCase() === project.name.toLowerCase()
       );
 
+      // Un projet OPTIONNEL non terminé ne bloque PAS la complétion du tronc
+      // (cohérent avec la timeline qui ignore les optionnels). Sinon « tronc
+      // terminé » n'était jamais vrai → comparaison toujours à 0 %.
+      const isOptional = (project as { optional?: boolean }).optional === true;
+
       if (userProject) {
         if (userProject.projectStatus === 'finished') {
           lastFinishedProject = { name: project.name, status: 'finished' };
@@ -124,7 +129,7 @@ function findActiveProjectsByTrack(
               status: userProject.projectStatus
             };
           }
-          allDone = false;
+          if (!isOptional) allDone = false;
         }
       } else {
         if (!firstUnfinishedProject.name) {
@@ -133,7 +138,7 @@ function findActiveProjectsByTrack(
             status: 'without group'
           };
         }
-        allDone = false;
+        if (!isOptional) allDone = false;
       }
     }
 

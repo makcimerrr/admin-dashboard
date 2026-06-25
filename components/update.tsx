@@ -269,6 +269,9 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
           (p) => p.projectName.toLowerCase() === project.name.toLowerCase()
         );
 
+        // Un projet OPTIONNEL non terminé ne bloque pas la complétion du tronc.
+        const isOptional = (project as { optional?: boolean }).optional === true;
+
         if (userProject) {
           if (userProject.projectStatus === 'finished') {
             lastFinishedProject = { name: project.name, status: 'finished' };
@@ -276,13 +279,13 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
             if (!studentActiveProject.name) {
               studentActiveProject = { name: project.name, status: userProject.projectStatus };
             }
-            allDone = false;
+            if (!isOptional) allDone = false;
           }
         } else {
           if (!firstUnfinishedProject.name) {
             firstUnfinishedProject = { name: project.name, status: 'without group' };
           }
-          allDone = false;
+          if (!isOptional) allDone = false;
         }
       }
 

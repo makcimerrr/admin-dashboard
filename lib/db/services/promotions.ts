@@ -1,6 +1,6 @@
 import { db } from '../config';
 import { promotions, delayStatus } from '../schema';
-import { eq, sql, and, or, ne } from 'drizzle-orm';
+import { eq, sql, and, or, ne, count } from 'drizzle-orm';
 import {
   students,
   studentProjects,
@@ -481,45 +481,54 @@ export async function getDelayStatus(promoId: string): Promise<{
   validatedCount: number;
   notValidatedCount: number;
 }> {
+  const zero = {
+    lateCount: 0, goodLateCount: 0, advanceLateCount: 0,
+    specialityCount: 0, validatedCount: 0, notValidatedCount: 0,
+  };
   try {
-    // Récupérer les données de delayStatus en fonction du promoId
-    const delayStatusData = await db
-      .select({
-        lateCount: delayStatus.lateCount,
-        goodLateCount: delayStatus.goodLateCount,
-        advanceLateCount: delayStatus.advanceLateCount,
-        specialityCount: delayStatus.specialityCount,
-        validatedCount: delayStatus.validatedCount,
-        notValidatedCount: delayStatus.notValidatedCount
-      })
-      .from(delayStatus)
-      .where(eq(delayStatus.promoId, promoId))
-      .orderBy(sql`${delayStatus.lastUpdate} DESC`)
+    // promoId = eventId → résoudre le nom de promo.
+    const promoRow = await db
+      .select({ name: promotions.name })
+      .from(promotions)
+      .where(eq(promotions.promoId, promoId))
       .limit(1)
       .execute();
+    const promoName = promoRow[0]?.name;
+    if (!promoName) return zero;
 
-    // Vérifier si un résultat a été trouvé
-    if (delayStatusData.length === 0) {
-      throw new Error(
-        `Aucun statut de retard trouvé pour la promotion avec l'ID "${promoId}".`
-      );
+    // Compte LIVE depuis student_projects.delay_level — source de vérité mise à
+    // jour par le cron / le bouton Exécuter. Robuste pour TOUTE promo (même
+    // récente) : plus de throw quand l'agrégat delays_status est absent (cas P1
+    // 2026), et toujours aligné sur les vraies données étudiants.
+    const rows = await db
+      .select({ delay: studentProjects.delay_level, c: count() })
+      .from(studentProjects)
+      .innerJoin(students, eq(students.id, studentProjects.student_id))
+      .where(
+        and(
+          eq(students.promoName, promoName),
+          eq(students.isDropout, false),
+          or(eq(students.archived, false), sql`${students.archived} IS NULL`),
+        ),
+      )
+      .groupBy(studentProjects.delay_level)
+      .execute();
+
+    const out = { ...zero };
+    for (const r of rows) {
+      const d = (r.delay ?? '').toLowerCase();
+      const n = Number(r.c) || 0;
+      if (d === 'en retard') out.lateCount += n;
+      else if (d === 'bien') out.goodLateCount += n;
+      else if (d === 'en avance') out.advanceLateCount += n;
+      else if (d === 'spécialité' || d === 'specialite') out.specialityCount += n;
+      else if (d === 'validé' || d === 'valide') out.validatedCount += n;
+      else if (d === 'non validé' || d === 'non valide') out.notValidatedCount += n;
     }
-
-    // Retourner les valeurs du premier résultat trouvé
-    return {
-      lateCount: delayStatusData[0].lateCount || 0,
-      goodLateCount: delayStatusData[0].goodLateCount || 0,
-      advanceLateCount: delayStatusData[0].advanceLateCount || 0,
-      specialityCount: delayStatusData[0].specialityCount || 0,
-      validatedCount: delayStatusData[0].validatedCount || 0,
-      notValidatedCount: delayStatusData[0].notValidatedCount || 0
-    };
+    return out;
   } catch (error) {
-    console.error(
-      'Erreur lors de la recherche des compteurs de retard:',
-      error
-    );
-    throw new Error('Impossible de trouver les compteurs de retard.');
+    console.error('Erreur lors du calcul des compteurs de retard:', error);
+    return zero;
   }
 }
 
