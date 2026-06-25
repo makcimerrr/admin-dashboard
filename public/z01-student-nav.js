@@ -2,23 +2,17 @@
  * Navbar étudiant PARTAGÉE entre les apps Zone01 (hub, émargement, 01deck).
  * Web component autonome (Shadow DOM, plain JS, IIFE).
  *
- * Design « Float-Dock » : la nav n'est pas un rail collé au bord pleine hauteur,
- * mais un DOCK FLOTTANT détaché de tous les bords (se POSE sur l'app, ne la
- * découpe pas).
- *  - Desktop (≥768px) : capsule ancrée BAS-GAUCHE (left:14, bottom:18, ~56px).
- *    S'élargit à 212px vers la DROITE en OVERLAY au survol / focus / épinglage.
- *    Le coin haut-gauche (top-bar 01deck, header émargement) reste libre par
- *    GÉOMÉTRIE, sans mesurer le DOM hôte. Zéro réservation de flux desktop.
- *  - Mobile (<768px) : pilule flottante CENTRÉE en bas (largeur = contenu).
- *    Position basse = var(--z01-host-bottom, 12px) + safe-area : une app qui a
- *    déjà une bottom-nav (01deck) pose --z01-host-bottom = sa hauteur pour que la
- *    pilule flotte JUSTE AU-DESSUS d'elle (pas de superposition).
- *
- * Réservation de l'espace contenu (mobile) :
- *  - hub / émargement : le composant réserve --z01-nav-h (consommé par leur
- *    layout / body padding).
- *  - 01deck (active="deck") : l'app gère elle-même son padding bas (elle a déjà
- *    une bottom-nav) → le composant NE réserve PAS de body padding.
+ *  - Desktop (≥768px) : DOCK FLOTTANT ancré bas-gauche (~56px), s'élargit à
+ *    212px en overlay au survol / focus / épinglage. Détaché des bords → ne
+ *    masque jamais le coin haut-gauche de l'app (top-bar 01deck, header
+ *    émargement). Zéro réservation de flux.
+ *  - Mobile (<768px) : BOUTON FLOTTANT (FAB) rond bleu, coin bas-droit. Au tap,
+ *    ouvre un mini-menu (les 3 apps + thème) au-dessus de lui. Footprint minimal,
+ *    AUCUNE barre pleine largeur, AUCUNE réservation d'espace → ne masque pas le
+ *    contenu et ne se superpose pas aux bottom-nav natives (ex. 01deck).
+ *    Position basse = var(--z01-host-bottom, 16px) + safe-area : une app avec sa
+ *    propre bottom-nav (01deck) pose --z01-host-bottom = sa hauteur pour que le
+ *    FAB flotte juste au-dessus.
  *
  * Conserve : presets par app (fond/police/rayon, dark+light), accent #0063f9,
  * thème synchronisé (classe dark/light sur <html> + MutationObserver + bouton
@@ -31,7 +25,6 @@
   if (window.customElements && customElements.get('z01-student-nav')) return;
 
   var PANEL_W = 212; // largeur capsule dépliée (overlay, desktop)
-  var BAR_H = 56;    // hauteur pilule mobile (pour --z01-nav-h)
   var LS_KEY = 'z01-nav-pinned';
 
   // Icônes lucide (24×24, stroke) — layout-dashboard / signature / layers.
@@ -124,35 +117,41 @@
     '@media (max-height:560px){nav{bottom:10px;max-height:calc(100vh - 20px)}}' +
     '}' +
 
-    /* ── Mobile : pilule flottante centrée, posée au-dessus de --z01-host-bottom ── */
+    /* ── Mobile : FAB + mini-menu ── */
     '@media (max-width:767px){' +
-    'nav{left:50%;transform:translateX(-50%);' +
-    'bottom:calc(var(--z01-host-bottom, 12px) + env(safe-area-inset-bottom,0px));' +
-    'flex-direction:row;justify-content:center;width:max-content;max-width:calc(100vw - 24px);' +
-    'background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:6px;' +
-    'box-shadow:0 8px 28px rgba(0,0,0,.22),0 2px 6px rgba(0,0,0,.12)}' +
+    'nav{left:auto;right:16px;bottom:calc(var(--z01-host-bottom, 16px) + env(safe-area-inset-bottom,0px));' +
+    'flex-direction:column;align-items:flex-end;gap:8px;background:none;border:0;box-shadow:none;padding:0;' +
+    'width:auto;max-width:calc(100vw - 32px)}' +
+    /* FAB (logo) */
+    '.brand{order:3;display:flex;align-items:center;justify-content:center;width:52px;height:52px;' +
+    'border-radius:999px;background:var(--primary);color:var(--primary-fg);border:0;cursor:pointer;padding:0;' +
+    'box-shadow:0 8px 24px rgba(0,0,0,.32);transition:transform .15s}' +
+    '.brand:active{transform:scale(.94)}' +
+    '.brand .box{width:auto;height:auto;background:none;color:inherit}' +
+    '.brand .box svg{width:24px;height:24px;fill:currentColor;stroke:none}' +
+    '.head-label{display:none}.grp{display:none}' +
+    /* menu (caché tant que fermé) */
+    '.inner{order:1;display:none}.foot{order:2;display:none}' +
+    'nav.expanded .inner,nav.expanded .foot{display:flex;flex-direction:column;gap:2px;min-width:200px;' +
+    'background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:6px;' +
+    'box-shadow:0 16px 40px rgba(0,0,0,.30)}' +
     '@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){' +
-    'nav{background:color-mix(in srgb,var(--bg) 90%,transparent);' +
+    'nav.expanded .inner,nav.expanded .foot{background:color-mix(in srgb,var(--bg) 92%,transparent);' +
     '-webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%)}}' +
-    '.inner{flex-direction:row;align-items:center;gap:2px}' +
-    'a{flex-direction:column;justify-content:center;gap:3px;padding:6px 12px 5px;min-width:56px;border-radius:999px}' +
-    'a:active{opacity:.7}a.active{color:var(--primary)}' +
-    'svg{width:22px;height:22px}' +
-    '.pill{padding:3px 12px;border-radius:999px}' +
-    'a.active .pill{background:color-mix(in srgb,var(--primary) 16%,transparent)}' +
-    '.lbl{display:block;font-size:10px;font-weight:600;letter-spacing:.01em}' +
-    '.ind,.brand,.head-label,.grp{display:none}' +
-    '.foot{display:flex;align-items:center;padding:0 0 0 4px;margin-left:2px;border-left:1px solid var(--border)}' +
-    '.foot .act{flex-direction:column;justify-content:center;gap:3px;padding:6px 12px 5px;min-width:48px;border-radius:999px;color:var(--muted)}' +
-    '.foot .txt{display:none}' +
-    '@media (max-height:430px){.lbl{display:none}a{padding:8px 12px;min-width:48px}}' +
+    'nav.expanded a,nav.expanded button.act{display:flex;flex-direction:row;align-items:center;gap:12px;' +
+    'width:100%;justify-content:flex-start;height:auto;margin:0;padding:10px 12px;border-radius:10px}' +
+    'nav.expanded a:hover,nav.expanded button.act:hover{background:var(--accent);color:var(--accent-fg)}' +
+    'nav.expanded a.active{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}' +
+    '.pill{width:auto;height:auto;background:none!important;padding:0;border-radius:0}' +
+    'svg{width:20px;height:20px}' +
+    '.txt{display:block;font-size:14px;font-weight:500}.lbl{display:none}.ind{display:none}' +
+    '@media (prefers-reduced-motion:reduce){.brand:active{transform:none}}' +
     '}' +
 
-    /* ── Réduit les animations ── */
     '@media (prefers-reduced-motion:reduce){nav,nav *,.pill,a,button.act{transition:none!important}}';
 
   var BRAND =
-    '<button class="brand" type="button" aria-label="Épingler / réduire le menu" aria-expanded="false">' +
+    '<button class="brand" type="button" aria-label="Menu Zone01" aria-expanded="false" aria-haspopup="true">' +
     '<span class="box"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.6"/>' +
     '<rect x="13" y="3" width="8" height="8" rx="1.6"/><rect x="3" y="13" width="8" height="8" rx="1.6"/>' +
     '<rect x="13" y="13" width="8" height="8" rx="1.6"/></svg></span>' +
@@ -163,6 +162,10 @@
     if (c.contains('dark')) return true;
     if (c.contains('light')) return false;
     return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  function isDesktop() {
+    return !!(window.matchMedia && window.matchMedia('(min-width:768px)').matches);
   }
 
   function isPinned() {
@@ -193,22 +196,20 @@
       '<span class="txt">' + (dark ? 'Mode clair' : 'Mode sombre') + '</span>' +
       '<span class="lbl">Thème</span></button></div>';
 
-    var cls = (dark ? 'dark' : 'light') + (isPinned() ? ' expanded' : '');
+    // Sur mobile : toujours fermé au départ (FAB). Sur desktop : état épinglé.
+    var open = isDesktop() && isPinned();
+    var cls = (dark ? 'dark' : 'light') + (open ? ' expanded' : '');
     return '<style>' + STYLE + palette + '</style>' +
       '<a class="skip" href="#z01-nav-first">Aller à la navigation Zone01</a>' +
       '<nav class="' + cls + '" aria-label="Navigation Zone01">' + BRAND +
       '<div class="inner"><span class="grp">Zone01</span>' + items + '</div>' + foot + '</nav>';
   }
 
-  // Réservation d'espace contenu (mobile). 01deck (active="deck") gère lui-même
-  // son padding bas (il a déjà une bottom-nav) → on ne réserve rien côté body.
-  function ensureBodySpace(active) {
-    var css = active === 'deck'
-      ? ':root{--z01-nav-h:0px}'
-      : ':root{--z01-nav-h:0px}@media (max-width:767px){' +
-        ':root{--z01-nav-h:calc(' + (BAR_H + 22) + 'px + env(safe-area-inset-bottom,0px))}' +
-        'body{padding-bottom:var(--z01-nav-h)}}';
+  // FAB = overlay : aucune réservation d'espace contenu. On garde --z01-nav-h=0
+  // (compat anciens consommateurs).
+  function ensureBodySpace() {
     var st = document.getElementById('z01-nav-body-pad');
+    var css = ':root{--z01-nav-h:0px}';
     if (!st) {
       st = document.createElement('style');
       st.id = 'z01-nav-body-pad';
@@ -225,36 +226,41 @@
 
     Z01StudentNav.prototype._paint = function () {
       if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
-      var active = this.getAttribute('active') || '';
-      this.shadowRoot.innerHTML = render(active);
-      ensureBodySpace(active);
+      this.shadowRoot.innerHTML = render(this.getAttribute('active') || '');
+      ensureBodySpace();
       var self = this;
       var first = this.shadowRoot.querySelector('.inner a');
       if (first) first.id = 'z01-nav-first';
       var brand = this.shadowRoot.querySelector('.brand');
       if (brand) {
-        brand.setAttribute('aria-expanded', String(isPinned()));
-        brand.addEventListener('click', function () { self._togglePin(); });
+        var nav0 = this.shadowRoot.querySelector('nav');
+        brand.setAttribute('aria-expanded', String(!!(nav0 && nav0.classList.contains('expanded'))));
+        brand.addEventListener('click', function () { self._toggle(); });
       }
       var theme = this.shadowRoot.querySelector('.theme');
       if (theme) theme.addEventListener('click', function () { self._toggleTheme(); });
     };
-    Z01StudentNav.prototype._togglePin = function () {
+    Z01StudentNav.prototype._toggle = function () {
       var nav = this.shadowRoot && this.shadowRoot.querySelector('nav');
       if (!nav) return;
       var next = !nav.classList.contains('expanded');
       nav.classList.toggle('expanded', next);
       var brand = this.shadowRoot.querySelector('.brand');
       if (brand) brand.setAttribute('aria-expanded', String(next));
-      try { window.localStorage.setItem(LS_KEY, String(next)); } catch (e) { /* ignore */ }
+      // Persiste l'épinglage uniquement sur desktop (le FAB mobile repart fermé).
+      if (isDesktop()) {
+        try { window.localStorage.setItem(LS_KEY, String(next)); } catch (e) { /* ignore */ }
+      }
     };
-    Z01StudentNav.prototype._unpin = function () {
+    Z01StudentNav.prototype._close = function () {
       var nav = this.shadowRoot && this.shadowRoot.querySelector('nav');
       if (nav && nav.classList.contains('expanded')) {
         nav.classList.remove('expanded');
         var brand = this.shadowRoot.querySelector('.brand');
         if (brand) brand.setAttribute('aria-expanded', 'false');
-        try { window.localStorage.setItem(LS_KEY, 'false'); } catch (e) { /* ignore */ }
+        if (isDesktop()) {
+          try { window.localStorage.setItem(LS_KEY, 'false'); } catch (e) { /* ignore */ }
+        }
       }
     };
     Z01StudentNav.prototype._toggleTheme = function () {
@@ -274,13 +280,25 @@
         this._obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
       }
       if (!this._onKey) {
-        this._onKey = function (e) { if (e.key === 'Escape') self._unpin(); };
+        this._onKey = function (e) { if (e.key === 'Escape') self._close(); };
         document.addEventListener('keydown', this._onKey);
+      }
+      if (!this._onDoc) {
+        // Clic hors du composant → ferme le menu (surtout utile au FAB mobile).
+        this._onDoc = function (e) {
+          var nav = self.shadowRoot && self.shadowRoot.querySelector('nav');
+          if (!nav || !nav.classList.contains('expanded')) return;
+          if (isDesktop()) return; // desktop : épinglage explicite, pas d'auto-close
+          var path = e.composedPath ? e.composedPath() : [];
+          if (path.indexOf(self) === -1) self._close();
+        };
+        document.addEventListener('click', this._onDoc, true);
       }
     };
     Z01StudentNav.prototype.disconnectedCallback = function () {
       if (this._obs) { this._obs.disconnect(); this._obs = null; }
       if (this._onKey) { document.removeEventListener('keydown', this._onKey); this._onKey = null; }
+      if (this._onDoc) { document.removeEventListener('click', this._onDoc, true); this._onDoc = null; }
     };
     Z01StudentNav.prototype.attributeChangedCallback = function () {
       if (this.shadowRoot) this._paint();
