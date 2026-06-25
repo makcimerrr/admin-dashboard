@@ -15,11 +15,13 @@ export function AppTabs() {
   const activeItem = findActiveItem(app, pathname);
 
   return (
-    <nav className="flex items-center gap-1 border-b px-3 lg:px-6 h-11 overflow-x-auto scrollbar-none">
-      <span className="hidden md:inline text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mr-3 shrink-0">
+    <nav className="flex items-center gap-1 border-b bg-muted/20 px-3 lg:px-6 h-[52px] overflow-x-auto scrollbar-none">
+      {/* Section courante (groupe) — plus lisible + séparateur */}
+      <span className="hidden md:inline-flex items-center text-sm font-semibold text-foreground mr-2 shrink-0">
         {app.label}
       </span>
-      <div className="flex items-center gap-0.5 h-full shrink-0">
+      <span className="hidden md:block h-5 w-px bg-border mr-2 shrink-0" aria-hidden="true" />
+      <div className="flex items-center gap-1 h-full shrink-0">
         {app.items.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem?.url === item.url;
@@ -27,14 +29,15 @@ export function AppTabs() {
             <Link
               key={item.url}
               href={item.url}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-1.5 px-3 h-full text-xs font-medium border-b-2 transition-colors -mb-px whitespace-nowrap',
+                'flex items-center gap-2 px-3.5 h-full text-sm border-b-2 transition-colors -mb-px whitespace-nowrap rounded-t-md',
                 isActive
-                  ? 'text-primary border-primary'
-                  : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
+                  ? 'text-primary border-primary bg-primary/10 font-semibold'
+                  : 'text-muted-foreground border-transparent font-medium hover:text-foreground hover:bg-muted/60'
               )}
             >
-              {Icon && <Icon className="h-3.5 w-3.5" />}
+              {Icon && <Icon className="h-4 w-4 shrink-0" />}
               {item.title}
             </Link>
           );

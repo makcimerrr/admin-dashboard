@@ -24,17 +24,30 @@ export async function GET(req: Request) {
     }
 
     for (const promo of promos.filter((p: any) => p.promotion?.name)) {
-        let currentProject = promo.currentProjects;
-
-        if (typeof currentProject === 'object' && currentProject !== null) {
-            currentProject = JSON.stringify(currentProject);
+        // Normalise currentProject AU FORMAT ATTENDU PAR LES LECTEURS
+        // (update-students + Update manuel : JSON.parse une seule fois) :
+        //  - mono-track  → NOM du projet BRUT (string ; JSON.parse échoue → string gardée)
+        //  - multi-track → {rust, java} stringifié UNE seule fois (JSON.parse → objet)
+        // ⚠️ Bug historique : double JSON.stringify + wrapping {single:…} →
+        // les lecteurs obtenaient une string non-parsable → delay_level faux
+        // ('bien' pour tout le monde) au passage du cron auto.
+        const cp = promo.currentProjects;
+        let currentProject: string | null = null;
+        if (cp && typeof cp === 'object') {
+            if (typeof cp.single !== 'undefined') {
+                currentProject = cp.single ?? null;
+            } else {
+                currentProject = JSON.stringify(cp);
+            }
+        } else if (typeof cp === 'string') {
+            currentProject = cp;
         }
 
       await upsertPromoStatus({
         promoKey: promo.promotion?.name ?? 'unknown',
         status: promo.status === 'success' ? 'OK' : 'ERROR',
         promotionName: `Promo ${promo.promotion?.name ?? 'unknown'}`,
-        currentProject: currentProject ? JSON.stringify(currentProject) : null,
+        currentProject,
         progress: promo.timeline?.progress ?? 0,
         agenda: promo.timeline ?? null,
         // startDate / endDate : à mapper si dispo
