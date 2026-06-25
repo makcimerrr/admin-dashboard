@@ -7,7 +7,7 @@ import {
   studentCurrentProjects,
   studentSpecialtyProgress
 } from '@/lib/db/schema';
-import { getAllPromotions } from '@/lib/config/promotions';
+import { getAllPromotions as getAllPromoConfig } from '@/lib/config/promotions';
 
 // ============== TYPES ==============
 
@@ -491,7 +491,7 @@ export async function getDelayStatus(promoId: string): Promise<{
     // source que les graphiques). ⚠️ NE PAS utiliser la table `promotions` :
     // son `promo_id` peut être désynchronisé du vrai eventId (ex. P1 2026 =
     // 1106 en base vs 1226 réel) → mapping faux → stats vides.
-    const promosCfg = await getAllPromotions();
+    const promosCfg = await getAllPromoConfig();
     const promoName = promosCfg.find((p) => String(p.eventId) === String(promoId))?.key;
     if (!promoName) return zero;
 
