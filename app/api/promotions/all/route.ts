@@ -1,9 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { getArchivedPromoNames } from '@/lib/db/filters';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const promotions = await getAllPromotions();
+    let promotions = await getAllPromotions();
+
+    // ?activeOnly=1 → exclut les promos archivées (utilisé par le cron de MAJ
+    // pour ne pas traiter les archivées, qui renvoient 400 sur update-students).
+    const activeOnly = request.nextUrl.searchParams.get('activeOnly');
+    if (activeOnly === '1' || activeOnly === 'true') {
+      const archived = await getArchivedPromoNames();
+      promotions = promotions.filter((p) => !archived.has(p.key));
+    }
 
     return NextResponse.json({
       success: true,
