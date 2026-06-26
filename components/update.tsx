@@ -262,32 +262,35 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
       let studentActiveProject: { name: string | null, status: string | null } = { name: null, status: null };
       let firstUnfinishedProject: { name: string | null, status: string | null } = { name: null, status: 'without group' };
       let lastFinishedProject: { name: string | null, status: string | null } = { name: null, status: 'finished' };
-      let allDone = true;
+      // « Tronc terminé » (Option A) : ≥1 projet fini ET aucun projet COMMENCÉ
+      // (entrée existante) obligatoire non terminé. Un projet jamais fait (cursus
+      // évolutif) ne bloque PAS.
+      let hasUnfinishedAttempt = false;
+      let hasFinished = false;
 
       for (const project of trackProjects) {
         const userProject = userProjects.find(
           (p) => p.projectName.toLowerCase() === project.name.toLowerCase()
         );
 
-        // Un projet OPTIONNEL non terminé ne bloque pas la complétion du tronc.
         const isOptional = (project as { optional?: boolean }).optional === true;
 
         if (userProject) {
           if (userProject.projectStatus === 'finished') {
             lastFinishedProject = { name: project.name, status: 'finished' };
+            hasFinished = true;
           } else {
             if (!studentActiveProject.name) {
               studentActiveProject = { name: project.name, status: userProject.projectStatus };
             }
-            if (!isOptional) allDone = false;
+            if (!isOptional) hasUnfinishedAttempt = true;
           }
-        } else {
-          if (!firstUnfinishedProject.name) {
-            firstUnfinishedProject = { name: project.name, status: 'without group' };
-          }
-          if (!isOptional) allDone = false;
+        } else if (!firstUnfinishedProject.name) {
+          firstUnfinishedProject = { name: project.name, status: 'without group' };
         }
       }
+
+      const allDone = hasFinished && !hasUnfinishedAttempt;
 
       if (allDone) {
         commonProjects[track] = lastFinishedProject;

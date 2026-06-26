@@ -107,21 +107,24 @@ function findActiveProjectsByTrack(
       name: null,
       status: 'finished'
     };
-    let allDone = true;
+    // « Tronc terminé » (Option A) : l'étudiant a fini tous les projets qu'il a
+    // RÉELLEMENT faits dans ce tronc — ≥1 projet fini, et aucun projet COMMENCÉ
+    // (entrée existante) obligatoire non terminé. Un projet jamais fait (cursus
+    // évolutif, ex. Git/Localhost ajoutés après une promo) ne bloque PAS.
+    let hasUnfinishedAttempt = false;
+    let hasFinished = false;
 
     for (const project of trackProjects) {
       const userProject = userProjects.find(
         (p) => p.projectName.toLowerCase() === project.name.toLowerCase()
       );
 
-      // Un projet OPTIONNEL non terminé ne bloque PAS la complétion du tronc
-      // (cohérent avec la timeline qui ignore les optionnels). Sinon « tronc
-      // terminé » n'était jamais vrai → comparaison toujours à 0 %.
       const isOptional = (project as { optional?: boolean }).optional === true;
 
       if (userProject) {
         if (userProject.projectStatus === 'finished') {
           lastFinishedProject = { name: project.name, status: 'finished' };
+          hasFinished = true;
         } else {
           if (!studentActiveProject.name) {
             studentActiveProject = {
@@ -129,18 +132,19 @@ function findActiveProjectsByTrack(
               status: userProject.projectStatus
             };
           }
-          if (!isOptional) allDone = false;
+          // Un projet COMMENCÉ mais non terminé bloque (sauf optionnel).
+          if (!isOptional) hasUnfinishedAttempt = true;
         }
-      } else {
-        if (!firstUnfinishedProject.name) {
-          firstUnfinishedProject = {
-            name: project.name,
-            status: 'without group'
-          };
-        }
-        if (!isOptional) allDone = false;
+      } else if (!firstUnfinishedProject.name) {
+        // Projet jamais commencé → mémorisé comme "prochain", mais NE bloque pas.
+        firstUnfinishedProject = {
+          name: project.name,
+          status: 'without group'
+        };
       }
     }
+
+    const allDone = hasFinished && !hasUnfinishedAttempt;
 
     if (allDone) {
       commonProjects[track] = lastFinishedProject;
