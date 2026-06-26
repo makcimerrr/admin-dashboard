@@ -28,8 +28,9 @@ export function AppTabs() {
         <ChevronRight className="h-4 w-4 text-muted-foreground/50" aria-hidden="true" />
       </span>
 
-      {/* Onglets = vrais boutons (pilules) : bordés/cliquables, actif = bleu plein */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      {/* Onglets « ghost » : sans bordure, survol = fond doux, actif = fond
+          bleuté + texte bleu (rounded, pas de pilule). Style dashboard épuré. */}
+      <div className="flex items-center gap-1 shrink-0">
         {app.items.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem?.url === item.url;
@@ -39,10 +40,10 @@ export function AppTabs() {
               href={item.url}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm whitespace-nowrap transition-colors',
                 isActive
-                  ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                  : 'border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground hover:border-foreground/20'
+                  ? 'bg-primary/10 text-primary font-semibold'
+                  : 'text-muted-foreground font-medium hover:bg-muted/70 hover:text-foreground'
               )}
             >
               {Icon && <Icon className="h-4 w-4 shrink-0" />}
