@@ -78,5 +78,7 @@ jobs:
             # stocké sur le VPS renverrait 'denied' et laisserait l'ancienne image).
             docker logout ghcr.io || true
             docker compose -f ${{ steps.env.outputs.compose }} pull
-            docker compose -f ${{ steps.env.outputs.compose }} up -d
+            # --force-recreate : 'up -d' seul ne recréait pas toujours le conteneur
+            # après un nouveau digest 'latest' → déploiement "réussi" mais ancien code.
+            docker compose -f ${{ steps.env.outputs.compose }} up -d --force-recreate
             docker image prune -f

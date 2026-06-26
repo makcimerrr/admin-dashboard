@@ -20,7 +20,7 @@ export const students = pgTable('students', {
     id: serial('id').primaryKey(),
     last_name: text('last_name').notNull(),
     first_name: text('first_name').notNull(),
-    login: text('login').notNull(),
+    login: text('login').notNull().unique(),
     availableAt: timestamp('available_at').notNull(),
     promoName: text('promo_name')
         .notNull()
