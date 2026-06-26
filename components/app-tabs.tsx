@@ -42,8 +42,10 @@ export function AppTabs() {
               className={cn(
                 'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm whitespace-nowrap transition-colors',
                 isActive
-                  ? 'bg-primary/10 text-primary font-semibold'
-                  : 'text-muted-foreground font-medium hover:bg-muted/70 hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                  // Inactif : surface douce permanente → se lit comme un bouton
+                  // cliquable (pas juste du texte). Survol = plus contrasté.
+                  : 'bg-muted/60 text-foreground/80 font-medium hover:bg-muted hover:text-foreground'
               )}
             >
               {Icon && <Icon className="h-4 w-4 shrink-0" />}
