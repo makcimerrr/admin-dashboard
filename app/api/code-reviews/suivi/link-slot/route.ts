@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveUser } from '@/lib/api/with-auth';
-import { updateSlot, unlinkSlot } from '@/lib/db/services/groupStatuses';
+import { updateSlot, unlinkSlot, reopenRdv } from '@/lib/db/services/groupStatuses';
 
 export async function POST(request: NextRequest) {
   const user = await resolveUser();
@@ -16,6 +16,13 @@ export async function POST(request: NextRequest) {
 
     if (action === 'unlink') {
       await unlinkSlot(Number(groupStatusId));
+      return NextResponse.json({ success: true });
+    }
+
+    // « Reporter le RDV » : annule la réservation (RDV + créneau) et remet le
+    // groupe en alerte (relance auto au prochain cron).
+    if (action === 'reopen') {
+      await reopenRdv(Number(groupStatusId));
       return NextResponse.json({ success: true });
     }
 

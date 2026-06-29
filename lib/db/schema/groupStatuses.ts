@@ -24,6 +24,8 @@ export const groupStatuses = pgTable(
     manualReminderAt: timestamp('manual_reminder_at'),
     /** Coach (reviewer) assigné lors de la dernière notification. */
     notifiedReviewerName: varchar('notified_reviewer_name', { length: 255 }),
+    /** Coach alerté sur Teams : review toujours pas saisie 10 j après réservation. */
+    coachAlertedAt: timestamp('coach_alerted_at'),
     lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
   },
   (table) => ({

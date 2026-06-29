@@ -251,6 +251,26 @@ export default function SuiviPage() {
     finally { setRowLoading(row.id, false); }
   }
 
+  // « Reporter le RDV » : annule la réservation et remet le groupe en alerte
+  // (relance auto au prochain cron).
+  async function callReopenRdv(row: SuiviRow) {
+    setRowLoading(row.id, true);
+    try {
+      const res = await fetch('/api/code-reviews/suivi/link-slot', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupStatusId: row.id, action: 'reopen' }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        toast.success('RDV reporté — groupe remis en alerte');
+      } else {
+        toast.error(data?.error ?? 'Échec');
+      }
+      await fetchRows();
+    } catch { toast.error('Erreur réseau'); }
+    finally { setRowLoading(row.id, false); }
+  }
+
   async function handleDeleteRow(row: SuiviRow) {
     setRowLoading(row.id, true);
     try {
@@ -796,6 +816,11 @@ export default function SuiviPage() {
                               </a>
                             </DropdownMenuItem>
                           )}
+                          {isBooked(row) && (
+                            <DropdownMenuItem onClick={() => callReopenRdv(row)} disabled={isLoading}>
+                              <RefreshCw className="mr-2 h-3.5 w-3.5" />Reporter le RDV
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleArchiveRow(row)} disabled={isLoading}>
                             Archiver
                           </DropdownMenuItem>
@@ -965,6 +990,11 @@ export default function SuiviPage() {
                                 : `/code-reviews/${row.promoId}`}>
                                 <ExternalLink className="mr-2 h-3.5 w-3.5" />Saisir la review
                               </a>
+                            </DropdownMenuItem>
+                          )}
+                          {isBooked(row) && (
+                            <DropdownMenuItem onClick={() => callReopenRdv(row)} disabled={isLoading}>
+                              <RefreshCw className="mr-2 h-3.5 w-3.5" />Reporter le RDV
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => handleArchiveRow(row)} disabled={isLoading}>

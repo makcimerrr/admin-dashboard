@@ -8,7 +8,9 @@ import {
   markAuditNotified,
   getNotifiedCount,
   getOverdueGroups,
-  markReminderSent
+  markReminderSent,
+  getBookedWithoutReview,
+  markCoachAlerted
 } from '@/lib/db/services/groupStatuses';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
@@ -311,6 +313,45 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Step 4: Alerte coach (Teams) — groupe RÉSERVÉ depuis ≥10 j mais review
+    // toujours pas saisie (aucun audit) → on prévient le coach (une seule fois).
+    const bookedNoReview = await getBookedWithoutReview();
+    let coachAlerts = 0;
+
+    for (const group of bookedNoReview) {
+      try {
+        if (!mandatoryProjects.has(group.projectName.toLowerCase())) continue;
+        const promo = promotions.find((p) => String(p.eventId) === group.promoId);
+        const pName = promo?.title ?? promo?.key ?? group.promoId;
+        const reservedAt = group.rdvConfirmedAt ?? group.slotBookedAt;
+        const days = reservedAt
+          ? Math.floor((Date.now() - new Date(reservedAt).getTime()) / 86_400_000)
+          : null;
+
+        const ok = await sendTeamsFormsCard(
+          buildRelanceCard({
+            title: '⚠️ Review non saisie — à vérifier',
+            facts: [
+              ...(group.notifiedReviewerName
+                ? [{ title: 'Coach', value: group.notifiedReviewerName }]
+                : []),
+              { title: 'Capitaine', value: group.captainLogin ?? '—' },
+              { title: 'Projet', value: group.projectName },
+              { title: 'Promo', value: pName },
+              ...(days != null ? [{ title: 'Réservé depuis', value: `${days} jours` }] : []),
+              { title: 'À vérifier', value: 'Saisie de la review manquante, ou projet non audité ?' },
+            ],
+          }),
+        );
+        if (ok) {
+          coachAlerts++;
+          await markCoachAlerted(group.id);
+        }
+      } catch (err) {
+        console.error(`Coach alert error for group ${group.id}:`, err);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       summary: {
@@ -320,7 +361,9 @@ export async function GET(request: NextRequest) {
         skippedNoDiscordId,
         errors,
         overdueReminders: reminders,
-        overdueTotal: overdue.length
+        overdueTotal: overdue.length,
+        coachAlerts,
+        bookedNoReviewTotal: bookedNoReview.length
       }
     });
   } catch (error) {

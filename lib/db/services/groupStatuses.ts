@@ -300,6 +300,63 @@ export async function unlinkSlot(id: number): Promise<void> {
     .where(eq(groupStatuses.id, id));
 }
 
+/**
+ * « Reporter le RDV » : annule la réservation (RDV confirmé + créneau) et réarme
+ * la relance auto → le groupe repasse en alerte (getOverdueGroups) et le cron
+ * `notify-audit-groups` re-notifie le capitaine au prochain passage.
+ */
+export async function reopenRdv(id: number): Promise<void> {
+  await db
+    .update(groupStatuses)
+    .set({
+      rdvConfirmedAt: null,
+      slotDate: null,
+      slotEventId: null,
+      slotBookedAt: null,
+      slotAttendeeEmail: null,
+      reminderSentAt: null,
+      coachAlertedAt: null,
+    })
+    .where(eq(groupStatuses.id, id));
+}
+
+/**
+ * Groupes RÉSERVÉS (RDV confirmé ou créneau lié) depuis ≥10 jours mais SANS
+ * review saisie (aucune ligne `audits` pour ce groupe/projet), pas encore
+ * signalés au coach. → alerte Teams unique (saisie manquante ou projet non audité).
+ */
+export async function getBookedWithoutReview(): Promise<(typeof groupStatuses.$inferSelect)[]> {
+  const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000);
+  const rows = await db
+    .select({ gs: groupStatuses })
+    .from(groupStatuses)
+    .leftJoin(
+      audits,
+      and(
+        eq(audits.groupId, groupStatuses.groupId),
+        eq(audits.promoId, groupStatuses.promoId),
+        sql`lower(${audits.projectName}) = lower(${groupStatuses.projectName})`,
+      ),
+    )
+    .where(
+      and(
+        or(isNotNull(groupStatuses.rdvConfirmedAt), isNotNull(groupStatuses.slotBookedAt)),
+        sql`coalesce(${groupStatuses.rdvConfirmedAt}, ${groupStatuses.slotBookedAt}) <= ${tenDaysAgo.toISOString()}`,
+        isNull(groupStatuses.coachAlertedAt),
+        sql`${groupStatuses.status} <> 'archived'`,
+        isNull(audits.id),
+      ),
+    );
+  return rows.map((r) => r.gs);
+}
+
+export async function markCoachAlerted(id: number): Promise<void> {
+  await db
+    .update(groupStatuses)
+    .set({ coachAlertedAt: new Date() })
+    .where(eq(groupStatuses.id, id));
+}
+
 export async function deleteGroupStatus(id: number): Promise<void> {
   await db.delete(groupStatuses).where(eq(groupStatuses.id, id));
 }
