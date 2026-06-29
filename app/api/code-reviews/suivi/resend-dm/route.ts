@@ -63,6 +63,10 @@ export const POST = withErrorHandler(
       .update(groupStatuses)
       .set({
         manualReminderAt: new Date(),
+        // Première notification : on marque le groupe comme notifié (le badge
+        // « Non notifié » disparaît). Les relances suivantes gardent la date
+        // d'origine et ne mettent à jour que manualReminderAt.
+        ...(row.notifiedAuditAt ? {} : { notifiedAuditAt: new Date() }),
         ...(reviewer ? { notifiedReviewerName: reviewer.name } : {}),
       })
       .where(eq(groupStatuses.id, Number(groupStatusId)));
