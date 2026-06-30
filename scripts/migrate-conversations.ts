@@ -1,10 +1,15 @@
 import 'dotenv/config';
-import { drizzle } from 'drizzle-orm/neon-http';
-import { migrate } from 'drizzle-orm/neon-http/migrator';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import postgres from 'postgres';
 
 async function runMigration() {
-  const sql = neon(process.env.DATABASE_URL!);
+  // Connexion unique POSTGRES_URL (runtime + drizzle-kit). Postgres interne du
+  // VPS = sans TLS → POSTGRES_SSL=disable. `max: 1` recommandé pour le migrator.
+  const sql = postgres(process.env.POSTGRES_URL!, {
+    ssl: process.env.POSTGRES_SSL === 'disable' ? false : true,
+    max: 1,
+  });
   const db = drizzle(sql);
 
   console.log('⏳ Running migrations...');
@@ -15,6 +20,8 @@ async function runMigration() {
   } catch (error) {
     console.error('❌ Migration failed:', error);
     process.exit(1);
+  } finally {
+    await sql.end();
   }
 }
 

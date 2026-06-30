@@ -1,4 +1,3 @@
-import { Analytics } from '@vercel/analytics/react';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SiteHeader } from '@/components/site-header';
 import { AppTabs } from '@/components/app-tabs';
@@ -121,7 +120,6 @@ export default async function DashboardLayout({
       <div className="fixed inset-0 flex flex-col overflow-hidden">
         <SiteHeader />
         <div className="flex flex-1 flex-col min-h-0 overflow-auto">{children}</div>
-        <Analytics />
       </div>
     );
   }
@@ -138,7 +136,6 @@ export default async function DashboardLayout({
             {children}
           </div>
         </div>
-        <Analytics />
       </div>
       <BottomNav user={user} />
       {(user.role === 'Admin' || user.role === 'Super Admin') && (
