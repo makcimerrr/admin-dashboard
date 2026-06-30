@@ -35,5 +35,8 @@ export const CACHE_TTL = {
  *     invalidate(CACHE_TAGS.projects);
  */
 export function invalidate(...tags: CacheTag[]) {
-  for (const t of tags) revalidateTag(t);
+  // Next 16 : revalidateTag exige un profil cacheLife en 2e argument.
+  // `max` = invalidation classique (le prochain accès recalcule). updateTag()
+  // n'est pas utilisable ici (réservé aux Server Actions ; on est en Route Handler).
+  for (const t of tags) revalidateTag(t, 'max');
 }
