@@ -28,7 +28,6 @@ import {
   SidebarMenuItem,
   useSidebar
 } from '@/components/ui/sidebar';
-import { Darker_Grotesque } from 'next/dist/compiled/@next/font/dist/google';
 import { useTheme } from 'next-themes';
 
 export function NavUser({ user, logout }: any) {
