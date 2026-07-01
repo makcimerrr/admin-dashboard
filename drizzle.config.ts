@@ -2,17 +2,14 @@
 import 'dotenv/config';
 import type { Config } from 'drizzle-kit';
 
-console.log('DB_HOST:', process.env.PGHOST);
-
+// Source de connexion UNIQUE : POSTGRES_URL (même variable que le runtime,
+// cf. lib/db/config.ts). Le Postgres interne du VPS est sans TLS ; pour une
+// base distante avec TLS, ajouter `?sslmode=require` dans l'URL.
 export default {
-  schema: './lib/db/schema', // <- sans ".ts", juste le dossier ou fichier
+  schema: './lib/db/schema',
   out: './drizzle/migrations',
-  dialect: 'postgresql', // ou 'sqlite', 'mysql'
+  dialect: 'postgresql',
   dbCredentials: {
-    host: process.env.PGHOST!,
-    database: process.env.PGDATABASE!,
-    user: process.env.PGUSER!,
-    password: process.env.PGPASSWORD!,
-    ssl: 'allow'
+    url: process.env.POSTGRES_URL!,
   },
 } satisfies Config;

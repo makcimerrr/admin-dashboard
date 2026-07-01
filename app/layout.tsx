@@ -1,6 +1,5 @@
 import './globals.css';
 
-import { Analytics } from '@vercel/analytics/react';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from '@/components/ui/sonner';
 import { Toaster as HotToaster } from 'react-hot-toast';
@@ -38,7 +37,6 @@ export default function RootLayout({
             />
           </Providers>
         </body>
-        <Analytics />
         </html>
     );
 }
