@@ -24,12 +24,14 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import GroupCard from '@/components/code-reviews/group-card';
 import GroupFilters from '@/components/code-reviews/group-filters';
+import { canAuditGroup } from '@/lib/types/code-reviews';
 
 const TRACKS = ['Golang', 'Javascript', 'Rust', 'Java'] as const;
 
-export default async function PromoGroupsIndexPage(props: any) {
-  const { params } = props as { params: { promoId: string } };
-  const { promoId } = params;
+export default async function PromoGroupsIndexPage(props: {
+  params: Promise<{ promoId: string }>;
+}) {
+  const { promoId } = await props.params;
 
   const [promoRes, allPromosRes] = await Promise.all([
     fetch(
@@ -101,7 +103,9 @@ export default async function PromoGroupsIndexPage(props: any) {
     for (const projectName of projectNames) {
       const groups = buildProjectGroups(progressions, projectName);
       for (const group of groups) {
-        if (group.status !== 'finished') continue;
+        // Groupes prêts pour une code-review staff : terminés (`finished`) OU
+        // soumis et en attente d'audit (`audit`). Cf. canAuditGroup().
+        if (!canAuditGroup(group.status)) continue;
 
         const audit = auditsByGroupId.get(group.groupId);
         const membersWithDropout = group.members.map((m: any) => ({

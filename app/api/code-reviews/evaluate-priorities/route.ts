@@ -5,6 +5,7 @@ import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { parsePromoId } from '@/lib/config/promotions';
 import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
+import { canAuditGroup } from '@/lib/types/code-reviews';
 import type { Track } from '@/lib/db/schema/audits';
 import { notFound } from 'next/navigation';
 
@@ -78,8 +79,8 @@ export async function GET(request: NextRequest) {
         const projectGroups = buildProjectGroups(progressions, projectName);
 
         for (const group of projectGroups) {
-          // Ne garder que les groupes finished NON audités
-          if (group.status !== 'finished') continue;
+          // Ne garder que les groupes auditables (finished/audit) NON audités
+          if (!canAuditGroup(group.status)) continue;
           if (auditedGroupIds.has(group.groupId)) continue;
 
           // Enrichir les membres avec le statut dropout

@@ -19,6 +19,7 @@ import { getDropoutLogins } from '@/lib/db/services/dropouts';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { trackAccent } from '@/lib/track-colors';
 import { LoadingCard } from '@/components/ui/loading-card';
+import { canAuditGroup } from '@/lib/types/code-reviews';
 import type { Track } from '@/lib/db/schema/audits';
 
 export const maxDuration = 60;
@@ -74,7 +75,7 @@ async function PromoOverview({ promoId }: { promoId: string }) {
     for (const projectName of projectNames) {
       const groups = buildProjectGroups(progressions, projectName);
       for (const group of groups) {
-        if (group.status !== 'finished') continue;
+        if (!canAuditGroup(group.status)) continue;
         const activeMembers = group.members.filter(
           (m) => !dropoutLogins.has(m.login.toLowerCase()),
         ).length;
@@ -156,7 +157,7 @@ async function PromoOverview({ promoId }: { promoId: string }) {
                 {totalGroups}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Groupes finished
+                Groupes à auditer
               </p>
             </div>
             <div className="text-center p-4 rounded-lg border border-success/30 bg-success/10 text-success">
