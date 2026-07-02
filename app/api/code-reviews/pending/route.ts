@@ -6,6 +6,7 @@ import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { evaluatePendingPriorities } from '@/lib/services/pending-priority';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getArchivedPromoNames } from '@/lib/db/filters';
+import { canAuditGroup } from '@/lib/types/code-reviews';
 import type { Track } from '@/lib/db/schema/audits';
 
 export const maxDuration = 60;
@@ -98,7 +99,7 @@ export async function GET(request: Request) {
             const groups = buildProjectGroups(progressions, projectName);
 
             for (const group of groups) {
-              if (group.status !== 'finished') continue;
+              if (!canAuditGroup(group.status)) continue;
               if (auditsByGroupId.has(group.groupId)) continue; // Déjà audité
 
               const membersWithDropout = group.members.map(m => ({

@@ -6,6 +6,7 @@ import { fetchPromotionProgressions, buildProjectGroups } from '@/lib/services/z
 import { getAuditedStudentsByPromoAndTrack } from '@/lib/db/services/audits';
 import { getProjectNamesByTrack } from '@/lib/config/projects';
 import { getAllPromotions } from '@/lib/config/promotions';
+import { canAuditGroup } from '@/lib/types/code-reviews';
 import type { Track } from '@/lib/db/schema/audits';
 
 /**
@@ -81,8 +82,9 @@ export async function GET(
         // Construire tous les groupes pour ce projet
         const groups = buildProjectGroups(progressions, projectName);
 
-        // Filtrer uniquement les groupes "finished"
-        const finishedGroups = groups.filter(g => g.status === 'finished');
+        // Groupes auditables : terminés (`finished`) OU soumis et en attente
+        // d'audit (`audit`). Cf. canAuditGroup().
+        const finishedGroups = groups.filter(g => canAuditGroup(g.status));
 
         for (const group of finishedGroups) {
           // Vérifier si l'étudiant est membre de ce groupe
