@@ -88,6 +88,7 @@ export async function GET(request: Request) {
           track: Track;
           members: { login: string; isDropout: boolean }[];
           activeMembers: number;
+          status: string;
         }> = new Map();
 
         for (const track of TRACKS) {
@@ -117,6 +118,7 @@ export async function GET(request: Request) {
                 track,
                 members: membersWithDropout,
                 activeMembers,
+                status: group.status,
               };
 
               groupsData.set(group.groupId, groupData);
@@ -142,7 +144,7 @@ export async function GET(request: Request) {
               members: groupData.members,
               membersCount: groupData.members.length,
               activeMembers: evalGroup.activeMembers,
-              status: 'finished',
+              status: groupData.status,
               priority: evalGroup.priority,
               priorityScore: evalGroup.priorityScore,
               priorityReasons: evalGroup.reasons,
