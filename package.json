@@ -103,7 +103,10 @@
     "overrides": {
       "trim-newlines": "3.0.1",
       "esbuild": "^0.25.0",
-      "@babel/runtime": "^7.26.10"
+      "@babel/runtime": "^7.26.10",
+      "websocket-driver@<0.7.5": ">=0.7.5",
+      "protobufjs@<7.5.5": "^7.5.5",
+      "fast-xml-parser@>=5.0.0 <5.3.5": ">=5.3.5"
     },
     "onlyBuiltDependencies": [
       "sharp"
