@@ -34,7 +34,7 @@ import { getWeekNumber } from '@/lib/db/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast as sonnerToast } from 'sonner';
-import { useUser } from "@stackframe/stack";
+import { useUserAccess } from "@/contexts/user-access-context";
 import { PageHeader } from '@/components/page-header';
 import { FilterToolbar } from '@/components/planning/filter-toolbar';
 import { EmployeeColorDot } from '@/components/planning/employee-color-dot';
@@ -170,12 +170,8 @@ export default function AbsencesPage() {
     search: string;
   }>({ employeeId: 'all', type: 'all', start: null, end: null, search: '' });
   const { toast } = useToast();
-  const stackUser = useUser();
-  const planningPermission = stackUser
-    ? ((stackUser.clientReadOnlyMetadata?.planningPermission ||
-       stackUser.clientMetadata?.planningPermission ||
-       'reader') as string)
-    : 'reader';
+  const access = useUserAccess();
+  const planningPermission = access?.planningPermission ?? 'reader';
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addEmployeeId, setAddEmployeeId] = useState('');

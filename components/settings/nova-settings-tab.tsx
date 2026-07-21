@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useUser } from '@stackframe/stack';
+import { useUserAccess } from '@/contexts/user-access-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +34,10 @@ type ConversationStats = {
  */
 export function NovaSettingsTab() {
   const user = useUser();
-  const userId = user?.primaryEmail || 'anonymous';
+  const access = useUserAccess();
+  // Même identifiant que la bulle Nova (layout : userId = email unifié) —
+  // sans le fallback access, un compte Authentik retombait sur 'anonymous'.
+  const userId = user?.primaryEmail || access?.email || 'anonymous';
   const [stats, setStats] = useState<ConversationStats | null>(null);
   const [deleting, setDeleting] = useState(false);
 

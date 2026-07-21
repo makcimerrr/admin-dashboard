@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useUser } from "@stackframe/stack";
+import { useUserAccess } from "@/contexts/user-access-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ interface HistoryEntry {
 }
 
 export default function HistoryClient({ initialHistory }: { initialHistory: HistoryEntry[] }) {
-  const stackUser = useUser();
+  const access = useUserAccess();
   // Données initiales fournies par le serveur (limit=100, sans filtre) →
   // pas de fetch au montage, pas de flash de loader.
   const [history, setHistory] = useState<HistoryEntry[]>(initialHistory);
@@ -43,11 +43,7 @@ export default function HistoryClient({ initialHistory }: { initialHistory: Hist
   // filtre change réellement.
   const skipInitialFetch = useRef(true);
 
-  const planningPermission = stackUser
-    ? ((stackUser.clientReadOnlyMetadata?.planningPermission ||
-       stackUser.clientMetadata?.planningPermission ||
-       'reader') as string)
-    : 'reader';
+  const planningPermission = access?.planningPermission ?? 'reader';
 
   useEffect(() => {
     if (skipInitialFetch.current) {

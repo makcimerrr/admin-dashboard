@@ -44,6 +44,22 @@ export async function listAllUsers(): Promise<LocalUserListItem[]> {
 }
 
 /**
+ * Accès (role + planningPermission) d'un user local par email (case-insensitive).
+ * Source d'autorité pour les comptes Authentik/SSO (gérée via la page /members).
+ */
+export async function getUserAccessByEmail(
+    email: string,
+): Promise<{ role: string | null; planningPermission: string | null } | null> {
+    const rows = await db
+        .select({ role: users.role, planningPermission: users.planningPermission })
+        .from(users)
+        .where(sql`lower(${users.email}) = lower(${email})`)
+        .limit(1)
+        .execute();
+    return rows[0] ?? null;
+}
+
+/**
  * Met à jour l'accès d'un user local par email (case-insensitive).
  * Seuls les champs fournis sont mis à jour.
  * @returns true si une ligne a été modifiée.

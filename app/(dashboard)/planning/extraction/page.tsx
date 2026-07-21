@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { addDays, isAfter, parseISO } from 'date-fns';
 import { FileBarChart, Loader2 } from 'lucide-react';
-import { useUser } from "@stackframe/stack";
+import { useUserAccess } from "@/contexts/user-access-context";
 import { PageHeader } from '@/components/page-header';
 import { FilterToolbar } from '@/components/planning/filter-toolbar';
 import { EmployeeColorDot } from '@/components/planning/employee-color-dot';
@@ -75,12 +75,8 @@ export default function ExtractionPage() {
   const [rows, setRows] = useState<ExtractionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const stackUser = useUser();
-  const planningPermission = stackUser
-    ? ((stackUser.clientReadOnlyMetadata?.planningPermission ||
-       stackUser.clientMetadata?.planningPermission ||
-       'reader') as string)
-    : 'reader';
+  const access = useUserAccess();
+  const planningPermission = access?.planningPermission ?? 'reader';
 
   useEffect(() => {
     fetch('/api/employees')

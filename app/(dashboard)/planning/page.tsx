@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, LayoutTemplate, Users, Clock, List, Grid } from 'lucide-react';
 import { useToast } from '@/components/hooks/use-toast';
-import { useUser } from '@stackframe/stack';
+import { useUserAccess } from '@/contexts/user-access-context';
 import { useIsMobile } from '@/components/hooks/use-mobile';
 import { PageHeader } from '@/components/page-header';
 import { WeekSelector } from '@/components/planning/week-selector';
@@ -37,10 +37,8 @@ const slotTypeConfig: Record<string, { label: string; bgColor: string; borderCol
 };
 
 export default function PlanningPage() {
-  const stackUser = useUser();
-  const planningPermission = stackUser
-    ? ((stackUser.clientReadOnlyMetadata?.planningPermission || stackUser.clientMetadata?.planningPermission || 'reader') as string)
-    : 'reader';
+  const access = useUserAccess();
+  const planningPermission = access?.planningPermission ?? 'reader';
   const isEditor = planningPermission === 'editor';
   const isMobile = useIsMobile();
 

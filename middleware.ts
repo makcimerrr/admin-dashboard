@@ -88,7 +88,12 @@ async function resolveRole(req: NextRequest): Promise<string | null> {
     secureCookie: shouldUseSecureCookies(),
   });
   if (token) {
-    if (Array.isArray(token.groups) && token.groups.includes('authentik Admins')) {
+    // Admin = groupe Developers ou authentik Admins (aligné sur auth-options
+    // et le layout dashboard).
+    if (
+      Array.isArray(token.groups) &&
+      (token.groups.includes('authentik Admins') || token.groups.includes('Developers'))
+    ) {
       return 'admin';
     }
     return 'user';
@@ -281,11 +286,12 @@ export async function middleware(req: NextRequest) {
   });
 
   if (token) {
-    // Si l'utilisateur est dans le groupe "authentik Admins", rôle = admin
+    // Admin = groupe Developers ou authentik Admins (aligné sur auth-options
+    // et le layout dashboard).
     let role = 'user';
     if (
       Array.isArray(token.groups) &&
-      token.groups.includes('authentik Admins')
+      (token.groups.includes('authentik Admins') || token.groups.includes('Developers'))
     ) {
       role = 'admin';
     }
