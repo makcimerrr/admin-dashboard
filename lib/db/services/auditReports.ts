@@ -2,7 +2,7 @@ import { db } from '../config';
 import { students } from '../schema/students';
 import { discordUsers } from '../schema/discordUsers';
 import { auditReportRequests } from '../schema/auditReportRequests';
-import { eq, and, inArray, isNull, isNotNull, lt } from 'drizzle-orm';
+import { eq, and, inArray, isNull, isNotNull, lt, gt } from 'drizzle-orm';
 import { zone01Graphql } from '@/lib/services/zone01-graphql';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getMandatoryProjectNames } from '@/lib/config/projects';
@@ -388,15 +388,28 @@ export interface EscalatedUnansweredItem {
   escalatedAt: Date;
 }
 
+export interface EscalatedUnansweredRecap {
+  /** Relances récentes (fenêtre `windowDays`) toujours sans réponse. */
+  items: EscalatedUnansweredItem[];
+  /** Relances plus anciennes que la fenêtre, toujours sans réponse. */
+  olderCount: number;
+}
+
 /**
- * Récap quotidien — demandes déjà escaladées (carte rouge envoyée) et TOUJOURS
- * sans réponse. On exclut les escalades de moins de `minAgeHours` (celles du
- * run courant : leur carte rouge vient d'être postée, inutile de les relister).
+ * Récap quotidien — demandes réellement escaladées (carte rouge envoyée) et
+ * TOUJOURS sans réponse.
+ * - `escalated_at > requested_at` exclut la baseline du 2026-06-05 (485 lignes
+ *   historiques marquées `escalated_at = requested_at` SANS carte envoyée).
+ * - On exclut les escalades de moins de `minAgeHours` (run courant : leur
+ *   carte rouge vient d'être postée).
+ * - Seules les relances des `windowDays` derniers jours sont listées (carte
+ *   lisible) ; les plus anciennes sont comptées dans `olderCount`.
  * Même filtre « projets obligatoires » que l'escalade.
  */
 export async function getEscalatedUnanswered(
   minAgeHours = 20,
-): Promise<EscalatedUnansweredItem[]> {
+  windowDays = 14,
+): Promise<EscalatedUnansweredRecap> {
   const cutoff = new Date(Date.now() - minAgeHours * 3600_000);
   const rows = await db
     .select({
@@ -411,14 +424,21 @@ export async function getEscalatedUnanswered(
         isNull(auditReportRequests.respondedAt),
         isNotNull(auditReportRequests.escalatedAt),
         lt(auditReportRequests.escalatedAt, cutoff),
+        gt(auditReportRequests.escalatedAt, auditReportRequests.requestedAt),
       ),
     );
 
   const mandatory = await getMandatoryProjectNames();
-  return rows
+  const all = rows
     .filter((r) => mandatory.has((r.projectName ?? '').toLowerCase()))
     .map((r) => ({ ...r, escalatedAt: r.escalatedAt! }))
     .sort((a, b) => a.escalatedAt.getTime() - b.escalatedAt.getTime());
+
+  const windowStart = Date.now() - windowDays * 24 * 3600_000;
+  return {
+    items: all.filter((r) => r.escalatedAt.getTime() >= windowStart),
+    olderCount: all.filter((r) => r.escalatedAt.getTime() < windowStart).length,
+  };
 }
 
 export { SINCE_DAYS_DEFAULT, ESCALATE_AFTER_BUSINESS_DAYS };
