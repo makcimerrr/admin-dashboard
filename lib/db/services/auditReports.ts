@@ -2,7 +2,7 @@ import { db } from '../config';
 import { students } from '../schema/students';
 import { discordUsers } from '../schema/discordUsers';
 import { auditReportRequests } from '../schema/auditReportRequests';
-import { eq, and, inArray, isNull } from 'drizzle-orm';
+import { eq, and, inArray, isNull, isNotNull, lt } from 'drizzle-orm';
 import { zone01Graphql } from '@/lib/services/zone01-graphql';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getMandatoryProjectNames } from '@/lib/config/projects';
@@ -265,8 +265,8 @@ export async function markAuditResponded(
   groupId: string,
   status: string,
   comment: string | null,
-): Promise<void> {
-  await db
+): Promise<{ requestedAt: Date; escalatedAt: Date | null; projectName: string | null } | null> {
+  const rows = await db
     .update(auditReportRequests)
     .set({
       respondedAt: new Date(),
@@ -278,7 +278,13 @@ export async function markAuditResponded(
         eq(auditReportRequests.auditorLogin, auditorLogin),
         eq(auditReportRequests.groupId, groupId),
       ),
-    );
+    )
+    .returning({
+      requestedAt: auditReportRequests.requestedAt,
+      escalatedAt: auditReportRequests.escalatedAt,
+      projectName: auditReportRequests.projectName,
+    });
+  return rows[0] ?? null;
 }
 
 export interface AuditRequestToEscalate {
@@ -373,6 +379,46 @@ export async function markAuditEscalated(id: number): Promise<void> {
     .update(auditReportRequests)
     .set({ escalatedAt: new Date() })
     .where(eq(auditReportRequests.id, id));
+}
+
+export interface EscalatedUnansweredItem {
+  auditorLogin: string;
+  projectName: string | null;
+  requestedAt: Date;
+  escalatedAt: Date;
+}
+
+/**
+ * Récap quotidien — demandes déjà escaladées (carte rouge envoyée) et TOUJOURS
+ * sans réponse. On exclut les escalades de moins de `minAgeHours` (celles du
+ * run courant : leur carte rouge vient d'être postée, inutile de les relister).
+ * Même filtre « projets obligatoires » que l'escalade.
+ */
+export async function getEscalatedUnanswered(
+  minAgeHours = 20,
+): Promise<EscalatedUnansweredItem[]> {
+  const cutoff = new Date(Date.now() - minAgeHours * 3600_000);
+  const rows = await db
+    .select({
+      auditorLogin: auditReportRequests.auditorLogin,
+      projectName: auditReportRequests.projectName,
+      requestedAt: auditReportRequests.requestedAt,
+      escalatedAt: auditReportRequests.escalatedAt,
+    })
+    .from(auditReportRequests)
+    .where(
+      and(
+        isNull(auditReportRequests.respondedAt),
+        isNotNull(auditReportRequests.escalatedAt),
+        lt(auditReportRequests.escalatedAt, cutoff),
+      ),
+    );
+
+  const mandatory = await getMandatoryProjectNames();
+  return rows
+    .filter((r) => mandatory.has((r.projectName ?? '').toLowerCase()))
+    .map((r) => ({ ...r, escalatedAt: r.escalatedAt! }))
+    .sort((a, b) => a.escalatedAt.getTime() - b.escalatedAt.getTime());
 }
 
 export { SINCE_DAYS_DEFAULT, ESCALATE_AFTER_BUSINESS_DAYS };

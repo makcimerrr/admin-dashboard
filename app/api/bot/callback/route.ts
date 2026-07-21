@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { markRdvConfirmed } from '@/lib/db/services/groupStatuses';
 import { markAuditResponded, getStudentDisplayNames, getGroupMemberNames } from '@/lib/db/services/auditReports';
-import { sendTeamsFormsCard, buildReplyCard, buildBookedCard } from '@/lib/services/teams';
+import { sendTeamsFormsCard, buildReplyCard, buildBookedCard, buildReportReceivedCard } from '@/lib/services/teams';
 import { getPromotionByEventId } from '@/lib/config/promotions';
 
 export const dynamic = 'force-dynamic';
@@ -97,9 +97,19 @@ export async function POST(request: NextRequest) {
 
       // (a) Enregistrer la réponse de l'auditeur EN PREMIER (rapport d'audit) :
       // ainsi un échec Teams ne fait pas perdre la réponse ni la confirmation.
+      // Si la demande avait été escaladée (carte rouge « sans réponse » déjà
+      // postée), on garde l'info pour poster la carte verte correspondante.
+      let respondedAfterEscalation: { requestedAt: Date; escalatedAt: Date; projectName: string | null } | null = null;
       if (context.type === 'audit_report' && context.auditorLogin && context.groupId) {
         try {
-          await markAuditResponded(context.auditorLogin, context.groupId, status, comment || null);
+          const prev = await markAuditResponded(context.auditorLogin, context.groupId, status, comment || null);
+          if (prev?.escalatedAt) {
+            respondedAfterEscalation = {
+              requestedAt: prev.requestedAt,
+              escalatedAt: prev.escalatedAt,
+              projectName: prev.projectName,
+            };
+          }
         } catch (e) {
           console.error('[bot/callback] markAuditResponded échec:', e);
         }
@@ -132,6 +142,25 @@ export async function POST(request: NextRequest) {
         );
       } catch (e) {
         console.error('[bot/callback] sendTeamsFormsCard (reply) échec:', e);
+      }
+
+      // (c) Carte verte « rapport reçu après relance » : pendant de la carte
+      // rouge d'escalade, sur le même canal — un ⚠️ sans ✅ = toujours en
+      // attente. Non bloquant.
+      if (respondedAfterEscalation && context.auditorLogin) {
+        try {
+          await sendTeamsFormsCard(
+            buildReportReceivedCard({
+              auditorLogin: context.auditorLogin,
+              projectName: respondedAfterEscalation.projectName ?? context.projectName,
+              requestedAt: respondedAfterEscalation.requestedAt,
+              escalatedAt: respondedAfterEscalation.escalatedAt,
+              status,
+            }),
+          );
+        } catch (e) {
+          console.error('[bot/callback] sendTeamsFormsCard (report received) échec:', e);
+        }
       }
 
       return NextResponse.json({ ok: true });
