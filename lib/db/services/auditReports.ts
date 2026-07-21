@@ -441,4 +441,81 @@ export async function getEscalatedUnanswered(
   };
 }
 
+/**
+ * Message Discord de 2e RELANCE — l'auditeur n'a répondu ni à la demande
+ * initiale ni à la relance (> 14 j). Ton plus ferme, même bouton Répondre.
+ */
+export function buildAuditReportSecondReminderMessage(
+  auditorLogin: string,
+  project: string,
+  members: string,
+): string {
+  const author = members.trim() ? `un autre groupe (${members.trim()})` : `un autre groupe`;
+  return [
+    `Hey ${auditorLogin},`,
+    ``,
+    `🔔 **Dernière relance** : ton **compte-rendu** de l'audit du projet **${project}** (réalisé par ${author}) est attendu depuis plus de deux semaines, malgré un premier rappel.`,
+    ``,
+    `C'est important pour le suivi des groupes : clique sur **Répondre** (2 min) pour nous donner déroulé, points forts/faibles et soucis éventuels.`,
+    ``,
+    `Sans réponse, le staff sera notifié individuellement. Merci ! 🙏`,
+  ].join('\n');
+}
+
+export interface SecondReminderTarget {
+  id: number;
+  auditorLogin: string;
+  groupId: string;
+  projectName: string | null;
+  requestedAt: Date;
+  escalatedAt: Date;
+}
+
+/**
+ * Cibles de la 2e relance : vraies escalades (`escalated_at > requested_at`,
+ * exclut la baseline), sans réponse, escaladées depuis plus de `minDays`
+ * jours, jamais re-relancées. `limit` borne le lot par run (étalement du
+ * backlog initial). Mêmes filtres projets que l'escalade.
+ */
+export async function getSecondReminderTargets(
+  limit = 25,
+  minDays = 14,
+): Promise<SecondReminderTarget[]> {
+  const cutoff = new Date(Date.now() - minDays * 24 * 3600_000);
+  const rows = await db
+    .select({
+      id: auditReportRequests.id,
+      auditorLogin: auditReportRequests.auditorLogin,
+      groupId: auditReportRequests.groupId,
+      projectName: auditReportRequests.projectName,
+      requestedAt: auditReportRequests.requestedAt,
+      escalatedAt: auditReportRequests.escalatedAt,
+    })
+    .from(auditReportRequests)
+    .where(
+      and(
+        isNull(auditReportRequests.respondedAt),
+        isNull(auditReportRequests.secondReminderAt),
+        isNotNull(auditReportRequests.escalatedAt),
+        lt(auditReportRequests.escalatedAt, cutoff),
+        gt(auditReportRequests.escalatedAt, auditReportRequests.requestedAt),
+      ),
+    );
+
+  const mandatory = await getMandatoryProjectNames();
+  return rows
+    .filter((r) => mandatory.has((r.projectName ?? '').toLowerCase()))
+    .map((r) => ({ ...r, escalatedAt: r.escalatedAt! }))
+    .sort((a, b) => a.escalatedAt.getTime() - b.escalatedAt.getTime())
+    .slice(0, limit);
+}
+
+/** Marque la 2e relance envoyée (ou traitée : auditeur sans Discord lié). */
+export async function markSecondReminderSent(id: number): Promise<void> {
+  await db
+    .update(auditReportRequests)
+    .set({ secondReminderAt: new Date() })
+    .where(eq(auditReportRequests.id, id));
+}
+
 export { SINCE_DAYS_DEFAULT, ESCALATE_AFTER_BUSINESS_DAYS };

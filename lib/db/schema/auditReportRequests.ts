@@ -19,6 +19,8 @@ export const auditReportRequests = pgTable(
     responseComment: varchar('response_comment', { length: 2000 }),
     /** Message Teams d'escalade envoyé (Feature 7 — 2 jours ouvrés sans réponse). */
     escalatedAt: timestamp('escalated_at'),
+    /** 2e relance Discord envoyée (backlog : escaladé > 14 j, toujours sans réponse). */
+    secondReminderAt: timestamp('second_reminder_at'),
   },
   (table) => ({
     uniqueReq: uniqueIndex('idx_audit_report_req_unique').on(table.auditorLogin, table.groupId),
