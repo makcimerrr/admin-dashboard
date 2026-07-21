@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from "@/components/hooks/use-toast";
 import { Users, Plus, Trash2, Edit, Mail, Phone } from "lucide-react";
 import type { Employee } from "@/lib/db/schema/employees";
-import { useUser } from "@stackframe/stack";
+import { useUserAccess } from "@/contexts/user-access-context";
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingCard } from '@/components/ui/loading-card';
@@ -36,12 +36,8 @@ export default function EmployeesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const { toast } = useToast();
-  const stackUser = useUser();
-  const planningPermission = stackUser
-    ? ((stackUser.clientReadOnlyMetadata?.planningPermission ||
-       stackUser.clientMetadata?.planningPermission ||
-       'reader') as string)
-    : 'reader';
+  const access = useUserAccess();
+  const planningPermission = access?.planningPermission ?? 'reader';
 
   useEffect(() => {
     if (employeesError) {

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { useUser } from '@stackframe/stack';
 import { AccountSettings } from '@stackframe/stack';
+import { useUserAccess } from '@/contexts/user-access-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -49,7 +50,11 @@ export default function SettingsPage() {
   // anywhere in the app switches the active tab (not just on first mount).
   const tabFromUrl = searchParams.get('tab') ?? 'profile';
   const { theme, setTheme } = useTheme();
+  // Session Stack (null pour un compte Authentik) — sert uniquement aux
+  // features Stack (AccountSettings, prefs stockées en clientMetadata).
   const user = useUser();
+  // Accès unifié Stack/Authentik résolu côté serveur (layout dashboard).
+  const access = useUserAccess();
   const { density, setDensity } = useUIPreferences();
   const [mounted, setMounted] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -104,8 +109,8 @@ export default function SettingsPage() {
     updateNotificationPref('browserNotifications', checked);
   };
 
-  const userRole = (user?.clientReadOnlyMetadata as Record<string, unknown>)?.role as string || 'user';
-  const planningPermission = (user?.clientReadOnlyMetadata as Record<string, unknown>)?.planningPermission as string || 'reader';
+  const userRole = access?.role ?? 'user';
+  const planningPermission = access?.planningPermission ?? 'reader';
 
   return (
     <div className="page-container flex flex-col gap-4 md:gap-6 p-4 md:p-6">
@@ -180,7 +185,27 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AccountSettings fullPage={false} />
+              {user ? (
+                // Compte Stack : panneau de gestion Stack (email, mdp, MFA…).
+                // NE PAS le rendre sans session Stack : il redirige vers
+                // /handler/sign-in (cas des comptes Authentik).
+                <AccountSettings fullPage={false} />
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <span className="text-sm font-medium">Nom</span>
+                    <span className="text-sm text-muted-foreground">{access?.name ?? '—'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <span className="text-sm font-medium">Email</span>
+                    <span className="text-sm text-muted-foreground">{access?.email ?? '—'}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Votre compte est géré par le SSO Zone01 (Authentik). Les informations
+                    personnelles et le mot de passe se modifient depuis Authentik.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -3,11 +3,10 @@ import { SiteHeader } from '@/components/site-header';
 import { AppTabs } from '@/components/app-tabs';
 import { BottomNav } from '@/components/bottom-nav';
 import { AssistantBubble } from '@/components/assistant/assistant-bubble';
-import { stackServerApp } from '@/lib/stack-server';
 import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth-options'; // ton NextAuth config
+import { resolveUser } from '@/lib/api/with-auth';
 import { isAdminRole } from '@/lib/nav-apps';
+import { UserAccessProvider } from '@/contexts/user-access-context';
 import type React from 'react';
 
 // Dashboard authentifié : rendu à la demande (jamais prérendu au build).
@@ -20,79 +19,15 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   // ===============================
-  // 1. Essayer Stack Auth
+  // 1. Résolution unifiée Stack / Authentik (rôle + permission planning ;
+  //    les comptes Authentik lisent leurs accès dans la table locale `users`).
   // ===============================
-  const stackUser = await stackServerApp.getUser();
-
-  let user: {
-    id: string;
-    email: string;
-    name: string;
-    image?: string;
-    role: string;
-    planningPermission: string;
-    provider: 'stack' | 'authentik';
-  } | null = null;
-
-  if (stackUser) {
-    // Utilisateur Stack Auth trouvé
-    user = {
-      id: stackUser.id,
-      email: stackUser.primaryEmail ?? '',
-      name: stackUser.displayName ?? stackUser.primaryEmail ?? '',
-      image: stackUser.profileImageUrl ?? undefined,
-      role:
-        stackUser.serverMetadata?.role ||
-        stackUser.clientReadOnlyMetadata?.role ||
-        stackUser.clientMetadata?.role ||
-        'user',
-      planningPermission:
-        stackUser.serverMetadata?.planningPermission ||
-        stackUser.clientReadOnlyMetadata?.planningPermission ||
-        stackUser.clientMetadata?.planningPermission ||
-        'reader',
-      provider: 'stack',
-    };
-
-    /*console.log('✅ Dashboard - Stack Auth utilisateur:', user.email, '- Rôle:', user.role);*/
-  } else {
-    // ===============================
-    // 2. Essayer NextAuth / Authentik
-    // ===============================
-    const session = await getServerSession(authOptions);
-
-    if (session?.user?.email) {
-      // Déterminer le rôle à partir des groupes Authentik
-      const groups: string[] = (session.user.groups || []) as string[];
-      // Admin = groupe Developers (ou authentik Admins). Sans groupe = étudiant.
-      const isAdmin = groups.includes('Developers') || groups.includes('authentik Admins');
-
-      user = {
-        id: session.user.id ?? '',
-        email: session.user.email ?? '',
-        name: session.user.name ?? session.user.email ?? '',
-        image: session.user.image ?? undefined,
-        role: isAdmin ? 'Admin' : 'user',
-        planningPermission: 'reader', // par défaut pour Authentik
-        provider: 'authentik',
-      };
-
-      console.log(
-        '✅ Dashboard - NextAuth/Authentik utilisateur connecté:',
-        user.email,
-        'Role:',
-        user.role
-      );
-    }
-  }
+  const user = await resolveUser();
 
   // ===============================
   // 3. Pas de session détectée → rediriger vers login
   // ===============================
   if (!user) {
-    console.log(
-      '⛔ Dashboard - Aucun utilisateur connecté, redirection vers /login'
-    );
     redirect('/login');
   }
 
@@ -111,36 +46,51 @@ export default async function DashboardLayout({
   // ===============================
   const isStudent = !isAdminRole(user.role);
 
+  // Accès unifié exposé aux Client Components (pages planning/settings…) :
+  // remplace useUser() de Stack, qui renvoie null pour les comptes Authentik.
+  const access = {
+    email: user.email,
+    name: user.name,
+    image: user.image ?? null,
+    role: user.role,
+    planningPermission: user.planningPermission,
+    provider: user.provider,
+  };
+
   // Étudiant : shell minimal (juste le header pour le menu/déconnexion). La
   // navigation est la navbar PARTAGÉE z01-student-nav (sidebar desktop / bottom
   // mobile, rendue dans la landing) — identique sur hub/émargement/01deck. On
   // réserve l'espace : padding gauche (sidebar desktop) / bas (barre mobile).
   if (isStudent) {
     return (
-      <div className="fixed inset-0 flex flex-col overflow-hidden">
-        <SiteHeader />
-        <div className="flex flex-1 flex-col min-h-0 overflow-auto">{children}</div>
-      </div>
+      <UserAccessProvider value={access}>
+        <div className="fixed inset-0 flex flex-col overflow-hidden">
+          <SiteHeader />
+          <div className="flex flex-1 flex-col min-h-0 overflow-auto">{children}</div>
+        </div>
+      </UserAccessProvider>
     );
   }
 
   // Admin : shell complet (sidebar + onglets + bottom-nav).
   return (
-    <div className="fixed inset-0 flex overflow-hidden">
-      <AppSidebar user={user} />
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        <SiteHeader />
-        <AppTabs />
-        <div className="flex flex-1 flex-col min-h-0 overflow-auto pb-14 md:pb-0">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            {children}
+    <UserAccessProvider value={access}>
+      <div className="fixed inset-0 flex overflow-hidden">
+        <AppSidebar user={user} />
+        <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+          <SiteHeader />
+          <AppTabs />
+          <div className="flex flex-1 flex-col min-h-0 overflow-auto pb-14 md:pb-0">
+            <div className="@container/main flex flex-1 flex-col gap-2">
+              {children}
+            </div>
           </div>
         </div>
+        <BottomNav user={user} />
+        {(user.role === 'Admin' || user.role === 'Super Admin') && (
+          <AssistantBubble userId={user.email} />
+        )}
       </div>
-      <BottomNav user={user} />
-      {(user.role === 'Admin' || user.role === 'Super Admin') && (
-        <AssistantBubble userId={user.email} />
-      )}
-    </div>
+    </UserAccessProvider>
   );
 }
