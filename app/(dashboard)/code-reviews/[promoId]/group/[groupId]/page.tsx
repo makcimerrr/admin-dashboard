@@ -96,12 +96,30 @@ export default async function GroupDetailPage({ params }: PageProps) {
     getDropoutLogins()
   ]);
 
-  // Trouver le groupe dans les progressions
-  const groupProgressions = progressions.filter(
-    (p) =>
-      String(p.group.id) === groupId &&
-      p.object.name.toLowerCase() === projectName.toLowerCase()
-  );
+  // Trouver le groupe dans les progressions. Zone01 peut renvoyer PLUSIEURS
+  // lignes de progression par étudiant pour le même projet/groupe (retries) :
+  // dédupliquer par login (même règle que buildProjectGroups), sinon chaque
+  // membre apparaît en double dans la liste. On garde la première ligne et on
+  // complète le grade avec la première valeur non nulle rencontrée.
+  const progressionByLogin = new Map<string, (typeof progressions)[number]>();
+  for (const p of progressions) {
+    if (
+      String(p.group.id) !== groupId ||
+      p.object.name.toLowerCase() !== projectName.toLowerCase()
+    ) {
+      continue;
+    }
+    const key = p.user.login.toLowerCase();
+    const existing = progressionByLogin.get(key);
+    if (!existing) {
+      // Copie superficielle : les progressions viennent d'un cache partagé,
+      // ne pas muter les objets originaux.
+      progressionByLogin.set(key, { ...p });
+    } else if (existing.grade == null && p.grade != null) {
+      existing.grade = p.grade;
+    }
+  }
+  const groupProgressions = Array.from(progressionByLogin.values());
 
   // Récupérer les IDs des étudiants depuis la DB
   const memberLogins = groupProgressions.map((p) => p.user.login.toLowerCase());
