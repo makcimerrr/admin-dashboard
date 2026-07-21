@@ -10,7 +10,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@ai-sdk/groq": "^0.0",
     "@ai-sdk/mistral": "^3.0.27",
     "@anthropic-ai/sdk": "^0.78.0",
     "@dnd-kit/core": "^6.3.1",
@@ -116,7 +115,14 @@
       "lodash@<=4.17.23": "^4.18.0",
       "minimatch@>=9.0.0 <9.0.7": "^9.0.7",
       "picomatch@<2.3.2": "^2.3.2",
-      "tmp@<0.2.6": "^0.2.6"
+      "tmp@<0.2.6": "^0.2.6",
+      "bn.js@<4.12.3": "^4.12.3",
+      "cookie@<0.7.0": "^0.7.0",
+      "mdast-util-to-hast@>=13.0.0 <13.2.1": "^13.2.1",
+      "postcss@<8.5.10": "^8.5.10",
+      "qs@>=6.11.1 <6.15.2": "^6.15.2",
+      "uuid@<11.1.1": "^11.1.1",
+      "yaml@>=2.0.0 <2.8.3": "^2.8.3"
     },
     "onlyBuiltDependencies": [
       "sharp"
