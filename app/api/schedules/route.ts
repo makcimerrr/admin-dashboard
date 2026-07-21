@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { withPlanningAccess, withPlanningEditor } from "@/lib/api/with-auth"
 import { db } from "@/lib/db/config"
 import { schedules } from "@/lib/db/schema/schedules"
 import { eq, and } from "drizzle-orm"
@@ -47,7 +48,7 @@ function getDateFromWeekKeyAndDay(weekKey: string, day: string): string | null {
 }
 
 // GET /api/schedules?weekKey=2024-W1
-export async function GET(request: Request) {
+export const GET = withPlanningAccess(async (request) => {
   try {
     const { searchParams } = new URL(request.url)
     const weekKey = searchParams.get("weekKey")
@@ -66,15 +67,16 @@ export async function GET(request: Request) {
     console.error("Error fetching schedules:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
-}
+})
 
 // POST /api/schedules
-export async function POST(request: Request) {
+export const POST = withPlanningEditor(async (request, { user }) => {
   try {
     const body = await request.json()
     const { employeeId, weekKey, day, timeSlots } = body
-    const userId = request.headers.get('x-user-id') || 'unknown';
-    const userEmail = request.headers.get('x-user-email') || 'unknown';
+    // Identité authentifiée pour l'audit (les headers x-user-* étaient falsifiables)
+    const userId = user.id;
+    const userEmail = user.email;
 
     // Récupérer les jours fériés
     const holidays = await getFrenchHolidays();
@@ -148,17 +150,17 @@ export async function POST(request: Request) {
     console.error("Error creating/updating schedule:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
-}
+})
 
 // DELETE /api/schedules?employeeId=123&weekKey=2024-W1&day=monday
-export async function DELETE(request: Request) {
+export const DELETE = withPlanningEditor(async (request, { user }) => {
   try {
     const { searchParams } = new URL(request.url)
     const employeeId = searchParams.get("employeeId")
     const weekKey = searchParams.get("weekKey")
     const day = searchParams.get("day")
-    const userId = request.headers.get('x-user-id') || 'unknown';
-    const userEmail = request.headers.get('x-user-email') || 'unknown';
+    const userId = user.id;
+    const userEmail = user.email;
 
     if (!employeeId || !weekKey || !day) {
       return NextResponse.json({ error: "Missing required parameters" }, { status: 400 })
@@ -202,4 +204,4 @@ export async function DELETE(request: Request) {
     console.error("Error deleting schedule:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
-}
+})

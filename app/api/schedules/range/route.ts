@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withPlanningEditor } from '@/lib/api/with-auth';
 import { deleteSchedule, upsertSchedule, getSchedule } from '@/lib/db/services/schedules';
 import { getWeekNumber } from '@/lib/db/utils';
 import { addHistoryEntry } from '@/lib/db/services/history';
@@ -15,11 +16,11 @@ function getDayNameFromDate(date: Date): string {
   return daysOfWeek[idx];
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withPlanningEditor(async (req, { user }) => {
   try {
     const { employeeId, startDate, endDate, slotType } = await req.json();
-    const userId = req.headers.get('x-user-id') || 'unknown';
-    const userEmail = req.headers.get('x-user-email') || 'unknown';
+    const userId = user.id;
+    const userEmail = user.email;
     if (!employeeId || !startDate || !endDate || !slotType) {
       return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 });
     }
@@ -73,4 +74,4 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-} 
+});

@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { withPlanningAccess } from '@/lib/api/with-auth';
 import { getEnrichedHistory } from '@/lib/db/services/history';
 
-export async function GET(req: NextRequest) {
+export const GET = withPlanningAccess(async (req) => {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type') || undefined;
   const userId = searchParams.get('userId') || undefined;
@@ -13,4 +14,4 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: 'Erreur lors de la récupération de l\'historique', details: error }, { status: 500 });
   }
-}
+});

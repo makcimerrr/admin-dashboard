@@ -1,9 +1,12 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+import { withPlanningAccess, withPlanningEditor } from "@/lib/api/with-auth"
 import { getEmployee, updateEmployee, deleteEmployee, emailExists } from "@/lib/db/services/employees"
 import { validateEmployeeData } from "@/lib/db/utils"
 import { addHistoryEntry } from '@/lib/db/services/history'
 
-export async function GET(request: NextRequest, context: any) {
+type RouteCtx = { params: Promise<{ id: string }> };
+
+export const GET = withPlanningAccess<RouteCtx>(async (request, context) => {
   const params = await context.params;
   try {
     const employee = await getEmployee(params.id)
@@ -15,15 +18,16 @@ export async function GET(request: NextRequest, context: any) {
     console.error("Error fetching employee:", error)
     return NextResponse.json({ error: "Failed to fetch employee" }, { status: 500 })
   }
-}
+})
 
-export async function PUT(request: NextRequest, context: any) {
+export const PUT = withPlanningEditor<RouteCtx>(async (request, context) => {
   const params = await context.params;
   let currentEmployee = null;
   try {
     const data = await request.json()
-    const userId = request.headers.get('x-user-id') || 'unknown';
-    const userEmail = request.headers.get('x-user-email') || 'unknown';
+    // Identité authentifiée pour l'audit (les headers x-user-* étaient falsifiables)
+    const userId = context.user.id;
+    const userEmail = context.user.email;
 
     // Validation des données modifiées
     if (data.name || data.initial || data.role || data.email || data.color) {
@@ -77,13 +81,13 @@ export async function PUT(request: NextRequest, context: any) {
     console.error("Error updating employee:", error)
     return NextResponse.json({ error: "Failed to update employee" }, { status: 500 })
   }
-}
+})
 
-export async function DELETE(request: NextRequest, context: any) {
+export const DELETE = withPlanningEditor<RouteCtx>(async (request, context) => {
   const params = await context.params;
   try {
-    const userId = request.headers.get('x-user-id') || 'unknown';
-    const userEmail = request.headers.get('x-user-email') || 'unknown';
+    const userId = context.user.id;
+    const userEmail = context.user.email;
     const currentEmployee = await getEmployee(params.id);
     const success = await deleteEmployee(params.id);
     // Audit
@@ -105,4 +109,4 @@ export async function DELETE(request: NextRequest, context: any) {
     console.error("Error deleting employee:", error)
     return NextResponse.json({ error: "Failed to delete employee" }, { status: 500 })
   }
-}
+})

@@ -1,8 +1,9 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+import { withPlanningEditor } from "@/lib/api/with-auth"
 import { bulkCopySchedules } from "@/lib/db/services/schedules"
 import { getEmployees } from "@/lib/db/services/employees"
 
-export async function POST(request: NextRequest) {
+export const POST = withPlanningEditor(async (request) => {
   try {
     const { employeeIds, fromWeekKey, toWeekKey } = await request.json()
 
@@ -28,4 +29,4 @@ export async function POST(request: NextRequest) {
     console.error("Error copying schedules:", error)
     return NextResponse.json({ error: "Failed to copy schedules" }, { status: 500 })
   }
-}
+})
