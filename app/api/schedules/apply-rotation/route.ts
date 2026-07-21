@@ -1,4 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+import { withPlanningEditor } from "@/lib/api/with-auth"
 import { upsertSchedule } from "@/lib/db/services/schedules"
 import { getEmployees } from "@/lib/db/services/employees"
 import { getWeekNumber } from "@/lib/db/utils"
@@ -131,7 +132,7 @@ function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<str
  * Le cycle se répète : semaine 1 → semaine 2 → semaine 3 → semaine 1 → ...
  * Mode "standard" (défaut) ou "piscine" (08:00 au lieu de 09:00).
  */
-export async function POST(request: NextRequest) {
+export const POST = withPlanningEditor(async (request) => {
   try {
     const { startDate, endDate, employeeIds, mode = "standard" } = await request.json()
 
@@ -233,4 +234,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

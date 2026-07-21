@@ -93,3 +93,30 @@ export function withAdmin<Ctx = unknown>(handler: Handler<Ctx>) {
     return handler(req, ctx);
   });
 }
+
+/**
+ * Lecture des données planning (employés, créneaux, historique) : admin OU
+ * permission planning 'editor'. Les pages correspondantes sont déjà admin-only ;
+ * ceci ferme l'accès API direct (emails/téléphones du staff, plannings).
+ */
+export function withPlanningAccess<Ctx = unknown>(handler: Handler<Ctx>) {
+  return withAuth<Ctx>(async (req, ctx) => {
+    if (!isAdminRole(ctx.user.role) && ctx.user.planningPermission !== 'editor') {
+      return apiError('FORBIDDEN', 'Accès réservé au staff planning');
+    }
+    return handler(req, ctx);
+  });
+}
+
+/**
+ * Écriture planning : permission 'editor' requise — même règle que l'UI, qui
+ * désactive l'édition pour tout le monde (admins compris) sans 'editor'.
+ */
+export function withPlanningEditor<Ctx = unknown>(handler: Handler<Ctx>) {
+  return withAuth<Ctx>(async (req, ctx) => {
+    if (ctx.user.planningPermission !== 'editor') {
+      return apiError('FORBIDDEN', 'Permission planning "editor" requise');
+    }
+    return handler(req, ctx);
+  });
+}

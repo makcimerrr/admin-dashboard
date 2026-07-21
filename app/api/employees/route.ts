@@ -1,9 +1,10 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
+import { withPlanningAccess, withPlanningEditor } from "@/lib/api/with-auth"
 import { getEmployees, createEmployee, emailExists } from "@/lib/db/services/employees"
 import { validateEmployeeData, getNextAvailableColor } from "@/lib/db/utils"
 import { addHistoryEntry } from '@/lib/db/services/history'
 
-export async function GET() {
+export const GET = withPlanningAccess(async () => {
   try {
     const employees = await getEmployees()
     return NextResponse.json(employees)
@@ -11,13 +12,14 @@ export async function GET() {
     console.error("Error fetching employees:", error)
     return NextResponse.json({ error: "Failed to fetch employees" }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = withPlanningEditor(async (request, { user }) => {
   try {
     const data = await request.json()
-    const userId = request.headers.get('x-user-id') || 'unknown';
-    const userEmail = request.headers.get('x-user-email') || 'unknown';
+    // Identité authentifiée pour l'audit (les headers x-user-* étaient falsifiables)
+    const userId = user.id;
+    const userEmail = user.email;
 
     // Validation
     const errors = validateEmployeeData(data)
@@ -62,4 +64,4 @@ export async function POST(request: NextRequest) {
     console.error("Error creating employee:", error)
     return NextResponse.json({ error: "Failed to create employee" }, { status: 500 })
   }
-}
+})

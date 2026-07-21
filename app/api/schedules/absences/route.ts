@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { withPlanningAccess } from "@/lib/api/with-auth";
 import { db } from "@/lib/db/config";
 import { schedules } from "@/lib/db/schema/schedules";
 import { eq, and } from "drizzle-orm";
 
 // GET /api/schedules/absences?employeeId=...&type=...&start=YYYY-MM-DD&end=YYYY-MM-DD
-export async function GET(request: Request) {
+export const GET = withPlanningAccess(async (request) => {
   try {
     const { searchParams } = new URL(request.url);
     const employeeId = searchParams.get("employeeId");
@@ -52,4 +53,4 @@ export async function GET(request: Request) {
     console.error("Error fetching absences:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-} 
+}); 
