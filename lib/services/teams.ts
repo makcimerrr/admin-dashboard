@@ -272,19 +272,33 @@ export function buildReportReceivedCard(opts: {
  */
 export function buildEscalatedUnansweredRecapCard(opts: {
   items: { auditorLogin: string; projectName: string | null; escalatedAt: Date }[];
+  /** Relances plus anciennes que la fenêtre listée, toujours sans réponse. */
+  olderCount?: number;
   suiviUrl?: string;
 }): object {
+  const MAX_LINES = 40;
+  const shown = opts.items.slice(0, MAX_LINES);
+  const truncated = opts.items.length - shown.length;
   const body: AdaptiveElement[] = [
     textBlock('⚠️ Toujours sans réponse après relance', { size: 'Large', weight: 'Bolder', color: 'Attention' }),
     textBlock(
-      `${opts.items.length} rapport(s) d'audit toujours en attente malgré la relance.`,
+      `${opts.items.length} rapport(s) d'audit des 2 dernières semaines toujours en attente malgré la relance.`,
       { isSubtle: true },
     ),
-    ...opts.items.map((i) =>
+    ...shown.map((i) =>
       textBlock(
         `• **${i.auditorLogin}** — ${i.projectName ?? '—'} (relancé le ${i.escalatedAt.toLocaleDateString('fr-FR')})`,
       ),
     ),
+    ...(truncated > 0 ? [textBlock(`… et ${truncated} autre(s).`, { isSubtle: true })] : []),
+    ...(opts.olderCount && opts.olderCount > 0
+      ? [
+          textBlock(
+            `+ ${opts.olderCount} relance(s) plus anciennes toujours sans réponse (voir la page).`,
+            { isSubtle: true, spacing: 'Medium' },
+          ),
+        ]
+      : []),
   ];
   const actions = opts.suiviUrl ? [openUrlAction('Voir les rapports d\'audit', opts.suiviUrl)] : [];
   return buildAdaptiveCard(body, actions);

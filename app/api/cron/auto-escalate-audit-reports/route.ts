@@ -44,10 +44,11 @@ export async function GET(request: NextRequest) {
   const suiviUrl = `${BASE_URL}/code-reviews/audit-reports`;
 
   const requests = await getAuditRequestsToEscalate();
-  // Récap « toujours sans réponse après relance » : escalades d'un run
-  // précédent (> 20 h) toujours silencieuses. Le cron tourne 1×/jour (8h30
-  // lun-sam via dashboard-daily-cron.sh) → au plus une carte récap par jour.
-  const stillUnanswered = await getEscalatedUnanswered();
+  // Récap « toujours sans réponse après relance » : vraies escalades d'un run
+  // précédent (> 20 h, fenêtre 14 j) toujours silencieuses. Le cron tourne
+  // 1×/jour (8h30 lun-sam via dashboard-daily-cron.sh) → au plus une carte
+  // récap par jour.
+  const recap = await getEscalatedUnanswered();
 
   if (dry) {
     return NextResponse.json({
@@ -60,11 +61,12 @@ export async function GET(request: NextRequest) {
         projectName: r.projectName,
         requestedAt: r.requestedAt,
       })),
-      stillUnanswered: stillUnanswered.map((r) => ({
+      stillUnanswered: recap.items.map((r) => ({
         auditorLogin: r.auditorLogin,
         projectName: r.projectName,
         escalatedAt: r.escalatedAt,
       })),
+      olderUnansweredCount: recap.olderCount,
     });
   }
 
@@ -128,9 +130,13 @@ export async function GET(request: NextRequest) {
 
   // Carte récap (une seule, best-effort) si des relances restent sans réponse.
   let recapSent = false;
-  if (stillUnanswered.length > 0) {
+  if (recap.items.length > 0) {
     recapSent = await sendTeamsFormsCard(
-      buildEscalatedUnansweredRecapCard({ items: stillUnanswered, suiviUrl }),
+      buildEscalatedUnansweredRecapCard({
+        items: recap.items,
+        olderCount: recap.olderCount,
+        suiviUrl,
+      }),
     );
   }
 
@@ -139,7 +145,7 @@ export async function GET(request: NextRequest) {
     checked: requests.length,
     escalated,
     errors,
-    recap: { count: stillUnanswered.length, sent: recapSent },
+    recap: { count: recap.items.length, older: recap.olderCount, sent: recapSent },
   });
 }
 
