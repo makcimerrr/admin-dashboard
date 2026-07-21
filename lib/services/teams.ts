@@ -238,6 +238,58 @@ export function buildEscalationCard(opts: {
   return buildAdaptiveCard(body, actions);
 }
 
+/**
+ * Carte verte « rapport reçu après relance » (pendant de buildEscalationCard).
+ * Postée sur le même canal que la carte rouge : dans le fil, un ⚠️ sans ✅
+ * correspondant = auditeur toujours silencieux.
+ */
+export function buildReportReceivedCard(opts: {
+  auditorLogin: string;
+  projectName?: string | null;
+  requestedAt: Date;
+  escalatedAt: Date;
+  status?: string | null;
+}): object {
+  const facts = [
+    { title: 'Auditeur', value: opts.auditorLogin },
+    ...(opts.projectName ? [{ title: 'Projet', value: opts.projectName }] : []),
+    { title: 'Demandé le', value: opts.requestedAt.toLocaleDateString('fr-FR') },
+    { title: 'Relancé le', value: opts.escalatedAt.toLocaleDateString('fr-FR') },
+    ...(opts.status ? [{ title: 'Statut', value: opts.status }] : []),
+  ];
+  const body: AdaptiveElement[] = [
+    textBlock('✅ Rapport d\'audit reçu (après relance)', { size: 'Large', weight: 'Bolder', color: 'Good' }),
+    textBlock('L\'auditeur a répondu suite à la relance.', { isSubtle: true }),
+    factSet(facts),
+  ];
+  return buildAdaptiveCard(body);
+}
+
+/**
+ * Carte récap « toujours sans réponse après relance » : liste les auditeurs
+ * déjà relancés (carte rouge envoyée) et toujours silencieux. Remplace le
+ * pointage manuel du canal.
+ */
+export function buildEscalatedUnansweredRecapCard(opts: {
+  items: { auditorLogin: string; projectName: string | null; escalatedAt: Date }[];
+  suiviUrl?: string;
+}): object {
+  const body: AdaptiveElement[] = [
+    textBlock('⚠️ Toujours sans réponse après relance', { size: 'Large', weight: 'Bolder', color: 'Attention' }),
+    textBlock(
+      `${opts.items.length} rapport(s) d'audit toujours en attente malgré la relance.`,
+      { isSubtle: true },
+    ),
+    ...opts.items.map((i) =>
+      textBlock(
+        `• **${i.auditorLogin}** — ${i.projectName ?? '—'} (relancé le ${i.escalatedAt.toLocaleDateString('fr-FR')})`,
+      ),
+    ),
+  ];
+  const actions = opts.suiviUrl ? [openUrlAction('Voir les rapports d\'audit', opts.suiviUrl)] : [];
+  return buildAdaptiveCard(body, actions);
+}
+
 /** Raccourci texte simple (titre + lignes), pour les notifications ponctuelles. */
 export async function sendTeamsMessage(title: string, lines: string[]): Promise<boolean> {
   const card = buildAdaptiveCard([

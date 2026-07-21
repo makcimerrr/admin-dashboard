@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   getAuditRequestsToEscalate,
+  getEscalatedUnanswered,
   markAuditEscalated,
   buildAuditReportReminderMessage,
   getGroupMemberNames,
 } from '@/lib/db/services/auditReports';
-import { sendTeamsFormsCard, buildEscalationCard } from '@/lib/services/teams';
+import {
+  sendTeamsFormsCard,
+  buildEscalationCard,
+  buildEscalatedUnansweredRecapCard,
+} from '@/lib/services/teams';
 import { getDiscordIdByLogin } from '@/lib/db/services/discordUsers';
 import { sendDiscordDM } from '@/lib/services/discord';
 import { notifyViaBot } from '@/lib/services/bot-notify';
@@ -39,6 +44,10 @@ export async function GET(request: NextRequest) {
   const suiviUrl = `${BASE_URL}/code-reviews/audit-reports`;
 
   const requests = await getAuditRequestsToEscalate();
+  // Récap « toujours sans réponse après relance » : escalades d'un run
+  // précédent (> 20 h) toujours silencieuses. Le cron tourne 1×/jour (8h30
+  // lun-sam via dashboard-daily-cron.sh) → au plus une carte récap par jour.
+  const stillUnanswered = await getEscalatedUnanswered();
 
   if (dry) {
     return NextResponse.json({
@@ -50,6 +59,11 @@ export async function GET(request: NextRequest) {
         auditorLogin: r.auditorLogin,
         projectName: r.projectName,
         requestedAt: r.requestedAt,
+      })),
+      stillUnanswered: stillUnanswered.map((r) => ({
+        auditorLogin: r.auditorLogin,
+        projectName: r.projectName,
+        escalatedAt: r.escalatedAt,
       })),
     });
   }
@@ -112,11 +126,20 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Carte récap (une seule, best-effort) si des relances restent sans réponse.
+  let recapSent = false;
+  if (stillUnanswered.length > 0) {
+    recapSent = await sendTeamsFormsCard(
+      buildEscalatedUnansweredRecapCard({ items: stillUnanswered, suiviUrl }),
+    );
+  }
+
   return NextResponse.json({
     success: true,
     checked: requests.length,
     escalated,
     errors,
+    recap: { count: stillUnanswered.length, sent: recapSent },
   });
 }
 
