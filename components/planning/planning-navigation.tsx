@@ -32,6 +32,12 @@ export function PlanningNavigation({ planningPermission = 'reader' }: PlanningNa
       match: (path: string): boolean => path === '/planning/absences',
     },
     {
+      href: '/planning/roulements',
+      label: 'Roulements',
+      icon: LayoutTemplate,
+      match: (path: string): boolean => path === '/planning/roulements',
+    },
+    {
       href: '/planning/extraction',
       label: 'Extraction',
       icon: LayoutTemplate,
