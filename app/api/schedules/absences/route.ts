@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { withPlanningAccess } from "@/lib/api/with-auth";
 import { db } from "@/lib/db/config";
 import { schedules } from "@/lib/db/schema/schedules";
-import { eq, and } from "drizzle-orm";
+import { getDateFromWeekKeyAndDay } from "@/lib/db/utils";
+import { eq } from "drizzle-orm";
 
 // GET /api/schedules/absences?employeeId=...&type=...&start=YYYY-MM-DD&end=YYYY-MM-DD
 export const GET = withPlanningAccess(async (request) => {
@@ -20,7 +21,9 @@ export const GET = withPlanningAccess(async (request) => {
     }
     const allSchedules = await db.select().from(schedules).where(where);
 
-    // Extraire toutes les absences (type !== 'work')
+    // Extraire toutes les absences (type !== 'work'). La date CALENDAIRE est
+    // dérivée de (weekKey, day) — slot.start/end sont des horaires, pas des
+    // dates (d'anciennes lignes portaient des dates : ne plus s'y fier).
     let absences = [];
     for (const sched of allSchedules) {
       for (const slot of sched.timeSlots) {
@@ -30,6 +33,7 @@ export const GET = withPlanningAccess(async (request) => {
             employeeId: sched.employeeId,
             weekKey: sched.weekKey,
             day: sched.day,
+            date: getDateFromWeekKeyAndDay(sched.weekKey, sched.day),
             scheduleId: sched.id,
             slotId: slot.id,
           });
@@ -37,15 +41,15 @@ export const GET = withPlanningAccess(async (request) => {
       }
     }
 
-    // Filtres supplémentaires
+    // Filtres supplémentaires (start/end = dates calendaires YYYY-MM-DD)
     if (type) {
       absences = absences.filter(a => a.type === type);
     }
     if (start) {
-      absences = absences.filter(a => a.start >= start);
+      absences = absences.filter(a => a.date && a.date >= start);
     }
     if (end) {
-      absences = absences.filter(a => a.end <= end);
+      absences = absences.filter(a => a.date && a.date <= end);
     }
 
     return NextResponse.json(absences);

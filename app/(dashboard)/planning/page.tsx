@@ -320,8 +320,20 @@ export default function PlanningPage() {
       const daySchedule = getEmployeeScheduleForDay(employee.id, day);
       daySchedule.forEach((slot) => {
         if ((day === 'samedi' || day === 'dimanche') && slot.type === 'vacation') return;
-        const startHour = parseInt(slot.start.split(':')[0]) + parseInt(slot.start.split(':')[1]) / 60;
-        const endHour = parseInt(slot.end.split(':')[0]) + parseInt(slot.end.split(':')[1]) / 60;
+        let startHour: number;
+        let endHour: number;
+        if (slot.type === 'work') {
+          startHour = parseInt(slot.start.split(':')[0]) + (parseInt(slot.start.split(':')[1]) || 0) / 60;
+          endHour = parseInt(slot.end.split(':')[0]) + (parseInt(slot.end.split(':')[1]) || 0) / 60;
+          if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) return;
+        } else {
+          // Absence = journée entière, quel que soit le format stocké dans le
+          // slot (d'anciennes absences portaient des DATES dans start/end →
+          // heures parsées absurdes → chaque absence formait son propre
+          // cluster pleine largeur et masquait les autres).
+          startHour = 0;
+          endHour = 24;
+        }
         slots.push({ employee, slot, startHour, endHour });
       });
     });

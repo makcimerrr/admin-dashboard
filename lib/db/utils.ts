@@ -180,3 +180,24 @@ export const detectTimeConflicts = (slots: { start: string; end: string }[]) => 
   }
   return false
 }
+
+/**
+ * Date ISO (YYYY-MM-DD) d'un jour de semaine à partir de la weekKey (ex.
+ * "2026-W31" + "lundi" → "2026-07-27"). Renvoie null si le jour est inconnu.
+ */
+export function getDateFromWeekKeyAndDay(weekKey: string, day: string): string | null {
+  const [yearStr, weekStr] = weekKey.split('-W')
+  const year = parseInt(yearStr, 10)
+  const week = parseInt(weekStr, 10)
+  const days = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+  const dayIndex = days.indexOf(day)
+  if (dayIndex === -1 || !Number.isFinite(year) || !Number.isFinite(week)) return null
+  const jan4 = new Date(Date.UTC(year, 0, 4))
+  const firstMonday = new Date(jan4)
+  firstMonday.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7))
+  const monday = new Date(firstMonday)
+  monday.setUTCDate(firstMonday.getUTCDate() + (week - 1) * 7)
+  const date = new Date(monday)
+  date.setUTCDate(monday.getUTCDate() + dayIndex)
+  return date.toISOString().slice(0, 10)
+}
