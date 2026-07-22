@@ -98,7 +98,9 @@ function groupAbsences(absences: Absence[]) {
     start: string;
     end: string;
     notes: string[];
-    slotIds: string[];
+    /** Absences (jour par jour) composant le groupe — les slots n'ont PAS
+     *  d'id en base : on cible par (employeeId, weekKey, day). */
+    items: Absence[];
   }[] = [];
   for (const abs of sorted) {
     if (!abs.date || !isValidDateString(abs.date)) continue;
@@ -112,7 +114,7 @@ function groupAbsences(absences: Absence[]) {
     ) {
       last.end = abs.date;
       if (abs.note) last.notes.push(abs.note);
-      last.slotIds.push(abs.slotId);
+      last.items.push(abs);
     } else {
       groups.push({
         employeeId: abs.employeeId,
@@ -121,7 +123,7 @@ function groupAbsences(absences: Absence[]) {
         start: abs.date,
         end: abs.date,
         notes: abs.note ? [abs.note] : [],
-        slotIds: [abs.slotId]
+        items: [abs]
       });
     }
   }
@@ -253,13 +255,13 @@ export default function AbsencesPage() {
     if (!editGroup) return;
     setEditLoading(true);
     try {
-      for (const slotId of editGroup.slotIds) {
-        const absence = absences.find((a) => a.slotId === slotId);
-        if (!absence) continue;
+      // Les slots n'ont pas d'id : on retire les créneaux d'ABSENCE du jour
+      // (les créneaux de travail éventuels du même jour sont conservés).
+      for (const absence of editGroup.items) {
         const res = await fetch(`/api/schedules?employeeId=${absence.employeeId}&weekKey=${absence.weekKey}&day=${absence.day}`);
         const sched = await res.json();
         if (!sched || !sched[0]) continue;
-        const newSlots = sched[0].timeSlots.filter((s: { id: string }) => s.id !== slotId);
+        const newSlots = sched[0].timeSlots.filter((s: { type: string }) => s.type === 'work');
         await fetch(`/api/schedules`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -278,7 +280,9 @@ export default function AbsencesPage() {
         await fetch(`/api/schedules`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employeeId: editGroup.employeeId, weekKey, day, timeSlots: [{ start: dateStr, end: dateStr, isWorking: false, type: editType, note: editNote }] })
+          // start/end = HORAIRES (journée entière), jamais des dates : la grille
+          // du planning parse ces valeurs en heures (même format que /api/schedules/range).
+          body: JSON.stringify({ employeeId: editGroup.employeeId, weekKey, day, timeSlots: [{ start: '00:00', end: '23:59', isWorking: false, type: editType, note: editNote }] })
         });
         d = addDays(d, 1);
       }
@@ -300,14 +304,14 @@ export default function AbsencesPage() {
         onClick: async () => {
           setEditLoading(true);
           try {
+            // Cible par (employeeId, weekKey, day) — les slots n'ont pas d'id ;
+            // on ne retire que les créneaux d'absence, le travail est conservé.
             await Promise.all(
-              group.slotIds.map(async (slotId) => {
-                const absence = absences.find((a) => a.slotId === slotId);
-                if (!absence) return;
+              group.items.map(async (absence) => {
                 const res = await fetch(`/api/schedules?employeeId=${absence.employeeId}&weekKey=${absence.weekKey}&day=${absence.day}`);
                 const sched = await res.json();
                 if (!sched || !sched[0]) return;
-                const newSlots = sched[0].timeSlots.filter((s: { id: string }) => s.id !== slotId);
+                const newSlots = sched[0].timeSlots.filter((s: { type: string }) => s.type === 'work');
                 await fetch(`/api/schedules`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -345,7 +349,8 @@ export default function AbsencesPage() {
         const res = await fetch('/api/schedules', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employeeId: addEmployeeId, weekKey, day, timeSlots: [{ start: dateStr, end: dateStr, isWorking: false, type: addType, note: addNote }] })
+          // start/end = HORAIRES (journée entière), jamais des dates (cf. handleEdit).
+          body: JSON.stringify({ employeeId: addEmployeeId, weekKey, day, timeSlots: [{ start: '00:00', end: '23:59', isWorking: false, type: addType, note: addNote }] })
         });
         if (!res.ok) allOk = false;
         d = addDays(d, 1);
@@ -533,7 +538,7 @@ export default function AbsencesPage() {
                 const daysCount = countDays(group.start, group.end);
                 const weeksCount = countWeeks(group.start, group.end);
                 return (
-                  <tr key={group.slotIds.join('-') + group.employeeId} className="border-b hover:bg-muted/30 align-top">
+                  <tr key={`${group.employeeId}-${group.type}-${group.start}`} className="border-b hover:bg-muted/30 align-top">
                     <td className="p-2">
                       <div className="flex items-center gap-1.5">
                         <EmployeeColorDot color={group.employee?.color || '#8884d8'} />
