@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,7 +32,13 @@ import {
 } from '@/lib/db/utils';
 import { useToast } from '@/components/hooks/use-toast';
 
-// Roulement de 3 semaines hardcodé côté API (basé sur S15→S16→S17)
+// Les roulements sont stockés en base (éditables sur /planning/roulements).
+interface RotationOption {
+  id: number;
+  name: string;
+  description: string | null;
+  weeks: unknown[];
+}
 
 interface PlanningSidebarProps {
   isOpen: boolean;
@@ -156,8 +163,22 @@ export function PlanningSidebar({
   const [rotationStartDate, setRotationStartDate] = useState<Date | null>(null);
   const [rotationEndDate, setRotationEndDate] = useState<Date | null>(null);
   const [selectedEmployeesForRotation, setSelectedEmployeesForRotation] = useState<string[]>([]);
-  const [rotationMode, setRotationMode] = useState<'standard' | 'piscine'>('standard');
+  const [rotationOptions, setRotationOptions] = useState<RotationOption[]>([]);
+  const [selectedRotationId, setSelectedRotationId] = useState<string>('');
   const [rotationLoading, setRotationLoading] = useState(false);
+
+  // Charger la liste des roulements à l'ouverture de la sidebar.
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch('/api/rotations')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: RotationOption[]) => {
+        if (!Array.isArray(data)) return;
+        setRotationOptions(data);
+        setSelectedRotationId((prev) => prev || (data[0] ? String(data[0].id) : ''));
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   // Copy state
   const [copyFromWeek, setCopyFromWeek] = useState(currentWeekOffset - 1);
@@ -190,6 +211,7 @@ export function PlanningSidebar({
     if (!rotationStartDate || !rotationEndDate) return toast({ title: 'Erreur', description: 'Sélectionnez une date de début et de fin.', variant: 'destructive' });
     if (selectedEmployeesForRotation.length === 0) return toast({ title: 'Erreur', description: 'Sélectionnez au moins un employé.', variant: 'destructive' });
     if (rotationEndDate < rotationStartDate) return toast({ title: 'Erreur', description: 'La date de fin doit être après la date de début.', variant: 'destructive' });
+    if (!selectedRotationId) return toast({ title: 'Erreur', description: 'Sélectionnez un roulement.', variant: 'destructive' });
 
     setRotationLoading(true);
     try {
@@ -200,7 +222,7 @@ export function PlanningSidebar({
           startDate: rotationStartDate.toISOString().slice(0, 10),
           endDate: rotationEndDate.toISOString().slice(0, 10),
           employeeIds: selectedEmployeesForRotation,
-          mode: rotationMode,
+          rotationId: Number(selectedRotationId),
         }),
       });
 
@@ -212,7 +234,6 @@ export function PlanningSidebar({
       setRotationStartDate(null);
       setRotationEndDate(null);
       setSelectedEmployeesForRotation([]);
-      setRotationMode('standard');
     } catch {
       toast({ title: 'Erreur', description: 'Impossible d\'appliquer le roulement', variant: 'destructive' });
     } finally {
@@ -322,40 +343,29 @@ export function PlanningSidebar({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {/* Roulement 3 semaines */}
-          <SidebarSection title="Roulement 3 semaines" icon={LayoutTemplate} defaultOpen>
+          {/* Roulement */}
+          <SidebarSection title="Appliquer un roulement" icon={LayoutTemplate} defaultOpen>
             <div className="space-y-3">
-              {/* Mode selector */}
+              {/* Rotation selector */}
               <div>
-                <Label className="text-[11px] font-medium text-muted-foreground">Template</Label>
-                <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setRotationMode('standard')}
-                    className={cn(
-                      'flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-xs transition-all',
-                      rotationMode === 'standard'
-                        ? 'border-primary/30 bg-primary/5 font-semibold'
-                        : 'border-border hover:border-muted-foreground/30 text-muted-foreground'
-                    )}
-                  >
-                    <span className="text-sm">Standard</span>
-                    <span className="text-[10px] text-muted-foreground">09h-17h</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRotationMode('piscine')}
-                    className={cn(
-                      'flex flex-col items-center gap-0.5 p-2.5 rounded-lg border text-xs transition-all',
-                      rotationMode === 'piscine'
-                        ? 'border-primary/30 bg-primary/5 font-semibold text-primary'
-                        : 'border-border hover:border-muted-foreground/30 text-muted-foreground'
-                    )}
-                  >
-                    <span className="text-sm">Piscine</span>
-                    <span className="text-[10px] text-muted-foreground">08h-17h</span>
-                  </button>
+                <div className="flex items-center justify-between">
+                  <Label className="text-[11px] font-medium text-muted-foreground">Roulement</Label>
+                  <Link href="/planning/roulements" className="text-[11px] text-primary hover:underline font-medium">
+                    Gérer les roulements
+                  </Link>
                 </div>
+                <Select value={selectedRotationId} onValueChange={setSelectedRotationId}>
+                  <SelectTrigger className="text-xs mt-1.5 h-8">
+                    <SelectValue placeholder="Choisir un roulement..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rotationOptions.map((r) => (
+                      <SelectItem key={r.id} value={String(r.id)} className="text-xs">
+                        {r.name} ({r.weeks.length} sem.)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Date pickers */}
@@ -419,7 +429,7 @@ export function PlanningSidebar({
               <Button
                 size="sm"
                 onClick={applyRotation}
-                disabled={rotationLoading || !rotationStartDate || !rotationEndDate || selectedEmployeesForRotation.length === 0}
+                disabled={rotationLoading || !rotationStartDate || !rotationEndDate || selectedEmployeesForRotation.length === 0 || !selectedRotationId}
                 className="w-full"
               >
                 {rotationLoading ? (

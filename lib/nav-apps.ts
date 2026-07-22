@@ -92,6 +92,7 @@ export const NAV_APPS: NavApp[] = [
     items: [
       { title: 'Planning', url: '/planning', icon: CalendarIcon },
       { title: 'Absences', url: '/planning/absences', icon: CalendarX2Icon },
+      { title: 'Roulements', url: '/planning/roulements', icon: CalendarDaysIcon },
       { title: 'Extraction', url: '/planning/extraction', icon: FileBarChartIcon },
       { title: 'Employés', url: '/employees', icon: UsersIcon },
       { title: 'Historique', url: '/history', icon: ClockIcon }
