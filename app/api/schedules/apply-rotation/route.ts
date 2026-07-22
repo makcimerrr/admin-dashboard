@@ -47,8 +47,9 @@ function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<str
         jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Maxime Dubois": {
+        // Temps plein (5 j) : samedi travaillé cette semaine → vendredi off en compensation.
         lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("13:00", "21:00"),
-        jeudi: off, vendredi: off, samedi: w("10:00", "18:00"), dimanche: off,
+        jeudi: w("09:00", "17:00"), vendredi: off, samedi: w("10:00", "18:00"), dimanche: off,
       },
       "Cyril Ramananjaona": {
         lundi: w("09:00", "17:00"), mardi: off, mercredi: w("09:00", "17:00"),
@@ -58,7 +59,9 @@ function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<str
         lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("09:00", "17:00"),
         jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
-      "Permanence Externe": {
+      // Permanence externe (soirées 16h-21h + mercredi journée), assurée par Nassuif.
+      // ⚠️ La clé doit matcher employees.name en base ("Nassuif").
+      "Nassuif": {
         lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w("09:00", "17:00"),
         jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
       },
@@ -70,8 +73,9 @@ function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<str
         jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Maxime Dubois": {
+        // Temps plein : lun→ven (fermeture mercredi 13h-21h conservée).
         lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("13:00", "21:00"),
-        jeudi: off, vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
+        jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Cyril Ramananjaona": {
         lundi: w("09:00", "17:00"), mardi: off, mercredi: w("09:00", "17:00"),
@@ -81,7 +85,9 @@ function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<str
         lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: off,
         jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: w("10:00", "18:00"), dimanche: off,
       },
-      "Permanence Externe": {
+      // Permanence externe (soirées 16h-21h + mercredi journée), assurée par Nassuif.
+      // ⚠️ La clé doit matcher employees.name en base ("Nassuif").
+      "Nassuif": {
         lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w("09:00", "17:00"),
         jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
       },
@@ -93,8 +99,9 @@ function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<str
         jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Maxime Dubois": {
+        // Temps plein : lun→ven (fermeture mercredi 13h-21h conservée).
         lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("13:00", "21:00"),
-        jeudi: off, vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
+        jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
       "Cyril Ramananjaona": {
         lundi: w("09:00", "17:00"), mardi: off, mercredi: off,
@@ -104,7 +111,9 @@ function buildTemplates(mode: "standard" | "piscine"): Record<string, Record<str
         lundi: w("09:00", "17:00"), mardi: w("09:00", "17:00"), mercredi: w("09:00", "17:00"),
         jeudi: w("09:00", "17:00"), vendredi: w("09:00", "17:00"), samedi: off, dimanche: off,
       },
-      "Permanence Externe": {
+      // Permanence externe (soirées 16h-21h + mercredi journée), assurée par Nassuif.
+      // ⚠️ La clé doit matcher employees.name en base ("Nassuif").
+      "Nassuif": {
         lundi: w("16:00", "21:00"), mardi: w("16:00", "21:00"), mercredi: w("09:00", "17:00"),
         jeudi: w("16:00", "21:00"), vendredi: off, samedi: off, dimanche: off,
       },
