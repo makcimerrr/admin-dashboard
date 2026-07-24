@@ -36,19 +36,26 @@ export async function POST(request: Request) {
       // Process incoming results: update if exists, insert if new
       for (const r of results || []) {
         const login = r.studentLogin;
+        // Note sur 10 : bornée 0-10, null si non fournie/invalide/absent.
+        const ratingRaw = r.rating == null ? null : Number(r.rating);
+        const rating =
+          !r.absent && ratingRaw !== null && Number.isInteger(ratingRaw) && ratingRaw >= 0 && ratingRaw <= 10
+            ? ratingRaw
+            : null;
         const payload = {
           auditId: Number(auditId),
           studentLogin: login,
           validated: !!r.validated,
           absent: !!r.absent,
           feedback: r.feedback ?? null,
-          warnings: r.warnings ?? []
+          warnings: r.warnings ?? [],
+          rating
         };
 
         if (existingMap.has(login)) {
           // Update only if changed
           const ex = existingMap.get(login);
-          const changed = ex.validated !== payload.validated || ex.absent !== payload.absent || (ex.feedback ?? null) !== (payload.feedback ?? null) || JSON.stringify(ex.warnings || []) !== JSON.stringify(payload.warnings || []);
+          const changed = ex.validated !== payload.validated || ex.absent !== payload.absent || (ex.feedback ?? null) !== (payload.feedback ?? null) || JSON.stringify(ex.warnings || []) !== JSON.stringify(payload.warnings || []) || (ex.rating ?? null) !== payload.rating;
           if (changed) {
             await tx.update(auditResults).set(payload).where(and(eq(auditResults.auditId, Number(auditId)), eq(auditResults.studentLogin, login)));
           }

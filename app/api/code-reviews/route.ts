@@ -28,6 +28,7 @@ const createAuditSchema = z.object({
         absent: z.boolean().default(false),
         feedback: z.string().nullable().optional(),
         warnings: z.array(z.string()).default([]),
+        rating: z.number().int().min(0).max(10).nullable().optional(),
     })),
 });
 
@@ -160,6 +161,7 @@ export async function POST(request: NextRequest) {
                 absent: r.absent,
                 feedback: r.feedback ?? undefined,
                 warnings: r.warnings,
+                rating: r.absent ? null : r.rating ?? null,
             })),
         };
 

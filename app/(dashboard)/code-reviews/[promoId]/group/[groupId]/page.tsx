@@ -287,6 +287,11 @@ export default async function GroupDetailPage({ params }: PageProps) {
                             </div>
 
                             <div className="flex items-center gap-2">
+                              {res?.rating != null && !absent && (
+                                <span className="text-[10px] tabular-nums text-muted-foreground">
+                                  ★ {res.rating}/10
+                                </span>
+                              )}
                               {warnings.length > 0 ? (
                                 <TooltipProvider>
                                   <Tooltip>

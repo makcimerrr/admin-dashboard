@@ -61,6 +61,8 @@ export interface CreateAuditInput {
     absent?: boolean;
     feedback?: string;
     warnings?: string[];
+    /** Note sur 10 (null = non noté). */
+    rating?: number | null;
   }[];
 }
 
@@ -476,7 +478,8 @@ export async function createAudit(
       validated: r.validated,
       absent: r.absent || false,
       feedback: r.feedback,
-      warnings: r.warnings || []
+      warnings: r.warnings || [],
+      rating: r.rating ?? null
     }));
 
     let results: (typeof auditResults.$inferSelect)[] = [];
@@ -713,6 +716,8 @@ export interface StudentAuditData {
   absent: boolean;
   feedback: string | null;
   warnings: string[];
+  /** Note sur 10 (null = non noté). */
+  rating: number | null;
   globalSummary: string | null;
   globalWarnings: string[];
   priority: Priority;
@@ -753,6 +758,7 @@ export async function getAuditsByStudentLogin(
       absent: result.absent,
       feedback: result.feedback,
       warnings: getWarningsArray(result.warnings),
+      rating: result.rating ?? null,
       globalSummary: audit.summary,
       globalWarnings: getWarningsArray(audit.warnings),
       priority: audit.priority as Priority || 'normal'

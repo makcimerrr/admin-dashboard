@@ -12,6 +12,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import { ArrowLeft, ClipboardCheck, Eye, EyeOff, FileText, UserX } from 'lucide-react';
 import Link from 'next/link';
 import MarkdownWithTables from './markdown-with-tables';
+import { StarRating } from './star-rating';
 
 type Member = {
   id: number;
@@ -20,6 +21,8 @@ type Member = {
   absent: boolean;
   feedback?: string | null;
   warnings?: string[];
+  /** Note sur 10 (null = non noté). */
+  rating?: number | null;
 };
 
 type Props = {
@@ -77,6 +80,7 @@ export default function AuditEditForm({
             absent: r.absent,
             feedback: r.feedback ?? null,
             warnings: r.warnings ?? [],
+            rating: r.absent ? null : r.rating ?? null,
           })),
         }),
       });
@@ -192,6 +196,16 @@ export default function AuditEditForm({
                   </div>
                 </div>
               </div>
+
+              {!r.absent && (
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-muted-foreground">Note</label>
+                  <StarRating
+                    value={r.rating ?? null}
+                    onChange={(rating) => updateMember(r.studentLogin, { rating })}
+                  />
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <label className="text-sm block mb-1">Feedback</label>

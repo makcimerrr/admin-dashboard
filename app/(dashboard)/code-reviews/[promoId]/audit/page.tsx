@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingCard } from '@/components/ui/loading-card';
 import GlobalWarningsEditor from '@/components/code-reviews/global-warnings-editor';
+import { StarRating } from '@/components/code-reviews/star-rating';
 import {
     ArrowLeft,
     ClipboardCheck,
@@ -47,6 +48,8 @@ interface MemberResult {
     absent: boolean;
     feedback: string;
     warnings: string[];
+    /** Note sur 10 (null = non noté). */
+    rating: number | null;
 }
 
 export default function AuditPage({ params }: { params: Promise<{ promoId: string }> }) {
@@ -106,6 +109,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                             absent: false,
                             feedback: '',
                             warnings: [],
+                            rating: null,
                         }))
                 );
             } catch (err) {
@@ -139,6 +143,7 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                         absent: r.absent,
                         feedback: r.feedback || null,
                         warnings: r.warnings.filter(w => w.trim()),
+                        rating: r.absent ? null : r.rating,
                     })),
                 }),
             });
@@ -388,15 +393,24 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                 </div>
 
                                 {!result.absent && (
-                                    <Textarea
-                                        value={result.feedback}
-                                        onChange={(e) =>
-                                            updateMemberResult(result.login, { feedback: e.target.value })
-                                        }
-                                        placeholder="Feedback individuel (optionnel)…"
-                                        rows={2}
-                                        className="text-sm"
-                                    />
+                                    <>
+                                        <div className="flex items-center gap-3">
+                                            <Label className="text-sm text-muted-foreground">Note</Label>
+                                            <StarRating
+                                                value={result.rating}
+                                                onChange={(rating) => updateMemberResult(result.login, { rating })}
+                                            />
+                                        </div>
+                                        <Textarea
+                                            value={result.feedback}
+                                            onChange={(e) =>
+                                                updateMemberResult(result.login, { feedback: e.target.value })
+                                            }
+                                            placeholder="Feedback individuel (optionnel)…"
+                                            rows={2}
+                                            className="text-sm"
+                                        />
+                                    </>
                                 )}
                             </div>
                         );

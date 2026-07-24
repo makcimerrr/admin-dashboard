@@ -32,6 +32,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import Link from 'next/link';
+import { StarRating } from '@/components/code-reviews/star-rating';
 
 type StudentAudit = {
   auditId: number;
@@ -45,6 +46,8 @@ type StudentAudit = {
   validated: boolean;
   feedback: string | null;
   warnings: string[];
+  /** Note sur 10 attribuée lors de la CR (null = non noté). */
+  rating: number | null;
   globalSummary: string | null;
   globalWarnings: string[];
   priority: 'urgent' | 'warning' | 'normal';
@@ -108,6 +111,11 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
   const validatedCount = audits.filter((a) => a.validated).length;
   const validationRate = totalAudits > 0 ? Math.round((validatedCount / totalAudits) * 100) : 0;
   const tracks = [...new Set(audits.map((a) => a.track))];
+  const ratedAudits = audits.filter((a) => a.rating != null);
+  const averageRating =
+    ratedAudits.length > 0
+      ? Math.round((ratedAudits.reduce((sum, a) => sum + (a.rating ?? 0), 0) / ratedAudits.length) * 10) / 10
+      : null;
 
   if (loading) {
     return (
@@ -157,6 +165,12 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
         <CardDescription>
           {totalAudits} audit{totalAudits > 1 ? 's' : ''} réalisé{totalAudits > 1 ? 's' : ''} • Taux
           de validation: {validationRate}%
+          {averageRating != null && (
+            <>
+              {' '}• Note moyenne : <span className="font-medium text-foreground">{averageRating}/10</span>
+              {' '}({ratedAudits.length} noté{ratedAudits.length > 1 ? 's' : ''})
+            </>
+          )}
         </CardDescription>
       </CardHeader>
 
@@ -229,6 +243,9 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
                           locale: fr,
                         })}
                       </span>
+                      {audit.rating != null && (
+                        <StarRating value={audit.rating} readOnly size="sm" />
+                      )}
                     </div>
                   </div>
 
