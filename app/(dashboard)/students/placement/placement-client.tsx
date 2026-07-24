@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Star, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CR_TAGS } from '@/lib/code-review-tags';
+import { CR_TAG_GROUPS } from '@/lib/code-review-tags';
 import type { PlacementProfile } from '@/lib/db/services/audits';
 
 type SortKey = 'rating' | 'name' | 'audits';
@@ -17,7 +17,8 @@ export function PlacementClient({ profiles }: { profiles: PlacementProfile[] }) 
   const [promo, setPromo] = useState<string>('all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>('rating');
-  const [hideAlternants, setHideAlternants] = useState(false);
+  // Vue placement : ceux qui ont DÉJÀ une alternance sont exclus par défaut.
+  const [showAlternants, setShowAlternants] = useState(false);
 
   const promos = useMemo(
     () => [...new Set(profiles.map((p) => p.promo))].sort(),
@@ -31,7 +32,7 @@ export function PlacementClient({ profiles }: { profiles: PlacementProfile[] }) 
     const q = search.trim().toLowerCase();
     const list = profiles.filter((p) => {
       if (promo !== 'all' && p.promo !== promo) return false;
-      if (hideAlternants && p.isAlternant) return false;
+      if (!showAlternants && p.isAlternant) return false;
       if (
         q &&
         !`${p.firstName} ${p.lastName} ${p.login}`.toLowerCase().includes(q)
@@ -50,7 +51,7 @@ export function PlacementClient({ profiles }: { profiles: PlacementProfile[] }) 
       if (sort === 'audits') return b.auditCount - a.auditCount || a.lastName.localeCompare(b.lastName);
       return a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName);
     });
-  }, [profiles, search, promo, selectedTags, sort, hideAlternants]);
+  }, [profiles, search, promo, selectedTags, sort, showAlternants]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -88,15 +89,15 @@ export function PlacementClient({ profiles }: { profiles: PlacementProfile[] }) 
         </Select>
         <button
           type="button"
-          onClick={() => setHideAlternants((v) => !v)}
+          onClick={() => setShowAlternants((v) => !v)}
           className={cn(
             'h-8 px-3 rounded-md border text-xs font-medium transition-colors',
-            hideAlternants
+            showAlternants
               ? 'border-primary/40 bg-primary/10 text-primary'
               : 'border-border text-muted-foreground hover:border-muted-foreground/40',
           )}
         >
-          Masquer les alternants
+          {showAlternants ? 'Masquer les alternants placés' : 'Afficher aussi les alternants placés'}
         </button>
         <span className="text-xs text-muted-foreground ml-auto">
           {filtered.length} profil{filtered.length > 1 ? 's' : ''}
@@ -104,26 +105,33 @@ export function PlacementClient({ profiles }: { profiles: PlacementProfile[] }) 
       </div>
 
       {/* Filtre par tag (points forts requis) */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] font-medium text-muted-foreground mr-1">Je cherche un profil :</span>
-        {CR_TAGS.map((tag) => {
-          const active = selectedTags.includes(tag);
-          return (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => toggleTag(tag)}
-              className={cn(
-                'px-2 py-0.5 rounded-full border text-[11px] font-medium transition-colors',
-                active
-                  ? 'bg-success/15 text-success border-success/40'
-                  : 'border-border text-muted-foreground hover:border-muted-foreground/50',
-              )}
-            >
-              {tag}
-            </button>
-          );
-        })}
+      <div className="space-y-1.5">
+        <span className="text-[11px] font-medium text-muted-foreground">Je cherche un profil :</span>
+        {CR_TAG_GROUPS.map((group) => (
+          <div key={group.label} className="flex flex-wrap items-baseline gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 w-20 shrink-0">
+              {group.label}
+            </span>
+            {group.tags.map((tag) => {
+              const active = selectedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={cn(
+                    'px-2 py-0.5 rounded-full border text-[11px] font-medium transition-colors',
+                    active
+                      ? 'bg-success/15 text-success border-success/40'
+                      : 'border-border text-muted-foreground hover:border-muted-foreground/50',
+                  )}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       {/* Grille des profils */}

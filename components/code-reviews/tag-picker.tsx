@@ -1,6 +1,6 @@
 'use client';
 
-import { CR_TAGS } from '@/lib/code-review-tags';
+import { CR_TAG_GROUPS } from '@/lib/code-review-tags';
 import { cn } from '@/lib/utils';
 
 /**
@@ -32,36 +32,43 @@ export function TagPicker({
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {CR_TAGS.map((tag) => {
-        const isStrength = strengths.includes(tag);
-        const isWeakness = weaknesses.includes(tag);
-        return (
-          <button
-            key={tag}
-            type="button"
-            disabled={disabled}
-            onClick={() => cycle(tag)}
-            title={
-              isStrength
-                ? `${tag} — point fort (cliquer : point faible)`
-                : isWeakness
-                  ? `${tag} — point faible (cliquer : retirer)`
-                  : `${tag} (cliquer : point fort)`
-            }
-            className={cn(
-              'px-2 py-0.5 rounded-full border text-[11px] font-medium transition-colors',
-              isStrength && 'bg-success/15 text-success border-success/40',
-              isWeakness && 'bg-destructive/15 text-destructive border-destructive/40',
-              !isStrength && !isWeakness && 'border-border text-muted-foreground',
-              !disabled && 'cursor-pointer hover:border-muted-foreground/50',
-            )}
-          >
-            {isStrength ? '+ ' : isWeakness ? '− ' : ''}
-            {tag}
-          </button>
-        );
-      })}
+    <div className="space-y-1.5">
+      {CR_TAG_GROUPS.map((group) => (
+        <div key={group.label} className="flex flex-wrap items-baseline gap-1.5">
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70 w-20 shrink-0">
+            {group.label}
+          </span>
+          {group.tags.map((tag) => {
+            const isStrength = strengths.includes(tag);
+            const isWeakness = weaknesses.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                disabled={disabled}
+                onClick={() => cycle(tag)}
+                title={
+                  isStrength
+                    ? `${tag} — point fort (cliquer : point faible)`
+                    : isWeakness
+                      ? `${tag} — point faible (cliquer : retirer)`
+                      : `${tag} (cliquer : point fort)`
+                }
+                className={cn(
+                  'px-2 py-0.5 rounded-full border text-[11px] font-medium transition-colors',
+                  isStrength && 'bg-success/15 text-success border-success/40',
+                  isWeakness && 'bg-destructive/15 text-destructive border-destructive/40',
+                  !isStrength && !isWeakness && 'border-border text-muted-foreground',
+                  !disabled && 'cursor-pointer hover:border-muted-foreground/50',
+                )}
+              >
+                {isStrength ? '+ ' : isWeakness ? '− ' : ''}
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
