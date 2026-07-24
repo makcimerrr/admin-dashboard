@@ -275,6 +275,26 @@ export function StudentTableRow({ student, promoConfig }: StudentTableRowProps) 
         </Badge>
       </TableCell>
 
+      {/* Note moyenne CR */}
+      <TableCell className="hidden md:table-cell">
+        {student.avgRating != null ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm tabular-nums font-medium cursor-default">
+                  <span className="text-warning">★</span> {student.avgRating}/10
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                Moyenne sur {student.ratedCount} CR notée{(student.ratedCount ?? 0) > 1 ? 's' : ''}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <span className="text-sm text-muted-foreground/50">—</span>
+        )}
+      </TableCell>
+
       {/* Availability cell */}
       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
         {new Date(student.availableAt).toLocaleDateString('fr-FR', {
