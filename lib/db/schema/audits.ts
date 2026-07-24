@@ -72,6 +72,10 @@ export const auditResults = pgTable('audit_results', {
     warnings: jsonb('warnings').$type<string[]>().default([]),
     /** Note sur 10 attribuée par l'auditeur (null = non noté ; absent → null). */
     rating: integer('rating'),
+    /** Tags « points forts » (liste CR_TAGS de lib/code-review-tags). */
+    strengths: jsonb('strengths').$type<string[]>().default([]),
+    /** Tags « points faibles » (même liste). */
+    weaknesses: jsonb('weaknesses').$type<string[]>().default([]),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({

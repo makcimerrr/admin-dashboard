@@ -10,6 +10,7 @@ import {
   type Track,
   type Priority
 } from '@/lib/db/schema/audits';
+import { students } from '@/lib/db/schema/students';
 import { GroupWithAuditStatus } from '../../../app/api/code-reviews/groups/route';
 import { getAllPromotions } from '@/lib/config/promotions';
 import { getArchivedPromoNames } from '@/lib/db/filters';
@@ -63,6 +64,9 @@ export interface CreateAuditInput {
     warnings?: string[];
     /** Note sur 10 (null = non noté). */
     rating?: number | null;
+    /** Tags points forts / points faibles (lib/code-review-tags). */
+    strengths?: string[];
+    weaknesses?: string[];
   }[];
 }
 
@@ -479,7 +483,9 @@ export async function createAudit(
       absent: r.absent || false,
       feedback: r.feedback,
       warnings: r.warnings || [],
-      rating: r.rating ?? null
+      rating: r.rating ?? null,
+      strengths: r.strengths || [],
+      weaknesses: r.weaknesses || []
     }));
 
     let results: (typeof auditResults.$inferSelect)[] = [];
@@ -718,6 +724,9 @@ export interface StudentAuditData {
   warnings: string[];
   /** Note sur 10 (null = non noté). */
   rating: number | null;
+  /** Tags points forts / points faibles attribués sur cet audit. */
+  strengths: string[];
+  weaknesses: string[];
   globalSummary: string | null;
   globalWarnings: string[];
   priority: Priority;
@@ -759,9 +768,112 @@ export async function getAuditsByStudentLogin(
       feedback: result.feedback,
       warnings: getWarningsArray(result.warnings),
       rating: result.rating ?? null,
+      strengths: result.strengths ?? [],
+      weaknesses: result.weaknesses ?? [],
       globalSummary: audit.summary,
       globalWarnings: getWarningsArray(audit.warnings),
       priority: audit.priority as Priority || 'normal'
     };
   });
+}
+
+// ============== PLACEMENT ALTERNANCE ==============
+
+export interface PlacementProfile {
+  studentId: number;
+  firstName: string;
+  lastName: string;
+  login: string;
+  promo: string;
+  isAlternant: boolean;
+  avgRating: number | null;
+  ratedCount: number;
+  auditCount: number;
+  /** Tags agrégés sur tous les audits, triés par occurrences décroissantes. */
+  strengths: { tag: string; count: number }[];
+  weaknesses: { tag: string; count: number }[];
+}
+
+/**
+ * Vue « Placement alternance » : tous les apprenants actifs (non archivés,
+ * non perdition, promos actives) avec leur note moyenne de CR et leurs tags
+ * points forts / points faibles agrégés sur l'ensemble de leurs audits.
+ */
+export async function getPlacementProfiles(): Promise<PlacementProfile[]> {
+  const archivedPromos = Array.from(await getArchivedPromoNames());
+
+  const studentRows = await db
+    .select({
+      id: students.id,
+      firstName: students.first_name,
+      lastName: students.last_name,
+      login: students.login,
+      promo: students.promoName,
+      isAlternant: students.isAlternant,
+    })
+    .from(students)
+    .where(
+      and(
+        sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`,
+        sql`(${students.archived} IS NULL OR ${students.archived} = false)`,
+        ...(archivedPromos.length > 0 ? [not(inArray(students.promoName, archivedPromos))] : []),
+      ),
+    );
+
+  if (studentRows.length === 0) return [];
+
+  const logins = studentRows.map((s) => s.login.toLowerCase());
+  const resultRows = await db
+    .select({
+      login: sql<string>`lower(${auditResults.studentLogin})`,
+      rating: auditResults.rating,
+      strengths: auditResults.strengths,
+      weaknesses: auditResults.weaknesses,
+    })
+    .from(auditResults)
+    .where(inArray(sql`lower(${auditResults.studentLogin})`, logins));
+
+  const byLogin = new Map<
+    string,
+    { ratings: number[]; auditCount: number; strengths: Map<string, number>; weaknesses: Map<string, number> }
+  >();
+  for (const r of resultRows) {
+    let agg = byLogin.get(r.login);
+    if (!agg) {
+      agg = { ratings: [], auditCount: 0, strengths: new Map(), weaknesses: new Map() };
+      byLogin.set(r.login, agg);
+    }
+    agg.auditCount++;
+    if (r.rating != null) agg.ratings.push(r.rating);
+    for (const t of r.strengths ?? []) agg.strengths.set(t, (agg.strengths.get(t) ?? 0) + 1);
+    for (const t of r.weaknesses ?? []) agg.weaknesses.set(t, (agg.weaknesses.get(t) ?? 0) + 1);
+  }
+
+  const toSorted = (m: Map<string, number>) =>
+    Array.from(m.entries())
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+
+  return studentRows
+    .map((s) => {
+      const agg = byLogin.get(s.login.toLowerCase());
+      const ratings = agg?.ratings ?? [];
+      return {
+        studentId: s.id,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        login: s.login,
+        promo: s.promo,
+        isAlternant: s.isAlternant === true,
+        avgRating:
+          ratings.length > 0
+            ? Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10
+            : null,
+        ratedCount: ratings.length,
+        auditCount: agg?.auditCount ?? 0,
+        strengths: toSorted(agg?.strengths ?? new Map()),
+        weaknesses: toSorted(agg?.weaknesses ?? new Map()),
+      };
+    })
+    .sort((a, b) => (b.avgRating ?? -1) - (a.avgRating ?? -1) || a.lastName.localeCompare(b.lastName));
 }

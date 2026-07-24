@@ -29,6 +29,8 @@ const createAuditSchema = z.object({
         feedback: z.string().nullable().optional(),
         warnings: z.array(z.string()).default([]),
         rating: z.number().int().min(0).max(10).nullable().optional(),
+        strengths: z.array(z.string().min(1).max(50)).max(20).default([]),
+        weaknesses: z.array(z.string().min(1).max(50)).max(20).default([]),
     })),
 });
 
@@ -162,6 +164,8 @@ export async function POST(request: NextRequest) {
                 feedback: r.feedback ?? undefined,
                 warnings: r.warnings,
                 rating: r.absent ? null : r.rating ?? null,
+                strengths: r.absent ? [] : r.strengths,
+                weaknesses: r.absent ? [] : r.weaknesses,
             })),
         };
 

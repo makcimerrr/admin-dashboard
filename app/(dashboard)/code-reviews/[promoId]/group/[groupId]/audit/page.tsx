@@ -146,7 +146,9 @@ export default async function AuditEditPage({ params }: PageProps) {
         absent: !!r.absent,
         feedback: r.feedback ?? null,
         warnings: r.warnings ?? [],
-        rating: r.rating ?? null
+        rating: r.rating ?? null,
+        strengths: r.strengths ?? [],
+        weaknesses: r.weaknesses ?? []
       }))}
     />
   );

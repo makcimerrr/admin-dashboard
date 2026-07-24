@@ -13,6 +13,7 @@ import { ArrowLeft, ClipboardCheck, Eye, EyeOff, FileText, UserX } from 'lucide-
 import Link from 'next/link';
 import MarkdownWithTables from './markdown-with-tables';
 import { StarRating } from './star-rating';
+import { TagPicker } from './tag-picker';
 
 type Member = {
   id: number;
@@ -23,6 +24,9 @@ type Member = {
   warnings?: string[];
   /** Note sur 10 (null = non noté). */
   rating?: number | null;
+  /** Tags points forts / points faibles (lib/code-review-tags). */
+  strengths?: string[];
+  weaknesses?: string[];
 };
 
 type Props = {
@@ -81,6 +85,8 @@ export default function AuditEditForm({
             feedback: r.feedback ?? null,
             warnings: r.warnings ?? [],
             rating: r.absent ? null : r.rating ?? null,
+            strengths: r.absent ? [] : r.strengths ?? [],
+            weaknesses: r.absent ? [] : r.weaknesses ?? [],
           })),
         }),
       });
@@ -198,13 +204,27 @@ export default function AuditEditForm({
               </div>
 
               {!r.absent && (
-                <div className="flex items-center gap-3">
-                  <label className="text-sm text-muted-foreground">Note</label>
-                  <StarRating
-                    value={r.rating ?? null}
-                    onChange={(rating) => updateMember(r.studentLogin, { rating })}
-                  />
-                </div>
+                <>
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm text-muted-foreground">Note</label>
+                    <StarRating
+                      value={r.rating ?? null}
+                      onChange={(rating) => updateMember(r.studentLogin, { rating })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm text-muted-foreground block">
+                      Profil — 1 clic = point fort, 2 = point faible, 3 = retirer
+                    </label>
+                    <TagPicker
+                      strengths={r.strengths ?? []}
+                      weaknesses={r.weaknesses ?? []}
+                      onChange={({ strengths, weaknesses }) =>
+                        updateMember(r.studentLogin, { strengths, weaknesses })
+                      }
+                    />
+                  </div>
+                </>
               )}
 
               <div className="flex items-center justify-between">

@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingCard } from '@/components/ui/loading-card';
 import GlobalWarningsEditor from '@/components/code-reviews/global-warnings-editor';
 import { StarRating } from '@/components/code-reviews/star-rating';
+import { TagPicker } from '@/components/code-reviews/tag-picker';
 import {
     ArrowLeft,
     ClipboardCheck,
@@ -50,6 +51,9 @@ interface MemberResult {
     warnings: string[];
     /** Note sur 10 (null = non noté). */
     rating: number | null;
+    /** Tags points forts / points faibles (lib/code-review-tags). */
+    strengths: string[];
+    weaknesses: string[];
 }
 
 export default function AuditPage({ params }: { params: Promise<{ promoId: string }> }) {
@@ -110,6 +114,8 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                             feedback: '',
                             warnings: [],
                             rating: null,
+                            strengths: [],
+                            weaknesses: [],
                         }))
                 );
             } catch (err) {
@@ -144,6 +150,8 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                         feedback: r.feedback || null,
                         warnings: r.warnings.filter(w => w.trim()),
                         rating: r.absent ? null : r.rating,
+                        strengths: r.absent ? [] : r.strengths,
+                        weaknesses: r.absent ? [] : r.weaknesses,
                     })),
                 }),
             });
@@ -399,6 +407,18 @@ export default function AuditPage({ params }: { params: Promise<{ promoId: strin
                                             <StarRating
                                                 value={result.rating}
                                                 onChange={(rating) => updateMemberResult(result.login, { rating })}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <Label className="text-sm text-muted-foreground">
+                                                Profil — 1 clic = point fort, 2 = point faible, 3 = retirer
+                                            </Label>
+                                            <TagPicker
+                                                strengths={result.strengths}
+                                                weaknesses={result.weaknesses}
+                                                onChange={({ strengths, weaknesses }) =>
+                                                    updateMemberResult(result.login, { strengths, weaknesses })
+                                                }
                                             />
                                         </div>
                                         <Textarea
