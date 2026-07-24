@@ -5,8 +5,9 @@ import {
   students,
   studentSpecialtyProgress
 } from '../schema';
+import { auditResults } from '../schema/audits';
 import { projects } from '../schema/projects';
-import { and, asc, count, desc, eq, ilike, notInArray, or, sql, SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, notInArray, or, sql, SQL } from 'drizzle-orm';
 import { SelectStudent } from '@/lib/db/schema/students';
 import { getArchivedPromoNames } from '@/lib/db/filters';
 
@@ -344,6 +345,36 @@ export async function getStudents(
     .limit(studentsPerPage)
     .offset(offset);
 
+  // Enrichissement : note moyenne de code review (audit_results.rating) par
+  // login, pour la page courante uniquement (20 lignes max → une requête).
+  const pageLogins = studentsResult
+    .map((s) => (s.login ?? '').toLowerCase())
+    .filter(Boolean);
+  const ratingByLogin = new Map<string, { avg: number; count: number }>();
+  if (pageLogins.length > 0) {
+    const ratingRows = await db
+      .select({
+        login: sql<string>`lower(${auditResults.studentLogin})`,
+        avg: sql<number>`avg(${auditResults.rating})::float`,
+        count: sql<number>`count(${auditResults.rating})::int`
+      })
+      .from(auditResults)
+      .where(
+        and(
+          isNotNull(auditResults.rating),
+          inArray(sql`lower(${auditResults.studentLogin})`, pageLogins)
+        )
+      )
+      .groupBy(sql`lower(${auditResults.studentLogin})`);
+    for (const r of ratingRows) {
+      ratingByLogin.set(r.login, { avg: Math.round(r.avg * 10) / 10, count: r.count });
+    }
+  }
+  const enrichedStudents = studentsResult.map((s) => {
+    const rating = ratingByLogin.get((s.login ?? '').toLowerCase());
+    return { ...s, avgRating: rating?.avg ?? null, ratedCount: rating?.count ?? 0 };
+  });
+
   // Requête de comptage des étudiants avec les mêmes filtres appliqués
   const totalQuery = db
     .select({ count: count() })
@@ -368,7 +399,7 @@ export async function getStudents(
     offset >= studentsPerPage ? offset - studentsPerPage : null;
 
   return {
-    students: studentsResult,
+    students: enrichedStudents,
     currentOffset: offset,
     newOffset,
     previousOffset,

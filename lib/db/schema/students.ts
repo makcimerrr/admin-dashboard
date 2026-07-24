@@ -124,4 +124,8 @@ export type SelectStudent = {
     companyEmail: string | null;
     companyPhone: string | null;
     alternantNotes: string | null;
+    // Enrichissement d'affichage (getStudents) : moyenne des notes de CR
+    // (audit_results.rating) pour ce login. Absents des autres producteurs.
+    avgRating?: number | null;
+    ratedCount?: number;
 };

@@ -157,6 +157,11 @@ export function StudentMobileCard({ student, promoConfig }: StudentMobileCardPro
           >
             {student.delay_level || 'N/A'}
           </Badge>
+          {student.avgRating != null && (
+            <span className="text-[10px] tabular-nums text-muted-foreground">
+              <span className="text-warning">★</span> {student.avgRating}/10
+            </span>
+          )}
         </div>
       </div>
 

@@ -14,7 +14,7 @@ type SortableColumn =
   | 'delay_level';
 
 interface Column {
-  key: SortableColumn | 'availability' | 'actions';
+  key: SortableColumn | 'availability' | 'avg_rating' | 'actions';
   label: string;
   sortable: boolean;
   className?: string;
@@ -28,6 +28,13 @@ const columns: Column[] = [
   { key: 'javascript_project', label: 'JavaScript', sortable: true },
   { key: 'rust_project', label: 'Rust/Java', sortable: true },
   { key: 'delay_level', label: 'Retard', sortable: true, className: 'w-[100px]' },
+  {
+    key: 'avg_rating',
+    label: 'Note CR',
+    sortable: false,
+    className: 'w-[90px]',
+    hideOnMobile: true
+  },
   {
     key: 'availability',
     label: 'Disponibilité',
