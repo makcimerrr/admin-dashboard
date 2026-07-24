@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { List, GraduationCap, MessageSquare, Sparkles } from 'lucide-react';
+import { List, GraduationCap, MessageSquare, Sparkles, Briefcase } from 'lucide-react';
 
 /**
  * Segmented nav shown at the top of the /students sub-pages. Lets users switch
@@ -16,6 +16,7 @@ export function StudentsSubnav() {
     { href: '/students/specialties', label: 'Par spécialité', icon: GraduationCap },
     { href: '/students/discord', label: 'Discord', icon: MessageSquare },
     { href: '/students/skills', label: 'Compétences', icon: Sparkles },
+    { href: '/students/placement', label: 'Placement', icon: Briefcase },
   ];
 
   return (

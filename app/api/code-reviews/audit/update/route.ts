@@ -42,6 +42,10 @@ export async function POST(request: Request) {
           !r.absent && ratingRaw !== null && Number.isInteger(ratingRaw) && ratingRaw >= 0 && ratingRaw <= 10
             ? ratingRaw
             : null;
+        const sanitizeTags = (v: unknown): string[] =>
+          Array.isArray(v)
+            ? v.filter((t): t is string => typeof t === 'string' && t.length > 0 && t.length <= 50).slice(0, 20)
+            : [];
         const payload = {
           auditId: Number(auditId),
           studentLogin: login,
@@ -49,13 +53,15 @@ export async function POST(request: Request) {
           absent: !!r.absent,
           feedback: r.feedback ?? null,
           warnings: r.warnings ?? [],
-          rating
+          rating,
+          strengths: r.absent ? [] : sanitizeTags(r.strengths),
+          weaknesses: r.absent ? [] : sanitizeTags(r.weaknesses)
         };
 
         if (existingMap.has(login)) {
           // Update only if changed
           const ex = existingMap.get(login);
-          const changed = ex.validated !== payload.validated || ex.absent !== payload.absent || (ex.feedback ?? null) !== (payload.feedback ?? null) || JSON.stringify(ex.warnings || []) !== JSON.stringify(payload.warnings || []) || (ex.rating ?? null) !== payload.rating;
+          const changed = ex.validated !== payload.validated || ex.absent !== payload.absent || (ex.feedback ?? null) !== (payload.feedback ?? null) || JSON.stringify(ex.warnings || []) !== JSON.stringify(payload.warnings || []) || (ex.rating ?? null) !== payload.rating || JSON.stringify(ex.strengths || []) !== JSON.stringify(payload.strengths) || JSON.stringify(ex.weaknesses || []) !== JSON.stringify(payload.weaknesses);
           if (changed) {
             await tx.update(auditResults).set(payload).where(and(eq(auditResults.auditId, Number(auditId)), eq(auditResults.studentLogin, login)));
           }

@@ -33,6 +33,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import Link from 'next/link';
 import { StarRating } from '@/components/code-reviews/star-rating';
+import { TagBadges } from '@/components/code-reviews/tag-picker';
 
 type StudentAudit = {
   auditId: number;
@@ -48,6 +49,9 @@ type StudentAudit = {
   warnings: string[];
   /** Note sur 10 attribuée lors de la CR (null = non noté). */
   rating: number | null;
+  /** Tags points forts / points faibles attribués sur cet audit. */
+  strengths: string[];
+  weaknesses: string[];
   globalSummary: string | null;
   globalWarnings: string[];
   priority: 'urgent' | 'warning' | 'normal';
@@ -247,6 +251,11 @@ export function StudentAudits({ studentId }: StudentAuditsProps) {
                         <StarRating value={audit.rating} readOnly size="sm" />
                       )}
                     </div>
+                    {((audit.strengths?.length ?? 0) > 0 || (audit.weaknesses?.length ?? 0) > 0) && (
+                      <div className="mt-1.5">
+                        <TagBadges strengths={audit.strengths ?? []} weaknesses={audit.weaknesses ?? []} size="sm" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Validation Status & Link */}
