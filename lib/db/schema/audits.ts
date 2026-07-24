@@ -70,6 +70,8 @@ export const auditResults = pgTable('audit_results', {
     absent: boolean('absent').default(false).notNull(),
     feedback: text('feedback'),
     warnings: jsonb('warnings').$type<string[]>().default([]),
+    /** Note sur 10 attribuée par l'auditeur (null = non noté ; absent → null). */
+    rating: integer('rating'),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => ({
