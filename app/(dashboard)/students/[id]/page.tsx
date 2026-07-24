@@ -38,6 +38,7 @@ import Link from 'next/link';
 import { PILL } from '@/lib/status-pills';
 import { LoadingCard } from '@/components/ui/loading-card';
 import { StudentAudits } from '@/components/student-audits';
+import { StudentRatingOverview } from '@/components/student-rating-overview';
 import { StudentPendingAudits } from '@/components/student-pending-audits';
 import { StudentSkillsPanel } from '@/components/students/skills-panel';
 
@@ -469,6 +470,9 @@ export default function StudentPage() {
           </Badge>
         </div>
       </div>
+
+      {/* Évolution des notes de CR + récap des tags (masqué si aucune donnée) */}
+      <StudentRatingOverview studentId={student.id} />
 
       {/* Quick Stats */}
       <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
