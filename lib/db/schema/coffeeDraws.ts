@@ -21,6 +21,9 @@ export const coffeeDraws = pgTable('coffee_draws', {
   // Alternants inclus dans le vivier de ce tirage (choisi au lancement). Le
   // re-tirage individuel réutilise ce même réglage.
   includeAlternants: boolean('include_alternants').notNull().default(true),
+  // Anti-répétition : on évite les apprenants tirés lors des N derniers mois
+  // (et on privilégie les jamais-tirés). Réutilisé par le re-tirage individuel.
+  cooldownMonths: integer('cooldown_months').notNull().default(3),
   status: text('status').notNull().default('draft'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });

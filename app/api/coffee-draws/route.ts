@@ -20,7 +20,10 @@ export const POST = withErrorHandler(
   withAdmin(async (req) => {
     const body = await req.json().catch(() => ({}));
     const includeAlternants = body?.includeAlternants !== false; // défaut true
-    const draw = await createCoffeeDraw({ includeAlternants });
+    const rawQuota = Number(body?.quota);
+    const quota =
+      Number.isInteger(rawQuota) && rawQuota > 0 ? Math.min(rawQuota, 50) : undefined;
+    const draw = await createCoffeeDraw({ includeAlternants, quota });
     return apiSuccess({ draw });
   }),
 );

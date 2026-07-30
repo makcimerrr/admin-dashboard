@@ -71,21 +71,103 @@ function currentMonthKey(): string {
   return new Date().toISOString().slice(0, 7); // 'YYYY-MM'
 }
 
+/** Les `n` derniers mois (clés 'YYYY-MM', mois courant inclus). */
+function recentMonthKeys(n: number): Set<string> {
+  const set = new Set<string>();
+  const now = new Date();
+  for (let i = 0; i < Math.max(0, n); i++) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    set.add(d.toISOString().slice(0, 7));
+  }
+  return set;
+}
+
+/** Dernier mois de tirage par apprenant (studentId → 'YYYY-MM'). */
+async function lastDrawnMonthByStudent(): Promise<Map<number, string>> {
+  const rows = await db
+    .select({
+      studentId: coffeeDrawParticipants.studentId,
+      lastMonth: sql<string>`max(${coffeeDraws.month})`,
+    })
+    .from(coffeeDrawParticipants)
+    .innerJoin(coffeeDraws, eq(coffeeDraws.id, coffeeDrawParticipants.drawId))
+    .groupBy(coffeeDrawParticipants.studentId);
+  return new Map(rows.map((r) => [r.studentId, r.lastMonth]));
+}
+
 /**
- * Tire au sort 9–10 apprenants éligibles et persiste le tirage (+ snapshot des
- * participants). Le quota est aléatoire dans {9, 10}, borné par la taille du
- * vivier. Phase de test : aucun message Discord n'est envoyé.
+ * Sélection anti-répétition : privilégie les JAMAIS-tirés, puis les tirés hors
+ * cooldown (les moins récents d'abord), et n'entame les « en cooldown » (tirés
+ * dans les `cooldownMonths` derniers mois) qu'en dernier recours si le vivier
+ * est trop petit pour atteindre `count`.
+ */
+async function pickWithAntiRepeat({
+  count,
+  includeAlternants,
+  excludeIds = [],
+  cooldownMonths,
+}: {
+  count: number;
+  includeAlternants: boolean;
+  excludeIds?: number[];
+  cooldownMonths: number;
+}): Promise<EligibleStudent[]> {
+  const pool = await getEligibleStudentsForCoffee({ exclude: excludeIds, includeAlternants });
+  const lastMonth = await lastDrawnMonthByStudent();
+  const recent = recentMonthKeys(cooldownMonths);
+
+  const never: EligibleStudent[] = [];
+  const stale: { s: EligibleStudent; m: string }[] = [];
+  const cooling: { s: EligibleStudent; m: string }[] = [];
+  for (const s of pool) {
+    const m = lastMonth.get(s.id);
+    if (!m) never.push(s);
+    else if (recent.has(m)) cooling.push({ s, m });
+    else stale.push({ s, m });
+  }
+
+  const picked: EligibleStudent[] = [];
+  const take = (arr: EligibleStudent[]) => {
+    for (const s of arr) {
+      if (picked.length >= count) break;
+      picked.push(s);
+    }
+  };
+  take(shuffle(never));
+  take(shuffle(stale.map((x) => x.s)));
+  // Relâchement : en cooldown, les moins récents d'abord.
+  take(cooling.sort((a, b) => a.m.localeCompare(b.m)).map((x) => x.s));
+  return picked.slice(0, count);
+}
+
+/**
+ * Tire au sort des apprenants éligibles (quota configurable, défaut aléatoire
+ * 9–10) avec anti-répétition, et persiste le tirage (+ snapshot des
+ * participants). Phase de test : aucun message Discord n'est envoyé.
  */
 export async function createCoffeeDraw(
-  { includeAlternants = true }: { includeAlternants?: boolean } = {},
+  {
+    includeAlternants = true,
+    quota,
+    cooldownMonths = 3,
+  }: { includeAlternants?: boolean; quota?: number; cooldownMonths?: number } = {},
 ): Promise<CoffeeDrawWithParticipants> {
-  const pool = await getEligibleStudentsForCoffee({ includeAlternants });
-  const targetQuota = Math.random() < 0.5 ? 9 : 10;
-  const picked = shuffle(pool).slice(0, Math.min(targetQuota, pool.length));
+  const targetQuota = quota && quota > 0 ? quota : Math.random() < 0.5 ? 9 : 10;
+  const picked = await pickWithAntiRepeat({
+    count: targetQuota,
+    includeAlternants,
+    cooldownMonths,
+  });
 
   const [draw] = await db
     .insert(coffeeDraws)
-    .values({ month: currentMonthKey(), quota: picked.length, includeAlternants, status: 'draft' })
+    .values({
+      month: currentMonthKey(),
+      quota: picked.length,
+      includeAlternants,
+      cooldownMonths,
+      status: 'draft',
+    })
     .returning();
 
   if (picked.length > 0) {
@@ -139,20 +221,25 @@ export async function redrawParticipant(participantId: number): Promise<RedrawRe
     .where(eq(coffeeDrawParticipants.drawId, participant.drawId));
   const excludeIds = current.map((r) => r.studentId);
 
-  // Réutilise le réglage alternants du tirage.
+  // Réutilise les réglages du tirage (alternants + cooldown anti-répétition).
   const [draw0] = await db
-    .select({ includeAlternants: coffeeDraws.includeAlternants })
+    .select({
+      includeAlternants: coffeeDraws.includeAlternants,
+      cooldownMonths: coffeeDraws.cooldownMonths,
+    })
     .from(coffeeDraws)
     .where(eq(coffeeDraws.id, participant.drawId))
     .limit(1);
 
-  const pool = await getEligibleStudentsForCoffee({
-    exclude: excludeIds,
+  const picked = await pickWithAntiRepeat({
+    count: 1,
     includeAlternants: draw0?.includeAlternants ?? true,
+    excludeIds,
+    cooldownMonths: draw0?.cooldownMonths ?? 3,
   });
-  if (pool.length === 0) return { ok: false, reason: 'pool_exhausted' };
+  if (picked.length === 0) return { ok: false, reason: 'pool_exhausted' };
 
-  const next = shuffle(pool)[0];
+  const next = picked[0];
   await db
     .update(coffeeDrawParticipants)
     .set({
