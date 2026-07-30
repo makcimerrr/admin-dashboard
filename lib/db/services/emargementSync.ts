@@ -1,6 +1,7 @@
 import 'server-only';
 import postgres from 'postgres';
 import { db } from '../config';
+import { students } from '../schema/students';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -10,19 +11,24 @@ import { sql } from 'drizzle-orm';
  * (lecture seule). Seule la table `students` du hub est écrite — émargement
  * ÉCRASE les saisies manuelles du hub.
  *
- * Source = base émargement (table `users`, login = `nickname`), lue directement
- * via `EMARGEMENT_DATABASE_URL` (réseau Docker partagé) car l'API HTTP
- * d'émargement exige une session admin Authentik (non appelable en backend).
+ * Source = base émargement (table `users`), lue directement via
+ * `EMARGEMENT_DATABASE_URL` (réseau Docker partagé) car l'API HTTP d'émargement
+ * exige une session admin Authentik (non appelable en backend).
+ *
+ * ⚠️ Le `nickname` d'émargement n'est PAS fiable comme login Zone01 (ex.
+ * `rlevasse` y est stocké « Levasseur »). On résout donc chaque utilisateur
+ * émargement vers un login du hub par : (1) nickname == login, sinon (2) nom
+ * complet == « prénom nom » du hub (normalisé, sans accents). Les non-résolus
+ * sont comptés et ignorés (jamais d'écriture hasardeuse).
  *
  * Règles (autoritatif) :
- *  - `archived`     = `users.archived` (double sens : archive ET désarchive).
- *  - `isAlternant`  = contrat présent (`contract_type` non vide → apprentissage /
- *                     professionnalisation). Marque ET démarque.
- *  - Alternant  → `alternantStartDate/EndDate` repris de `contract_start/end_date`.
+ *  - `archived`    = `users.archived` (double sens : archive ET désarchive).
+ *  - `isAlternant` = contrat présent (`contract_type` ∈ {apprentissage,
+ *                    professionnalisation}). Marque ET démarque.
+ *  - Alternant     → `alternantStartDate/EndDate` repris des dates de contrat
+ *                    (en TEXTE 'YYYY-MM-DD' → pas de décalage de fuseau).
  *  - Non-alternant → efface les champs alternant du hub (dates + entreprise /
- *    contact / email / téléphone / notes) : l'émargement prime sur le manuel.
- *    (émargement ne fournit pas le nom d'entreprise → conservé pour les alternants
- *    confirmés, faute de source de remplacement.)
+ *                    contact / email / téléphone / notes).
  */
 
 const ALTERNANT_CONTRACTS = ['apprentissage', 'professionnalisation'];
@@ -33,14 +39,27 @@ export interface EmargementSyncResult {
   alternantsInEmargement: number;
   studentsArchived: number;
   studentsAlternant: number;
+  /** Utilisateurs émargement (archivé/alternant) non rattachés à un login hub. */
+  unresolved: number;
 }
 
 interface EmgUserRow {
-  login: string;
+  nickname: string | null;
+  name: string | null;
   archived: boolean | null;
   contract_type: string | null;
   contract_start_date: string | null;
   contract_end_date: string | null;
+}
+
+/** Normalise pour le rapprochement : minuscules, sans accents, espaces compactés. */
+function norm(s: string | null | undefined): string {
+  return (s ?? '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export async function syncEmargementStatuses(
@@ -49,57 +68,108 @@ export async function syncEmargementStatuses(
   const emgUrl = process.env.EMARGEMENT_DATABASE_URL;
   if (!emgUrl) throw new Error('EMARGEMENT_DATABASE_URL non configuré');
 
-  // 1) LECTURE SEULE émargement (jamais d'écriture ici).
+  // 1) Charger les apprenants du hub pour le rapprochement (login + nom).
+  const hubStudents = await db
+    .select({
+      login: students.login,
+      firstName: students.first_name,
+      lastName: students.last_name,
+    })
+    .from(students);
+
+  const loginSet = new Set(hubStudents.map((s) => s.login.toLowerCase()));
+  const loginByName = new Map<string, string>();
+  for (const s of hubStudents) {
+    const login = s.login.toLowerCase();
+    const fwd = norm(`${s.firstName} ${s.lastName}`);
+    const rev = norm(`${s.lastName} ${s.firstName}`);
+    if (fwd && !loginByName.has(fwd)) loginByName.set(fwd, login);
+    if (rev && !loginByName.has(rev)) loginByName.set(rev, login);
+  }
+
+  /** Résout un utilisateur émargement vers un login hub, ou null. */
+  const resolve = (u: EmgUserRow): string | null => {
+    const nick = norm(u.nickname);
+    if (nick && loginSet.has(nick)) return nick;
+    const byName = loginByName.get(norm(u.name));
+    return byName ?? null;
+  };
+
+  // 2) LECTURE SEULE émargement (jamais d'écriture ici). Dates en TEXTE.
   const emg = postgres(emgUrl, { ssl: false, max: 1 });
   let rows: EmgUserRow[] = [];
   try {
     rows = await emg<EmgUserRow[]>`
-      SELECT lower(nickname) AS login,
+      SELECT nickname,
+             name,
              archived,
              contract_type,
-             contract_start_date,
-             contract_end_date
+             contract_start_date::text AS contract_start_date,
+             contract_end_date::text   AS contract_end_date
       FROM users
-      WHERE nickname IS NOT NULL AND nickname <> ''
     `;
   } finally {
     await emg.end({ timeout: 5 }).catch(() => {});
   }
 
-  const archivedLogins = rows.filter((r) => r.archived).map((r) => r.login);
-  const alternants = rows.filter(
-    (r) => r.contract_type && ALTERNANT_CONTRACTS.includes(r.contract_type.trim().toLowerCase()),
-  );
-  const alternantLogins = alternants.map((r) => r.login);
+  // 3) Rapprochement → ensembles de logins hub.
+  const archivedLogins = new Set<string>();
+  const alternantMap = new Map<string, { start: string | null; end: string | null }>();
+  let unresolved = 0;
+
+  for (const u of rows) {
+    const isArchived = !!u.archived;
+    const isAlternant =
+      !!u.contract_type &&
+      ALTERNANT_CONTRACTS.includes(u.contract_type.trim().toLowerCase());
+    if (!isArchived && !isAlternant) continue;
+
+    const login = resolve(u);
+    if (!login) {
+      unresolved++;
+      continue;
+    }
+    if (isArchived) archivedLogins.add(login);
+    if (isAlternant) {
+      alternantMap.set(login, {
+        start: u.contract_start_date,
+        end: u.contract_end_date,
+      });
+    }
+  }
+
+  const archivedList = [...archivedLogins];
+  const alternantList = [...alternantMap.keys()];
 
   if (dry) {
     return {
       dry: true,
-      archivedInEmargement: archivedLogins.length,
-      alternantsInEmargement: alternantLogins.length,
+      archivedInEmargement: archivedList.length,
+      alternantsInEmargement: alternantList.length,
       studentsArchived: 0,
       studentsAlternant: 0,
+      unresolved,
     };
   }
 
-  // 2) ÉCRITURE hub uniquement (students).
-  // 2a) archived (double sens).
-  if (archivedLogins.length === 0) {
+  // 4) ÉCRITURE hub uniquement (students).
+  // 4a) archived (double sens).
+  if (archivedList.length === 0) {
     await db.execute(sql`UPDATE students SET archived = false WHERE archived = true`);
   } else {
-    const list = sql.join(archivedLogins.map((l) => sql`${l}`), sql`, `);
+    const list = sql.join(archivedList.map((l) => sql`${l}`), sql`, `);
     await db.execute(sql`UPDATE students SET archived = (lower(login) IN (${list}))`);
   }
 
-  // 2b) isAlternant (double sens).
-  if (alternantLogins.length === 0) {
+  // 4b) isAlternant (double sens).
+  if (alternantList.length === 0) {
     await db.execute(sql`UPDATE students SET is_alternant = false WHERE is_alternant = true`);
   } else {
-    const list = sql.join(alternantLogins.map((l) => sql`${l}`), sql`, `);
+    const list = sql.join(alternantList.map((l) => sql`${l}`), sql`, `);
     await db.execute(sql`UPDATE students SET is_alternant = (lower(login) IN (${list}))`);
   }
 
-  // 2c) Non-alternants : effacer les champs alternant du hub (autoritatif).
+  // 4c) Non-alternants : effacer les champs alternant du hub (autoritatif).
   await db.execute(sql`
     UPDATE students SET
       alternant_start_date = NULL,
@@ -112,32 +182,41 @@ export async function syncEmargementStatuses(
     WHERE (is_alternant IS NULL OR is_alternant = false)
   `);
 
-  // 2d) Alternants : dates de contrat reprises d'émargement.
-  await Promise.all(
-    alternants.map((a) =>
-      db.execute(sql`
-        UPDATE students SET
-          alternant_start_date = ${a.contract_start_date},
-          alternant_end_date = ${a.contract_end_date}
-        WHERE lower(login) = ${a.login}
-      `),
-    ),
-  );
+  // 4d) Alternants : dates de contrat en UN SEUL update ensembliste (VALUES).
+  //     Dates passées en TEXTE puis castées → pas de décalage de fuseau, et pas
+  //     de binding de Date concurrent (source du « Failed query » précédent).
+  const withDates = [...alternantMap.entries()].filter(([, d]) => d.start || d.end);
+  if (withDates.length > 0) {
+    const values = sql.join(
+      withDates.map(
+        ([login, d]) => sql`(${login}, ${d.start}::timestamp, ${d.end}::timestamp)`,
+      ),
+      sql`, `,
+    );
+    await db.execute(sql`
+      UPDATE students AS s SET
+        alternant_start_date = v.d_start,
+        alternant_end_date = v.d_end
+      FROM (VALUES ${values}) AS v(login, d_start, d_end)
+      WHERE lower(s.login) = v.login
+    `);
+  }
 
-  // 3) Comptage.
+  // 5) Comptage.
+  const asRows = <T,>(r: unknown) => r as unknown as T[];
   const archivedRes = await db.execute<{ count: number }>(
     sql`SELECT count(*)::int AS count FROM students WHERE archived = true`,
   );
   const alternantRes = await db.execute<{ count: number }>(
     sql`SELECT count(*)::int AS count FROM students WHERE is_alternant = true`,
   );
-  const asRows = <T,>(r: unknown) => r as unknown as T[];
 
   return {
     dry: false,
-    archivedInEmargement: archivedLogins.length,
-    alternantsInEmargement: alternantLogins.length,
+    archivedInEmargement: archivedList.length,
+    alternantsInEmargement: alternantList.length,
     studentsArchived: Number(asRows<{ count: number }>(archivedRes)[0]?.count ?? 0),
     studentsAlternant: Number(asRows<{ count: number }>(alternantRes)[0]?.count ?? 0),
+    unresolved,
   };
 }
