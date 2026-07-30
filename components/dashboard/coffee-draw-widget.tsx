@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Coffee } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { getLatestCoffeeDraw } from '@/lib/db/services/coffeeDraws';
 import { CoffeeDrawButton } from './coffee-draw-button';
+import { CoffeeParticipantRow } from './coffee-participant-row';
 
 function monthLabel(monthKey: string): string {
   // monthKey = 'YYYY-MM' → 'juillet 2026'
@@ -40,21 +40,20 @@ export async function CoffeeDrawWidget() {
           <>
             <p className="text-xs text-muted-foreground mb-3">
               {draw.participants.length} apprenants tirés au sort · phase de test
-              (aucun message envoyé)
+              (aucun message envoyé) · re-tire un apprenant avec l’icône ↻
             </p>
             <ul className="grid gap-2 grid-cols-1 sm:grid-cols-2">
               {draw.participants.map((p) => (
-                <li
+                <CoffeeParticipantRow
                   key={p.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border bg-background/50 px-3 py-2"
-                >
-                  <span className="text-sm font-medium truncate">
-                    {p.firstName} {p.lastName}
-                  </span>
-                  <Badge variant="outline" className="shrink-0 text-[10px]">
-                    {p.promoName}
-                  </Badge>
-                </li>
+                  participant={{
+                    id: p.id,
+                    firstName: p.firstName,
+                    lastName: p.lastName,
+                    promoName: p.promoName,
+                    isAlternant: p.isAlternant,
+                  }}
+                />
               ))}
             </ul>
           </>

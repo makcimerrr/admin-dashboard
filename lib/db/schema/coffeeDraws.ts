@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, serial, integer } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, serial, integer, boolean } from 'drizzle-orm/pg-core';
 import { students } from './students';
 
 /**
@@ -36,6 +36,8 @@ export const coffeeDrawParticipants = pgTable('coffee_draw_participants', {
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   promoName: text('promo_name').notNull(),
+  // Snapshot du statut alternant au moment du tirage → tag affiché en face du nom.
+  isAlternant: boolean('is_alternant').notNull().default(false),
   status: text('status').notNull().default('drawn'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
