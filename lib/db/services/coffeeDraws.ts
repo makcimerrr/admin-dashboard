@@ -15,22 +15,29 @@ interface EligibleStudent {
   firstName: string;
   lastName: string;
   promoName: string;
+  isAlternant: boolean;
 }
 
 /**
  * Vivier éligible au tirage café : apprenants ACTIFS de toutes promos —
- * non archivés, non en perdition, NON alternants, et hors promos archivées.
+ * non archivés, non en perdition, hors promos archivées. Les alternants sont
+ * INCLUS (repérés ensuite par un tag). `exclude` retire des studentId précis
+ * (ex. ceux déjà présents dans le tirage lors d'un re-tirage individuel).
  */
-export async function getEligibleStudentsForCoffee(): Promise<EligibleStudent[]> {
+export async function getEligibleStudentsForCoffee(
+  exclude: number[] = [],
+): Promise<EligibleStudent[]> {
   const filters: SQL[] = [
     sql`(${students.archived} IS NULL OR ${students.archived} = false)`,
     sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`,
-    sql`(${students.isAlternant} IS NULL OR ${students.isAlternant} = false)`,
   ];
 
   const archivedPromos = Array.from(await getArchivedPromoNames());
   if (archivedPromos.length > 0) {
     filters.push(notInArray(students.promoName, archivedPromos));
+  }
+  if (exclude.length > 0) {
+    filters.push(notInArray(students.id, exclude));
   }
 
   return db
@@ -40,6 +47,7 @@ export async function getEligibleStudentsForCoffee(): Promise<EligibleStudent[]>
       firstName: students.first_name,
       lastName: students.last_name,
       promoName: students.promoName,
+      isAlternant: sql<boolean>`COALESCE(${students.isAlternant}, false)`,
     })
     .from(students)
     .where(and(...filters));
@@ -83,6 +91,7 @@ export async function createCoffeeDraw(): Promise<CoffeeDrawWithParticipants> {
         firstName: s.firstName,
         lastName: s.lastName,
         promoName: s.promoName,
+        isAlternant: s.isAlternant,
         status: 'drawn' as const,
       })),
     );
@@ -97,6 +106,62 @@ async function getParticipants(drawId: number): Promise<CoffeeDrawParticipant[]>
     .from(coffeeDrawParticipants)
     .where(eq(coffeeDrawParticipants.drawId, drawId))
     .orderBy(asc(coffeeDrawParticipants.promoName), asc(coffeeDrawParticipants.lastName));
+}
+
+export type RedrawResult =
+  | { ok: true; draw: CoffeeDrawWithParticipants }
+  | { ok: false; reason: 'not_found' | 'pool_exhausted' };
+
+/**
+ * Re-tire UN seul participant : le remplace par un apprenant éligible tiré au
+ * sort, en excluant tous ceux déjà présents dans le même tirage (pas de
+ * doublon). Met à jour la ligne en place (l'id du participant est conservé).
+ */
+export async function redrawParticipant(participantId: number): Promise<RedrawResult> {
+  const [participant] = await db
+    .select()
+    .from(coffeeDrawParticipants)
+    .where(eq(coffeeDrawParticipants.id, participantId))
+    .limit(1);
+
+  if (!participant) return { ok: false, reason: 'not_found' };
+
+  // Exclure tous les studentId déjà présents dans ce tirage (dont le sortant).
+  const current = await db
+    .select({ studentId: coffeeDrawParticipants.studentId })
+    .from(coffeeDrawParticipants)
+    .where(eq(coffeeDrawParticipants.drawId, participant.drawId));
+  const excludeIds = current.map((r) => r.studentId);
+
+  const pool = await getEligibleStudentsForCoffee(excludeIds);
+  if (pool.length === 0) return { ok: false, reason: 'pool_exhausted' };
+
+  const next = shuffle(pool)[0];
+  await db
+    .update(coffeeDrawParticipants)
+    .set({
+      studentId: next.id,
+      login: next.login,
+      firstName: next.firstName,
+      lastName: next.lastName,
+      promoName: next.promoName,
+      isAlternant: next.isAlternant,
+      status: 'drawn',
+    })
+    .where(eq(coffeeDrawParticipants.id, participantId));
+
+  const draw = await getCoffeeDrawById(participant.drawId);
+  return draw ? { ok: true, draw } : { ok: false, reason: 'not_found' };
+}
+
+async function getCoffeeDrawById(drawId: number): Promise<CoffeeDrawWithParticipants | null> {
+  const [draw] = await db
+    .select()
+    .from(coffeeDraws)
+    .where(eq(coffeeDraws.id, drawId))
+    .limit(1);
+  if (!draw) return null;
+  return { ...draw, participants: await getParticipants(drawId) };
 }
 
 /** Dernier tirage en date (avec ses participants), ou null si aucun. */
