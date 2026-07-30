@@ -6,6 +6,7 @@ import { getAllProjects } from '@/lib/config/projects';
 import { getAllPromoStatus } from '@/lib/db/services/promoStatus';
 import { updateLastUpdate } from '@/lib/db/services/updates';
 import type { ProjectsConfig } from '@/lib/types/code-reviews';
+import { ZONE01_API_BASE } from '@/lib/config/zone01-api';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -355,7 +356,7 @@ async function updatePromoStudents(
     const fetchTimeout = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(
-      `https://api-zone01-rouen.deno.dev/api/v1/promotions/${eventId}/students`,
+      `${ZONE01_API_BASE}/promotions/${eventId}/students`,
       { signal: controller.signal }
     );
     clearTimeout(fetchTimeout);

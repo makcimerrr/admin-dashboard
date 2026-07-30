@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const ZONE01_API = 'https://api-zone01-rouen.deno.dev/api/v1';
+import { ZONE01_API_BASE as ZONE01_API } from '@/lib/config/zone01-api';
 
 /**
  * GET /api/specialties

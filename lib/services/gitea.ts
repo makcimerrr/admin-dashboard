@@ -11,7 +11,7 @@
 
 import type { AffinityLabel, GiteaLanguageBreakdown } from '@/lib/db/schema/studentSkills';
 
-const DENO_API = 'https://api-zone01-rouen.deno.dev/api/v1';
+import { ZONE01_API_BASE as DENO_API } from '@/lib/config/zone01-api';
 // Token Zone01 (admin Gitea) — server-only, jamais exposé au client
 // utilisée par le front si besoin.
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN;

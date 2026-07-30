@@ -10,6 +10,7 @@ import { projects } from '../schema/projects';
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, notInArray, or, sql, SQL } from 'drizzle-orm';
 import { SelectStudent } from '@/lib/db/schema/students';
 import { getArchivedPromoNames } from '@/lib/db/filters';
+import { ZONE01_API_BASE } from '@/lib/config/zone01-api';
 
 // Helper générique pour normaliser et obtenir la position du projet pour n'importe quel track
 const projectPositionSubquery = (
@@ -516,7 +517,7 @@ export async function updateStudentProject(
         `Tentative de récupération des données pour l'étudiant ${login}`
       );
       const response = await fetch(
-        `https://api-zone01-rouen.deno.dev/api/v1/user-info/${login}`
+        `${ZONE01_API_BASE}/user-info/${login}`
       );
       if (!response.ok) {
         throw new Error(
