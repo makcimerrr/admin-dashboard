@@ -7,7 +7,7 @@
  * Endpoint principal : GET /api/v1/promotions/[promoID]/students
  */
 
-const ZONE01_API_BASE = 'https://api-zone01-rouen.deno.dev/api/v1';
+import { ZONE01_API_BASE } from '@/lib/config/zone01-api';
 
 // ============== TYPES API ZONE01 ==============
 

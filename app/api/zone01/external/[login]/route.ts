@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const DENO_API = 'https://api-zone01-rouen.deno.dev/api/v1';
+import { ZONE01_API_BASE as DENO_API } from '@/lib/config/zone01-api';
 
 /**
  * Proxy server-side vers l'API Zone01 (gitea-info + user-info).
