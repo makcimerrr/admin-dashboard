@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,25 +37,43 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(search);
 
-  // Debounced search handler
+  // Dernière valeur QUE NOUS avons poussée dans l'URL. Sert à distinguer l'écho
+  // de notre propre frappe (à ignorer) d'un changement externe (back/forward,
+  // reset de filtres → à adopter). Sans ça, l'aller-retour serveur réinjecte une
+  // valeur en retard dans l'input contrôlé et « efface » les caractères tapés.
+  const lastPushedRef = useRef(search);
+
+  // searchParams courant via ref → la fonction debounce reste stable (créée une
+  // seule fois) au lieu d'être recréée à chaque frappe (chaque navigation change
+  // searchParams), ce qui annulait des appels en attente.
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+
   const debouncedSearch = useMemo(
     () =>
       debounce((value: string) => {
-        const query = new URLSearchParams(searchParams.toString());
+        const query = new URLSearchParams(searchParamsRef.current.toString());
         if (value) {
           query.set('q', value);
         } else {
           query.delete('q');
         }
         query.set('offset', '0');
-        router.push(`${pathname}?${query.toString()}`, { scroll: false });
+        lastPushedRef.current = value;
+        router.replace(`${pathname}?${query.toString()}`, { scroll: false });
       }, 300),
-    [searchParams, pathname, router]
+    [pathname, router]
   );
 
-  // Sync search value with URL
+  useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
+
+  // N'adopter la valeur de l'URL que si elle vient de l'EXTÉRIEUR (différente de
+  // notre dernier push). L'écho de notre frappe est ignoré → plus de reset.
   useEffect(() => {
-    setSearchValue(search);
+    if (search !== lastPushedRef.current) {
+      lastPushedRef.current = search;
+      setSearchValue(search);
+    }
   }, [search]);
 
   // Get current filter values
