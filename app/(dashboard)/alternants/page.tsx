@@ -22,6 +22,7 @@ import { Briefcase, Search } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { AddAlternantDialog } from "./_components/add-alternant-dialog";
+import { EmargementSyncButton } from "./_components/emargement-sync-button";
 import { AlternantsStats } from "./_components/alternants-stats";
 import { AlternantsTable } from "./_components/alternants-table";
 import { AlternantDetailSheet } from "./_components/alternant-detail-sheet";
@@ -154,11 +155,14 @@ export default function AlternantsPage() {
         title="Alternants"
         description="Gestion et suivi des étudiants en alternance"
       >
-        <AddAlternantDialog
-          open={isAddDialogOpen}
-          onOpenChange={setIsAddDialogOpen}
-          onSuccess={fetchData}
-        />
+        <div className="flex items-center gap-2">
+          <EmargementSyncButton onSynced={fetchData} />
+          <AddAlternantDialog
+            open={isAddDialogOpen}
+            onOpenChange={setIsAddDialogOpen}
+            onSuccess={fetchData}
+          />
+        </div>
       </PageHeader>
 
       {loading ? (
