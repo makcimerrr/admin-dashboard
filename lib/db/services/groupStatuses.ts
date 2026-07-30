@@ -369,9 +369,27 @@ export async function cleanOrphanGroupStatuses(): Promise<number> {
   // Récupérer toutes les lignes
   const rows = await db.select().from(groupStatuses);
   let deletedCount = 0;
+
+  // Récupérer les progressions UNE FOIS par promo (au lieu d'une fois par ligne),
+  // en mode best-effort : si l'API Zone01 est indisponible pour une promo, on
+  // SKIP le nettoyage de ses lignes (jamais de suppression à l'aveugle) et on ne
+  // propage PAS l'erreur — sinon un simple appel de maintenance ferait planter
+  // /code-reviews/suivi en 500. Cf. panne API Zone01 (Deno Deploy Classic).
+  const progressionsByPromo = new Map<string, Awaited<ReturnType<typeof fetchPromotionProgressions>>>();
+  const failedPromos = new Set<string>();
+  for (const promoId of new Set(rows.map((r) => r.promoId))) {
+    try {
+      progressionsByPromo.set(promoId, await fetchPromotionProgressions(promoId));
+    } catch (e) {
+      failedPromos.add(promoId);
+      console.error(`cleanOrphanGroupStatuses: progressions indisponibles pour la promo ${promoId} — nettoyage ignoré`, e);
+    }
+  }
+
   for (const row of rows) {
-    // Vérifier si le groupe existe encore
-    const progressions = await fetchPromotionProgressions(row.promoId);
+    if (failedPromos.has(row.promoId)) continue; // API down pour cette promo → on ne touche à rien
+    const progressions = progressionsByPromo.get(row.promoId);
+    if (!progressions) continue;
     const groups = buildProjectGroups(progressions, row.projectName);
     const exists = groups.some((g) => g.groupId === row.groupId);
     if (!exists) {
