@@ -13,11 +13,14 @@ export const GET = withErrorHandler(
 
 /**
  * POST /api/coffee-draws — lance un nouveau tirage (9–10 apprenants actifs,
- * toutes promos, hors alternants). Phase de test : pas d'envoi Discord.
+ * toutes promos). Body `{ includeAlternants?: boolean }` (défaut true) contrôle
+ * l'inclusion des alternants. Phase de test : pas d'envoi Discord.
  */
 export const POST = withErrorHandler(
-  withAdmin(async () => {
-    const draw = await createCoffeeDraw();
+  withAdmin(async (req) => {
+    const body = await req.json().catch(() => ({}));
+    const includeAlternants = body?.includeAlternants !== false; // défaut true
+    const draw = await createCoffeeDraw({ includeAlternants });
     return apiSuccess({ draw });
   }),
 );

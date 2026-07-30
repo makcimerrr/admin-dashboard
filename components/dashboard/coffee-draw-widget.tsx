@@ -28,7 +28,10 @@ export async function CoffeeDrawWidget() {
             </span>
           )}
         </CardTitle>
-        <CoffeeDrawButton hasExisting={!!draw} />
+        <CoffeeDrawButton
+          hasExisting={!!draw}
+          defaultIncludeAlternants={draw?.includeAlternants ?? true}
+        />
       </CardHeader>
       <CardContent>
         {!draw || draw.participants.length === 0 ? (
@@ -39,7 +42,8 @@ export async function CoffeeDrawWidget() {
         ) : (
           <>
             <p className="text-xs text-muted-foreground mb-3">
-              {draw.participants.length} apprenants tirés au sort · phase de test
+              {draw.participants.length} apprenants tirés au sort · alternants{' '}
+              {draw.includeAlternants ? 'inclus' : 'exclus'} · phase de test
               (aucun message envoyé) · re-tire un apprenant avec l’icône ↻
             </p>
             <ul className="grid gap-2 grid-cols-1 sm:grid-cols-2">
