@@ -104,13 +104,18 @@ export async function getStudents(
     }
   }
 
-  // Filtre de recherche
-  let searchQuery = search ? `%${search}%` : null;
+  // Filtre de recherche. On matche login / prénom / nom / projet / statut, MAIS
+  // aussi la concaténation « prénom nom » (et « nom prénom ») pour qu'une
+  // recherche du type « Jean Dupont » fonctionne — sinon aucun champ isolé ne
+  // contient la chaîne complète.
+  let searchQuery = search ? `%${search.trim()}%` : null;
   let searchFilter = searchQuery
     ? or(
         ilike(students.login, searchQuery),
         ilike(students.first_name, searchQuery),
         ilike(students.last_name, searchQuery),
+        sql`(${students.first_name} || ' ' || ${students.last_name}) ILIKE ${searchQuery}`,
+        sql`(${students.last_name} || ' ' || ${students.first_name}) ILIKE ${searchQuery}`,
         ilike(studentProjects.project_name, searchQuery),
         ilike(studentProjects.progress_status, searchQuery)
       )
