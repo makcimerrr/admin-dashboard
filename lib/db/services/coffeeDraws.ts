@@ -20,17 +20,21 @@ interface EligibleStudent {
 
 /**
  * Vivier éligible au tirage café : apprenants ACTIFS de toutes promos —
- * non archivés, non en perdition, hors promos archivées. Les alternants sont
- * INCLUS (repérés ensuite par un tag). `exclude` retire des studentId précis
- * (ex. ceux déjà présents dans le tirage lors d'un re-tirage individuel).
+ * non archivés, non en perdition, hors promos archivées. `includeAlternants`
+ * (défaut true) contrôle l'inclusion des alternants. `exclude` retire des
+ * studentId précis (ex. ceux déjà présents lors d'un re-tirage individuel).
  */
 export async function getEligibleStudentsForCoffee(
-  exclude: number[] = [],
+  { exclude = [], includeAlternants = true }: { exclude?: number[]; includeAlternants?: boolean } = {},
 ): Promise<EligibleStudent[]> {
   const filters: SQL[] = [
     sql`(${students.archived} IS NULL OR ${students.archived} = false)`,
     sql`(${students.isDropout} IS NULL OR ${students.isDropout} = false)`,
   ];
+
+  if (!includeAlternants) {
+    filters.push(sql`(${students.isAlternant} IS NULL OR ${students.isAlternant} = false)`);
+  }
 
   const archivedPromos = Array.from(await getArchivedPromoNames());
   if (archivedPromos.length > 0) {
@@ -72,14 +76,16 @@ function currentMonthKey(): string {
  * participants). Le quota est aléatoire dans {9, 10}, borné par la taille du
  * vivier. Phase de test : aucun message Discord n'est envoyé.
  */
-export async function createCoffeeDraw(): Promise<CoffeeDrawWithParticipants> {
-  const pool = await getEligibleStudentsForCoffee();
+export async function createCoffeeDraw(
+  { includeAlternants = true }: { includeAlternants?: boolean } = {},
+): Promise<CoffeeDrawWithParticipants> {
+  const pool = await getEligibleStudentsForCoffee({ includeAlternants });
   const targetQuota = Math.random() < 0.5 ? 9 : 10;
   const picked = shuffle(pool).slice(0, Math.min(targetQuota, pool.length));
 
   const [draw] = await db
     .insert(coffeeDraws)
-    .values({ month: currentMonthKey(), quota: picked.length, status: 'draft' })
+    .values({ month: currentMonthKey(), quota: picked.length, includeAlternants, status: 'draft' })
     .returning();
 
   if (picked.length > 0) {
@@ -133,7 +139,17 @@ export async function redrawParticipant(participantId: number): Promise<RedrawRe
     .where(eq(coffeeDrawParticipants.drawId, participant.drawId));
   const excludeIds = current.map((r) => r.studentId);
 
-  const pool = await getEligibleStudentsForCoffee(excludeIds);
+  // Réutilise le réglage alternants du tirage.
+  const [draw0] = await db
+    .select({ includeAlternants: coffeeDraws.includeAlternants })
+    .from(coffeeDraws)
+    .where(eq(coffeeDraws.id, participant.drawId))
+    .limit(1);
+
+  const pool = await getEligibleStudentsForCoffee({
+    exclude: excludeIds,
+    includeAlternants: draw0?.includeAlternants ?? true,
+  });
   if (pool.length === 0) return { ok: false, reason: 'pool_exhausted' };
 
   const next = shuffle(pool)[0];

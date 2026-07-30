@@ -18,6 +18,9 @@ export const coffeeDraws = pgTable('coffee_draws', {
   month: text('month').notNull(),
   // Quota effectivement tiré (peut être < demandé si le vivier est plus petit).
   quota: integer('quota').notNull(),
+  // Alternants inclus dans le vivier de ce tirage (choisi au lancement). Le
+  // re-tirage individuel réutilise ce même réglage.
+  includeAlternants: boolean('include_alternants').notNull().default(true),
   status: text('status').notNull().default('draft'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
