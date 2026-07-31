@@ -42,6 +42,9 @@ export const alternantContracts = pgTable('alternant_contracts', {
   workSchedule: text('work_schedule'), // Ex: "3 jours entreprise / 2 jours formation"
   notes: text('notes'),
   isActive: boolean('is_active').default(true),
+  // Origine : 'manual' (saisie hub) ou 'emargement' (synchronisé). La synchro ne
+  // touche que les lignes 'emargement'.
+  source: text('source').notNull().default('manual'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow()
 });

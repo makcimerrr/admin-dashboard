@@ -26,9 +26,9 @@ export function EmargementSyncButton({ onSynced }: { onSynced?: () => void }) {
       const res = await fetch('/api/emargement/sync', { method: 'POST' });
       const data = await res.json();
       if (data?.success) {
-        const { studentsArchived, studentsAlternant } = data.data ?? {};
+        const { studentsArchived, studentsAlternant, contractsSynced } = data.data ?? {};
         toast.success(
-          `Synchro émargement OK — ${studentsAlternant ?? 0} alternant(s), ${studentsArchived ?? 0} archivé(s)`,
+          `Synchro émargement OK — ${studentsAlternant ?? 0} alternant(s), ${contractsSynced ?? 0} contrat(s), ${studentsArchived ?? 0} archivé(s)`,
         );
         onSynced?.();
       } else {
@@ -59,9 +59,11 @@ export function EmargementSyncButton({ onSynced }: { onSynced?: () => void }) {
           <AlertDialogTitle>Synchroniser les statuts depuis émargement ?</AlertDialogTitle>
           <AlertDialogDescription>
             Émargement est la source de vérité : les statuts <b>archivé</b> et{' '}
-            <b>alternant</b> (+ dates de contrat) du hub seront alignés dessus.
-            Les données alternant saisies à la main dans le hub seront{' '}
-            <b>écrasées</b>. Émargement n’est jamais modifié.
+            <b>alternant</b> (+ dates) du hub seront alignés dessus, et des{' '}
+            <b>contrats structurés</b> (type + dates + tuteur) seront (re)créés.
+            Les statuts saisis à la main sont écrasés ; les contrats saisis à la
+            main (source manuelle) sont <b>préservés</b>. Émargement n’est jamais
+            modifié.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
