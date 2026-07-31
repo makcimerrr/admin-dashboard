@@ -56,6 +56,48 @@ export function AlternantDetailSheet({
   onRefreshDetail: (studentId: number) => void;
   formatDate: (dateStr: string | null) => string;
 }) {
+  // Les CERFA sont stockés comme documents de type « contrat » → on les remonte
+  // dans l'onglet Contrats ; les autres (convention, planning…) restent dans
+  // Documents.
+  const contractDocuments = documents.filter((d) => d.documentType === 'contrat');
+  const otherDocuments = documents.filter((d) => d.documentType !== 'contrat');
+
+  const renderDocument = (doc: Document) => (
+    <Card key={doc.id}>
+      <CardContent className="p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="font-medium">{doc.title}</div>
+          <Badge variant="outline">
+            {DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType}
+          </Badge>
+        </div>
+        {doc.description && (
+          <div className="text-sm text-muted-foreground">{doc.description}</div>
+        )}
+        <div className="text-xs text-muted-foreground">
+          Ajouté le {formatDate(doc.uploadedAt)}
+          {doc.validUntil && (
+            <span className="ml-2">- Valide jusqu'au {formatDate(doc.validUntil)}</span>
+          )}
+        </div>
+        {doc.fileUrl && /^https?:\/\//i.test(doc.fileUrl) ? (
+          <a
+            href={doc.fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary hover:underline"
+          >
+            Voir le document
+          </a>
+        ) : doc.fileUrl ? (
+          <span className="text-xs text-muted-foreground italic">
+            Fichier non hébergé{doc.fileName ? ` (${doc.fileName})` : ''}
+          </span>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <Sheet open={!!selectedAlternant} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
@@ -90,11 +132,11 @@ export function AlternantDetailSheet({
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="contracts" className="gap-2">
                     <ClipboardList className="h-4 w-4" />
-                    Contrats ({contracts.length})
+                    Contrats ({contracts.length + contractDocuments.length})
                   </TabsTrigger>
                   <TabsTrigger value="documents" className="gap-2">
                     <FileText className="h-4 w-4" />
-                    Documents ({documents.length})
+                    Documents ({otherDocuments.length})
                   </TabsTrigger>
                 </TabsList>
 
@@ -108,10 +150,11 @@ export function AlternantDetailSheet({
                     />
                   </div>
 
-                  {contracts.length === 0 ? (
+                  {contracts.length === 0 && contractDocuments.length === 0 ? (
                     <EmptyState icon={ClipboardList} title="Aucun contrat enregistré" />
                   ) : (
                     <div className="space-y-3">
+                      {contractDocuments.map(renderDocument)}
                       {contracts.map((contract) => (
                         <Card key={contract.id} className={contract.isActive ? "border-primary/50" : ""}>
                           <CardContent className="p-4 space-y-2">
@@ -166,52 +209,10 @@ export function AlternantDetailSheet({
                     />
                   </div>
 
-                  {documents.length === 0 ? (
+                  {otherDocuments.length === 0 ? (
                     <EmptyState icon={FileText} title="Aucun document enregistré" />
                   ) : (
-                    <div className="space-y-3">
-                      {documents.map((doc) => (
-                        <Card key={doc.id}>
-                          <CardContent className="p-4 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium">{doc.title}</div>
-                              <Badge variant="outline">
-                                {DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType}
-                              </Badge>
-                            </div>
-                            {doc.description && (
-                              <div className="text-sm text-muted-foreground">
-                                {doc.description}
-                              </div>
-                            )}
-                            <div className="text-xs text-muted-foreground">
-                              Ajouté le {formatDate(doc.uploadedAt)}
-                              {doc.validUntil && (
-                                <span className="ml-2">
-                                  - Valide jusqu'au {formatDate(doc.validUntil)}
-                                </span>
-                              )}
-                            </div>
-                            {doc.fileUrl && /^https?:\/\//i.test(doc.fileUrl) ? (
-                              <a
-                                href={doc.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sm text-primary hover:underline"
-                              >
-                                Voir le document
-                              </a>
-                            ) : doc.fileUrl ? (
-                              // Données legacy : chemin relatif non hébergé → on
-                              // n'envoie plus l'utilisateur sur un 404.
-                              <span className="text-xs text-muted-foreground italic">
-                                Fichier non hébergé{doc.fileName ? ` (${doc.fileName})` : ''}
-                              </span>
-                            ) : null}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
+                    <div className="space-y-3">{otherDocuments.map(renderDocument)}</div>
                   )}
                 </TabsContent>
               </Tabs>
