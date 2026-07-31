@@ -30,6 +30,7 @@ import {
 } from "../types";
 import { AddContractDialog } from "./add-contract-dialog";
 import { AddDocumentDialog } from "./add-document-dialog";
+import { CompanyEditor } from "./company-editor";
 
 export function AlternantDetailSheet({
   selectedAlternant,
@@ -179,6 +180,12 @@ export function AlternantDetailSheet({
                 </TabsList>
 
                 <TabsContent value="contracts" className="space-y-4 mt-4">
+                  <CompanyEditor
+                    studentId={selectedAlternant.id}
+                    initialCompany={selectedAlternant.companyName}
+                    onSaved={() => onRefreshDetail(selectedAlternant.id)}
+                  />
+
                   <div className="flex justify-end">
                     <AddContractDialog
                       studentId={selectedAlternant.id}

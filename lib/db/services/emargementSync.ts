@@ -91,15 +91,20 @@ export async function syncEmargementStatuses(
       login: students.login,
       firstName: students.first_name,
       lastName: students.last_name,
+      companyName: students.companyName,
     })
     .from(students);
 
   const loginSet = new Set(hubStudents.map((s) => s.login.toLowerCase()));
   const studentIdByLogin = new Map<string, number>();
+  // Entreprise saisie à la main (durable sur students.company_name) → réappliquée
+  // aux contrats synchronisés pour ne pas être écrasée par la synchro.
+  const companyByLogin = new Map<string, string>();
   const loginByName = new Map<string, string>();
   for (const s of hubStudents) {
     const login = s.login.toLowerCase();
     studentIdByLogin.set(login, s.id);
+    if (s.companyName && s.companyName.trim()) companyByLogin.set(login, s.companyName.trim());
     const fwd = norm(`${s.firstName} ${s.lastName}`);
     const rev = norm(`${s.lastName} ${s.firstName}`);
     if (fwd && !loginByName.has(fwd)) loginByName.set(fwd, login);
@@ -250,7 +255,7 @@ export async function syncEmargementStatuses(
       contractType: info.contractType,
       startDate: new Date(info.start),
       endDate,
-      companyName: 'Non renseigné',
+      companyName: companyByLogin.get(login) ?? 'Non renseigné',
       tutorName: info.tutorName,
       tutorPhone: info.tutorPhone,
       isActive: endDate >= now,
