@@ -333,10 +333,9 @@ const PromotionProgress = ({ eventId, onUpdate }: UpdateProps) => {
     console.log('Projet de la promo:', promoProject);
 
     try {
-      const response = await fetch(
-        `https://api-zone01-rouen.deno.dev/api/v1/promotions/${eventId}/students`
-        /*`http://localhost:8000/api/v1/promotions/${eventId}/students`*/
-      );
+      // Proxy serveur same-origin → relaie vers l'API Zone01 interne du VPS
+      // (l'appel direct au navigateur cassait : CORS + URL Deno Deploy morte).
+      const response = await fetch(`/api/promotions/${eventId}/students`);
       if (!response.ok) {
         throw new Error(
           `Erreur lors de la récupération des données pour l'événement ${eventId}`
