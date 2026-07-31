@@ -192,7 +192,7 @@ export function AlternantDetailSheet({
                                 </span>
                               )}
                             </div>
-                            {doc.fileUrl && (
+                            {doc.fileUrl && /^https?:\/\//i.test(doc.fileUrl) ? (
                               <a
                                 href={doc.fileUrl}
                                 target="_blank"
@@ -201,7 +201,13 @@ export function AlternantDetailSheet({
                               >
                                 Voir le document
                               </a>
-                            )}
+                            ) : doc.fileUrl ? (
+                              // Données legacy : chemin relatif non hébergé → on
+                              // n'envoie plus l'utilisateur sur un 404.
+                              <span className="text-xs text-muted-foreground italic">
+                                Fichier non hébergé{doc.fileName ? ` (${doc.fileName})` : ''}
+                              </span>
+                            ) : null}
                           </CardContent>
                         </Card>
                       ))}
