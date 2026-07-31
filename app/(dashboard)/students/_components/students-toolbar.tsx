@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Workflow,
-  Archive
+  Archive,
+  Loader2
 } from 'lucide-react';
 import { FilterChips, FilterChip } from './filter-chips';
 import debounce from 'lodash.debounce';
@@ -36,12 +37,10 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(search);
-
-  // Dernière valeur QUE NOUS avons poussée dans l'URL. Sert à distinguer l'écho
-  // de notre propre frappe (à ignorer) d'un changement externe (back/forward,
-  // reset de filtres → à adopter). Sans ça, l'aller-retour serveur réinjecte une
-  // valeur en retard dans l'input contrôlé et « efface » les caractères tapés.
-  const lastPushedRef = useRef(search);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Transition → la navigation serveur ne bloque pas la frappe et React garde
+  // l'ancien rendu jusqu'à ce que le nouveau soit prêt (pas de flicker).
+  const [isPending, startTransition] = useTransition();
 
   // searchParams courant via ref → la fonction debounce reste stable (créée une
   // seule fois) au lieu d'être recréée à chaque frappe (chaque navigation change
@@ -59,19 +58,21 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
           query.delete('q');
         }
         query.set('offset', '0');
-        lastPushedRef.current = value;
-        router.replace(`${pathname}?${query.toString()}`, { scroll: false });
+        startTransition(() => {
+          router.replace(`${pathname}?${query.toString()}`, { scroll: false });
+        });
       }, 300),
     [pathname, router]
   );
 
   useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
 
-  // N'adopter la valeur de l'URL que si elle vient de l'EXTÉRIEUR (différente de
-  // notre dernier push). L'écho de notre frappe est ignoré → plus de reset.
+  // On n'adopte la valeur de l'URL QUE si l'input n'a pas le focus, c.-à-d. quand
+  // le changement vient de l'EXTÉRIEUR (back/forward, reset de filtres) et pas de
+  // l'utilisateur en train de taper. Tant qu'il tape (input focus), on ignore
+  // TOUS les échos serveur → plus de reset ni de course sur les réponses tardives.
   useEffect(() => {
-    if (search !== lastPushedRef.current) {
-      lastPushedRef.current = search;
+    if (document.activeElement !== inputRef.current) {
       setSearchValue(search);
     }
   }, [search]);
@@ -208,8 +209,9 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={inputRef}
             type="search"
-            placeholder="Rechercher par nom ou login..."
+            placeholder="Rechercher par nom, prénom, login…"
             className="pl-9 w-full"
             value={searchValue}
             onChange={(e) => {
@@ -217,6 +219,9 @@ export function StudentsToolbar({ search }: StudentsToolbarProps) {
               debouncedSearch(e.target.value);
             }}
           />
+          {isPending && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
         </div>
 
         {/* Filter buttons */}
