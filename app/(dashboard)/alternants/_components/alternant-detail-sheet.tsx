@@ -62,6 +62,44 @@ export function AlternantDetailSheet({
   const contractDocuments = documents.filter((d) => d.documentType === 'contrat');
   const otherDocuments = documents.filter((d) => d.documentType !== 'contrat');
 
+  // Documents type « contrat » regroupés sous leur contrat (contractId) ; ceux
+  // non rattachés à un contrat sont affichés à part.
+  const docsByContract = new Map<number, Document[]>();
+  const unlinkedContractDocs: Document[] = [];
+  for (const d of contractDocuments) {
+    if (d.contractId != null) {
+      const arr = docsByContract.get(d.contractId) ?? [];
+      arr.push(d);
+      docsByContract.set(d.contractId, arr);
+    } else {
+      unlinkedContractDocs.push(d);
+    }
+  }
+
+  // Rendu compact d'un document rattaché (sous un contrat).
+  const renderLinkedDoc = (doc: Document) => (
+    <div key={doc.id} className="flex items-center justify-between gap-2 text-sm">
+      <span className="truncate">
+        {doc.title}
+        <span className="ml-1 text-xs text-muted-foreground">
+          ({DOCUMENT_TYPE_LABELS[doc.documentType] || doc.documentType})
+        </span>
+      </span>
+      {doc.fileUrl && /^https?:\/\//i.test(doc.fileUrl) ? (
+        <a
+          href={doc.fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 text-xs text-primary hover:underline"
+        >
+          Voir
+        </a>
+      ) : doc.fileUrl ? (
+        <span className="shrink-0 text-xs italic text-muted-foreground">non hébergé</span>
+      ) : null}
+    </div>
+  );
+
   const renderDocument = (doc: Document) => (
     <Card key={doc.id}>
       <CardContent className="p-4 space-y-2">
@@ -154,7 +192,6 @@ export function AlternantDetailSheet({
                     <EmptyState icon={ClipboardList} title="Aucun contrat enregistré" />
                   ) : (
                     <div className="space-y-3">
-                      {contractDocuments.map(renderDocument)}
                       {contracts.map((contract) => (
                         <Card key={contract.id} className={contract.isActive ? "border-primary/50" : ""}>
                           <CardContent className="p-4 space-y-2">
@@ -191,9 +228,27 @@ export function AlternantDetailSheet({
                                 {contract.workSchedule}
                               </div>
                             )}
+                            {(docsByContract.get(contract.id)?.length ?? 0) > 0 && (
+                              <div className="pt-2 mt-2 border-t space-y-1.5">
+                                <div className="text-xs font-medium text-muted-foreground">
+                                  Documents
+                                </div>
+                                {docsByContract.get(contract.id)!.map(renderLinkedDoc)}
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
+                      {unlinkedContractDocs.length > 0 && (
+                        <>
+                          {contracts.length > 0 && (
+                            <div className="text-xs font-medium text-muted-foreground pt-1">
+                              Documents de contrat non rattachés
+                            </div>
+                          )}
+                          {unlinkedContractDocs.map(renderDocument)}
+                        </>
+                      )}
                     </div>
                   )}
                 </TabsContent>
