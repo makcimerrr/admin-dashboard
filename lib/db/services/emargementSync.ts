@@ -42,6 +42,8 @@ export interface EmargementSyncResult {
   studentsAlternant: number;
   /** Contrats structurés (type + dates + tuteur) synchronisés depuis émargement. */
   contractsSynced: number;
+  /** Documents 'contrat' (CERFA) rattachés au contrat synchronisé. */
+  documentsLinked: number;
   /** Utilisateurs émargement (archivé/alternant) non rattachés à un login hub. */
   unresolved: number;
 }
@@ -175,6 +177,7 @@ export async function syncEmargementStatuses(
       studentsArchived: 0,
       studentsAlternant: 0,
       contractsSynced: 0,
+      documentsLinked: 0,
       unresolved,
     };
   }
@@ -233,6 +236,8 @@ export async function syncEmargementStatuses(
   //     Idempotent : on remplace les contrats source='emargement' (les contrats
   //     saisis à la main, source='manual', ne sont jamais touchés). émargement
   //     n'a pas le nom d'entreprise → placeholder « Non renseigné ».
+  //     La suppression met à NULL le contract_id des documents liés (FK
+  //     onDelete:set null) ; on les re-relie ensuite au nouveau contrat.
   await db.delete(alternantContracts).where(eq(alternantContracts.source, 'emargement'));
   const now = new Date();
   const contractRows = [];
@@ -252,8 +257,21 @@ export async function syncEmargementStatuses(
       source: 'emargement',
     });
   }
+  let documentsLinked = 0;
   if (contractRows.length > 0) {
-    await db.insert(alternantContracts).values(contractRows);
+    const inserted = await db
+      .insert(alternantContracts)
+      .values(contractRows)
+      .returning({ id: alternantContracts.id, studentId: alternantContracts.studentId });
+
+    // Rattacher les documents type 'contrat' (CERFA) au contrat de l'apprenant.
+    const pairs = inserted.map((c) => sql`(${c.studentId}::int, ${c.id}::int)`);
+    const linkRes = await db.execute(sql`
+      UPDATE alternant_documents AS d SET contract_id = v.cid
+      FROM (VALUES ${sql.join(pairs, sql`, `)}) AS v(sid, cid)
+      WHERE d.student_id = v.sid AND d.document_type = 'contrat'
+    `);
+    documentsLinked = (linkRes as unknown as { count?: number }).count ?? 0;
   }
 
   // 5) Comptage.
@@ -272,6 +290,7 @@ export async function syncEmargementStatuses(
     studentsArchived: Number(asRows<{ count: number }>(archivedRes)[0]?.count ?? 0),
     studentsAlternant: Number(asRows<{ count: number }>(alternantRes)[0]?.count ?? 0),
     contractsSynced: contractRows.length,
+    documentsLinked,
     unresolved,
   };
 }
