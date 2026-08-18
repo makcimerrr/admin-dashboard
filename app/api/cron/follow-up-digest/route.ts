@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { makeLog } from '@/lib/log';
 import {
   getFollowUpSettings,
+  getMilestonesToRemind,
   linkOrphanReportsToMilestones,
   listMilestones,
   reconcileMilestones,
-  type MilestoneRow,
 } from '@/lib/db/services/followUps';
 import { sendInternalDigest } from '@/lib/services/follow-up-notify';
 
@@ -49,22 +49,10 @@ export async function GET(request: NextRequest) {
   const linkedReports = await linkOrphanReportsToMilestones();
 
   const open = await listMilestones();
-  const now = Date.now();
 
-  /** Échéance entrée dans la fenêtre de relance et jamais relancée. */
-  const awaitingFirstReminder = (m: MilestoneRow) =>
-    m.status === 'a_venir' && m.reminderCount === 0 && m.daysUntilDue <= settings.reminderLeadDays;
+  // Même règle que le widget d'accueil : cf. getMilestonesToRemind().
+  const toConfirm = await getMilestonesToRemind();
 
-  /** Relance partie, toujours pas de RDV après le délai configuré. */
-  const awaitingFollowUpReminder = (m: MilestoneRow) =>
-    m.status === 'relance_envoyee' &&
-    m.lastReminderAt !== null &&
-    (now - new Date(m.lastReminderAt).getTime()) / 86_400_000 >=
-      settings.secondReminderAfterDays;
-
-  const toConfirm = open.filter(
-    (m) => awaitingFirstReminder(m) || awaitingFollowUpReminder(m),
-  );
   const overdue = open.filter((m) => m.daysUntilDue < 0);
   const upcoming = open.filter(
     (m) => m.daysUntilDue >= 0 && m.daysUntilDue <= settings.internalAlertLeadDays,
