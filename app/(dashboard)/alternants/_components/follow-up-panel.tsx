@@ -69,7 +69,15 @@ export function refreshFollowUps() {
 
 type PeriodFilter = "all" | "late" | "30" | "90";
 
-type SortKey = "student" | "company" | "tutor" | "milestone" | "dueDate" | "status" | "reminders";
+type SortKey =
+  | "student"
+  | "company"
+  | "tutor"
+  | "milestone"
+  | "dueDate"
+  | "lastReport"
+  | "status"
+  | "reminders";
 
 /** Comparateurs par colonne ; le sens (asc/desc) est appliqué par l'appelant. */
 const SORTERS: Record<SortKey, (a: FollowUpMilestone, b: FollowUpMilestone) => number> = {
@@ -86,6 +94,10 @@ const SORTERS: Record<SortKey, (a: FollowUpMilestone, b: FollowUpMilestone) => n
       new Date(a.contractStart).getTime() -
       (new Date(b.dueDate).getTime() - new Date(b.contractStart).getTime()),
   dueDate: (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+  // Jamais rencontré = cas le plus criant : ces lignes remontent en tête.
+  lastReport: (a, b) =>
+    (a.lastReportAt ? new Date(a.lastReportAt).getTime() : 0) -
+    (b.lastReportAt ? new Date(b.lastReportAt).getTime() : 0),
   status: (a, b) =>
     MILESTONE_STATUS_ORDER.indexOf(a.status) - MILESTONE_STATUS_ORDER.indexOf(b.status),
   reminders: (a, b) => a.reminderCount - b.reminderCount,
@@ -312,6 +324,17 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
     }
   };
 
+  /** Ancienneté lisible : « il y a 8 mois » parle plus qu'une date seule. */
+  const monthsAgo = (iso: string) => {
+    const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+    if (days < 31) return `il y a ${days} j`;
+    const months = Math.round(days / 30.44);
+    if (months < 12) return `il y a ${months} mois`;
+    const years = Math.floor(months / 12);
+    const rest = months % 12;
+    return rest === 0 ? `il y a ${years} an${years > 1 ? "s" : ""}` : `il y a ${years} an${years > 1 ? "s" : ""} ${rest} m`;
+  };
+
   const formatDue = (m: FollowUpMilestone) => {
     const date = new Date(m.dueDate).toLocaleDateString("fr-FR");
     if (m.status === "realise" || m.status === "annule") return date;
@@ -518,6 +541,9 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
                     <SortableHead sortKey="dueDate" sort={sort} onSort={toggleSort}>
                       Échéance
                     </SortableHead>
+                    <SortableHead sortKey="lastReport" sort={sort} onSort={toggleSort}>
+                      Dernier RDV
+                    </SortableHead>
                     <SortableHead sortKey="status" sort={sort} onSort={toggleSort}>
                       Statut
                     </SortableHead>
@@ -569,6 +595,20 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
                         </Badge>
                       </TableCell>
                       <TableCell className={rowTone(m)}>{formatDue(m)}</TableCell>
+                      <TableCell>
+                        {m.lastReportAt ? (
+                          <div title={m.lastReportTitle ?? undefined}>
+                            <div className="text-sm">
+                              {new Date(m.lastReportAt).toLocaleDateString("fr-FR")}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {monthsAgo(m.lastReportAt)}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-warning">jamais rencontré</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
