@@ -673,6 +673,34 @@ export async function listFollowUpReports(
 
 // ─── Statistiques (bandeau de la page) ───────────────────────────────────────
 
+/**
+ * Échéances pour lesquelles une relance est à relire et confirmer :
+ *  - jamais relancée et entrée dans la fenêtre d'envoi ;
+ *  - relancée mais toujours sans RDV après le délai configuré.
+ *
+ * Règle unique, partagée par le cron (qui la signale) et le widget d'accueil
+ * (qui l'affiche) : deux implémentations divergeraient.
+ */
+export async function getMilestonesToRemind(): Promise<MilestoneRow[]> {
+  const settings = await getFollowUpSettings();
+  const open = await listMilestones();
+  const now = Date.now();
+
+  return open.filter((m) => {
+    if (m.status === 'a_venir') {
+      return m.reminderCount === 0 && m.daysUntilDue <= settings.reminderLeadDays;
+    }
+    if (m.status === 'relance_envoyee') {
+      return (
+        m.lastReminderAt !== null &&
+        (now - new Date(m.lastReminderAt).getTime()) / 86_400_000 >=
+          settings.secondReminderAfterDays
+      );
+    }
+    return false;
+  });
+}
+
 export interface FollowUpStats {
   overdue: number;
   dueSoon: number;

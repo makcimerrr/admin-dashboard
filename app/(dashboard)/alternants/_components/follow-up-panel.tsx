@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useData, mutateKey } from "@/lib/client-cache";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -178,7 +179,20 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
   const [activeKpi, setActiveKpi] = useState<KpiKey | null>(null);
   const [selected, setSelected] = useState<FollowUpMilestone | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deepLinked, setDeepLinked] = useState(false);
   const [reconciling, setReconciling] = useState(false);
+
+  // Lien profond depuis le widget d'accueil : ?milestone=<id> ouvre
+  // directement l'échéance, pour passer du constat à l'action en un clic.
+  const searchParams = useSearchParams();
+  const requestedMilestone = searchParams.get("milestone");
+
+  useEffect(() => {
+    if (deepLinked || !requestedMilestone || milestones.length === 0) return;
+    const target = milestones.find((m) => m.id === Number(requestedMilestone));
+    if (target) setSelected(target);
+    setDeepLinked(true);
+  }, [deepLinked, requestedMilestone, milestones]);
 
   const companies = useMemo(
     () => [...new Set(milestones.map((m) => m.companyName))].sort((a, b) => a.localeCompare(b)),

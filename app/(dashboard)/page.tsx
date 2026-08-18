@@ -5,6 +5,7 @@ import { MyTasksWidgetServer } from '@/components/hub/MyTasksWidgetServer';
 import { ActionInbox } from '@/components/dashboard/action-inbox';
 import { PromoStrip } from '@/components/dashboard/promo-strip';
 import { CoffeeDrawWidget } from '@/components/dashboard/coffee-draw-widget';
+import { FollowUpWidget } from '@/components/dashboard/follow-up-widget';
 import { NonAdminLanding } from '@/components/non-admin-landing';
 import { LoadingCard } from '@/components/ui/loading-card';
 import { BarChart3 } from 'lucide-react';
@@ -71,6 +72,11 @@ export default async function DashboardPage() {
           <MyTasksWidgetServer />
         </Suspense>
       </div>
+
+      {/* Suivi en entreprise : ce qui attend une confirmation de relance */}
+      <Suspense fallback={<LoadingCard height="md" />}>
+        <FollowUpWidget />
+      </Suspense>
 
       {/* Tirage café mensuel (phase de test : affichage seul, pas d'envoi Discord) */}
       <Suspense fallback={<LoadingCard height="md" />}>
