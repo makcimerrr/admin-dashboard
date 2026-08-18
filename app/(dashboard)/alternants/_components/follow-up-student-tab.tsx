@@ -12,8 +12,7 @@ import { PILL } from "@/lib/status-pills";
 import { CalendarClock, FileText, Plus } from "lucide-react";
 import {
   FOLLOW_UP_MODE_LABELS,
-  MILESTONE_STATUS_LABELS,
-  MILESTONE_STATUS_TONE,
+  displayStatus,
   type ApiEnvelope,
   type FollowUpMilestone,
   type FollowUpReport,
@@ -86,8 +85,8 @@ export function FollowUpStudentTab({ studentId }: { studentId: number }) {
                     {m.completedAt && ` · réalisé le ${fmt(m.completedAt)}`}
                   </div>
                 </div>
-                <Badge variant="outline" className={PILL[MILESTONE_STATUS_TONE[m.status]]}>
-                  {MILESTONE_STATUS_LABELS[m.status]}
+                <Badge variant="outline" className={PILL[displayStatus(m).tone]}>
+                  {displayStatus(m).label}
                 </Badge>
               </div>
             ))}

@@ -95,6 +95,19 @@ describe('isMilestoneRelevant', () => {
   it('écarte un jalon désactivé même dans la période', () => {
     expect(isMilestoneRelevant(new Date(2026, 2, 1), end, false)).toBe(false);
   });
+
+  it('écarte un jalon trop proche de la fin de contrat', () => {
+    // Une visite en entreprise 10 jours avant le départ n'a pas d'objet.
+    expect(isMilestoneRelevant(new Date(2026, 7, 21), end, true, 30)).toBe(false);
+  });
+
+  it('retient un jalon au-delà de la marge minimale', () => {
+    expect(isMilestoneRelevant(new Date(2026, 6, 1), end, true, 30)).toBe(true);
+  });
+
+  it('sans marge configurée, seule la fin de contrat borne', () => {
+    expect(isMilestoneRelevant(new Date(2026, 7, 31), end, true, 0)).toBe(true);
+  });
 });
 
 describe('isSameDay', () => {

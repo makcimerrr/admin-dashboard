@@ -136,6 +136,31 @@ export const MILESTONE_STATUS_TONE: Record<MilestoneStatus, 'blue' | 'amber' | '
   annule: 'rose',
 };
 
+/**
+ * Libellé et ton d'une échéance TELS QU'AFFICHÉS.
+ *
+ * `a_venir` est un état de workflow (« rien n'a encore été fait »), pas une
+ * information temporelle : une échéance jamais traitée dont la date est passée
+ * doit se lire « En retard ». Afficher « À venir » sur un point de 6 mois
+ * dépassé de 9 mois donnait l'impression d'une incohérence, alors que la
+ * donnée était juste — le suivi avait bel et bien été manqué.
+ *
+ * Le statut stocké reste `a_venir` : le retard se déduit de la date, il n'a pas
+ * à être écrit en base ni entretenu par un travail de fond.
+ */
+export function displayStatus(m: {
+  status: MilestoneStatus;
+  daysUntilDue: number;
+}): { label: string; tone: 'blue' | 'amber' | 'violet' | 'emerald' | 'rose' } {
+  if (m.status === 'a_venir' && m.daysUntilDue < 0) {
+    return { label: 'En retard', tone: 'rose' };
+  }
+  return {
+    label: MILESTONE_STATUS_LABELS[m.status],
+    tone: MILESTONE_STATUS_TONE[m.status],
+  };
+}
+
 export interface FollowUpStats {
   overdue: number;
   dueSoon: number;
@@ -178,6 +203,7 @@ export interface FollowUpSettings {
   internalAlertLeadDays: number;
   reminderLeadDays: number;
   secondReminderAfterDays: number;
+  minDaysBeforeContractEnd: number;
   bookingUrl: string | null;
   watchedCalendarId: string | null;
   senderName: string | null;

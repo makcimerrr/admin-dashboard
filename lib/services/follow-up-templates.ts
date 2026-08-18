@@ -72,16 +72,24 @@ export function computeDueDate(contractStart: Date, offsetMonths: number): Date 
 }
 
 /**
- * Un jalon n'est posé que s'il est actif ET tombe avant la fin du contrat :
- * relancer une entreprise pour un point « 2 ans » sur un contrat de 12 mois
- * n'a pas de sens.
+ * Un jalon n'est posé que s'il est actif ET tombe suffisamment avant la fin du
+ * contrat.
+ *
+ * Deux règles, pas une : relancer une entreprise pour un point « 18 mois » sur
+ * un contrat de 12 mois n'a pas de sens ; mais planifier un point 3 jours avant
+ * le départ de l'apprenant n'en a pas davantage — personne n'organisera une
+ * visite en entreprise pour quelqu'un qui s'en va. D'où la marge minimale,
+ * réglable (`follow_up_settings.min_days_before_contract_end`) parce que c'est
+ * un arbitrage pédagogique, pas une constante technique.
  */
 export function isMilestoneRelevant(
   due: Date,
   contractEnd: Date,
   isActive: boolean,
+  minDaysBeforeEnd = 0,
 ): boolean {
-  return isActive && due.getTime() <= contractEnd.getTime();
+  const latestUseful = contractEnd.getTime() - minDaysBeforeEnd * 86_400_000;
+  return isActive && due.getTime() <= latestUseful;
 }
 
 /** Compare deux dates au jour près (les échéances n'ont pas d'heure utile). */

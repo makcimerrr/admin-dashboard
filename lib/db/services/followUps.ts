@@ -86,6 +86,7 @@ const DEFAULT_SETTINGS: FollowUpSettings = {
   internalAlertLeadDays: 30,
   reminderLeadDays: 21,
   secondReminderAfterDays: 10,
+  minDaysBeforeContractEnd: 30,
   bookingUrl: null,
   watchedCalendarId: null,
   senderName: null,
@@ -129,6 +130,7 @@ export async function updateFollowUpSettings(
  * telle qu'il l'avait nettoyée.
  */
 export const AUTO_CANCEL_BEYOND_CONTRACT = 'Au-delà de la fin de contrat';
+export const AUTO_CANCEL_TOO_CLOSE_TO_END = 'Trop proche de la fin de contrat';
 export const AUTO_CANCEL_TYPE_DISABLED = 'Jalon désactivé dans la configuration';
 export const AUTO_CANCEL_STUDENT_ARCHIVED = 'Apprenant archivé';
 export const AUTO_CANCEL_STUDENT_DROPOUT = 'Apprenant en perdition';
@@ -136,6 +138,7 @@ export const AUTO_CANCEL_PROMO_ARCHIVED = 'Promotion archivée';
 
 const AUTO_CANCEL_REASONS: string[] = [
   AUTO_CANCEL_BEYOND_CONTRACT,
+  AUTO_CANCEL_TOO_CLOSE_TO_END,
   AUTO_CANCEL_TYPE_DISABLED,
   AUTO_CANCEL_STUDENT_ARCHIVED,
   AUTO_CANCEL_STUDENT_DROPOUT,
@@ -165,6 +168,7 @@ export async function reconcileMilestones(
   { contractIds, studentIds }: { contractIds?: number[]; studentIds?: number[] } = {},
 ): Promise<ReconcileResult> {
   const types = await getMilestoneTypes();
+  const { minDaysBeforeContractEnd } = await getFollowUpSettings();
 
   const filters = [];
   if (contractIds?.length) filters.push(inArray(alternantContracts.id, contractIds));
@@ -222,6 +226,9 @@ export async function reconcileMilestones(
       const current = byKey.get(key);
       const due = computeDueDate(contract.startDate, type.offsetMonths);
       const beyondContract = due.getTime() > contract.endDate.getTime();
+      const tooCloseToEnd =
+        !beyondContract &&
+        !isMilestoneRelevant(due, contract.endDate, true, minDaysBeforeContractEnd);
       // Motif le plus précis d'abord : il est affiché tel quel dans l'UI.
       const inactiveReason = contract.studentArchived
         ? AUTO_CANCEL_STUDENT_ARCHIVED
@@ -231,7 +238,8 @@ export async function reconcileMilestones(
             ? AUTO_CANCEL_PROMO_ARCHIVED
             : null;
       const relevant =
-        !inactiveReason && isMilestoneRelevant(due, contract.endDate, type.isActive);
+        !inactiveReason &&
+        isMilestoneRelevant(due, contract.endDate, type.isActive, minDaysBeforeContractEnd);
 
       if (!current) {
         if (!relevant) continue; // rien à créer pour un jalon hors périmètre
@@ -258,7 +266,11 @@ export async function reconcileMilestones(
               statusChangedAt: now,
               cancelReason:
                 inactiveReason ??
-                (beyondContract ? AUTO_CANCEL_BEYOND_CONTRACT : AUTO_CANCEL_TYPE_DISABLED),
+                (beyondContract
+                  ? AUTO_CANCEL_BEYOND_CONTRACT
+                  : tooCloseToEnd
+                    ? AUTO_CANCEL_TOO_CLOSE_TO_END
+                    : AUTO_CANCEL_TYPE_DISABLED),
               updatedAt: now,
             })
             .where(eq(followUpMilestones.id, current.id));

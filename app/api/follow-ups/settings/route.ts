@@ -50,6 +50,7 @@ export const PUT = withErrorHandler(
       'internalAlertLeadDays',
       'reminderLeadDays',
       'secondReminderAfterDays',
+      'minDaysBeforeContractEnd',
     ] as const;
     for (const key of numeric) {
       if (body[key] !== undefined) {
