@@ -175,6 +175,14 @@ interface DataSourceRef {
   title: string;
 }
 
+/**
+ * Bases rencontrées SANS data source exploitable : ce sont des « vues liées »
+ * (linked views). Notion les expose comme `child_database`, mais les données
+ * vivent dans une base ailleurs, et l'API n'offre aucun moyen de remonter de la
+ * vue à sa source. Il faut cibler la base d'origine directement.
+ */
+const linkedViews: { blockId: string; title: string }[] = [];
+
 /** Bases (data sources) exploitables sous l'objet ciblé. */
 async function discoverDataSources(id: string): Promise<DataSourceRef[]> {
   const found: DataSourceRef[] = [];
@@ -183,7 +191,12 @@ async function discoverDataSources(id: string): Promise<DataSourceRef[]> {
     const database = (await notion.databases.retrieve({ database_id: databaseId })) as AnyProp;
     const title =
       (database.title ?? []).map((t: AnyProp) => t.plain_text).join('') || fallbackTitle;
-    for (const ds of database.data_sources ?? []) {
+    const sources = database.data_sources ?? [];
+    if (sources.length === 0) {
+      linkedViews.push({ blockId: databaseId, title: title || fallbackTitle || 'Sans titre' });
+      return;
+    }
+    for (const ds of sources) {
       found.push({ databaseId, dataSourceId: ds.id, title: ds.name || title });
     }
   };
@@ -617,7 +630,20 @@ async function main() {
   }
 
   if (sources.length === 0) {
-    console.error('❌ Aucune base trouvée sous cet objet Notion.');
+    if (linkedViews.length > 0) {
+      console.error(
+        '❌ Cette page ne contient que des VUES LIÉES, pas la base elle-même :\n' +
+          linkedViews.map((v) => `     · ${v.title} (bloc ${v.blockId})`).join('\n') +
+          '\n\n   Une vue liée n’expose aucune donnée par l’API, et rien ne permet de\n' +
+          '   remonter à sa base d’origine. Il faut viser la base source :\n' +
+          '     1. dans Notion, cliquer sur le titre de la vue → « Ouvrir la source »\n' +
+          '        (ou ⋯ au-dessus de la vue → la base d’origine) ;\n' +
+          '     2. sur cette base, ⋯ → Connexions → ajouter « Zone01 Rouen Data » ;\n' +
+          '     3. copier son lien et relancer avec --page <id de la base>.',
+      );
+    } else {
+      console.error('❌ Aucune base trouvée sous cet objet Notion.');
+    }
     await pool.end();
     process.exit(1);
   }
