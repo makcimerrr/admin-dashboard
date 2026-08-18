@@ -20,9 +20,11 @@ export const GET = withErrorHandler(
     const studentId = searchParams.get('studentId');
     const company = searchParams.get('company');
 
+    const limit = Number(searchParams.get('limit') ?? 1000);
     const reports = await listFollowUpReports({
       ...(studentId ? { studentId: Number(studentId) } : {}),
       ...(company ? { company } : {}),
+      limit: Number.isFinite(limit) ? Math.min(limit, 5000) : 1000,
     });
     return apiSuccess({ reports, count: reports.length });
   }),

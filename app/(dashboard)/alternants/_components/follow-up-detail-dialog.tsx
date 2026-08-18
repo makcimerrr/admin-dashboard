@@ -170,13 +170,19 @@ export function FollowUpDetailDialog({
               <div className="flex items-start gap-2">
                 <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <div>
-                  <div className="font-medium">{milestone.tutorName ?? "Tuteur non renseigné"}</div>
+                  {/* Aucune source ne porte le nom du tuteur entreprise :
+                      l'email tient lieu d'identité du contact. */}
+                  <div className="font-medium">
+                    {milestone.tutorName ?? milestone.tutorEmail ?? "Contact entreprise inconnu"}
+                  </div>
                   <div className="text-xs text-muted-foreground space-y-0.5">
                     {milestone.tutorEmail ? (
-                      <div className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {milestone.tutorEmail}
-                      </div>
+                      milestone.tutorName && (
+                        <div className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {milestone.tutorEmail}
+                        </div>
+                      )
                     ) : (
                       <div className="text-warning">Email manquant — relance impossible</div>
                     )}

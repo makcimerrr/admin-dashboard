@@ -514,6 +514,102 @@ export async function deleteFollowUpReport(id: number): Promise<boolean> {
   return rows.length > 0;
 }
 
+/**
+ * Rattache les comptes rendus orphelins (importés de Notion, sans échéance)
+ * à l'échéance qu'ils clôturent, et bascule celle-ci en « réalisé ».
+ *
+ * Les CR importés ne portaient pas de `milestone_id` : les échéances restaient
+ * « à venir » alors que le suivi avait bien eu lieu, ce qui gonflait
+ * artificiellement les retards.
+ *
+ * Rapprochement : pour chaque apprenant, chaque CR prend l'échéance NON encore
+ * réalisée dont la date prévue est la plus proche, dans une fenêtre de
+ * `maxDaysApart` jours. Une échéance ne peut être consommée qu'une fois — deux
+ * visites rapprochées ne clôturent pas deux fois le même jalon. Un CR sans
+ * échéance plausible reste orphelin : il alimente l'historique, sans inventer
+ * de correspondance.
+ *
+ * Idempotent : les CR déjà rattachés sont ignorés.
+ */
+export async function linkOrphanReportsToMilestones(
+  { maxDaysApart = 183 }: { maxDaysApart?: number } = {},
+): Promise<{ linked: number; orphansLeft: number }> {
+  const orphans = await db
+    .select({
+      id: followUpReports.id,
+      studentId: followUpReports.studentId,
+      performedAt: followUpReports.performedAt,
+    })
+    .from(followUpReports)
+    .where(sql`${followUpReports.milestoneId} IS NULL`)
+    .orderBy(asc(followUpReports.studentId), asc(followUpReports.performedAt));
+
+  if (orphans.length === 0) return { linked: 0, orphansLeft: 0 };
+
+  const studentIds = [...new Set(orphans.map((r) => r.studentId))];
+  const candidates = await db
+    .select({
+      id: followUpMilestones.id,
+      studentId: followUpMilestones.studentId,
+      dueDate: followUpMilestones.dueDate,
+      status: followUpMilestones.status,
+    })
+    .from(followUpMilestones)
+    .where(
+      and(
+        inArray(followUpMilestones.studentId, studentIds),
+        // Un suivi déjà réalisé n'est jamais réattribué.
+        sql`${followUpMilestones.status} <> 'realise'`,
+      ),
+    );
+
+  const byStudent = new Map<number, typeof candidates>();
+  for (const m of candidates) {
+    const list = byStudent.get(m.studentId) ?? [];
+    list.push(m);
+    byStudent.set(m.studentId, list);
+  }
+
+  const consumed = new Set<number>();
+  const windowMs = maxDaysApart * 86_400_000;
+  let linked = 0;
+
+  for (const report of orphans) {
+    const pool = (byStudent.get(report.studentId) ?? []).filter((m) => !consumed.has(m.id));
+    if (pool.length === 0) continue;
+
+    let best = pool[0];
+    let bestGap = Math.abs(best.dueDate.getTime() - report.performedAt.getTime());
+    for (const m of pool.slice(1)) {
+      const gap = Math.abs(m.dueDate.getTime() - report.performedAt.getTime());
+      if (gap < bestGap) {
+        best = m;
+        bestGap = gap;
+      }
+    }
+    if (bestGap > windowMs) continue;
+
+    consumed.add(best.id);
+    linked++;
+    await db
+      .update(followUpReports)
+      .set({ milestoneId: best.id, updatedAt: new Date() })
+      .where(eq(followUpReports.id, report.id));
+    await db
+      .update(followUpMilestones)
+      .set({
+        status: 'realise',
+        statusChangedAt: new Date(),
+        completedAt: report.performedAt,
+        cancelReason: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(followUpMilestones.id, best.id));
+  }
+
+  return { linked, orphansLeft: orphans.length - linked };
+}
+
 export interface ReportRow extends FollowUpReport {
   login: string;
   firstName: string;

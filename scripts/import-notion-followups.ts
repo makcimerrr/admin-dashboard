@@ -48,6 +48,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { students } from '../lib/db/schema/students';
 import { alternantContracts } from '../lib/db/schema/alternants';
 import { followUpReports } from '../lib/db/schema/followUps';
+import { linkOrphanReportsToMilestones } from '../lib/db/services/followUps';
 import { dateInText, splitLogEntries } from '../lib/services/follow-up-import';
 
 config();
@@ -685,6 +686,13 @@ async function main() {
   }
 
   if (apply) {
+    // Un CR importé clôt l'échéance qu'il documente : sans ça les échéances
+    // restent « à venir » alors que le suivi a eu lieu.
+    const link = await linkOrphanReportsToMilestones();
+    console.log(
+      `\n   comptes rendus rattachés à une échéance : ${link.linked}` +
+        ` (${link.orphansLeft} sans échéance plausible, conservés en historique)`,
+    );
     console.log(
       '\n✅ Import terminé. Lancez « Recalculer les échéances » sur /alternants ' +
         '(onglet Suivi en entreprise) pour poser les jalons.',

@@ -78,6 +78,7 @@ export const NAV_APPS: NavApp[] = [
       { title: 'Étudiants', url: '/students', icon: UsersIcon },
       { title: 'Placement', url: '/students/placement', icon: BriefcaseIcon },
       { title: 'Alternants', url: '/alternants', icon: BriefcaseIcon },
+      { title: 'Comptes rendus', url: '/alternants/comptes-rendus', icon: ClipboardCheckIcon },
       { title: 'Code Reviews', url: '/code-reviews', icon: ClipboardCheckIcon },
       { title: 'Suivi', url: '/code-reviews/suivi', icon: BellIcon },
       { title: 'Gestion Promos', url: '/promos/manage', icon: FolderArchiveIcon },
