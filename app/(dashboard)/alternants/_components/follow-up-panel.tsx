@@ -30,6 +30,9 @@ import { PILL } from "@/lib/status-pills";
 import { cn } from "@/lib/utils";
 import {
   AlarmClock,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CalendarCheck,
   CalendarClock,
   CheckCircle2,
@@ -64,6 +67,83 @@ export function refreshFollowUps() {
 
 type PeriodFilter = "all" | "late" | "30" | "90";
 
+type SortKey = "student" | "company" | "tutor" | "milestone" | "dueDate" | "status" | "reminders";
+
+/** Comparateurs par colonne ; le sens (asc/desc) est appliqué par l'appelant. */
+const SORTERS: Record<SortKey, (a: FollowUpMilestone, b: FollowUpMilestone) => number> = {
+  student: (a, b) =>
+    `${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`, "fr"),
+  company: (a, b) => a.companyName.localeCompare(b.companyName, "fr"),
+  // Les lignes sans email de tuteur remontent : ce sont celles à compléter.
+  tutor: (a, b) =>
+    Number(Boolean(a.tutorEmail)) - Number(Boolean(b.tutorEmail)) ||
+    (a.tutorName ?? "").localeCompare(b.tutorName ?? "", "fr"),
+  // Par ancienneté du jalon (3 mois < 6 mois < 1 an), pas par ordre alphabétique.
+  milestone: (a, b) =>
+    new Date(a.dueDate).getTime() -
+      new Date(a.contractStart).getTime() -
+      (new Date(b.dueDate).getTime() - new Date(b.contractStart).getTime()),
+  dueDate: (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+  status: (a, b) =>
+    MILESTONE_STATUS_ORDER.indexOf(a.status) - MILESTONE_STATUS_ORDER.indexOf(b.status),
+  reminders: (a, b) => a.reminderCount - b.reminderCount,
+};
+
+type KpiKey = "overdue" | "dueSoon" | "awaitingReply" | "scheduled" | "done";
+
+/** Filtres posés par un clic sur chaque KPI du bandeau. */
+const KPI_FILTERS: Record<
+  KpiKey,
+  { status: MilestoneStatus | "open" | "all"; period: PeriodFilter }
+> = {
+  overdue: { status: "open", period: "late" },
+  dueSoon: { status: "open", period: "30" },
+  awaitingReply: { status: "relance_envoyee", period: "all" },
+  scheduled: { status: "rdv_planifie", period: "all" },
+  done: { status: "realise", period: "all" },
+};
+
+/** En-tête de colonne cliquable, avec l'indicateur du sens de tri. */
+function SortableHead({
+  sortKey,
+  sort,
+  onSort,
+  align = "left",
+  children,
+}: {
+  sortKey: SortKey;
+  sort: { key: SortKey; dir: "asc" | "desc" };
+  onSort: (key: SortKey) => void;
+  align?: "left" | "right";
+  children: React.ReactNode;
+}) {
+  const active = sort.key === sortKey;
+  return (
+    <TableHead className={align === "right" ? "text-right" : undefined}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={cn(
+          "inline-flex items-center gap-1 hover:text-foreground transition-colors",
+          align === "right" && "flex-row-reverse",
+          active ? "text-foreground font-medium" : "text-muted-foreground",
+        )}
+      >
+        {children}
+        {active ? (
+          sort.dir === "asc" ? (
+            <ArrowUp className="h-3 w-3" />
+          ) : (
+            <ArrowDown className="h-3 w-3" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3 w-3 opacity-40" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
+
 /**
  * Suivi en entreprise : les échéances calculées (3 mois, 6 mois, 1 an…) avec
  * leur statut, en liste filtrable ou en Kanban.
@@ -89,6 +169,12 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
   // quasi identiques pour un même apprenant, ce qui se lit comme des doublons.
   // Par défaut on ne montre que l'échéance la plus urgente de chaque contrat.
   const [oneRowPerStudent, setOneRowPerStudent] = useState(true);
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
+    key: "dueDate",
+    dir: "asc",
+  });
+  /** KPI sélectionné : pilote les filtres, et se désélectionne au 2e clic. */
+  const [activeKpi, setActiveKpi] = useState<KpiKey | null>(null);
   const [selected, setSelected] = useState<FollowUpMilestone | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reconciling, setReconciling] = useState(false);
@@ -129,10 +215,12 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
   }, [milestones, search, statusFilter, companyFilter, periodFilter]);
 
   /**
-   * Réduit à une ligne par contrat : l'échéance ouverte la plus urgente, avec
-   * le nombre d'échéances ouvertes restantes sur ce contrat.
+   * Réduit à une ligne par contrat. On garde le jalon le PLUS AVANCÉ (18 mois
+   * plutôt que 3 mois) : c'est là qu'en est réellement le suivi. Afficher le
+   * plus ancien donnait « 3 mois + 4 autres », qui se lit comme un doublon et
+   * masque l'état courant.
    */
-  const displayed = useMemo(() => {
+  const grouped = useMemo(() => {
     if (!oneRowPerStudent) {
       return filtered.map((m) => ({ milestone: m, others: 0 }));
     }
@@ -142,15 +230,47 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
       list.push(m);
       byContract.set(m.contractId, list);
     }
-    // `filtered` est déjà trié par date d'échéance croissante : le premier de
-    // chaque groupe est le plus urgent.
-    return [...byContract.values()]
-      .map((list) => ({ milestone: list[0], others: list.length - 1 }))
-      .sort(
-        (a, b) =>
-          new Date(a.milestone.dueDate).getTime() - new Date(b.milestone.dueDate).getTime(),
-      );
+    // `filtered` arrive trié par échéance croissante : le dernier du groupe est
+    // le jalon le plus avancé.
+    return [...byContract.values()].map((list) => ({
+      milestone: list[list.length - 1],
+      others: list.length - 1,
+    }));
   }, [filtered, oneRowPerStudent]);
+
+  const displayed = useMemo(() => {
+    const factor = sort.dir === "asc" ? 1 : -1;
+    return [...grouped].sort(
+      (a, b) => factor * SORTERS[sort.key](a.milestone, b.milestone),
+    );
+  }, [grouped, sort]);
+
+  /** Anneau sur la carte dont le filtre est actif. */
+  const kpiRing = (kpi: KpiKey) =>
+    activeKpi === kpi ? "ring-2 ring-primary border-primary" : undefined;
+
+  const toggleSort = (key: SortKey) =>
+    setSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: key === "dueDate" ? "asc" : "asc" },
+    );
+
+  /**
+   * Un clic sur un KPI positionne les filtres correspondants ; un second clic
+   * sur le même KPI les relâche.
+   */
+  const applyKpi = (kpi: KpiKey) => {
+    if (activeKpi === kpi) {
+      setActiveKpi(null);
+      setStatusFilter("open");
+      setPeriodFilter("all");
+      return;
+    }
+    setActiveKpi(kpi);
+    setStatusFilter(KPI_FILTERS[kpi].status);
+    setPeriodFilter(KPI_FILTERS[kpi].period);
+  };
 
   const handleReconcile = async () => {
     setReconciling(true);
@@ -192,15 +312,42 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
     <div className="flex flex-col gap-4 md:gap-6">
       {/* Bandeau de pilotage */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
-        <StatCard label="En retard" value={stats?.overdue ?? 0} icon={AlarmClock} accent="var(--destructive)" />
-        <StatCard label="À traiter bientôt" value={stats?.dueSoon ?? 0} icon={CalendarClock} />
-        <StatCard label="Sans réponse" value={stats?.awaitingReply ?? 0} icon={MailWarning} />
-        <StatCard label="RDV planifiés" value={stats?.scheduled ?? 0} icon={CalendarCheck} />
+        <StatCard
+          label="En retard"
+          value={stats?.overdue ?? 0}
+          icon={AlarmClock}
+          accent="var(--destructive)"
+          onClick={() => applyKpi("overdue")}
+          className={kpiRing("overdue")}
+        />
+        <StatCard
+          label="À traiter bientôt"
+          value={stats?.dueSoon ?? 0}
+          icon={CalendarClock}
+          onClick={() => applyKpi("dueSoon")}
+          className={kpiRing("dueSoon")}
+        />
+        <StatCard
+          label="Sans réponse"
+          value={stats?.awaitingReply ?? 0}
+          icon={MailWarning}
+          onClick={() => applyKpi("awaitingReply")}
+          className={kpiRing("awaitingReply")}
+        />
+        <StatCard
+          label="RDV planifiés"
+          value={stats?.scheduled ?? 0}
+          icon={CalendarCheck}
+          onClick={() => applyKpi("scheduled")}
+          className={kpiRing("scheduled")}
+        />
         <StatCard
           label="Suivis réalisés"
           value={stats?.doneThisYear ?? 0}
           hint="depuis le 1er janvier"
           icon={CheckCircle2}
+          onClick={() => applyKpi("done")}
+          className={kpiRing("done")}
         />
       </div>
 
@@ -337,13 +484,27 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Apprenant</TableHead>
-                    <TableHead>Entreprise</TableHead>
-                    <TableHead>Tuteur</TableHead>
-                    <TableHead>Jalon</TableHead>
-                    <TableHead>Échéance</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead className="text-right">Relances</TableHead>
+                    <SortableHead sortKey="student" sort={sort} onSort={toggleSort}>
+                      Apprenant
+                    </SortableHead>
+                    <SortableHead sortKey="company" sort={sort} onSort={toggleSort}>
+                      Entreprise
+                    </SortableHead>
+                    <SortableHead sortKey="tutor" sort={sort} onSort={toggleSort}>
+                      Tuteur
+                    </SortableHead>
+                    <SortableHead sortKey="milestone" sort={sort} onSort={toggleSort}>
+                      Jalon
+                    </SortableHead>
+                    <SortableHead sortKey="dueDate" sort={sort} onSort={toggleSort}>
+                      Échéance
+                    </SortableHead>
+                    <SortableHead sortKey="status" sort={sort} onSort={toggleSort}>
+                      Statut
+                    </SortableHead>
+                    <SortableHead sortKey="reminders" sort={sort} onSort={toggleSort} align="right">
+                      Relances
+                    </SortableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -373,12 +534,16 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{m.typeLabel}</Badge>
-                        {others > 0 && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            +{others} autre{others > 1 ? "s" : ""}
-                          </span>
-                        )}
+                        <Badge
+                          variant="outline"
+                          title={
+                            others > 0
+                              ? `Jalon le plus avancé ; ${others} autre${others > 1 ? "s" : ""} échéance${others > 1 ? "s" : ""} ouverte${others > 1 ? "s" : ""} sur ce contrat`
+                              : undefined
+                          }
+                        >
+                          {m.typeLabel}
+                        </Badge>
                       </TableCell>
                       <TableCell className={rowTone(m)}>{formatDue(m)}</TableCell>
                       <TableCell>
