@@ -352,6 +352,15 @@ export interface MilestoneRow {
   /** Dernière relance envoyée (tous canaux confondus). */
   lastReminderAt: string | null;
   reminderCount: number;
+  /**
+   * Dernier RDV réellement tenu avec cet apprenant, tous jalons confondus.
+   * Porté par l'apprenant et non par le contrat : les suivis repris de Notion
+   * n'ont pas de contrat rattaché, et c'est bien « quand l'a-t-on vu pour la
+   * dernière fois » qui intéresse.
+   */
+  lastReportAt: string | null;
+  /** Titre de ce dernier compte rendu (« RDV alternance 13/11/25 »). */
+  lastReportTitle: string | null;
   /** Nombre de jours avant l'échéance (négatif = en retard). */
   daysUntilDue: number;
 }
@@ -413,6 +422,15 @@ export async function listMilestones(filters: MilestoneFilters = {}): Promise<Mi
         SELECT COUNT(*)::int FROM follow_up_reminders r
         WHERE r.milestone_id = ${followUpMilestones.id} AND r.status = 'sent'
       )`,
+      lastReportAt: sql<Date | null>`(
+        SELECT MAX(rep.performed_at) FROM follow_up_reports rep
+        WHERE rep.student_id = ${followUpMilestones.studentId}
+      )`,
+      lastReportTitle: sql<string | null>`(
+        SELECT split_part(rep.content, E'\n', 1) FROM follow_up_reports rep
+        WHERE rep.student_id = ${followUpMilestones.studentId}
+        ORDER BY rep.performed_at DESC LIMIT 1
+      )`,
     })
     .from(followUpMilestones)
     .innerJoin(alternantContracts, eq(alternantContracts.id, followUpMilestones.contractId))
@@ -436,6 +454,7 @@ export async function listMilestones(filters: MilestoneFilters = {}): Promise<Mi
     contractStart: r.contractStart.toISOString(),
     contractEnd: r.contractEnd.toISOString(),
     lastReminderAt: r.lastReminderAt ? new Date(r.lastReminderAt).toISOString() : null,
+    lastReportAt: r.lastReportAt ? new Date(r.lastReportAt).toISOString() : null,
     daysUntilDue: Math.round(
       (new Date(r.dueDate).setHours(0, 0, 0, 0) - today.getTime()) / 86_400_000,
     ),

@@ -100,6 +100,9 @@ export interface FollowUpMilestone {
   tutorPhone: string | null;
   lastReminderAt: string | null;
   reminderCount: number;
+  /** Dernier RDV réellement tenu avec l'apprenant (tous jalons confondus). */
+  lastReportAt: string | null;
+  lastReportTitle: string | null;
   /** Négatif = en retard. */
   daysUntilDue: number;
 }
