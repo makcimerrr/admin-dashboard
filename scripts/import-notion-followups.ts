@@ -352,8 +352,14 @@ interface FollowUpEntry {
   date: Date | null;
   /** Libellé du lien (« RDV alternance 13/11/25 ») — sert de titre. */
   label: string;
-  /** Texte réellement rédigé dans la page liée ; vide si le RDV n'a rien laissé. */
+  /** Texte rédigé dans la page liée ; vide si le RDV n'a rien laissé. */
   body: string;
+  /**
+   * Vrai pour une mention de page. Une page sans texte signifie « RDV eu lieu,
+   * rien de rédigé ». Un texte libre (« Rupture »), lui, EST son propre
+   * contenu : lui coller ce marqueur revenait à effacer l'information.
+   */
+  isPage: boolean;
 }
 
 /**
@@ -372,7 +378,7 @@ async function extractEntries(props: AnyProp): Promise<FollowUpEntry[]> {
       if (item.type === 'mention' && item.mention?.type === 'page') {
         const label = (item.plain_text ?? '').trim();
         const body = await pageText(item.mention.page.id).catch(() => '');
-        entries.push({ date: dateInText(label), label, body });
+        entries.push({ date: dateInText(label), label, body, isPage: true });
       } else {
         freeText += item.plain_text ?? '';
       }
@@ -380,7 +386,7 @@ async function extractEntries(props: AnyProp): Promise<FollowUpEntry[]> {
 
     // Le texte libre restant peut porter plusieurs RDV sur une même ligne.
     for (const chunk of splitLogEntries(freeText)) {
-      entries.push({ date: chunk.date, label: chunk.content, body: '' });
+      entries.push({ date: chunk.date, label: chunk.content, body: '', isPage: false });
     }
   }
 
@@ -659,11 +665,13 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
     // ── 2. Comptes rendus d'entretien ───────────────────────────────────────
     for (const entry of await extractEntries(props)) {
       const performedAt = entry.date ?? toDate(row.last_edited_time) ?? new Date();
-      // Le corps de la page liée EST le compte rendu ; à défaut on garde le
-      // libellé, en disant explicitement que rien n'a été rédigé.
+      // Le corps de la page liée EST le compte rendu. Une page vide le dit ;
+      // un texte libre se suffit à lui-même.
       const content = entry.body.trim()
         ? `${entry.label}\n\n${entry.body.trim()}`
-        : `${entry.label}\n\n(aucun compte rendu rédigé dans Notion)`;
+        : entry.isPage
+          ? `${entry.label}\n\n(aucun compte rendu rédigé dans Notion)`
+          : entry.label;
 
       const [existingReport] = await db
         .select({ id: followUpReports.id, content: followUpReports.content })
@@ -671,7 +679,7 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
         .where(
           and(
             eq(followUpReports.studentId, student.id),
-            sql`date_trunc('day', ${followUpReports.performedAt}) = date_trunc('day', ${performedAt}::timestamp)`,
+            sql`split_part(${followUpReports.content}, E'\n', 1) = ${entry.label}`,
           ),
         )
         .limit(1);
