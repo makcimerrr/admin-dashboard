@@ -34,6 +34,7 @@ import {
   CalendarClock,
   CheckCircle2,
   KanbanSquare,
+  Layers,
   List,
   MailWarning,
   RefreshCw,
@@ -84,6 +85,10 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
   const [statusFilter, setStatusFilter] = useState<MilestoneStatus | "open" | "all">("open");
   const [companyFilter, setCompanyFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("all");
+  // Un contrat porte plusieurs jalons : les afficher tous produit des lignes
+  // quasi identiques pour un même apprenant, ce qui se lit comme des doublons.
+  // Par défaut on ne montre que l'échéance la plus urgente de chaque contrat.
+  const [oneRowPerStudent, setOneRowPerStudent] = useState(true);
   const [selected, setSelected] = useState<FollowUpMilestone | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [reconciling, setReconciling] = useState(false);
@@ -122,6 +127,30 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
       return matchesSearch && matchesStatus && matchesCompany && matchesPeriod;
     });
   }, [milestones, search, statusFilter, companyFilter, periodFilter]);
+
+  /**
+   * Réduit à une ligne par contrat : l'échéance ouverte la plus urgente, avec
+   * le nombre d'échéances ouvertes restantes sur ce contrat.
+   */
+  const displayed = useMemo(() => {
+    if (!oneRowPerStudent) {
+      return filtered.map((m) => ({ milestone: m, others: 0 }));
+    }
+    const byContract = new Map<number, FollowUpMilestone[]>();
+    for (const m of filtered) {
+      const list = byContract.get(m.contractId) ?? [];
+      list.push(m);
+      byContract.set(m.contractId, list);
+    }
+    // `filtered` est déjà trié par date d'échéance croissante : le premier de
+    // chaque groupe est le plus urgent.
+    return [...byContract.values()]
+      .map((list) => ({ milestone: list[0], others: list.length - 1 }))
+      .sort(
+        (a, b) =>
+          new Date(a.milestone.dueDate).getTime() - new Date(b.milestone.dueDate).getTime(),
+      );
+  }, [filtered, oneRowPerStudent]);
 
   const handleReconcile = async () => {
     setReconciling(true);
@@ -246,6 +275,18 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
           </ToggleGroup>
 
           <Button
+            variant={oneRowPerStudent ? "default" : "outline"}
+            size="icon"
+            onClick={() => setOneRowPerStudent((v) => !v)}
+            title={
+              oneRowPerStudent
+                ? "Une ligne par apprenant (échéance la plus urgente) — cliquer pour tout voir"
+                : "Toutes les échéances — cliquer pour n'afficher que la plus urgente par apprenant"
+            }
+          >
+            <Layers className="h-4 w-4" />
+          </Button>
+          <Button
             variant="outline"
             size="icon"
             onClick={handleReconcile}
@@ -285,7 +326,10 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
           <CardHeader>
             <CardTitle>Échéances de suivi</CardTitle>
             <CardDescription>
-              {filtered.length} échéance{filtered.length > 1 ? "s" : ""} — cliquez pour agir
+              {oneRowPerStudent
+                ? `${displayed.length} apprenant${displayed.length > 1 ? "s" : ""} à suivre sur ${filtered.length} échéance${filtered.length > 1 ? "s" : ""}`
+                : `${filtered.length} échéance${filtered.length > 1 ? "s" : ""}`}{" "}
+              — cliquez pour agir
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -303,7 +347,7 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((m) => (
+                  {displayed.map(({ milestone: m, others }) => (
                     <TableRow
                       key={m.id}
                       className="cursor-pointer"
@@ -330,6 +374,11 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{m.typeLabel}</Badge>
+                        {others > 0 && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            +{others} autre{others > 1 ? "s" : ""}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className={rowTone(m)}>{formatDue(m)}</TableCell>
                       <TableCell>
