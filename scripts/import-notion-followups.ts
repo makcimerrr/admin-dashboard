@@ -129,13 +129,19 @@ function plain(prop: AnyProp | undefined): string {
   }
 }
 
-/** Date ISO (propriété `date`) ou texte JJ/MM/AAAA. */
+/**
+ * Date ISO (propriété `date` Notion) ou texte JJ/MM/AAAA, construite en UTC.
+ *
+ * ⚠️ `new Date(y, m, d)` donnerait minuit HEURE LOCALE : stocké dans une colonne
+ * `timestamp` sans fuseau, cela atterrit à 22h/23h la VEILLE et décale tout le
+ * suivi d'un jour. La synchro émargement stocke minuit UTC — même convention.
+ */
 function toDate(raw: string): Date | null {
   if (!raw) return null;
   const iso = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  if (iso) return new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])));
   const fr = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-  if (fr) return new Date(Number(fr[3]), Number(fr[2]) - 1, Number(fr[1]));
+  if (fr) return new Date(Date.UTC(Number(fr[3]), Number(fr[2]) - 1, Number(fr[1])));
   return null;
 }
 

@@ -26,6 +26,11 @@ const DATE_PATTERN = /(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/;
 /**
  * Première date d'un texte libre, format JJ/MM/AA(AA). Une année à deux
  * chiffres est lue comme 20xx : ces suivis datent tous des années 2020.
+ *
+ * La date est construite en UTC. `new Date(y, m, d)` produirait minuit HEURE
+ * LOCALE, qui, stocké dans une colonne `timestamp` sans fuseau, atterrit à
+ * 22h/23h la VEILLE — décalant tout le suivi d'un jour. Le reste de la base
+ * (synchro émargement) stocke bien minuit UTC.
  */
 export function dateInText(raw: string): Date | null {
   const m = raw.match(DATE_PATTERN);
@@ -34,7 +39,7 @@ export function dateInText(raw: string): Date | null {
   const month = Number(m[2]);
   const year = Number(m[3]) < 100 ? 2000 + Number(m[3]) : Number(m[3]);
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return new Date(year, month - 1, day);
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 export interface LogEntry {
