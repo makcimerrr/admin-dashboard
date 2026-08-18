@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { mutatePromoDependentData } from "@/lib/client-cache";
 import {
   Card,
   CardContent,
@@ -170,6 +171,10 @@ export default function PromosManagePage() {
       const data = await res.json();
       if (data.success) {
         fetchData();
+        // La liste des alternants et le suivi en entreprise se lisent ailleurs :
+        // sans ça, ils continuaient d'afficher les apprenants de la promo
+        // archivée jusqu'au prochain rechargement complet.
+        mutatePromoDependentData();
       } else {
         alert(data.error || "Erreur lors de l'archivage");
       }
@@ -192,6 +197,7 @@ export default function PromosManagePage() {
       const data = await res.json();
       if (data.success) {
         fetchData();
+        mutatePromoDependentData();
       } else {
         alert(data.error || "Erreur lors de la restauration");
       }

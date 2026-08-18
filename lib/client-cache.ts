@@ -54,6 +54,30 @@ export function mutateKey<T = unknown>(key: string, fetcher: (k: string) => Prom
   return revalidate(key, fetcher);
 }
 
+/**
+ * Clés dont le contenu dépend de l'état d'archivage d'une promo ou de la
+ * perdition d'un apprenant.
+ *
+ * Ces vues se lisent depuis d'AUTRES pages que celles où la mutation a lieu
+ * (on archive une promo depuis /promos/manage, on voit le résultat sur
+ * /alternants et sur l'accueil). Sans invalidation explicite, le cache client
+ * continue de servir la liste d'avant l'archivage : le serveur a raison, mais
+ * l'écran ment.
+ */
+const PROMO_DEPENDENT_KEYS = [
+  '/api/alternants',
+  '/api/alternants?stats=true',
+  '/api/alternants?companies=true',
+  '/api/promotions/active',
+  '/api/follow-ups?includeClosed=true',
+  '/api/follow-ups?stats=true',
+];
+
+/** À appeler après un archivage/désarchivage de promo ou une mise en perdition. */
+export function mutatePromoDependentData(): void {
+  PROMO_DEPENDENT_KEYS.forEach((key) => mutateKey(key));
+}
+
 export interface UseDataOptions<T> {
   fetcher?: (key: string) => Promise<T>;
   /** Fenêtre (ms) pendant laquelle une valeur en cache est considérée fraîche (pas de refetch). Défaut 30s. */
