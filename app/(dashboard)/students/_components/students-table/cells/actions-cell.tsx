@@ -23,6 +23,7 @@ import {
   ArchiveRestore
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { mutatePromoDependentData } from '@/lib/client-cache';
 import { deleteStudent } from '../../../../actions';
 
 interface ActionsCellProps {
@@ -61,6 +62,9 @@ export function ActionsCell({
         });
         if (response.ok) {
           toast.success('Étudiant marqué en perdition');
+          // Ces changements retirent (ou rendent) l'apprenant à la liste des
+          // alternants et à son suivi en entreprise, lus depuis d'autres pages.
+          mutatePromoDependentData();
           router.refresh();
         } else {
           toast.error('Erreur lors du marquage');
@@ -71,6 +75,9 @@ export function ActionsCell({
         });
         if (response.ok) {
           toast.success('Étudiant réactivé');
+          // Ces changements retirent (ou rendent) l'apprenant à la liste des
+          // alternants et à son suivi en entreprise, lus depuis d'autres pages.
+          mutatePromoDependentData();
           router.refresh();
         } else {
           toast.error('Erreur lors de la réactivation');
@@ -95,6 +102,9 @@ export function ActionsCell({
       });
       if (response.ok) {
         toast.success(nextArchived ? 'Apprenant archivé' : 'Apprenant désarchivé');
+          // Ces changements retirent (ou rendent) l'apprenant à la liste des
+          // alternants et à son suivi en entreprise, lus depuis d'autres pages.
+          mutatePromoDependentData();
         router.refresh();
       } else {
         toast.error("Erreur lors de l'archivage");
