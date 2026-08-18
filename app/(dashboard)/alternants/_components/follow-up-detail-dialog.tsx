@@ -25,12 +25,7 @@ import {
   Send,
   User,
 } from "lucide-react";
-import {
-  MILESTONE_STATUS_LABELS,
-  MILESTONE_STATUS_TONE,
-  type ApiEnvelope,
-  type FollowUpMilestone,
-} from "../types";
+import { displayStatus, type ApiEnvelope, type FollowUpMilestone } from "../types";
 import { FollowUpReportDialog } from "./follow-up-report-dialog";
 import { FollowUpConfirmSendDialog } from "./follow-up-confirm-send-dialog";
 
@@ -137,11 +132,8 @@ export function FollowUpDetailDialog({
               {milestone.firstName} {milestone.lastName} — {milestone.typeLabel}
             </DialogTitle>
             <DialogDescription className="flex flex-wrap items-center gap-2 pt-1">
-              <Badge
-                variant="outline"
-                className={PILL[MILESTONE_STATUS_TONE[milestone.status]]}
-              >
-                {MILESTONE_STATUS_LABELS[milestone.status]}
+              <Badge variant="outline" className={PILL[displayStatus(milestone).tone]}>
+                {displayStatus(milestone).label}
               </Badge>
               <span>Échéance : {dueLabel}</span>
               {milestone.daysUntilDue < 0 &&

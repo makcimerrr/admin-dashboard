@@ -90,6 +90,11 @@ export const followUpSettings = pgTable('follow_up_settings', {
   reminderLeadDays: integer('reminder_lead_days').notNull().default(21),
   /** 2e relance si aucun RDV planifié X jours après la 1re. */
   secondReminderAfterDays: integer('second_reminder_after_days').notNull().default(10),
+  /**
+   * Marge minimale entre un jalon et la fin du contrat : en deçà, le suivi
+   * n'est plus organisable et le jalon n'est pas posé.
+   */
+  minDaysBeforeContractEnd: integer('min_days_before_contract_end').notNull().default(30),
   /** Lien de réservation (Google Appointment schedule, Calendly…) injecté dans le mail. */
   bookingUrl: text('booking_url'),
   /** Agenda surveillé pour détecter automatiquement les RDV réservés. */

@@ -328,6 +328,29 @@ export function FollowUpSettingsDialog({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="minDaysBeforeContractEnd">
+                  Marge minimale avant la fin de contrat (jours)
+                </Label>
+                <Input
+                  id="minDaysBeforeContractEnd"
+                  type="number"
+                  min={0}
+                  max={365}
+                  className="w-40"
+                  value={form.minDaysBeforeContractEnd ?? 30}
+                  onChange={(e) =>
+                    setForm({ ...form, minDaysBeforeContractEnd: Number(e.target.value) })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Un jalon qui tomberait moins de X jours avant la fin du contrat n'est pas
+                  posé : on n'organise pas une visite en entreprise pour un apprenant qui
+                  s'en va. Les jalons au-delà de la fin de contrat ne le sont jamais non plus
+                  (un point « 18 mois » sur un contrat d'un an).
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="bookingUrl">Lien de réservation (agenda)</Label>
                 <Input
                   id="bookingUrl"

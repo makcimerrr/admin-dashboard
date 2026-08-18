@@ -48,6 +48,7 @@ import {
   MILESTONE_STATUS_LABELS,
   MILESTONE_STATUS_ORDER,
   MILESTONE_STATUS_TONE,
+  displayStatus,
   type ApiEnvelope,
   type FollowUpMilestone,
   type FollowUpStats,
@@ -555,8 +556,11 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
                       </TableCell>
                       <TableCell className={rowTone(m)}>{formatDue(m)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={PILL[MILESTONE_STATUS_TONE[m.status]]}>
-                          {MILESTONE_STATUS_LABELS[m.status]}
+                        <Badge
+                          variant="outline"
+                          className={PILL[displayStatus(m).tone]}
+                        >
+                          {displayStatus(m).label}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground">
