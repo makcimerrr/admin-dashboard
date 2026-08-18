@@ -8,6 +8,7 @@ import {
 } from '@/lib/db/services/promotions';
 import { CACHE_TAGS, invalidate } from '@/lib/cache';
 import { invalidateArchivedPromoCache } from '@/lib/db/filters';
+import { reconcileMilestones } from '@/lib/db/services/followUps';
 
 /**
  * GET /api/promotions/archive
@@ -68,9 +69,18 @@ export async function POST(request: NextRequest) {
         invalidate(CACHE_TAGS.promotions, CACHE_TAGS.widgetsOverview, CACHE_TAGS.codeReviewsStats);
         invalidateArchivedPromoCache();
 
+        // Les échéances de suivi de cette promo n'ont plus lieu d'être : on les
+        // ferme tout de suite plutôt que d'attendre le cron du lendemain.
+        // (annulation automatique, donc réversible au désarchivage)
+        const milestones = await reconcileMilestones().catch((e) => {
+            console.error('Réconciliation des échéances après archivage échouée :', e);
+            return null;
+        });
+
         return NextResponse.json({
             success: true,
             message: result,
+            milestones,
             archivedBy: user.name || user.email
         });
     } catch (error) {
@@ -113,9 +123,17 @@ export async function DELETE(request: NextRequest) {
         invalidate(CACHE_TAGS.promotions, CACHE_TAGS.widgetsOverview, CACHE_TAGS.codeReviewsStats);
         invalidateArchivedPromoCache();
 
+        // Symétrique de l'archivage : les échéances annulées automatiquement
+        // pour « promotion archivée » se rouvrent.
+        const milestones = await reconcileMilestones().catch((e) => {
+            console.error('Réconciliation des échéances après désarchivage échouée :', e);
+            return null;
+        });
+
         return NextResponse.json({
             success: true,
             message: result,
+            milestones,
             unarchivedBy: user.name || user.email
         });
     } catch (error) {

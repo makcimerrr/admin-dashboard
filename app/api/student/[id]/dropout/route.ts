@@ -3,6 +3,7 @@ import { db } from '@/lib/db/config';
 import { students, DROPOUT_REASONS } from '@/lib/db/schema/students';
 import { eq } from 'drizzle-orm';
 import { CACHE_TAGS, invalidate } from '@/lib/cache';
+import { reconcileMilestones } from '@/lib/db/services/followUps';
 
 // GET - Récupérer le status dropout d'un étudiant
 export async function GET(
@@ -112,6 +113,13 @@ export async function POST(
 
     invalidate(CACHE_TAGS.widgetsOverview, CACHE_TAGS.codeReviewsStats);
 
+    // Plus de suivi en entreprise à mener pour un apprenant en perdition :
+    // ses échéances se ferment tout de suite (annulation automatique, donc
+    // réversible à la réactivation).
+    await reconcileMilestones({ studentIds: [studentId] }).catch((e) =>
+      console.error('Réconciliation des échéances après perdition échouée :', e),
+    );
+
     return NextResponse.json({
       success: true,
       message: 'Étudiant marqué comme en perdition'
@@ -203,6 +211,11 @@ export async function DELETE(
       .where(eq(students.id, studentId));
 
     invalidate(CACHE_TAGS.widgetsOverview, CACHE_TAGS.codeReviewsStats);
+
+    // Réactivation : les échéances annulées automatiquement se rouvrent.
+    await reconcileMilestones({ studentIds: [studentId] }).catch((e) =>
+      console.error('Réconciliation des échéances après réactivation échouée :', e),
+    );
 
     return NextResponse.json({
       success: true,

@@ -45,9 +45,20 @@ export interface AlternantStats {
 // ============== FONCTIONS ==============
 
 /**
- * Récupère tous les alternants
- * @param promoName - Filtrer par promotion (optionnel)
- * @param includeDropouts - Inclure les perditions (défaut: false)
+ * Récupère les alternants À SUIVRE.
+ *
+ * Sont écartés, car il n'y a plus d'accompagnement à mener :
+ *  - les apprenants en perdition (`isDropout`) ;
+ *  - les apprenants archivés côté émargement (`archived`, sortis des effectifs) ;
+ *  - ceux d'une promotion archivée.
+ *
+ * Le module de suivi en entreprise applique exactement les mêmes règles à ses
+ * échéances (cf. `reconcileMilestones`) : la page et le suivi ne doivent jamais
+ * raconter deux histoires différentes.
+ *
+ * @param promoName - Filtrer par promotion (optionnel). Cibler explicitement une
+ *   promo archivée reste possible : c'est une consultation d'historique.
+ * @param includeDropouts - Inclure perditions ET archivés (défaut: false)
  */
 export async function getAlternants(
     promoName?: string,
@@ -58,6 +69,9 @@ export async function getAlternants(
 
         if (!includeDropouts) {
             conditions.push(eq(students.isDropout, false));
+            conditions.push(
+                or(eq(students.archived, false), sql`${students.archived} IS NULL`)!,
+            );
         }
 
         if (promoName) {
@@ -309,17 +323,12 @@ export async function getAlternantsByCompany(companyName: string): Promise<Alter
  */
 export async function getCompanies(): Promise<string[]> {
     try {
-        const result = await db
-            .selectDistinct({ companyName: students.companyName })
-            .from(students)
-            .where(and(
-                eq(students.isAlternant, true),
-                sql`${students.companyName} IS NOT NULL`
-            ))
-            .orderBy(asc(students.companyName))
-            .execute();
-
-        return result.map(r => r.companyName!).filter(Boolean);
+        // Dérivé de `getAlternants()` pour partager EXACTEMENT ses filtres :
+        // une requête indépendante proposait des entreprises d'apprenants
+        // absents du tableau (archivés, perditions, promos archivées).
+        const alternants = await getAlternants();
+        return [...new Set(alternants.map((a) => a.companyName).filter((c): c is string => Boolean(c)))]
+            .sort((a, b) => a.localeCompare(b, 'fr'));
     } catch (error) {
         console.error('Erreur lors de la récupération des entreprises:', error);
         throw error;
