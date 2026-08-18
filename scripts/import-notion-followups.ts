@@ -27,6 +27,11 @@
  *                                            (conservée dans les notes du contrat)
  *   Suivi entretiens Alternance           → compte rendu des entretiens passés
  *
+ * ⚠️ `Suivi entretiens Alternance` ne contient PAS le compte rendu : chaque
+ * « RDV alternance 13/11/25 » est une MENTION de page Notion, dont le corps
+ * porte le vrai texte du suivi. Lire `plain_text` ne récupère que le libellé du
+ * lien. On suit donc chaque mention pour rapatrier le contenu.
+ *
  * Usage :
  *   pnpm tsx scripts/import-notion-followups.ts --inspect   # schéma + 3 lignes
  *   pnpm tsx scripts/import-notion-followups.ts             # dry-run complet
@@ -48,7 +53,6 @@ import { and, eq, sql } from 'drizzle-orm';
 import { students } from '../lib/db/schema/students';
 import { alternantContracts } from '../lib/db/schema/alternants';
 import { followUpReports } from '../lib/db/schema/followUps';
-import { linkOrphanReportsToMilestones } from '../lib/db/services/followUps';
 import { dateInText, splitLogEntries } from '../lib/services/follow-up-import';
 
 config();
@@ -180,6 +184,12 @@ function findProp(props: AnyProp, ...aliases: string[]): AnyProp | undefined {
   return undefined;
 }
 
+/** Items `rich_text` bruts d'une propriété (mentions comprises). */
+function richItems(props: AnyProp, ...aliases: string[]): AnyProp[] {
+  const prop = findProp(props, ...aliases);
+  return prop?.type === 'rich_text' ? (prop.rich_text ?? []) : [];
+}
+
 function text(props: AnyProp, ...aliases: string[]): string {
   const value = plain(findProp(props, ...aliases)).trim();
   // « Untitled » est un reliquat de Notion (relation vide rendue en texte),
@@ -294,6 +304,89 @@ async function queryAll(dataSourceId: string, filter?: AnyProp): Promise<AnyProp
   return rows;
 }
 
+// ─── Contenu des pages de compte rendu ──────────────────────────────────────
+
+/**
+ * Texte d'une page Notion : tous les blocs porteurs de `rich_text`, dans
+ * l'ordre, listes imbriquées comprises. Une page vide (RDV planifié mais
+ * jamais rédigé) renvoie une chaîne vide — on le signale plutôt que d'inventer.
+ */
+async function pageText(pageId: string, depth = 0): Promise<string> {
+  if (depth > 2) return '';
+  const lines: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const res = (await notion.blocks.children.list({
+      block_id: pageId,
+      start_cursor: cursor,
+      page_size: 100,
+    })) as AnyProp;
+
+    for (const block of res.results as AnyProp[]) {
+      const content = block[block.type] as AnyProp | undefined;
+      const rich = content?.rich_text;
+      if (Array.isArray(rich)) {
+        const line = rich.map((t: AnyProp) => t.plain_text ?? '').join('').trim();
+        if (line) {
+          // Les puces gardent leur marqueur : la mise en forme porte du sens
+          // dans ces comptes rendus (listes de points abordés).
+          lines.push(
+            block.type === 'bulleted_list_item' || block.type === 'numbered_list_item'
+              ? `- ${line}`
+              : line,
+          );
+        }
+      }
+      if (block.has_children) {
+        const nested = await pageText(block.id, depth + 1);
+        if (nested) lines.push(nested);
+      }
+    }
+    cursor = res.has_more ? res.next_cursor : undefined;
+  } while (cursor);
+
+  return lines.join('\n');
+}
+
+interface FollowUpEntry {
+  date: Date | null;
+  /** Libellé du lien (« RDV alternance 13/11/25 ») — sert de titre. */
+  label: string;
+  /** Texte réellement rédigé dans la page liée ; vide si le RDV n'a rien laissé. */
+  body: string;
+}
+
+/**
+ * Entrées de suivi d'une ligne : une par mention de page (compte rendu rédigé
+ * dans Notion) plus le texte libre éventuel (« Rupture »), pour les deux
+ * journaux (alternance et stage).
+ */
+async function extractEntries(props: AnyProp): Promise<FollowUpEntry[]> {
+  const entries: FollowUpEntry[] = [];
+
+  for (const alias of ['Suivi entretiens Alternance', 'Commentaire Stage']) {
+    const items = richItems(props, alias);
+    let freeText = '';
+
+    for (const item of items) {
+      if (item.type === 'mention' && item.mention?.type === 'page') {
+        const label = (item.plain_text ?? '').trim();
+        const body = await pageText(item.mention.page.id).catch(() => '');
+        entries.push({ date: dateInText(label), label, body });
+      } else {
+        freeText += item.plain_text ?? '';
+      }
+    }
+
+    // Le texte libre restant peut porter plusieurs RDV sur une même ligne.
+    for (const chunk of splitLogEntries(freeText)) {
+      entries.push({ date: chunk.date, label: chunk.content, body: '' });
+    }
+  }
+
+  return entries;
+}
+
 // ─── Rapprochement avec les apprenants du hub ────────────────────────────────
 
 interface HubStudent {
@@ -356,8 +449,8 @@ interface Extracted {
   tutorEmail: string | null;
   /** Date de relance tenue à la main dans Notion — on ne la perd pas. */
   notionReminder: Date | null;
-  /** Historique d'entretiens saisi en texte libre. */
-  followUpLog: string;
+  /** Y a-t-il un journal d'entretiens ? (le contenu est résolu séparément) */
+  hasFollowUpLog: boolean;
 }
 
 function extract(props: AnyProp): Extracted {
@@ -383,17 +476,17 @@ function extract(props: AnyProp): Extracted {
     // familiales (cf. l'avertissement en tête de fichier).
     tutorEmail: firstEmail(text(props, 'Mail Tuteur')),
     notionReminder: toDate(text(props, 'Rappel suivi entreprise')),
-    // Les deux journaux coexistent (alternance et stage) : on ne perd ni l'un
-    // ni l'autre.
-    followUpLog: [text(props, 'Suivi entretiens Alternance'), text(props, 'Commentaire Stage')]
-      .filter(Boolean)
-      .join('\n'),
+    // Les deux journaux coexistent (alternance et stage). Leur contenu réel
+    // vit dans des pages liées, résolu par `extractEntries()`.
+    hasFollowUpLog: Boolean(
+      text(props, 'Suivi entretiens Alternance') || text(props, 'Commentaire Stage'),
+    ),
   };
 }
 
 // ─── Inspection (mode --inspect) ─────────────────────────────────────────────
 
-function inspectRows(title: string, rows: AnyProp[]) {
+async function inspectRows(title: string, rows: AnyProp[]) {
   console.log(`\n━━ ${title} — ${rows.length} ligne(s) retenue(s)`);
   if (rows.length === 0) return;
 
@@ -413,7 +506,16 @@ function inspectRows(title: string, rows: AnyProp[]) {
     console.log(
       `     rappel Notion : ${e.notionReminder?.toLocaleDateString('fr-FR') ?? '—'}`,
     );
-    if (e.followUpLog) console.log(`     suivi         : ${e.followUpLog.slice(0, 120)}`);
+    if (e.hasFollowUpLog) {
+      const entries = await extractEntries(props);
+      for (const entry of entries) {
+        console.log(
+          `     suivi         : ${entry.label} → ${
+            entry.body ? `${entry.body.length} car. de compte rendu` : 'page vide'
+          }`,
+        );
+      }
+    }
   }
 }
 
@@ -425,6 +527,7 @@ interface Stats {
   emargementEnriched: number;
   tutorEmails: number;
   reportsImported: number;
+  reportsUpdated: number;
   reportsExisting: number;
 }
 
@@ -435,6 +538,7 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
     emargementEnriched: 0,
     tutorEmails: 0,
     reportsImported: 0,
+    reportsUpdated: 0,
     reportsExisting: 0,
   };
   const unresolved: string[] = [];
@@ -547,17 +651,22 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
           })
           .where(eq(students.id, student.id));
       }
-    } else if (e.tutorEmail || e.followUpLog) {
+    } else if (e.tutorEmail || e.hasFollowUpLog) {
       // Pas de dates exploitables : on ne fabrique pas un contrat, mais on le dit.
       noDates.push(`${rowLabel(props)} — ${e.company}`);
     }
 
     // ── 2. Comptes rendus d'entretien ───────────────────────────────────────
-    for (const entry of splitLogEntries(e.followUpLog)) {
+    for (const entry of await extractEntries(props)) {
       const performedAt = entry.date ?? toDate(row.last_edited_time) ?? new Date();
+      // Le corps de la page liée EST le compte rendu ; à défaut on garde le
+      // libellé, en disant explicitement que rien n'a été rédigé.
+      const content = entry.body.trim()
+        ? `${entry.label}\n\n${entry.body.trim()}`
+        : `${entry.label}\n\n(aucun compte rendu rédigé dans Notion)`;
 
       const [existingReport] = await db
-        .select({ id: followUpReports.id })
+        .select({ id: followUpReports.id, content: followUpReports.content })
         .from(followUpReports)
         .where(
           and(
@@ -568,24 +677,36 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
         .limit(1);
 
       if (existingReport) {
-        stats.reportsExisting++;
+        if (existingReport.content === content) {
+          stats.reportsExisting++;
+          continue;
+        }
+        // Passage précédent : seul le libellé du lien avait été importé.
+        stats.reportsUpdated++;
+        console.log(
+          `      ↻ CR ${performedAt.toLocaleDateString('fr-FR')} enrichi (${entry.body.length} car.)`,
+        );
+        if (apply) {
+          await db
+            .update(followUpReports)
+            .set({ content, updatedAt: new Date() })
+            .where(eq(followUpReports.id, existingReport.id));
+        }
         continue;
       }
 
       stats.reportsImported++;
       console.log(
-        `      ↳ CR ${performedAt.toLocaleDateString('fr-FR')} : ${entry.content
-          .replace(/\s+/g, ' ')
-          .slice(0, 80)}`,
+        `      ↳ CR ${performedAt.toLocaleDateString('fr-FR')} : ${entry.label}` +
+          (entry.body ? ` (${entry.body.length} car.)` : ' — page vide'),
       );
       if (apply) {
-        // Pas de `milestoneId` : ces suivis précèdent le module, ils
-        // alimentent l'historique sans clore d'échéance calculée.
+        // Pas de `milestoneId` ici : le rattachement se fait après l'import.
         await db.insert(followUpReports).values({
           studentId: student.id,
           performedAt,
           author: 'Import Notion',
-          content: entry.content,
+          content,
           companyName: e.company !== 'Non renseigné' ? e.company : null,
         });
       }
@@ -598,7 +719,8 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
   console.log(`   contrats émargement enrichis      : ${stats.emargementEnriched}`);
   console.log(`   emails de tuteur récupérés        : ${stats.tutorEmails}`);
   console.log(`   comptes rendus importés           : ${stats.reportsImported}`);
-  console.log(`   comptes rendus déjà présents      : ${stats.reportsExisting}`);
+  console.log(`   comptes rendus enrichis (contenu) : ${stats.reportsUpdated}`);
+  console.log(`   comptes rendus inchangés          : ${stats.reportsExisting}`);
 
   if (noDates.length) {
     console.log(
@@ -678,7 +800,7 @@ async function main() {
     );
 
     if (inspectOnly) {
-      inspectRows(source.title, rows);
+      await inspectRows(source.title, rows);
       continue;
     }
     console.log('');
@@ -686,16 +808,11 @@ async function main() {
   }
 
   if (apply) {
-    // Un CR importé clôt l'échéance qu'il documente : sans ça les échéances
-    // restent « à venir » alors que le suivi a eu lieu.
-    const link = await linkOrphanReportsToMilestones();
-    console.log(
-      `\n   comptes rendus rattachés à une échéance : ${link.linked}` +
-        ` (${link.orphansLeft} sans échéance plausible, conservés en historique)`,
-    );
     console.log(
       '\n✅ Import terminé. Lancez « Recalculer les échéances » sur /alternants ' +
-        '(onglet Suivi en entreprise) pour poser les jalons.',
+        '(onglet Suivi en entreprise) : ce bouton pose les jalons manquants ET ' +
+        "rattache les comptes rendus aux échéances qu'ils clôturent.\n" +
+        '   (le cron quotidien fait la même chose ; les deux sont idempotents)',
     );
   }
 

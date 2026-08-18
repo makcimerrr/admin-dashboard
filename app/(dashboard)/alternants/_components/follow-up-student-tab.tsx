@@ -22,7 +22,11 @@ import { FollowUpReportDialog } from "./follow-up-report-dialog";
 
 /**
  * Onglet « Suivi » de la fiche apprenant : les échéances de son contrat et
- * l'historique complet des comptes rendus le concernant.
+ * l'historique COMPLET de ses comptes rendus, du plus récent au plus ancien.
+ *
+ * C'est ici qu'on lit un suivi : l'API renvoie déjà les CR triés par date
+ * décroissante, et le contenu est affiché en entier (les suivis repris de
+ * Notion incluent le texte rédigé dans la page de chaque RDV).
  */
 export function FollowUpStudentTab({ studentId }: { studentId: number }) {
   const milestonesKey = `/api/follow-ups?studentId=${studentId}&includeClosed=true`;
@@ -93,38 +97,62 @@ export function FollowUpStudentTab({ studentId }: { studentId: number }) {
 
       <Separator />
 
-      {/* Historique des comptes rendus */}
+      {/* Historique des comptes rendus, du plus récent au plus ancien */}
       <div className="space-y-2">
-        <h4 className="text-sm font-medium">Comptes rendus ({reports.length})</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Comptes rendus ({reports.length})</h4>
+          {reports.length > 1 && (
+            <span className="text-xs text-muted-foreground">
+              du {fmt(reports[reports.length - 1].performedAt)} au {fmt(reports[0].performedAt)}
+            </span>
+          )}
+        </div>
+
         {reports.length === 0 ? (
           <EmptyState icon={FileText} title="Aucun compte rendu" />
         ) : (
-          reports.map((r) => (
-            <Card key={r.id}>
-              <CardContent className="space-y-2 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-sm font-medium">
-                    {r.milestoneLabel ?? "Suivi hors échéance"} — {fmt(r.performedAt)}
+          reports.map((r) => {
+            // Les CR repris de Notion sont « titre\n\ncorps » : on sépare pour
+            // donner un vrai titre à la carte.
+            const [firstLine, ...rest] = r.content.split("\n");
+            const body = rest.join("\n").trim();
+            const hasTitle = Boolean(body);
+
+            return (
+              <Card key={r.id}>
+                <CardContent className="space-y-2 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-medium">
+                        {hasTitle ? firstLine : (r.milestoneLabel ?? "Suivi en entreprise")}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {fmt(r.performedAt)} · par {r.author}
+                        {r.companyName && ` · ${r.companyName}`}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {r.milestoneLabel && <Badge variant="outline">{r.milestoneLabel}</Badge>}
+                      {r.mode && (
+                        <Badge variant="outline">{FOLLOW_UP_MODE_LABELS[r.mode] ?? r.mode}</Badge>
+                      )}
+                    </div>
                   </div>
-                  {r.mode && (
-                    <Badge variant="outline">{FOLLOW_UP_MODE_LABELS[r.mode] ?? r.mode}</Badge>
+
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {hasTitle ? body : firstLine}
+                  </p>
+
+                  {r.vigilancePoints && (
+                    <div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-xs">
+                      <span className="font-medium">Points de vigilance : </span>
+                      {r.vigilancePoints}
+                    </div>
                   )}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Par {r.author}
-                  {r.companyName && ` · ${r.companyName}`}
-                  {r.tutorName && ` · tuteur : ${r.tutorName}`}
-                </div>
-                <p className="whitespace-pre-wrap text-sm">{r.content}</p>
-                {r.vigilancePoints && (
-                  <div className="rounded-md border border-warning/30 bg-warning/10 p-2 text-xs">
-                    <span className="font-medium">Points de vigilance : </span>
-                    {r.vigilancePoints}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
 

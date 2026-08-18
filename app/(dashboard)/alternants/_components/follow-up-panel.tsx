@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
 import { useData, mutateKey } from "@/lib/client-cache";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +36,6 @@ import {
   CalendarCheck,
   CalendarClock,
   CheckCircle2,
-  FileText,
   KanbanSquare,
   Layers,
   List,
@@ -280,9 +278,13 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
       const res = await fetch("/api/follow-ups/reconcile", { method: "POST" });
       const json = await res.json();
       if (json.success) {
-        const { created, updated, cancelled, restored } = json.data;
+        const { created, updated, cancelled, restored, linkedReports } = json.data;
         toast.success(
-          `Échéances recalculées : ${created} créée(s), ${updated} décalée(s), ${cancelled} annulée(s), ${restored} rouverte(s)`,
+          `Échéances recalculées : ${created} créée(s), ${updated} décalée(s), ` +
+            `${cancelled} annulée(s), ${restored} rouverte(s)` +
+            (linkedReports?.linked
+              ? ` — ${linkedReports.linked} compte(s) rendu(s) rattaché(s)`
+              : ""),
         );
         refreshFollowUps();
       } else {
@@ -443,16 +445,6 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
             title="Recalculer les échéances à partir des contrats"
           >
             <RefreshCw className={cn("h-4 w-4", reconciling && "animate-spin")} />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            asChild
-            title="Voir tous les comptes rendus de suivi"
-          >
-            <Link href="/alternants/comptes-rendus">
-              <FileText className="h-4 w-4" />
-            </Link>
           </Button>
           <Button
             variant="outline"
