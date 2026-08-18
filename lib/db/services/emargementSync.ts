@@ -29,6 +29,11 @@ import { sql, eq, inArray } from 'drizzle-orm';
  *                    professionnalisation}). Marque ET démarque.
  *  - Alternant     → `alternantStartDate/EndDate` repris des dates de contrat
  *                    (en TEXTE 'YYYY-MM-DD' → pas de décalage de fuseau).
+ *
+ * ⚠️ `candidate_data.tutor_1_*` d'émargement est le TUTEUR LÉGAL (parent), pas
+ * le tuteur entreprise : les noms de famille coïncident avec ceux de
+ * l'apprenant (Guimiot/Guimiot, Caboor/Caboor…). On ne l'importe donc PAS :
+ * le hub n'en a aucun usage, et le module de suivi relance l'entreprise.
  *  - Non-alternant → efface les champs alternant du hub (dates + entreprise /
  *                    contact / email / téléphone / notes).
  */
@@ -56,17 +61,12 @@ interface EmgUserRow {
   contract_type: string | null;
   contract_start_date: string | null;
   contract_end_date: string | null;
-  tutor_1_first_name: string | null;
-  tutor_1_last_name: string | null;
-  tutor_1_phone_number: string | null;
 }
 
 interface AlternantInfo {
   start: string | null;
   end: string | null;
   contractType: string;
-  tutorName: string | null;
-  tutorPhone: string | null;
 }
 
 /** Normalise pour le rapprochement : minuscules, sans accents, espaces compactés. */
@@ -130,12 +130,8 @@ export async function syncEmargementStatuses(
              u.archived,
              u.contract_type,
              u.contract_start_date::text AS contract_start_date,
-             u.contract_end_date::text   AS contract_end_date,
-             cd.tutor_1_first_name,
-             cd.tutor_1_last_name,
-             cd.tutor_1_phone_number
+             u.contract_end_date::text   AS contract_end_date
       FROM users u
-      LEFT JOIN candidate_data cd ON cd.user_id = u.id
     `;
   } finally {
     await emg.end({ timeout: 5 }).catch(() => {});
@@ -160,14 +156,10 @@ export async function syncEmargementStatuses(
     }
     if (isArchived) archivedLogins.add(login);
     if (isAlternant) {
-      const tutorName =
-        [u.tutor_1_first_name, u.tutor_1_last_name].filter(Boolean).join(' ').trim() || null;
       alternantMap.set(login, {
         start: u.contract_start_date,
         end: u.contract_end_date,
         contractType: u.contract_type!.trim().toLowerCase(),
-        tutorName,
-        tutorPhone: u.tutor_1_phone_number?.trim() || null,
       });
     }
   }
@@ -262,8 +254,6 @@ export async function syncEmargementStatuses(
       startDate: new Date(info.start),
       endDate,
       companyName: companyByLogin.get(login) ?? 'Non renseigné',
-      tutorName: info.tutorName,
-      tutorPhone: info.tutorPhone,
       isActive: endDate >= now,
       source: 'emargement',
     });
@@ -305,8 +295,6 @@ export async function syncEmargementStatuses(
           startDate: row.startDate,
           endDate: row.endDate,
           companyName: row.companyName,
-          tutorName: row.tutorName,
-          tutorPhone: row.tutorPhone,
           isActive: row.isActive,
           updatedAt: now,
         })

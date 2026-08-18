@@ -11,10 +11,16 @@
  *
  *   Login · Nom · Prénom · Promo          → rapprochement avec l'apprenant du hub
  *   Entreprises                           → entreprise
- *   Tuteur 1 / Mail Tuteur / Tél Tuteur 1 → le tuteur (⚠️ l'email n'existe QUE ici,
- *                                            émargement ne le porte pas)
- *   Adresse / Code Postal / Ville Tuteur  → adresse entreprise
+ *   Mail Tuteur                           → email du tuteur ENTREPRISE (⚠️ n'existe
+ *                                            QUE ici : émargement ne le porte pas)
  *   Type de contrat                       → apprentissage / pro / stage
+ *
+ * ⚠️ PIÈGE DE NOMMAGE — `Tuteur 1`, `Téléphone Tuteur 1`, `Adresse Tuteur` et
+ * `Ville Tuteur` désignent le TUTEUR LÉGAL (le parent) : mêmes noms de famille
+ * que l'apprenant, et souvent la même adresse que la sienne. Idem pour
+ * `Nom/Prénom/Téléphone responsable`. Ces champs ne sont PAS importés : ce sont
+ * des données familiales sans usage ici. Seul `Mail Tuteur` désigne bien le
+ * contact en entreprise (il porte le domaine de la boîte).
  *   Date Début Alt / Date fin Alt         → contrat d'alternance
  *   Date Début Stag / Date fin Stag       → contrat de stage
  *   Rappel suivi entreprise               → la date de relance tenue à la main
@@ -346,10 +352,7 @@ interface Extracted {
   contractType: string;
   startDate: Date | null;
   endDate: Date | null;
-  tutorName: string | null;
   tutorEmail: string | null;
-  tutorPhone: string | null;
-  address: string | null;
   /** Date de relance tenue à la main dans Notion — on ne la perd pas. */
   notionReminder: Date | null;
   /** Historique d'entretiens saisi en texte libre. */
@@ -367,13 +370,6 @@ function extract(props: AnyProp): Extracted {
   const startDate = altStart ?? stageStart;
   const endDate = altEnd ?? stageEnd;
 
-  const address = [
-    text(props, 'Adresse Tuteur'),
-    [text(props, 'Code Postal Tuteur'), text(props, 'Ville Tuteur')].filter(Boolean).join(' '),
-  ]
-    .filter(Boolean)
-    .join(', ');
-
   return {
     company: text(props, 'entreprises', 'entreprise', 'societe') || 'Non renseigné',
     contractType: mapContractType(
@@ -382,11 +378,9 @@ function extract(props: AnyProp): Extracted {
     ),
     startDate,
     endDate,
-    tutorName: text(props, 'Tuteur 1') || text(props, 'Tuteur 2') || null,
-    tutorEmail: firstEmail(text(props, 'Mail Tuteur', 'email tuteur', 'tuteur email')),
-    tutorPhone:
-      text(props, 'Téléphone Tuteur 1') || text(props, 'Téléphone Tuteur 2') || null,
-    address: address || null,
+    // Uniquement « Mail Tuteur » : les autres colonnes « Tuteur » sont
+    // familiales (cf. l'avertissement en tête de fichier).
+    tutorEmail: firstEmail(text(props, 'Mail Tuteur')),
     notionReminder: toDate(text(props, 'Rappel suivi entreprise')),
     // Les deux journaux coexistent (alternance et stage) : on ne perd ni l'un
     // ni l'autre.
@@ -414,8 +408,7 @@ function inspectRows(title: string, rows: AnyProp[]) {
         e.endDate?.toLocaleDateString('fr-FR') ?? '?'
       }`,
     );
-    console.log(`     tuteur        : ${e.tutorName ?? '—'} / ${e.tutorEmail ?? 'PAS D’EMAIL'}`);
-    console.log(`     tél / adresse : ${e.tutorPhone ?? '—'} / ${e.address ?? '—'}`);
+    console.log(`     tuteur entrep.: ${e.tutorEmail ?? 'PAS D’EMAIL'}`);
     console.log(
       `     rappel Notion : ${e.notionReminder?.toLocaleDateString('fr-FR') ?? '—'}`,
     );
@@ -485,9 +478,6 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
           .update(alternantContracts)
           .set({
             ...(e.tutorEmail ? { tutorEmail: e.tutorEmail } : {}),
-            ...(e.tutorName ? { tutorName: e.tutorName } : {}),
-            ...(e.tutorPhone ? { tutorPhone: e.tutorPhone } : {}),
-            ...(e.address ? { companyAddress: e.address } : {}),
             ...(e.company !== 'Non renseigné' ? { companyName: e.company } : {}),
             ...(notes ? { notes } : {}),
             updatedAt: new Date(),
@@ -501,9 +491,7 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
           .update(students)
           .set({
             ...(e.company !== 'Non renseigné' ? { companyName: e.company } : {}),
-            companyContact: e.tutorName,
             companyEmail: e.tutorEmail,
-            ...(e.tutorPhone ? { companyPhone: e.tutorPhone } : {}),
           })
           .where(eq(students.id, student.id));
       }
@@ -536,10 +524,7 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
           startDate: e.startDate,
           endDate: e.endDate,
           companyName: e.company,
-          companyAddress: e.address,
-          tutorName: e.tutorName,
           tutorEmail: e.tutorEmail,
-          tutorPhone: e.tutorPhone,
           notes,
           isActive: e.endDate >= new Date(),
           source: 'notion',
@@ -557,9 +542,7 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
           .update(students)
           .set({
             companyName: e.company,
-            companyContact: e.tutorName,
             companyEmail: e.tutorEmail,
-            companyPhone: e.tutorPhone,
           })
           .where(eq(students.id, student.id));
       }
@@ -603,7 +586,6 @@ async function importRows(rows: AnyProp[], index: StudentIndex) {
           author: 'Import Notion',
           content: entry.content,
           companyName: e.company !== 'Non renseigné' ? e.company : null,
-          tutorName: e.tutorName,
         });
       }
     }
