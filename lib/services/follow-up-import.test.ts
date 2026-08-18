@@ -82,10 +82,17 @@ describe('splitLogEntries', () => {
     expect(entries).toHaveLength(1);
   });
 
-  it('retombe sur un découpage par date sans libellé répété', () => {
+  it('ne découpe pas une plage de dates en deux entrées tronquées', () => {
+    // Cas réel : « Stage FOREM (26/06/25-05/07/25) » devenait
+    // « Stage FOREM (26/06/25- » et « 05/07/25) ».
+    const entries = splitLogEntries('Stage FOREM (26/06/25-05/07/25)');
+    expect(entries).toHaveLength(1);
+    expect(entries[0].content).toBe('Stage FOREM (26/06/25-05/07/25)');
+    expect(entries[0].date).toEqual(utc(2025, 6, 26));
+  });
+
+  it('garde entier un texte libre à plusieurs dates sans libellé de RDV', () => {
     const entries = splitLogEntries('01/02/25 échange tel 03/04/25 second échange');
-    expect(entries).toHaveLength(2);
-    expect(entries[0].date).toEqual(utc(2025, 2, 1));
-    expect(entries[1].date).toEqual(utc(2025, 4, 3));
+    expect(entries).toHaveLength(1);
   });
 });

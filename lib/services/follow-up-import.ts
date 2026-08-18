@@ -51,20 +51,16 @@ export interface LogEntry {
 /**
  * Découpe un journal en une entrée par RDV.
  *
- * On coupe AVANT le libellé (« RDV … »), pas avant la date : sinon le libellé
- * reste collé à l'entrée précédente et la nouvelle commence par une date nue.
- * Sans libellé répété, on retombe sur un découpage par date ; sans date du
- * tout, l'entrée reste entière (ex. « Rupture »).
+ * On coupe AVANT le libellé (« RDV … »), jamais sur les dates : découper sur
+ * les dates cassait en deux une plage comme « Stage FOREM (26/06/25-05/07/25) »
+ * et produisait deux comptes rendus tronqués. Sans libellé répété, l'entrée
+ * reste donc entière — mieux vaut un bloc fidèle qu'une structure inventée.
  */
 export function splitLogEntries(raw: string): LogEntry[] {
   const text = raw.trim();
   if (!text) return [];
 
-  const markers = [...text.matchAll(ENTRY_MARKER)].map((m) => m.index!);
-  const cuts = markers.length >= 2
-    ? markers
-    : [...text.matchAll(new RegExp(DATE_PATTERN, 'g'))].map((m) => m.index!);
-
+  const cuts = [...text.matchAll(ENTRY_MARKER)].map((m) => m.index!);
   if (cuts.length <= 1) return [{ date: dateInText(text), content: text }];
 
   const entries: LogEntry[] = [];
