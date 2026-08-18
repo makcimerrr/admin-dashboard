@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { makeLog } from '@/lib/log';
 import {
   getFollowUpSettings,
+  linkOrphanReportsToMilestones,
   listMilestones,
   reconcileMilestones,
   type MilestoneRow,
@@ -21,7 +22,8 @@ const log = makeLog('cron:follow-up-digest');
  * ⚠️ Ce cron n'envoie AUCUN mail à une entreprise. Il ne fait que :
  *
  *  1. RÉCONCILIER — reposer les échéances manquantes (nouveau contrat, dates
- *     corrigées, jalon reconfiguré). Idempotent.
+ *     corrigées, jalon reconfiguré), et rattacher les comptes rendus orphelins
+ *     à l'échéance qu'ils clôturent. Idempotent.
  *  2. SIGNALER EN INTERNE — une carte Teams récapitulant les retards, les
  *     échéances proches et les relances à confirmer, avec un lien vers le hub.
  *
@@ -43,6 +45,8 @@ export async function GET(request: NextRequest) {
 
   const settings = await getFollowUpSettings();
   const reconciled = await reconcileMilestones();
+  // Un compte rendu saisi hors échéance clôt l'échéance qu'il documente.
+  const linkedReports = await linkOrphanReportsToMilestones();
 
   const open = await listMilestones();
   const now = Date.now();
@@ -75,6 +79,7 @@ export async function GET(request: NextRequest) {
   const summary = {
     dry,
     reconciled,
+    linkedReports,
     openMilestones: open.length,
     /** Relances proposées — AUCUNE n'est envoyée par ce cron. */
     toConfirm: toConfirm.map((m) => ({

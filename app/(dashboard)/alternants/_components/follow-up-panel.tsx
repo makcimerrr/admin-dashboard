@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { useData, mutateKey } from "@/lib/client-cache";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +37,7 @@ import {
   CalendarCheck,
   CalendarClock,
   CheckCircle2,
+  FileText,
   KanbanSquare,
   Layers,
   List,
@@ -445,6 +447,16 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
           <Button
             variant="outline"
             size="icon"
+            asChild
+            title="Voir tous les comptes rendus de suivi"
+          >
+            <Link href="/alternants/comptes-rendus">
+              <FileText className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => setSettingsOpen(true)}
             title="Configurer les jalons et les relances"
           >
@@ -522,15 +534,19 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
                       </TableCell>
                       <TableCell>{m.companyName}</TableCell>
                       <TableCell>
+                        {/* Le nom du tuteur entreprise n'existe dans aucune de
+                            nos sources : l'email EST l'identité du contact. */}
                         {m.tutorName ? (
                           <div>
                             <div className="text-sm">{m.tutorName}</div>
-                            {!m.tutorEmail && (
-                              <div className="text-xs text-warning">email manquant</div>
+                            {m.tutorEmail && (
+                              <div className="text-xs text-muted-foreground">{m.tutorEmail}</div>
                             )}
                           </div>
+                        ) : m.tutorEmail ? (
+                          <span className="text-sm">{m.tutorEmail}</span>
                         ) : (
-                          <span className="text-xs text-warning">non renseigné</span>
+                          <span className="text-xs text-warning">aucun contact</span>
                         )}
                       </TableCell>
                       <TableCell>
