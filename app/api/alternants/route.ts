@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveUser } from '@/lib/api/with-auth';
+import { requireAdmin } from '@/lib/api/with-auth';
 import {
     getAlternants,
     getAlternantByLogin,
@@ -24,6 +24,11 @@ import {
  */
 export async function GET(request: NextRequest) {
     try {
+    // Données sensibles (coordonnées des tuteurs entreprise) : la page est
+    // admin-only, l'API doit l'être aussi — une route se garde elle-même.
+    const auth = await requireAdmin();
+    if (auth instanceof NextResponse) return auth;
+
         const { searchParams } = new URL(request.url);
         const promo = searchParams.get('promo');
         const login = searchParams.get('login');
@@ -101,14 +106,10 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
     try {
-        // Vérifier l'authentification (Stack Auth OU Authentik via resolveUser)
-        const user = await resolveUser();
-        if (!user) {
-            return NextResponse.json(
-                { success: false, error: 'Non authentifié' },
-                { status: 401 }
-            );
-        }
+        // Écriture sur les données alternance : admin uniquement, comme la page.
+        const auth = await requireAdmin();
+        if (auth instanceof NextResponse) return auth;
+        const user = auth;
 
         const body = await request.json();
         const {

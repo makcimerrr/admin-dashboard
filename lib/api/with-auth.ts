@@ -1,4 +1,5 @@
-import type { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { stackServerApp } from '@/lib/stack-server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth-options';
@@ -64,6 +65,31 @@ export async function resolveUser(): Promise<AuthedUser | null> {
     };
   }
   return null;
+}
+
+/**
+ * Garde pour les routes qui répondent AVEC LEUR PROPRE FORMAT (héritage :
+ * `{ success, alternants }` et non l'enveloppe `apiSuccess`). Renvoie la
+ * réponse d'erreur à retourner telle quelle, ou `null` si l'appelant est admin.
+ *
+ * Pour une route neuve, préférer `withAdmin` + `apiSuccess`.
+ *
+ *     const auth = await requireAdmin();
+ *     if (auth instanceof NextResponse) return auth;
+ *     // `auth` est ici l'utilisateur admin authentifié.
+ */
+export async function requireAdmin(): Promise<AuthedUser | NextResponse> {
+  const user = await resolveUser();
+  if (!user) {
+    return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
+  }
+  if (!isAdminRole(user.role)) {
+    return NextResponse.json(
+      { success: false, error: 'Accès réservé aux administrateurs' },
+      { status: 403 },
+    );
+  }
+  return user;
 }
 
 /**

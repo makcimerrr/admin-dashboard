@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveUser } from '@/lib/api/with-auth';
+import { requireAdmin } from '@/lib/api/with-auth';
 import {
   getContractsByStudentId,
   getActiveContract,
@@ -16,6 +16,11 @@ export async function GET(
   { params }: { params: Promise<{ studentId: string }> }
 ) {
   try {
+    // Données sensibles (coordonnées des tuteurs entreprise) : la page est
+    // admin-only, l'API doit l'être aussi — une route se garde elle-même.
+    const auth = await requireAdmin();
+    if (auth instanceof NextResponse) return auth;
+
     const { studentId } = await params;
     const id = parseInt(studentId, 10);
 
@@ -54,13 +59,9 @@ export async function POST(
   { params }: { params: Promise<{ studentId: string }> }
 ) {
   try {
-    const user = await resolveUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireAdmin();
+    if (auth instanceof NextResponse) return auth;
+    const user = auth;
 
     const { studentId } = await params;
     const id = parseInt(studentId, 10);

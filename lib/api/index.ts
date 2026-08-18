@@ -5,6 +5,6 @@ export type {
   ApiError,
   ApiErrorCode,
 } from './response';
-export { withAuth, withAdmin } from './with-auth';
+export { withAuth, withAdmin, requireAdmin } from './with-auth';
 export type { AuthedUser } from './with-auth';
 export { withErrorHandler } from './with-error-handler';

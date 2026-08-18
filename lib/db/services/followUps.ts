@@ -25,6 +25,7 @@ import {
 } from '../schema/followUps';
 import { alternantContracts } from '../schema/alternants';
 import { students } from '../schema/students';
+import { promotions } from '../schema/promotions';
 
 /**
  * Module « Suivi en entreprise » — accès données.
@@ -129,10 +130,16 @@ export async function updateFollowUpSettings(
  */
 export const AUTO_CANCEL_BEYOND_CONTRACT = 'Au-delà de la fin de contrat';
 export const AUTO_CANCEL_TYPE_DISABLED = 'Jalon désactivé dans la configuration';
+export const AUTO_CANCEL_STUDENT_ARCHIVED = 'Apprenant archivé';
+export const AUTO_CANCEL_STUDENT_DROPOUT = 'Apprenant en perdition';
+export const AUTO_CANCEL_PROMO_ARCHIVED = 'Promotion archivée';
 
 const AUTO_CANCEL_REASONS: string[] = [
   AUTO_CANCEL_BEYOND_CONTRACT,
   AUTO_CANCEL_TYPE_DISABLED,
+  AUTO_CANCEL_STUDENT_ARCHIVED,
+  AUTO_CANCEL_STUDENT_DROPOUT,
+  AUTO_CANCEL_PROMO_ARCHIVED,
 ];
 
 export interface ReconcileResult {
@@ -163,14 +170,23 @@ export async function reconcileMilestones(
   if (contractIds?.length) filters.push(inArray(alternantContracts.id, contractIds));
   if (studentIds?.length) filters.push(inArray(alternantContracts.studentId, studentIds));
 
+  // On suit l'apprenant ET sa promotion : un apprenant archivé (sorti des
+  // effectifs côté émargement), en perdition, ou dont la promo est archivée
+  // n'a plus de suivi en entreprise à mener. Sans ce lien, le tableau se
+  // remplit d'échéances d'anciennes promos que personne ne peut plus traiter.
   const contracts = await db
     .select({
       id: alternantContracts.id,
       studentId: alternantContracts.studentId,
       startDate: alternantContracts.startDate,
       endDate: alternantContracts.endDate,
+      studentArchived: students.archived,
+      studentDropout: students.isDropout,
+      promoArchived: promotions.isArchived,
     })
     .from(alternantContracts)
+    .innerJoin(students, eq(students.id, alternantContracts.studentId))
+    .leftJoin(promotions, eq(promotions.name, students.promoName))
     .where(filters.length ? and(...filters) : undefined);
 
   if (contracts.length === 0) {
@@ -205,9 +221,17 @@ export async function reconcileMilestones(
       const key = `${contract.id}|${type.code}`;
       const current = byKey.get(key);
       const due = computeDueDate(contract.startDate, type.offsetMonths);
-      const relevant = isMilestoneRelevant(due, contract.endDate, type.isActive);
-      // Distingue « hors contrat » de « jalon désactivé » pour le motif d'annulation.
       const beyondContract = due.getTime() > contract.endDate.getTime();
+      // Motif le plus précis d'abord : il est affiché tel quel dans l'UI.
+      const inactiveReason = contract.studentArchived
+        ? AUTO_CANCEL_STUDENT_ARCHIVED
+        : contract.studentDropout
+          ? AUTO_CANCEL_STUDENT_DROPOUT
+          : contract.promoArchived
+            ? AUTO_CANCEL_PROMO_ARCHIVED
+            : null;
+      const relevant =
+        !inactiveReason && isMilestoneRelevant(due, contract.endDate, type.isActive);
 
       if (!current) {
         if (!relevant) continue; // rien à créer pour un jalon hors périmètre
@@ -232,9 +256,9 @@ export async function reconcileMilestones(
             .set({
               status: 'annule',
               statusChangedAt: now,
-              cancelReason: beyondContract
-                ? AUTO_CANCEL_BEYOND_CONTRACT
-                : AUTO_CANCEL_TYPE_DISABLED,
+              cancelReason:
+                inactiveReason ??
+                (beyondContract ? AUTO_CANCEL_BEYOND_CONTRACT : AUTO_CANCEL_TYPE_DISABLED),
               updatedAt: now,
             })
             .where(eq(followUpMilestones.id, current.id));
