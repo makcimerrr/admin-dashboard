@@ -18,7 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Briefcase, Search } from "lucide-react";
+import { Briefcase, CalendarClock, Search, Users } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/page-header";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { AddAlternantDialog } from "./_components/add-alternant-dialog";
@@ -26,12 +27,15 @@ import { EmargementSyncButton } from "./_components/emargement-sync-button";
 import { AlternantsStats } from "./_components/alternants-stats";
 import { AlternantsTable } from "./_components/alternants-table";
 import { AlternantDetailSheet } from "./_components/alternant-detail-sheet";
+import { FollowUpPanel } from "./_components/follow-up-panel";
 
 import { type Alternant, type AlternantStats, type Contract, type Document } from './types';
 
 export default function AlternantsPage() {
   const searchParams = useSearchParams();
   const preselectedStudentId = searchParams.get("student");
+  // ?tab=suivi : lien direct depuis le digest Teams vers le suivi en entreprise.
+  const initialTab = searchParams.get("tab") === "suivi" ? "suivi" : "liste";
 
   const { data: alternantsData, isLoading: alternantsLoading } = useData<{
     success: boolean;
@@ -165,73 +169,97 @@ export default function AlternantsPage() {
         </div>
       </PageHeader>
 
-      {loading ? (
-        <PageSkeleton variant="table" />
-      ) : (
-        <>
-          {/* Stats Cards */}
-          <AlternantsStats stats={stats} companiesCount={companies.length} />
+      <Tabs defaultValue={initialTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="liste" className="gap-2">
+            <Users className="h-4 w-4" />
+            Alternants
+          </TabsTrigger>
+          <TabsTrigger value="suivi" className="gap-2">
+            <CalendarClock className="h-4 w-4" />
+            Suivi en entreprise
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher par nom, login ou entreprise..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={selectedPromo} onValueChange={setSelectedPromo}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Promo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes les promos</SelectItem>
-                {promos.map((p) => (
-                  <SelectItem key={p.key} value={p.key}>
-                    {p.key}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Entreprise" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes les entreprises</SelectItem>
-                {companies.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <TabsContent value="liste" className="mt-4 flex flex-col gap-4 md:gap-6">
+          {loading ? (
+            <PageSkeleton variant="table" />
+          ) : (
+            <>
+              {/* Stats Cards */}
+              <AlternantsStats stats={stats} companiesCount={companies.length} />
 
-          {/* Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Liste des Alternants</CardTitle>
-              <CardDescription>
-                {filteredAlternants.length} alternant
-                {filteredAlternants.length > 1 ? "s" : ""} trouvé
-                {filteredAlternants.length > 1 ? "s" : ""} - Cliquez sur une ligne pour voir les détails
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AlternantsTable
-                filteredAlternants={filteredAlternants}
-                onSelect={handleSelectAlternant}
-                formatDate={formatDate}
-                isEndingSoon={isEndingSoon}
-              />
-            </CardContent>
-          </Card>
-        </>
-      )}
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par nom, login ou entreprise..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={selectedPromo} onValueChange={setSelectedPromo}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Promo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les promos</SelectItem>
+                    {promos.map((p) => (
+                      <SelectItem key={p.key} value={p.key}>
+                        {p.key}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Entreprise" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Toutes les entreprises</SelectItem>
+                    {companies.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Liste des Alternants</CardTitle>
+                  <CardDescription>
+                    {filteredAlternants.length} alternant
+                    {filteredAlternants.length > 1 ? "s" : ""} trouvé
+                    {filteredAlternants.length > 1 ? "s" : ""} - Cliquez sur une ligne pour voir les détails
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AlternantsTable
+                    filteredAlternants={filteredAlternants}
+                    onSelect={handleSelectAlternant}
+                    formatDate={formatDate}
+                    isEndingSoon={isEndingSoon}
+                  />
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="suivi" className="mt-4">
+          <FollowUpPanel
+            onOpenStudent={(studentId) => {
+              const student = alternants.find((a) => a.id === studentId);
+              if (student) setSelectedAlternant(student);
+            }}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Detail Sheet */}
       <AlternantDetailSheet

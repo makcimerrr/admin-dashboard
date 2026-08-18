@@ -6,6 +6,9 @@ export const CONTRACT_TYPES = [
   'apprentissage',
   'professionnalisation',
   'stage_alterne',
+  // Stage classique : saisi à la main dans le hub (émargement ne le porte pas),
+  // suivi en entreprise au même titre qu'une alternance.
+  'stage',
   'autre'
 ] as const;
 

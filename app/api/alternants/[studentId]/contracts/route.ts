@@ -5,6 +5,7 @@ import {
   getActiveContract,
   createContract,
 } from '@/lib/db/services/alternant-contracts';
+import { reconcileMilestones } from '@/lib/db/services/followUps';
 
 /**
  * GET /api/alternants/[studentId]/contracts
@@ -110,9 +111,20 @@ export async function POST(
       notes,
     });
 
+    // Les échéances de suivi en entreprise (3 mois, 6 mois, 1 an…) se posent
+    // automatiquement dès la création du contrat. Un échec ici ne doit pas
+    // invalider la création elle-même.
+    const milestones = await reconcileMilestones({ contractIds: [contract.id] }).catch(
+      (e) => {
+        console.error('Réconciliation des échéances échouée :', e);
+        return null;
+      },
+    );
+
     return NextResponse.json({
       success: true,
       contract,
+      milestones,
       createdBy: user.name || user.email,
     });
   } catch (error) {
