@@ -4,7 +4,7 @@ import {
   isMilestoneRelevant,
   isSameDay,
 } from '@/lib/services/follow-up-templates';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lte, sql } from 'drizzle-orm';
 import { db } from '../config';
 import {
   followUpMilestoneTypes,
@@ -120,6 +120,21 @@ export async function updateFollowUpSettings(
 
 // ─── Réconciliation des échéances ────────────────────────────────────────────
 
+/**
+ * Motifs d'annulation posés PAR la réconciliation. Seules ces annulations-là
+ * peuvent être défaites automatiquement : une échéance annulée à la main (« ce
+ * suivi n'aura pas lieu », passif antérieur au module…) doit le rester, sinon
+ * le prochain recalcul la ressusciterait et l'utilisateur retrouverait sa liste
+ * telle qu'il l'avait nettoyée.
+ */
+export const AUTO_CANCEL_BEYOND_CONTRACT = 'Au-delà de la fin de contrat';
+export const AUTO_CANCEL_TYPE_DISABLED = 'Jalon désactivé dans la configuration';
+
+const AUTO_CANCEL_REASONS: string[] = [
+  AUTO_CANCEL_BEYOND_CONTRACT,
+  AUTO_CANCEL_TYPE_DISABLED,
+];
+
 export interface ReconcileResult {
   created: number;
   updated: number;
@@ -218,8 +233,8 @@ export async function reconcileMilestones(
               status: 'annule',
               statusChangedAt: now,
               cancelReason: beyondContract
-                ? 'Au-delà de la fin de contrat'
-                : 'Jalon désactivé dans la configuration',
+                ? AUTO_CANCEL_BEYOND_CONTRACT
+                : AUTO_CANCEL_TYPE_DISABLED,
               updatedAt: now,
             })
             .where(eq(followUpMilestones.id, current.id));
@@ -228,8 +243,10 @@ export async function reconcileMilestones(
         continue;
       }
 
-      // Jalon redevenu pertinent (contrat prolongé, type réactivé).
+      // Jalon redevenu pertinent (contrat prolongé, type réactivé) — mais on ne
+      // rouvre QUE ce que la réconciliation avait elle-même annulé.
       if (current.status === 'annule') {
+        if (!AUTO_CANCEL_REASONS.includes(current.cancelReason ?? '')) continue;
         await db
           .update(followUpMilestones)
           .set({
@@ -325,8 +342,8 @@ export async function listMilestones(filters: MilestoneFilters = {}): Promise<Mi
   }
   if (filters.studentId) where.push(eq(followUpMilestones.studentId, filters.studentId));
   if (filters.company) where.push(eq(alternantContracts.companyName, filters.company));
-  if (filters.dueBefore) where.push(sql`${followUpMilestones.dueDate} <= ${filters.dueBefore}`);
-  if (filters.dueAfter) where.push(sql`${followUpMilestones.dueDate} >= ${filters.dueAfter}`);
+  if (filters.dueBefore) where.push(lte(followUpMilestones.dueDate, filters.dueBefore));
+  if (filters.dueAfter) where.push(gte(followUpMilestones.dueDate, filters.dueAfter));
 
   const rows = await db
     .select({
@@ -541,7 +558,7 @@ export async function getFollowUpStats(): Promise<FollowUpStats> {
   const [doneRow] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(followUpReports)
-    .where(sql`${followUpReports.performedAt} >= ${startOfYear}`);
+    .where(gte(followUpReports.performedAt, startOfYear));
 
   return {
     overdue: open.filter((m) => m.daysUntilDue < 0).length,
