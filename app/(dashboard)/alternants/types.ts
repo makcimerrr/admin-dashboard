@@ -185,7 +185,6 @@ export interface FollowUpSettings {
   replyToEmail: string | null;
   emailSubjectTemplate: string | null;
   emailBodyTemplate: string | null;
-  autoSendEnabled: boolean;
   teamsAlertsEnabled: boolean;
 }
 

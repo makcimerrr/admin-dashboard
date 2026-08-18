@@ -92,7 +92,6 @@ const DEFAULT_SETTINGS: FollowUpSettings = {
   replyToEmail: null,
   emailSubjectTemplate: null,
   emailBodyTemplate: null,
-  autoSendEnabled: false,
   teamsAlertsEnabled: true,
   updatedAt: new Date(0),
   updatedBy: null,

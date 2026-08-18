@@ -70,7 +70,6 @@ export const PUT = withErrorHandler(
       'replyToEmail',
       'emailSubjectTemplate',
       'emailBodyTemplate',
-      'autoSendEnabled',
       'teamsAlertsEnabled',
     ];
     const patch = Object.fromEntries(

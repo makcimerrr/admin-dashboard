@@ -8,6 +8,7 @@ import {
   openUrlAction,
   sendTeamsCard,
   textBlock,
+  type AdaptiveElement,
 } from './teams';
 import {
   getFollowUpSettings,
@@ -35,12 +36,14 @@ const log = makeLog('follow-up-notify');
 /**
  * Relances « suivi en entreprise » : mail au tuteur + alerte interne Teams.
  *
- * Deux garde-fous, volontaires :
- *  - `autoSendEnabled` (réglages du module) : kill-switch, OFF par défaut. Les
- *    envois AUTOMATIQUES sont bloqués tant qu'il n'est pas activé. Une relance
- *    déclenchée à la main depuis le hub passe outre (c'est un acte explicite).
- *  - chaque envoi est tracé dans `follow_up_reminders` (date, destinataire,
- *    canal, auteur) → pas de doublon, et une trace auditable.
+ * RÈGLE ABSOLUE : aucun mail ne part vers une entreprise partenaire sans
+ * confirmation humaine explicite. Il n'existe aucun chemin d'envoi automatique
+ * dans ce module — le cron se contente de calculer et de signaler ce qu'il y a
+ * à relancer, un humain relit le mail et confirme.
+ *
+ * `sendMilestoneReminder()` exige donc `confirmedBy` (l'email de l'utilisateur
+ * hub qui valide) : impossible de l'appeler « au nom de personne ». Chaque
+ * envoi, réussi ou non, est tracé dans `follow_up_reminders`.
  */
 
 function formatDate(iso: string): string {
@@ -94,23 +97,37 @@ export function renderTutorEmail(
 
 export interface SendReminderResult {
   ok: boolean;
-  skipped?: 'no_email' | 'auto_disabled' | 'mailer_unconfigured';
+  skipped?: 'no_email' | 'mailer_unconfigured';
   error?: string;
 }
 
+export interface SendReminderInput {
+  kind: ReminderKind;
+  /**
+   * Email de l'utilisateur hub qui CONFIRME l'envoi. Obligatoire : c'est la
+   * garantie qu'aucun mail ne part sans décision humaine, et la trace laissée
+   * dans `follow_up_reminders.sent_by`.
+   */
+  confirmedBy: string;
+  /** Objet relu / corrigé dans l'écran de confirmation (défaut : le modèle). */
+  subject?: string;
+  /** Corps relu / corrigé dans l'écran de confirmation (défaut : le modèle). */
+  body?: string;
+}
+
 /**
- * Envoie la relance à un tuteur, trace l'envoi et bascule l'échéance en
- * `relance_envoyee`. Un échec est tracé aussi (statut 'failed') pour pouvoir
- * réessayer sans perdre l'information.
+ * Envoie la relance à un tuteur APRÈS confirmation humaine, trace l'envoi et
+ * bascule l'échéance en `relance_envoyee`. Un échec est tracé aussi
+ * (statut 'failed') pour pouvoir réessayer sans perdre l'information.
  */
 export async function sendMilestoneReminder(
   milestone: MilestoneRow,
-  { kind, sentBy }: { kind: ReminderKind; sentBy: string },
+  { kind, confirmedBy, subject: subjectOverride, body: bodyOverride }: SendReminderInput,
 ): Promise<SendReminderResult> {
-  const settings = await getFollowUpSettings();
-
-  if (kind !== 'manual' && !settings.autoSendEnabled) {
-    return { ok: false, skipped: 'auto_disabled' };
+  if (!confirmedBy?.trim()) {
+    // Garde-fou : un appelant qui ne sait pas dire QUI confirme n'a rien à
+    // faire ici. Ne jamais assouplir.
+    throw new Error('sendMilestoneReminder : confirmedBy est obligatoire');
   }
   if (!milestone.tutorEmail?.trim()) {
     return { ok: false, skipped: 'no_email' };
@@ -119,12 +136,16 @@ export async function sendMilestoneReminder(
     return { ok: false, skipped: 'mailer_unconfigured' };
   }
 
-  const { subject, text, html } = renderTutorEmail(milestone, settings);
+  const settings = await getFollowUpSettings();
+  const rendered = renderTutorEmail(milestone, settings);
+  const subject = subjectOverride?.trim() || rendered.subject;
+  const text = bodyOverride?.trim() || rendered.text;
+
   const result = await sendMail({
     to: milestone.tutorEmail.trim(),
     subject,
     text,
-    html,
+    html: textToHtml(text),
     replyTo: settings.replyToEmail || settings.senderEmail || undefined,
     from:
       settings.senderName && settings.senderEmail
@@ -138,7 +159,7 @@ export async function sendMilestoneReminder(
     kind,
     recipient: milestone.tutorEmail.trim(),
     subject,
-    sentBy,
+    sentBy: confirmedBy,
     status: result.ok ? 'sent' : 'failed',
     error: result.error,
   });
@@ -152,44 +173,78 @@ export async function sendMilestoneReminder(
 
 // ─── Alerte interne (Teams) ──────────────────────────────────────────────────
 
+/** Date courte pour les cartes Teams (jj/mm). */
+function fmtShort(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
 function hubUrl(path: string): string {
   const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://hub.zone01normandie.org';
   return `${base}${path}`;
 }
 
 /**
- * Digest interne : les échéances qui arrivent et celles en retard. Une seule
- * carte par exécution du cron — on ne spamme pas le canal.
+ * Digest interne : ce qu'il y a à traiter, et surtout les relances EN ATTENTE
+ * DE CONFIRMATION — le hub ne les envoie pas tout seul, il vient les chercher.
+ * Une seule carte par exécution du cron : on ne spamme pas le canal.
  */
-export async function sendInternalDigest(
-  { overdue, upcoming }: { overdue: MilestoneRow[]; upcoming: MilestoneRow[] },
-): Promise<boolean> {
+export async function sendInternalDigest({
+  overdue,
+  upcoming,
+  toConfirm = [],
+  missingTutorEmail = [],
+}: {
+  overdue: MilestoneRow[];
+  upcoming: MilestoneRow[];
+  toConfirm?: MilestoneRow[];
+  missingTutorEmail?: MilestoneRow[];
+}): Promise<boolean> {
   const settings = await getFollowUpSettings();
   if (!settings.teamsAlertsEnabled || !isTeamsConfigured()) return false;
-  if (overdue.length === 0 && upcoming.length === 0) return false;
+  if (overdue.length === 0 && upcoming.length === 0 && toConfirm.length === 0) return false;
 
-  const body = [
-    textBlock('Suivi en entreprise — échéances à traiter', { size: 'Large', weight: 'Bolder' }),
+  /** Liste compacte, tronquée à 10 lignes pour rester lisible dans Teams. */
+  const listOf = (items: MilestoneRow[], value: (m: MilestoneRow) => string) => {
+    const elements: AdaptiveElement[] = [
+      factSet(
+        items.slice(0, 10).map((m) => ({
+          title: `${m.firstName} ${m.lastName}`,
+          value: value(m),
+        })),
+      ),
+    ];
+    if (items.length > 10) {
+      elements.push(textBlock(`…et ${items.length - 10} autre(s).`, { isSubtle: true }));
+    }
+    return elements;
+  };
+
+  const body: AdaptiveElement[] = [
+    textBlock('Suivi en entreprise — à traiter', { size: 'Large', weight: 'Bolder' }),
   ];
+
+  if (toConfirm.length > 0) {
+    body.push(
+      textBlock(`✉️ ${toConfirm.length} relance(s) à relire et confirmer`, {
+        weight: 'Bolder',
+        color: 'Accent',
+      }),
+      textBlock('Aucun mail n’est parti : ils attendent votre validation sur le hub.', {
+        isSubtle: true,
+      }),
+      ...listOf(toConfirm, (m) => `${m.typeLabel} · ${m.companyName} · échéance ${fmtShort(m.dueDate)}`),
+    );
+  }
 
   if (overdue.length > 0) {
     body.push(
       textBlock(`⚠️ ${overdue.length} échéance(s) en retard`, {
         weight: 'Bolder',
         color: 'Attention',
+        spacing: 'Medium',
       }),
+      ...listOf(overdue, (m) => `${m.typeLabel} · ${m.companyName} · ${Math.abs(m.daysUntilDue)} j de retard`),
     );
-    body.push(
-      factSet(
-        overdue.slice(0, 10).map((m) => ({
-          title: `${m.firstName} ${m.lastName}`,
-          value: `${m.typeLabel} · ${m.companyName} · ${Math.abs(m.daysUntilDue)} j de retard`,
-        })),
-      ),
-    );
-    if (overdue.length > 10) {
-      body.push(textBlock(`…et ${overdue.length - 10} autre(s).`, { isSubtle: true }));
-    }
   }
 
   if (upcoming.length > 0) {
@@ -198,18 +253,17 @@ export async function sendInternalDigest(
         weight: 'Bolder',
         spacing: 'Medium',
       }),
+      ...listOf(upcoming, (m) => `${m.typeLabel} · ${m.companyName} · dans ${m.daysUntilDue} j`),
     );
+  }
+
+  if (missingTutorEmail.length > 0) {
     body.push(
-      factSet(
-        upcoming.slice(0, 10).map((m) => ({
-          title: `${m.firstName} ${m.lastName}`,
-          value: `${m.typeLabel} · ${m.companyName} · dans ${m.daysUntilDue} j`,
-        })),
+      textBlock(
+        `🚫 ${missingTutorEmail.length} contrat(s) sans email de tuteur — relance impossible tant que la fiche n'est pas complétée.`,
+        { color: 'Warning', spacing: 'Medium' },
       ),
     );
-    if (upcoming.length > 10) {
-      body.push(textBlock(`…et ${upcoming.length - 10} autre(s).`, { isSubtle: true }));
-    }
   }
 
   const card = buildAdaptiveCard(body, [

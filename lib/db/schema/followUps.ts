@@ -48,8 +48,14 @@ export const CLOSED_MILESTONE_STATUSES: MilestoneStatus[] = ['realise', 'annule'
 export const REMINDER_CHANNELS = ['email', 'teams', 'discord'] as const;
 export type ReminderChannel = (typeof REMINDER_CHANNELS)[number];
 
-/** `auto` = cron, `manual` = bouton hub, `relance` = 2e envoi sans réponse. */
-export const REMINDER_KINDS = ['auto', 'manual', 'relance'] as const;
+/**
+ * `manual` = 1re relance confirmée à la main, `relance` = envoi suivant.
+ *
+ * Il n'existe PAS de valeur « auto » : aucun mail ne peut partir vers une
+ * entreprise partenaire sans confirmation humaine explicite. Le cron se
+ * contente de signaler ce qu'il y a à relancer.
+ */
+export const REMINDER_KINDS = ['manual', 'relance'] as const;
 export type ReminderKind = (typeof REMINDER_KINDS)[number];
 
 export const FOLLOW_UP_MODES = ['visite', 'visio', 'telephone', 'autre'] as const;
@@ -93,8 +99,6 @@ export const followUpSettings = pgTable('follow_up_settings', {
   replyToEmail: text('reply_to_email'),
   emailSubjectTemplate: text('email_subject_template'),
   emailBodyTemplate: text('email_body_template'),
-  /** Kill-switch : par défaut OFF, aucun mail ne part sans activation explicite. */
-  autoSendEnabled: boolean('auto_send_enabled').notNull().default(false),
   teamsAlertsEnabled: boolean('teams_alerts_enabled').notNull().default(true),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   updatedBy: text('updated_by'),
@@ -155,7 +159,7 @@ export const followUpReminders = pgTable(
     kind: varchar('kind', { length: 20 }).notNull(),
     recipient: text('recipient'),
     subject: text('subject'),
-    /** `cron` pour un envoi automatique, sinon l'email de l'utilisateur hub. */
+    /** Email de l'utilisateur hub qui a CONFIRMÉ l'envoi. Jamais 'cron'. */
     sentBy: text('sent_by'),
     sentAt: timestamp('sent_at').defaultNow().notNull(),
     /** 'sent' | 'failed' — un échec reste tracé pour pouvoir réessayer. */

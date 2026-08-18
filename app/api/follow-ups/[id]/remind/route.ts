@@ -10,8 +10,10 @@ export const dynamic = 'force-dynamic';
 type Ctx = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/follow-ups/[id]/remind — prévisualise le mail qui SERAIT envoyé au
- * tuteur (sujet + corps rendus avec les vraies valeurs). Aucun envoi.
+ * GET /api/follow-ups/[id]/remind — prépare le mail à relire AVANT envoi
+ * (sujet + corps rendus avec les vraies valeurs). Aucun envoi, jamais.
+ *
+ * C'est la première moitié du geste en deux temps : on relit, puis on confirme.
  */
 export const GET = withErrorHandler(
   withAdmin<Ctx>(async (_req: NextRequest, { params }) => {
@@ -27,25 +29,39 @@ export const GET = withErrorHandler(
       body: text,
       mailerConfigured: isMailerConfigured(),
       bookingUrlConfigured: Boolean(settings.bookingUrl),
+      /** Nombre de relances déjà parties — affiché avant de confirmer. */
+      remindersSent: milestone.reminderCount,
     });
   }),
 );
 
 /**
- * POST /api/follow-ups/[id]/remind — relance MANUELLE du tuteur.
+ * POST /api/follow-ups/[id]/remind — envoi de la relance, APRÈS confirmation
+ * humaine dans l'UI.
  *
- * Acte explicite : passe outre le kill-switch `autoSendEnabled` (qui ne
- * concerne que les envois automatiques du cron), mais reste tracé dans
- * `follow_up_reminders`.
+ * Body optionnel : { subject, body } — le texte relu et éventuellement corrigé
+ * dans l'écran de confirmation. Sans eux, le modèle configuré s'applique.
+ *
+ * Il n'existe aucun autre chemin d'envoi : les crons ne postent jamais de mail
+ * à une entreprise. `user.email` (l'utilisateur authentifié qui confirme) est
+ * tracé dans `follow_up_reminders.sent_by`.
  */
 export const POST = withErrorHandler(
-  withAdmin<Ctx>(async (_req: NextRequest, { params, user }) => {
+  withAdmin<Ctx>(async (req: NextRequest, { params, user }) => {
     const milestone = await getMilestoneById(Number((await params).id));
     if (!milestone) return apiError('NOT_FOUND', 'Échéance introuvable');
 
+    const body = (await req.json().catch(() => ({}))) as {
+      subject?: string;
+      body?: string;
+    };
+
     const result = await sendMilestoneReminder(milestone, {
-      kind: 'manual',
-      sentBy: user.email,
+      // 1er envoi = 'manual', les suivants = 'relance'.
+      kind: milestone.reminderCount > 0 ? 'relance' : 'manual',
+      confirmedBy: user.email,
+      subject: body.subject,
+      body: body.body,
     });
 
     if (!result.ok) {
@@ -58,6 +74,6 @@ export const POST = withErrorHandler(
       return apiError('BAD_REQUEST', message);
     }
 
-    return apiSuccess({ sent: true, to: milestone.tutorEmail });
+    return apiSuccess({ sent: true, to: milestone.tutorEmail, confirmedBy: user.email });
   }),
 );

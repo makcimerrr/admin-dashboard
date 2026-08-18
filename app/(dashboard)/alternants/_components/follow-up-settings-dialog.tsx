@@ -357,21 +357,15 @@ export function FollowUpSettingsDialog({
 
               <Separator />
 
-              <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
-                <div>
-                  <Label htmlFor="autoSendEnabled">Envoi automatique des relances</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Tant que c'est désactivé, le cron calcule et alerte en interne mais
-                    n'envoie aucun mail aux tuteurs. Les relances manuelles restent possibles.
-                    {!payload.integrations.mailerConfigured &&
-                      " ⚠️ SMTP non configuré côté serveur : aucun envoi n'est possible."}
-                  </p>
-                </div>
-                <Switch
-                  id="autoSendEnabled"
-                  checked={form.autoSendEnabled ?? false}
-                  onCheckedChange={(v) => setForm({ ...form, autoSendEnabled: v })}
-                />
+              <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm">
+                <p className="font-medium">Aucun envoi automatique</p>
+                <p className="text-xs text-muted-foreground">
+                  Les délais ci-dessus déterminent uniquement <em>quand</em> une relance
+                  vous est proposée. Aucun mail ne part vers une entreprise sans que vous
+                  l'ayez relu et confirmé depuis le hub.
+                  {!payload.integrations.mailerConfigured &&
+                    " ⚠️ SMTP non configuré côté serveur : aucun envoi n'est possible pour l'instant."}
+                </p>
               </div>
 
               <div className="flex items-start justify-between gap-4 rounded-lg border p-3">

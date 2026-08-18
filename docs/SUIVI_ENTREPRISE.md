@@ -9,6 +9,22 @@ C'est aussi un point de contrôle Qualiopi classique (accompagnement des
 bénéficiaires) : tout ce qui est envoyé et tout ce qui est fait laisse une trace
 datée et attribuée.
 
+## ⚠️ Règle non négociable : aucun envoi automatique
+
+**Aucun mail ne part vers une entreprise partenaire sans qu'un humain l'ait relu
+et confirmé.** Ce n'est pas un réglage, c'est une propriété du code :
+
+- `sendMilestoneReminder()` exige `confirmedBy` (l'email de l'utilisateur hub
+  qui valide) et lève une erreur sans lui — impossible d'envoyer « au nom de
+  personne » ;
+- `REMINDER_KINDS` ne contient **pas** de valeur `auto` ;
+- les crons ne référencent même pas la fonction d'envoi : ils calculent, et
+  signalent en interne ce qu'il y a à traiter ;
+- le seul chemin d'envoi est `POST /api/follow-ups/[id]/remind`, appelé depuis
+  l'écran de confirmation où le message est affiché **et modifiable**.
+
+Ne pas réintroduire de chemin d'envoi automatique.
+
 ---
 
 ## 1. Ce que fait le module
@@ -18,8 +34,8 @@ datée et attribuée.
 | Calcul automatique des échéances (3M / 6M / 1A / 18M / 2A) dès qu'un contrat existe | `reconcileMilestones()` |
 | Jalons **configurables** (durées éditables, ajout/désactivation) | UI → ⚙️ Configuration → Jalons |
 | Vue liste filtrable + Kanban par statut | onglet Suivi en entreprise |
-| Relance mail au tuteur avec lien de réservation | bouton « Relancer » + cron |
-| Alerte interne (Teams) X jours avant | cron `follow-up-reminders` |
+| Relance mail au tuteur, **après relecture et confirmation humaine** | bouton « Relancer… » → écran de confirmation |
+| Alerte interne (Teams) : retards, échéances proches, relances à confirmer | cron `follow-up-digest` |
 | Détection automatique du RDV réservé | cron `follow-up-calendar` |
 | Saisie du compte rendu, qui clôt l'échéance | dialogue « Saisir le compte rendu » |
 | Historique par apprenant / par entreprise | fiche apprenant → onglet Suivi |
@@ -87,9 +103,8 @@ La détection des RDV réutilise le service account Google déjà en place
   recalcule immédiatement les échéances de tous les contrats.
 - **Relances** : délai d'alerte interne, délai d'envoi au tuteur, délai de 2e
   relance, lien de réservation, agenda surveillé.
-- **Envoi automatique** : *kill-switch, OFF par défaut*. Tant qu'il est
-  désactivé, le cron calcule et alerte en interne mais n'envoie **aucun** mail
-  aux tuteurs. Les relances manuelles restent possibles (acte explicite).
+  Ces délais déterminent uniquement **quand une relance vous est proposée** —
+  jamais un envoi.
 - **Modèle de mail** : objet et corps, avec variables `{{tuteur}}`,
   `{{apprenant}}`, `{{entreprise}}`, `{{jalon}}`, `{{date_echeance}}`,
   `{{lien_rdv}}`… Vide = modèle par défaut.
@@ -117,49 +132,67 @@ base.
 `Authorization: Bearer $CRON_SECRET`) :
 
 ```cron
-# Relances tuteurs + digest interne — tous les jours à 8h
-0 8 * * *  curl -sS -H "Authorization: Bearer $CRON_SECRET" https://hub.zone01normandie.org/api/cron/follow-up-reminders
+# Réconciliation + digest interne (n'envoie AUCUN mail tuteur) — tous les jours à 8h
+0 8 * * *  curl -sS -H "Authorization: Bearer $CRON_SECRET" https://hub.zone01normandie.org/api/cron/follow-up-digest
 
 # Détection des RDV réservés dans l'agenda — 2×/jour
 0 7,13 * * *  curl -sS -H "Authorization: Bearer $CRON_SECRET" https://hub.zone01normandie.org/api/cron/follow-up-calendar
 ```
 
-Les deux acceptent `?dry=true` : ils calculent et renvoient ce qui *serait*
-envoyé, sans rien envoyer. À utiliser pour la première mise en service.
+Les deux acceptent `?dry=true` : ils calculent et renvoient l'état sans rien
+poster (même la carte Teams). À utiliser pour la première mise en service.
 
 ---
 
-## 5. Migration depuis Notion
+## 5. Migration depuis Notion (100 % API)
 
-Export CSV depuis Notion, puis :
+Source : la page Notion **« Suivi entretiens Tuteurs »**
+(`641862b579db47c199b6ec7e9e522d22`). Aucun export CSV : le script lit l'API,
+donc il est **rejouable** tant que le Notion vit en parallèle.
+
+### Prérequis — partager la page avec l'intégration
+
+`NOTION_TOKEN` est déjà en place (intégration « Zone01 Rouen Data »), mais la
+page n'est pas partagée avec elle : l'API répond 404. Dans Notion :
+
+> ouvrir la page → **⋯** (en haut à droite) → **Connexions** → ajouter
+> l'intégration « Zone01 Rouen Data ».
+
+Le partage se propage aux sous-pages et aux bases inline.
+
+### Déroulé
 
 ```bash
-# 1. Vérifier le rapprochement (n'écrit RIEN)
-pnpm tsx scripts/import-followups-csv.ts --people people.csv --reports cr.csv
+# 1. Voir le schéma réel et 3 lignes — lecture seule
+pnpm tsx scripts/import-notion-followups.ts --inspect
 
-# 2. Appliquer
-pnpm tsx scripts/import-followups-csv.ts --people people.csv --reports cr.csv --apply
+# 2. Simuler l'import complet (rapport de rapprochement, aucune écriture)
+pnpm tsx scripts/import-notion-followups.ts
+
+# 3. Appliquer
+pnpm tsx scripts/import-notion-followups.ts --apply
 ```
 
 Le script :
 
+- **découvre seul** les bases sous la page (y compris les bases *inline*) et
+  devine leur nature : « fiches apprenant » (dates de contrat) ou « comptes
+  rendus » (contenu / date d'entretien) ;
 - rapproche chaque ligne d'un apprenant du hub (login, sinon nom complet
-  normalisé) et **liste explicitement les non-rapprochés** — jamais d'écriture
-  hasardeuse ;
+  normalisé, accents et ordre nom/prénom tolérés) et **liste explicitement les
+  non-rapprochés** — jamais d'écriture hasardeuse ;
 - **ne duplique pas** un contrat déjà synchronisé depuis émargement : il
-  l'**enrichit** (email du tuteur — qu'émargement ne porte pas —, adresse,
-  SIRET) et écrit `students.company_name` pour que l'entreprise survive à la
-  prochaine synchro ;
-- importe les comptes rendus antérieurs sans les rattacher à une échéance
-  calculée (ils alimentent l'historique).
+  l'**enrichit** (email du tuteur — qu'émargement ne porte pas —, entreprise,
+  adresse, SIRET) et écrit `students.company_name` pour que l'entreprise
+  survive à la prochaine synchro ;
+- lit le compte rendu dans la propriété dédiée **ou**, à défaut, dans le corps
+  de la page Notion ;
+- **dédoublonne** : relancer le script ne recrée rien (contrats mis à jour en
+  place, comptes rendus déjà présents ignorés).
 
-Les colonnes acceptées (et leurs alias) sont documentées en tête du script.
-
-**Bascule via l'API Notion** : possible dans un second temps avec un token
-d'intégration — le script est déjà structuré pour ça (le lecteur CSV est isolé
-dans `readCsv()`), il suffit de remplacer la source des lignes.
-
----
+Les noms de colonnes sont reconnus à la tolérance près (accents, casse,
+ponctuation, correspondance partielle). Si `--inspect` révèle une colonne non
+reconnue, ajouter son nom aux alias dans le script.
 
 ## 6. API
 

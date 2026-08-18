@@ -20,7 +20,6 @@ import {
   Building2,
   CalendarCheck,
   ExternalLink,
-  Loader2,
   Mail,
   Phone,
   Send,
@@ -33,6 +32,7 @@ import {
   type FollowUpMilestone,
 } from "../types";
 import { FollowUpReportDialog } from "./follow-up-report-dialog";
+import { FollowUpConfirmSendDialog } from "./follow-up-confirm-send-dialog";
 
 interface ReminderRow {
   id: number;
@@ -46,9 +46,8 @@ interface ReminderRow {
 }
 
 const KIND_LABELS: Record<string, string> = {
-  auto: "automatique",
-  manual: "manuelle",
-  relance: "2e relance",
+  manual: "confirmée à la main",
+  relance: "relance suivante",
 };
 
 /**
@@ -68,10 +67,10 @@ export function FollowUpDetailDialog({
 }) {
   const [preview, setPreview] = useState<{ subject: string; body: string } | null>(null);
   const [reminders, setReminders] = useState<ReminderRow[]>([]);
-  const [sending, setSending] = useState(false);
   const [savingDate, setSavingDate] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
+  const [confirmSendOpen, setConfirmSendOpen] = useState(false);
 
   useEffect(() => {
     if (!milestone) {
@@ -98,25 +97,6 @@ export function FollowUpDetailDialog({
   }, [milestone]);
 
   if (!milestone) return null;
-
-  const handleSendReminder = async () => {
-    setSending(true);
-    try {
-      const res = await fetch(`/api/follow-ups/${milestone.id}/remind`, { method: "POST" });
-      const json = await res.json();
-      if (json.success) {
-        toast.success(`Relance envoyée à ${json.data.to}`);
-        onChanged();
-        onClose();
-      } else {
-        toast.error(json.error?.message ?? "L'envoi a échoué");
-      }
-    } catch {
-      toast.error("Erreur réseau");
-    } finally {
-      setSending(false);
-    }
-  };
 
   const handleStatus = async (status: string, extra: Record<string, unknown> = {}) => {
     setSavingDate(true);
@@ -230,7 +210,7 @@ export function FollowUpDetailDialog({
             {preview && (
               <div className="space-y-2">
                 <Label className="text-xs uppercase text-muted-foreground">
-                  Mail qui sera envoyé au tuteur
+                  Mail proposé — relu et confirmé avant tout envoi
                 </Label>
                 <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                   <div className="font-medium">{preview.subject}</div>
@@ -312,21 +292,33 @@ export function FollowUpDetailDialog({
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 variant="outline"
-                onClick={handleSendReminder}
-                disabled={sending || !milestone.tutorEmail}
+                onClick={() => setConfirmSendOpen(true)}
+                disabled={!milestone.tutorEmail}
+                title={
+                  milestone.tutorEmail
+                    ? "Ouvre l'écran de relecture avant envoi"
+                    : "Aucun email de tuteur sur ce contrat"
+                }
               >
-                {sending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 h-4 w-4" />
-                )}
-                {milestone.reminderCount > 0 ? "Relancer à nouveau" : "Relancer le tuteur"}
+                <Send className="mr-2 h-4 w-4" />
+                {milestone.reminderCount > 0 ? "Relancer à nouveau…" : "Relancer le tuteur…"}
               </Button>
               <Button onClick={() => setReportOpen(true)}>Saisir le compte rendu</Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FollowUpConfirmSendDialog
+        milestone={milestone}
+        open={confirmSendOpen}
+        onOpenChange={setConfirmSendOpen}
+        onSent={() => {
+          setConfirmSendOpen(false);
+          onChanged();
+          onClose();
+        }}
+      />
 
       <FollowUpReportDialog
         open={reportOpen}

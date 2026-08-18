@@ -39,8 +39,6 @@ CREATE TABLE IF NOT EXISTS "follow_up_settings" (
     "reply_to_email" TEXT,
     "email_subject_template" TEXT,
     "email_body_template" TEXT,
-    -- Kill-switch : aucun mail ne part tant que ce n'est pas activé à la main.
-    "auto_send_enabled" BOOLEAN NOT NULL DEFAULT FALSE,
     "teams_alerts_enabled" BOOLEAN NOT NULL DEFAULT TRUE,
     "updated_at" TIMESTAMP DEFAULT NOW() NOT NULL,
     "updated_by" TEXT,
@@ -78,6 +76,8 @@ CREATE INDEX IF NOT EXISTS "idx_follow_up_milestone_student"
     ON "follow_up_milestones"("student_id");
 
 -- ─── Relances envoyées (traçabilité / anti-doublon) ──────────────────────────
+-- `kind` ∈ {manual, relance} : il n'existe pas d'envoi automatique, chaque mail
+-- part sur confirmation humaine explicite (sent_by = l'utilisateur qui a validé).
 
 CREATE TABLE IF NOT EXISTS "follow_up_reminders" (
     "id" SERIAL PRIMARY KEY,
