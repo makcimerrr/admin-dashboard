@@ -1,7 +1,7 @@
 import { db } from '../config';
 import { students } from '../schema';
-import { eq, and, or, sql, desc, asc, notInArray } from 'drizzle-orm';
-import { getArchivedPromoNames } from '../filters';
+import { eq, and, sql, desc, asc } from 'drizzle-orm';
+import { countableStudentsWhereNoJoin } from '../filters';
 
 // ============== TYPES ==============
 
@@ -56,9 +56,11 @@ export interface AlternantStats {
  * échéances (cf. `reconcileMilestones`) : la page et le suivi ne doivent jamais
  * raconter deux histoires différentes.
  *
- * @param promoName - Filtrer par promotion (optionnel). Cibler explicitement une
- *   promo archivée reste possible : c'est une consultation d'historique.
- * @param includeDropouts - Inclure perditions ET archivés (défaut: false)
+ * @param promoName - Filtrer par promotion (optionnel). Une promo archivée ne
+ *   renvoie rien : elle est hors périmètre, y compris ciblée explicitement.
+ * @param includeDropouts - Lève TOUTES ces exclusions (perditions, archivés,
+ *   promos archivées). Seule porte de sortie, pour une consultation
+ *   d'historique assumée.
  */
 export async function getAlternants(
     promoName?: string,
@@ -67,21 +69,17 @@ export async function getAlternants(
     try {
         const conditions = [eq(students.isAlternant, true)];
 
-        if (!includeDropouts) {
-            conditions.push(eq(students.isDropout, false));
-            conditions.push(
-                or(eq(students.archived, false), sql`${students.archived} IS NULL`)!,
-            );
-        }
-
         if (promoName) {
             conditions.push(eq(students.promoName, promoName));
-        } else {
-            // Quand aucune promo n'est ciblée explicitement, exclure les archivées.
-            const archived = Array.from(await getArchivedPromoNames());
-            if (archived.length > 0) {
-                conditions.push(notInArray(students.promoName, archived));
-            }
+        }
+
+        // `countableStudentsWhereNoJoin()` est LA règle du hub : ni perdition,
+        // ni apprenant archivé, ni promo archivée. On s'en sert plutôt que de
+        // la réécrire ici — c'est ce qui garantit que la page, les stats et
+        // le suivi comptent la même chose. Ciblage explicite d'une promo
+        // archivée compris : elle ne renvoie rien.
+        if (!includeDropouts) {
+            conditions.push(await countableStudentsWhereNoJoin());
         }
 
         const result = await db
@@ -281,42 +279,17 @@ export async function getAlternantStats(): Promise<AlternantStats> {
  */
 export async function getAlternantsByCompany(companyName: string): Promise<AlternantInfo[]> {
     try {
-        const result = await db
-            .select({
-                id: students.id,
-                login: students.login,
-                firstName: students.first_name,
-                lastName: students.last_name,
-                promoName: students.promoName,
-                isAlternant: students.isAlternant,
-                alternantStartDate: students.alternantStartDate,
-                alternantEndDate: students.alternantEndDate,
-                companyName: students.companyName,
-                companyContact: students.companyContact,
-                companyEmail: students.companyEmail,
-                companyPhone: students.companyPhone,
-                alternantNotes: students.alternantNotes,
-                isDropout: students.isDropout
-            })
-            .from(students)
-            .where(and(
-                eq(students.isAlternant, true),
-                eq(students.isDropout, false),
-                eq(students.companyName, companyName)
-            ))
-            .orderBy(asc(students.last_name), asc(students.first_name))
-            .execute();
-
-        return result.map(r => ({
-            ...r,
-            isAlternant: r.isAlternant ?? false,
-            isDropout: r.isDropout ?? false
-        }));
+        // Dérivé de `getAlternants()` : filtrer par entreprise ne doit pas
+        // ramener des apprenants que la liste principale écarte (archivés,
+        // perditions, promos archivées).
+        const alternants = await getAlternants();
+        return alternants.filter((a) => a.companyName === companyName);
     } catch (error) {
         console.error('Erreur lors de la récupération des alternants par entreprise:', error);
         throw error;
     }
 }
+
 
 /**
  * Récupère la liste des entreprises distinctes
