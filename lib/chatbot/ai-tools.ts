@@ -11,6 +11,7 @@ import { audits, auditResults } from '@/lib/db/schema/audits';
 import { groupStatuses } from '@/lib/db/schema/groupStatuses';
 import { alternantContracts } from '@/lib/db/schema/alternants';
 import { eq, ilike, or, and, count, sql, desc, isNotNull, isNull, inArray } from 'drizzle-orm';
+import { countableStudentsWhereNoJoin } from '@/lib/db/filters';
 
 // =============================================================================
 // HELPERS
@@ -289,7 +290,12 @@ async function getStats({ promoName }: { promoName?: string }) {
       .from(students).leftJoin(studentProjects, eq(students.id, studentProjects.student_id))
       .where(activeFilter).groupBy(studentProjects.delay_level),
     db.select({ count: count() }).from(students).where(promoFilter ? and(promoFilter, eq(students.isDropout, true)) : eq(students.isDropout, true)),
-    db.select({ count: count() }).from(students).where(promoFilter ? and(promoFilter, eq(students.isAlternant, true), eq(students.isDropout, false)) : and(eq(students.isAlternant, true), eq(students.isDropout, false)))
+    // Même règle que la page /alternants : ni perdition, ni apprenant archivé,
+    // ni promo archivée. Sans ça l'assistant annonçait un nombre d'alternants
+    // sans rapport avec ce que le hub affiche.
+    db.select({ count: count() }).from(students).where(
+      and(await countableStudentsWhereNoJoin(), eq(students.isAlternant, true), promoFilter)
+    )
   ]);
 
   const totalActive = totalActiveResult[0].count;
