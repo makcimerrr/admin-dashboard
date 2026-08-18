@@ -8,6 +8,7 @@ export * from './conversations';
 export * from './hub';
 export * from './audits';
 export * from './alternants';
+export * from './followUps';
 export * from './discordUsers';
 export * from './groupStatuses';
 export * from './reviewers';

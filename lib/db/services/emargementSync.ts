@@ -3,7 +3,8 @@ import postgres from 'postgres';
 import { db } from '../config';
 import { students } from '../schema/students';
 import { alternantContracts } from '../schema/alternants';
-import { sql, eq } from 'drizzle-orm';
+import { reconcileMilestones } from './followUps';
+import { sql, eq, inArray } from 'drizzle-orm';
 
 /**
  * Synchronise les statuts des apprenants (archivé + alternant) depuis émargement.
@@ -238,19 +239,24 @@ export async function syncEmargementStatuses(
   }
 
   // 4e) Contrats structurés depuis émargement (type + dates + tuteur).
-  //     Idempotent : on remplace les contrats source='emargement' (les contrats
-  //     saisis à la main, source='manual', ne sont jamais touchés). émargement
-  //     n'a pas le nom d'entreprise → placeholder « Non renseigné ».
-  //     La suppression met à NULL le contract_id des documents liés (FK
-  //     onDelete:set null) ; on les re-relie ensuite au nouveau contrat.
-  await db.delete(alternantContracts).where(eq(alternantContracts.source, 'emargement'));
+  //     UPSERT sur la clé naturelle `student_id` (émargement porte au plus UN
+  //     contrat par utilisateur : les colonnes contract_* sont sur `users`).
+  //     Les contrats saisis à la main (source='manual') ne sont jamais touchés.
+  //
+  //     ⚠️ Ne JAMAIS repasser en DELETE + INSERT : les IDs de contrat sont
+  //     référencés par les échéances de suivi en entreprise
+  //     (`follow_up_milestones.contract_id`, ON DELETE CASCADE). Les recréer à
+  //     chaque synchro détruirait les échéances, les relances tracées et le
+  //     rattachement des comptes rendus.
+  //
+  //     émargement n'a pas le nom d'entreprise → placeholder « Non renseigné ».
   const now = new Date();
-  const contractRows = [];
+  const desiredByStudent = new Map<number, typeof alternantContracts.$inferInsert>();
   for (const [login, info] of alternantMap.entries()) {
     const studentId = studentIdByLogin.get(login);
     if (!studentId || !info.start || !info.end) continue; // dates obligatoires
     const endDate = new Date(info.end);
-    contractRows.push({
+    desiredByStudent.set(studentId, {
       studentId,
       contractType: info.contractType,
       startDate: new Date(info.start),
@@ -262,21 +268,83 @@ export async function syncEmargementStatuses(
       source: 'emargement',
     });
   }
-  let documentsLinked = 0;
-  if (contractRows.length > 0) {
-    const inserted = await db
-      .insert(alternantContracts)
-      .values(contractRows)
-      .returning({ id: alternantContracts.id, studentId: alternantContracts.studentId });
 
+  // État actuel des contrats synchronisés, pour décider update / insert / delete.
+  const existingEmg = await db
+    .select({ id: alternantContracts.id, studentId: alternantContracts.studentId })
+    .from(alternantContracts)
+    .where(eq(alternantContracts.source, 'emargement'))
+    .orderBy(alternantContracts.id);
+
+  const existingByStudent = new Map<number, number>(); // studentId → contractId conservé
+  const staleIds: number[] = []; // doublons hérités + contrats disparus d'émargement
+  for (const row of existingEmg) {
+    if (existingByStudent.has(row.studentId)) {
+      staleIds.push(row.id); // doublon (données antérieures au passage en upsert)
+    } else {
+      existingByStudent.set(row.studentId, row.id);
+    }
+  }
+  for (const [studentId, contractId] of existingByStudent.entries()) {
+    if (!desiredByStudent.has(studentId)) staleIds.push(contractId);
+  }
+  if (staleIds.length > 0) {
+    await db.delete(alternantContracts).where(inArray(alternantContracts.id, staleIds));
+  }
+
+  const contractIds: number[] = [];
+  /** (studentId, contractId) pour rattacher les CERFA au bon contrat. */
+  const studentContractPairs: [number, number][] = [];
+  for (const [studentId, row] of desiredByStudent.entries()) {
+    const existingId = existingByStudent.get(studentId);
+    if (existingId) {
+      await db
+        .update(alternantContracts)
+        .set({
+          contractType: row.contractType,
+          startDate: row.startDate,
+          endDate: row.endDate,
+          companyName: row.companyName,
+          tutorName: row.tutorName,
+          tutorPhone: row.tutorPhone,
+          isActive: row.isActive,
+          updatedAt: now,
+        })
+        .where(eq(alternantContracts.id, existingId));
+      contractIds.push(existingId);
+      studentContractPairs.push([studentId, existingId]);
+    } else {
+      const [inserted] = await db
+        .insert(alternantContracts)
+        .values(row)
+        .returning({ id: alternantContracts.id });
+      contractIds.push(inserted.id);
+      studentContractPairs.push([studentId, inserted.id]);
+    }
+  }
+  const contractRows = [...desiredByStudent.values()];
+
+  let documentsLinked = 0;
+  if (contractIds.length > 0) {
     // Rattacher les documents type 'contrat' (CERFA) au contrat de l'apprenant.
-    const pairs = inserted.map((c) => sql`(${c.studentId}::int, ${c.id}::int)`);
+    const pairs = studentContractPairs.map(([sid, cid]) => sql`(${sid}::int, ${cid}::int)`);
     const linkRes = await db.execute(sql`
       UPDATE alternant_documents AS d SET contract_id = v.cid
       FROM (VALUES ${sql.join(pairs, sql`, `)}) AS v(sid, cid)
       WHERE d.student_id = v.sid AND d.document_type = 'contrat'
+        AND (d.contract_id IS NULL OR d.contract_id <> v.cid)
     `);
     documentsLinked = (linkRes as unknown as { count?: number }).count ?? 0;
+  }
+
+  // 4f) Réconcilier les échéances de suivi en entreprise sur ces contrats.
+  //     Idempotent : ne crée que ce qui manque, décale si la date de début a
+  //     changé, n'écrase jamais un suivi déjà réalisé.
+  if (contractIds.length > 0) {
+    await reconcileMilestones({ contractIds }).catch((e) => {
+      // Un échec ici ne doit pas faire échouer la synchro RH elle-même.
+      console.error('[emargementSync] réconciliation des échéances échouée :', e);
+    });
   }
 
   // 5) Comptage.

@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building2,
   Calendar,
+  CalendarClock,
   ClipboardList,
   Clock,
   FileText,
@@ -31,6 +32,7 @@ import {
 import { AddContractDialog } from "./add-contract-dialog";
 import { AddDocumentDialog } from "./add-document-dialog";
 import { CompanyEditor } from "./company-editor";
+import { FollowUpStudentTab } from "./follow-up-student-tab";
 
 export function AlternantDetailSheet({
   selectedAlternant,
@@ -168,7 +170,7 @@ export function AlternantDetailSheet({
               <LoadingCard height="md" />
             ) : (
               <Tabs defaultValue="contracts" className="mt-6">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="contracts" className="gap-2">
                     <ClipboardList className="h-4 w-4" />
                     Contrats ({contracts.length + contractDocuments.length})
@@ -176,6 +178,10 @@ export function AlternantDetailSheet({
                   <TabsTrigger value="documents" className="gap-2">
                     <FileText className="h-4 w-4" />
                     Documents ({otherDocuments.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="followups" className="gap-2">
+                    <CalendarClock className="h-4 w-4" />
+                    Suivi
                   </TabsTrigger>
                 </TabsList>
 
@@ -276,6 +282,10 @@ export function AlternantDetailSheet({
                   ) : (
                     <div className="space-y-3">{otherDocuments.map(renderDocument)}</div>
                   )}
+                </TabsContent>
+
+                <TabsContent value="followups" className="mt-4">
+                  <FollowUpStudentTab studentId={selectedAlternant.id} />
                 </TabsContent>
               </Tabs>
             )}
