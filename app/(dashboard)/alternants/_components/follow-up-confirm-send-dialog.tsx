@@ -14,24 +14,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, Loader2, Send } from "lucide-react";
+import { AlertTriangle, Check, Copy, Loader2, Mail } from "lucide-react";
 import type { ApiEnvelope, FollowUpMilestone } from "../types";
 
 interface Prepared {
   to: string | null;
   subject: string;
   body: string;
-  mailerConfigured: boolean;
   bookingUrlConfigured: boolean;
   remindersSent: number;
 }
 
 /**
- * Confirmation humaine avant tout envoi à une entreprise partenaire.
+ * Certaines messageries tronquent les `mailto:` longs. Au-delà de ce seuil on
+ * le dit, et le bouton « Copier » devient la voie sûre.
+ */
+const MAILTO_SAFE_LENGTH = 1800;
+
+/**
+ * Préparation d'une relance, envoyée depuis la messagerie de l'utilisateur.
  *
- * C'est le SEUL chemin par lequel un mail peut partir : on relit le message
- * (modifiable), on voit le destinataire réel, et on confirme. Aucun cron, aucun
- * automatisme ne court-circuite cet écran.
+ * Le hub n'envoie aucun mail : il compose le message (modifiable), l'ouvre dans
+ * la messagerie via `mailto:`, puis enregistre la relance quand l'utilisateur
+ * déclare l'avoir envoyée. Le mail part donc de sa boîte réelle — les réponses
+ * du tuteur lui reviennent directement, au lieu de se perdre dans une adresse
+ * technique.
+ *
+ * Les deux gestes sont volontairement distincts : ouvrir ne prouve pas qu'on a
+ * envoyé, et la trace ne doit refléter que ce qui a vraiment été fait.
  */
 export function FollowUpConfirmSendDialog({
   milestone,
@@ -47,11 +57,13 @@ export function FollowUpConfirmSendDialog({
   const [prepared, setPrepared] = useState<Prepared | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [opened, setOpened] = useState(false);
 
   useEffect(() => {
     if (!open || !milestone) {
       setPrepared(null);
+      setOpened(false);
       return;
     }
     void (async () => {
@@ -70,29 +82,52 @@ export function FollowUpConfirmSendDialog({
 
   if (!milestone) return null;
 
-  const handleConfirm = async () => {
-    setSending(true);
+  const mailtoHref = prepared?.to
+    ? `mailto:${encodeURIComponent(prepared.to)}?subject=${encodeURIComponent(
+        subject,
+      )}&body=${encodeURIComponent(body)}`
+    : "";
+
+  const handleOpenMailClient = () => {
+    window.location.href = mailtoHref;
+    setOpened(true);
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${subject}\n\n${body}`);
+      toast.success("Message copié");
+      setOpened(true);
+    } catch {
+      toast.error("Copie impossible — sélectionnez le texte à la main");
+    }
+  };
+
+  /** Enregistre la relance : c'est une déclaration, pas un accusé technique. */
+  const handleRecord = async () => {
+    setRecording(true);
     try {
       const res = await fetch(`/api/follow-ups/${milestone.id}/remind`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, body }),
+        body: JSON.stringify({ subject }),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success(`Mail envoyé à ${json.data.to}`);
+        toast.success(`Relance enregistrée pour ${json.data.to}`);
         onSent();
       } else {
-        toast.error(json.error?.message ?? "L'envoi a échoué");
+        toast.error(json.error?.message ?? "L'enregistrement a échoué");
       }
     } catch {
       toast.error("Erreur réseau");
     } finally {
-      setSending(false);
+      setRecording(false);
     }
   };
 
-  const blocked = !prepared?.mailerConfigured || !prepared?.to;
+  const blocked = !prepared?.to;
+  const tooLongForMailto = mailtoHref.length > MAILTO_SAFE_LENGTH;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,8 +135,10 @@ export function FollowUpConfirmSendDialog({
         <DialogHeader>
           <DialogTitle>Confirmer l'envoi au tuteur</DialogTitle>
           <DialogDescription>
-            Ce mail partira réellement chez {milestone.companyName}. Relisez-le — vous
-            pouvez le modifier avant de confirmer.
+            Relisez et modifiez le message, ouvrez-le dans votre messagerie, envoyez-le
+            depuis votre boîte — puis enregistrez la relance ici. Le hub n'envoie rien
+            lui-même : les réponses de {milestone.companyName} vous reviendront
+            directement.
           </DialogDescription>
         </DialogHeader>
 
@@ -121,11 +158,13 @@ export function FollowUpConfirmSendDialog({
               </div>
             )}
 
-            {!prepared.mailerConfigured && (
-              <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm">
+            {tooLongForMailto && (
+              <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 <span>
-                  SMTP non configuré côté serveur : l'envoi est impossible pour l'instant.
+                  Message long : certaines messageries tronquent les liens
+                  <code className="mx-1">mailto:</code>. Préférez « Copier le message »
+                  et collez-le dans un mail vierge.
                 </span>
               </div>
             )}
@@ -174,21 +213,45 @@ export function FollowUpConfirmSendDialog({
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
-            Annuler
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={recording}>
+            Fermer
           </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={sending || blocked || !subject.trim() || !body.trim()}
-          >
-            {sending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="mr-2 h-4 w-4" />
-            )}
-            Confirmer et envoyer
-          </Button>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={handleCopy} disabled={blocked}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copier le message
+            </Button>
+
+            <Button
+              variant={opened ? "outline" : "default"}
+              onClick={handleOpenMailClient}
+              disabled={blocked || !subject.trim() || !body.trim()}
+            >
+              <Mail className="mr-2 h-4 w-4" />
+              Ouvrir dans ma messagerie
+            </Button>
+
+            {/* Geste distinct : ouvrir ne prouve pas qu'on a envoyé. La trace
+                ne doit refléter que ce qui a réellement été fait. */}
+            <Button
+              onClick={handleRecord}
+              disabled={recording || blocked || !opened}
+              title={
+                opened
+                  ? "Enregistre la relance et passe l'échéance en « relance envoyée »"
+                  : "Ouvrez d'abord le mail dans votre messagerie"
+              }
+            >
+              {recording ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
+              J'ai envoyé le mail
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

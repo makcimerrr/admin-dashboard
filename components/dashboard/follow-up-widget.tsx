@@ -96,7 +96,7 @@ export async function FollowUpWidget() {
                 {actionable.length} relance{actionable.length > 1 ? 's' : ''} à confirmer
               </h4>
               <span className="text-[11px] text-muted-foreground">
-                aucun mail ne part sans votre validation
+à envoyer depuis votre messagerie
               </span>
             </div>
 

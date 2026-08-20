@@ -9,21 +9,33 @@ C'est aussi un point de contrôle Qualiopi classique (accompagnement des
 bénéficiaires) : tout ce qui est envoyé et tout ce qui est fait laisse une trace
 datée et attribuée.
 
-## ⚠️ Règle non négociable : aucun envoi automatique
+## ⚠️ Règle non négociable : le hub n'envoie aucun mail
 
-**Aucun mail ne part vers une entreprise partenaire sans qu'un humain l'ait relu
-et confirmé.** Ce n'est pas un réglage, c'est une propriété du code :
+**Aucun mail ne part vers une entreprise partenaire depuis le serveur.** Le hub
+prépare le message, l'ouvre dans la messagerie de l'utilisateur (`mailto:`), et
+enregistre la relance quand celui-ci déclare l'avoir envoyée.
 
-- `sendMilestoneReminder()` exige `confirmedBy` (l'email de l'utilisateur hub
-  qui valide) et lève une erreur sans lui — impossible d'envoyer « au nom de
-  personne » ;
+Ce choix vaut mieux qu'un SMTP serveur : le mail part de la boîte réelle de la
+personne, donc **les réponses du tuteur lui reviennent directement** au lieu de
+se perdre dans une adresse technique. Et il n'y a aucun identifiant SMTP à
+détenir ni à faire tourner.
+
+C'est une propriété du code, pas un réglage :
+
+- il n'existe aucune dépendance d'envoi (pas de `nodemailer`, pas de service
+  `mailer`) ;
+- `recordMilestoneReminder()` exige `confirmedBy` (l'email de l'utilisateur hub)
+  et lève une erreur sans lui — impossible de tracer « au nom de personne » ;
 - `REMINDER_KINDS` ne contient **pas** de valeur `auto` ;
-- les crons ne référencent même pas la fonction d'envoi : ils calculent, et
-  signalent en interne ce qu'il y a à traiter ;
-- le seul chemin d'envoi est `POST /api/follow-ups/[id]/remind`, appelé depuis
-  l'écran de confirmation où le message est affiché **et modifiable**.
+- les crons calculent et signalent en interne, rien d'autre.
 
-Ne pas réintroduire de chemin d'envoi automatique.
+La trace est une **déclaration humaine**, pas un accusé technique : le hub ne
+peut pas savoir si le `mailto:` a abouti. C'est assumé — mieux vaut une trace
+datée et attribuée qu'un envoi automatique que personne n'a relu. L'UI sépare
+d'ailleurs les deux gestes : « Ouvrir dans ma messagerie » puis « J'ai envoyé le
+mail ».
+
+Ne pas réintroduire d'envoi côté serveur.
 
 ---
 
@@ -83,16 +95,7 @@ contrat par utilisateur). **Ne jamais revenir à un DELETE + INSERT.**
 
 ### Variables d'environnement
 
-```bash
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=<boîte émettrice>
-SMTP_PASSWORD=<mot de passe d'application>
-SMTP_FROM=                      # optionnel
-```
-
-Sans ces variables le module reste pleinement utilisable : il calcule, affiche
-et alerte en interne, mais aucun mail ne part (l'UI l'indique explicitement).
+**Aucune pour l'envoi** : il n'y a pas de SMTP à configurer.
 
 La détection des RDV réutilise le service account Google déjà en place
 (`GOOGLE_SERVICE_ACCOUNT_*`). L'agenda surveillé se règle dans l'UI.
@@ -204,11 +207,11 @@ tuteurs entreprise).
 | `GET /api/follow-ups` | liste des échéances (`status`, `studentId`, `company`, `includeClosed`) |
 | `GET /api/follow-ups?stats=true` | bandeau de pilotage |
 | `GET/PATCH /api/follow-ups/[id]` | détail + relances / changement de statut |
-| `GET /api/follow-ups/[id]/remind` | **aperçu** du mail (aucun envoi) |
-| `POST /api/follow-ups/[id]/remind` | relance manuelle |
+| `GET /api/follow-ups/[id]/remind` | prépare objet + corps pour le `mailto:` |
+| `POST /api/follow-ups/[id]/remind` | enregistre la relance déclarée envoyée |
 | `GET/POST /api/follow-ups/reports` | historique / saisie d'un compte rendu |
 | `PATCH/DELETE /api/follow-ups/reports/[id]` | correction / suppression |
-| `GET/PUT /api/follow-ups/settings` | réglages (+ `?verify=true` pour tester le SMTP) |
+| `GET/PUT /api/follow-ups/settings` | réglages du module |
 | `GET/POST /api/follow-ups/milestone-types` | jalons configurables |
 | `DELETE /api/follow-ups/milestone-types/[code]` | désactive un jalon |
 | `POST /api/follow-ups/reconcile` | recalcule toutes les échéances |
@@ -223,6 +226,6 @@ tuteurs entreprise).
 4. Vérifier la vue Kanban : le passif (échéances déjà en retard) apparaît —
    c'est normal, c'est précisément ce que le Notion ne montrait plus.
 5. Régler les jalons et délais, renseigner le lien de réservation.
-6. Lancer les crons en `?dry=true` pendant quelques jours, envoi automatique
-   **désactivé**, et relancer à la main.
-7. Quand les mails générés sont satisfaisants : activer l'envoi automatique.
+6. Lancer les crons en `?dry=true` pendant quelques jours pour vérifier ce
+   qu'ils signalent.
+7. Relancer les tuteurs depuis l'écran de confirmation, au rythme voulu.

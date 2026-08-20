@@ -6,24 +6,20 @@ import {
   DEFAULT_SUBJECT_TEMPLATE,
   TEMPLATE_VARIABLES,
 } from '@/lib/services/follow-up-notify';
-import { isMailerConfigured, verifyMailer } from '@/lib/services/mailer';
 import { isCalendarConfigured } from '@/lib/services/googleCalendar';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/follow-ups/settings — réglages du module + état des intégrations
- * (SMTP, agenda) pour que l'UI affiche ce qui est réellement opérationnel.
+ * GET /api/follow-ups/settings — réglages du module + état de l'agenda.
+ *
+ * Aucun état SMTP : le hub n'envoie pas de mail, il ouvre la messagerie de
+ * l'utilisateur (`mailto:`).
  */
 export const GET = withErrorHandler(
-  withAdmin(async (req: NextRequest) => {
+  withAdmin(async () => {
     const settings = await getFollowUpSettings();
-    const { searchParams } = new URL(req.url);
-
-    // ?verify=true : test réel de la connexion SMTP (bouton dédié).
-    const verify =
-      searchParams.get('verify') === 'true' ? await verifyMailer() : undefined;
 
     return apiSuccess({
       settings,
@@ -33,9 +29,7 @@ export const GET = withErrorHandler(
         variables: TEMPLATE_VARIABLES,
       },
       integrations: {
-        mailerConfigured: isMailerConfigured(),
         calendarConfigured: isCalendarConfigured(),
-        ...(verify ? { smtpVerify: verify } : {}),
       },
     });
   }),

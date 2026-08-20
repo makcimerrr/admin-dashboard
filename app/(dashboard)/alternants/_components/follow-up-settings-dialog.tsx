@@ -24,7 +24,7 @@ import type { ApiEnvelope, FollowUpMilestoneType, FollowUpSettings } from "../ty
 interface SettingsPayload {
   settings: FollowUpSettings;
   defaults: { subject: string; body: string; variables: string[] };
-  integrations: { mailerConfigured: boolean; calendarConfigured: boolean };
+  integrations: { calendarConfigured: boolean };
 }
 
 /**
@@ -381,13 +381,12 @@ export function FollowUpSettingsDialog({
               <Separator />
 
               <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-sm">
-                <p className="font-medium">Aucun envoi automatique</p>
+                <p className="font-medium">Le hub n'envoie aucun mail</p>
                 <p className="text-xs text-muted-foreground">
                   Les délais ci-dessus déterminent uniquement <em>quand</em> une relance
-                  vous est proposée. Aucun mail ne part vers une entreprise sans que vous
-                  l'ayez relu et confirmé depuis le hub.
-                  {!payload.integrations.mailerConfigured &&
-                    " ⚠️ SMTP non configuré côté serveur : aucun envoi n'est possible pour l'instant."}
+                  vous est proposée. Le message est préparé puis ouvert dans votre
+                  messagerie : vous l'envoyez depuis votre propre boîte, et les réponses
+                  du tuteur vous reviennent directement.
                 </p>
               </div>
 
@@ -410,7 +409,7 @@ export function FollowUpSettingsDialog({
             <TabsContent value="mail" className="space-y-4 pt-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="senderName">Nom de l'expéditeur</Label>
+                  <Label htmlFor="senderName">Signature du mail</Label>
                   <Input
                     id="senderName"
                     placeholder="Bastien — Zone01 Normandie"
@@ -419,7 +418,7 @@ export function FollowUpSettingsDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="senderEmail">Adresse d'expédition</Label>
+                  <Label htmlFor="senderEmail">Adresse de contact citée dans le mail</Label>
                   <Input
                     id="senderEmail"
                     type="email"
