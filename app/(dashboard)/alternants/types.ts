@@ -140,6 +140,59 @@ export const MILESTONE_STATUS_TONE: Record<MilestoneStatus, 'blue' | 'amber' | '
 };
 
 /**
+ * Colonnes du Kanban. « En retard » n'est PAS un statut stocké : c'est
+ * `a_venir` dont la date est passée. Sans cette colonne, tout le passif
+ * s'entassait dans « À venir » et le tableau ne montrait plus rien d'utile.
+ *
+ * Les trois dernières colonnes reprennent les libellés et tons des statuts
+ * réels — une seule source, pas de divergence possible.
+ */
+export const KANBAN_COLUMNS: {
+  key: string;
+  label: string;
+  tone: 'blue' | 'amber' | 'violet' | 'emerald' | 'rose';
+  match: (m: FollowUpMilestone) => boolean;
+}[] = [
+  {
+    key: 'en_retard',
+    label: 'En retard',
+    tone: 'rose',
+    match: (m) => m.status === 'a_venir' && m.daysUntilDue < 0,
+  },
+  {
+    key: 'a_venir',
+    label: MILESTONE_STATUS_LABELS.a_venir,
+    tone: MILESTONE_STATUS_TONE.a_venir,
+    match: (m) => m.status === 'a_venir' && m.daysUntilDue >= 0,
+  },
+  {
+    key: 'relance_envoyee',
+    label: MILESTONE_STATUS_LABELS.relance_envoyee,
+    tone: MILESTONE_STATUS_TONE.relance_envoyee,
+    match: (m) => m.status === 'relance_envoyee',
+  },
+  {
+    key: 'rdv_planifie',
+    label: MILESTONE_STATUS_LABELS.rdv_planifie,
+    tone: MILESTONE_STATUS_TONE.rdv_planifie,
+    match: (m) => m.status === 'rdv_planifie',
+  },
+  {
+    key: 'realise',
+    label: MILESTONE_STATUS_LABELS.realise,
+    tone: MILESTONE_STATUS_TONE.realise,
+    match: (m) => m.status === 'realise',
+  },
+];
+
+/** Index de colonne d'une échéance : sert aussi à trier par statut. */
+export function milestoneColumnIndex(m: FollowUpMilestone): number {
+  const i = KANBAN_COLUMNS.findIndex((c) => c.match(m));
+  // Les annulées ne sont dans aucune colonne : elles ferment la marche.
+  return i === -1 ? KANBAN_COLUMNS.length : i;
+}
+
+/**
  * Libellé et ton d'une échéance TELS QU'AFFICHÉS.
  *
  * `a_venir` est un état de workflow (« rien n'a encore été fait »), pas une
