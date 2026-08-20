@@ -104,7 +104,13 @@ export const followUpSettings = pgTable('follow_up_settings', {
   replyToEmail: text('reply_to_email'),
   emailSubjectTemplate: text('email_subject_template'),
   emailBodyTemplate: text('email_body_template'),
-  teamsAlertsEnabled: boolean('teams_alerts_enabled').notNull().default(true),
+  /**
+   * Destinataire du récapitulatif interne : un ID Discord, saisi dans l'UI et
+   * non dans l'environnement — la personne qui suit les alternants peut
+   * changer sans redéploiement.
+   */
+  digestDiscordUserId: text('digest_discord_user_id'),
+  digestEnabled: boolean('digest_enabled').notNull().default(true),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
   updatedBy: text('updated_by'),
 });

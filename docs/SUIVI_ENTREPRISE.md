@@ -47,7 +47,7 @@ Ne pas réintroduire d'envoi côté serveur.
 | Jalons **configurables** (durées éditables, ajout/désactivation) | UI → ⚙️ Configuration → Jalons |
 | Vue liste filtrable + Kanban par statut | onglet Suivi en entreprise |
 | Relance mail au tuteur, **après relecture et confirmation humaine** | bouton « Relancer… » → écran de confirmation |
-| Alerte interne (Teams) : retards, échéances proches, relances à confirmer | cron `follow-up-digest` |
+| Récapitulatif interne en **DM Discord** : relances à confirmer, retards, échéances proches | cron `follow-up-digest` |
 | Détection automatique du RDV réservé | cron `follow-up-calendar` |
 | Saisie du compte rendu, qui clôt l'échéance | dialogue « Saisir le compte rendu » |
 | Historique par apprenant / par entreprise | fiche apprenant → onglet Suivi |
@@ -105,7 +105,10 @@ La détection des RDV réutilise le service account Google déjà en place
 - **Jalons** : durées éditables, ajout, désactivation. Toute modification
   recalcule immédiatement les échéances de tous les contrats.
 - **Relances** : délai d'alerte interne, délai d'envoi au tuteur, délai de 2e
-  relance, lien de réservation, agenda surveillé.
+  relance, marge avant la fin de contrat, lien de réservation, agenda surveillé,
+  et le **destinataire du récapitulatif (ID Discord)**. Ce destinataire est un
+  réglage d'interface, pas une variable d'environnement : la personne qui suit
+  les alternants peut changer sans redéploiement. Vide = aucun récapitulatif.
   Ces délais déterminent uniquement **quand une relance vous est proposée** —
   jamais un envoi.
 - **Modèle de mail** : objet et corps, avec variables `{{tuteur}}`,
@@ -134,16 +137,24 @@ base.
 À ajouter au planificateur (même mécanique que les crons existants, header
 `Authorization: Bearer $CRON_SECRET`) :
 
-```cron
-# Réconciliation + digest interne (n'envoie AUCUN mail tuteur) — tous les jours à 8h
-0 8 * * *  curl -sS -H "Authorization: Bearer $CRON_SECRET" https://hub.zone01normandie.org/api/cron/follow-up-digest
+Branchés sur le VPS via `$HOME/scripts/follow-up-cron.sh` (même convention que
+les autres crons du hub : lecture du `CRON_SECRET` depuis `.env.production`,
+journal dans `$HOME/cron-fetch.log`) :
 
+```cron
 # Détection des RDV réservés dans l'agenda — 2×/jour
-0 7,13 * * *  curl -sS -H "Authorization: Bearer $CRON_SECRET" https://hub.zone01normandie.org/api/cron/follow-up-calendar
+30 6,12 * * *  $HOME/scripts/follow-up-cron.sh calendar
+
+# Réconciliation + récapitulatif Discord (aucun mail tuteur) — tous les jours à 8h
+0 8 * * *      $HOME/scripts/follow-up-cron.sh digest
 ```
 
+La détection d'agenda tourne AVANT le récapitulatif : un RDV déjà réservé ne
+doit pas être signalé comme une relance à faire.
+
 Les deux acceptent `?dry=true` : ils calculent et renvoient l'état sans rien
-poster (même la carte Teams). À utiliser pour la première mise en service.
+envoyer (même le récapitulatif Discord). À utiliser pour la première mise en
+service.
 
 ---
 

@@ -1,14 +1,6 @@
 import 'server-only';
 import { makeLog } from '@/lib/log';
-import {
-  buildAdaptiveCard,
-  factSet,
-  isTeamsConfigured,
-  openUrlAction,
-  sendTeamsCard,
-  textBlock,
-  type AdaptiveElement,
-} from './teams';
+import { sendDiscordDM } from './discord';
 import {
   getFollowUpSettings,
   recordReminder,
@@ -32,7 +24,8 @@ export {
 const log = makeLog('follow-up-notify');
 
 /**
- * Relances « suivi en entreprise » : mail au tuteur + alerte interne Teams.
+ * Relances « suivi en entreprise » : mail au tuteur (préparé, jamais envoyé par
+ * le hub) et récapitulatif interne en DM Discord.
  *
  * RÈGLE ABSOLUE : aucun mail ne part vers une entreprise partenaire sans
  * confirmation humaine explicite. Le hub n'ENVOIE d'ailleurs aucun mail : il
@@ -150,9 +143,9 @@ export async function recordMilestoneReminder(
   return { ok: true };
 }
 
-// ─── Alerte interne (Teams) ──────────────────────────────────────────────────
+// ─── Récapitulatif interne (DM Discord) ─────────────────────────────────────
 
-/** Date courte pour les cartes Teams (jj/mm). */
+/** Date courte pour le récapitulatif (jj/mm). */
 function fmtShort(iso: string): string {
   return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
 }
@@ -162,10 +155,21 @@ function hubUrl(path: string): string {
   return `${base}${path}`;
 }
 
+export interface DigestResult {
+  sent: boolean;
+  skipped?: 'disabled' | 'no_recipient' | 'nothing_to_report' | 'send_failed';
+}
+
 /**
- * Digest interne : ce qu'il y a à traiter, et surtout les relances EN ATTENTE
- * DE CONFIRMATION — le hub ne les envoie pas tout seul, il vient les chercher.
- * Une seule carte par exécution du cron : on ne spamme pas le canal.
+ * Récapitulatif interne envoyé en DM Discord.
+ *
+ * Le destinataire est un ID Discord réglé dans l'interface du hub : la personne
+ * qui suit les alternants peut changer, et ce changement ne doit pas demander
+ * un redéploiement.
+ *
+ * Contenu : d'abord les relances EN ATTENTE DE CONFIRMATION — le hub ne les
+ * envoie pas tout seul, il vient les chercher — puis les retards et les
+ * échéances proches. Un seul message par exécution : on ne spamme pas.
  */
 export async function sendInternalDigest({
   overdue,
@@ -177,79 +181,69 @@ export async function sendInternalDigest({
   upcoming: MilestoneRow[];
   toConfirm?: MilestoneRow[];
   missingTutorEmail?: MilestoneRow[];
-}): Promise<boolean> {
+}): Promise<DigestResult> {
   const settings = await getFollowUpSettings();
-  if (!settings.teamsAlertsEnabled || !isTeamsConfigured()) return false;
-  if (overdue.length === 0 && upcoming.length === 0 && toConfirm.length === 0) return false;
+  if (!settings.digestEnabled) return { sent: false, skipped: 'disabled' };
 
-  /** Liste compacte, tronquée à 10 lignes pour rester lisible dans Teams. */
-  const listOf = (items: MilestoneRow[], value: (m: MilestoneRow) => string) => {
-    const elements: AdaptiveElement[] = [
-      factSet(
-        items.slice(0, 10).map((m) => ({
-          title: `${m.firstName} ${m.lastName}`,
-          value: value(m),
-        })),
-      ),
-    ];
-    if (items.length > 10) {
-      elements.push(textBlock(`…et ${items.length - 10} autre(s).`, { isSubtle: true }));
-    }
-    return elements;
+  const recipient = settings.digestDiscordUserId?.trim();
+  if (!recipient) return { sent: false, skipped: 'no_recipient' };
+
+  if (overdue.length === 0 && upcoming.length === 0 && toConfirm.length === 0) {
+    return { sent: false, skipped: 'nothing_to_report' };
+  }
+
+  /** Liste compacte, tronquée à 8 lignes pour rester lisible dans un DM. */
+  const listOf = (items: MilestoneRow[], detail: (m: MilestoneRow) => string) => {
+    const lines = items
+      .slice(0, 8)
+      .map((m) => `• **${m.firstName} ${m.lastName}** — ${detail(m)}`);
+    if (items.length > 8) lines.push(`_…et ${items.length - 8} autre(s)._`);
+    return lines.join('\n');
   };
 
-  const body: AdaptiveElement[] = [
-    textBlock('Suivi en entreprise — à traiter', { size: 'Large', weight: 'Bolder' }),
-  ];
+  const blocks: string[] = ['**Suivi en entreprise — à traiter**'];
 
   if (toConfirm.length > 0) {
-    body.push(
-      textBlock(`✉️ ${toConfirm.length} relance(s) à relire et confirmer`, {
-        weight: 'Bolder',
-        color: 'Accent',
-      }),
-      textBlock('Aucun mail n’est parti : ils attendent votre validation sur le hub.', {
-        isSubtle: true,
-      }),
-      ...listOf(toConfirm, (m) => `${m.typeLabel} · ${m.companyName} · échéance ${fmtShort(m.dueDate)}`),
+    blocks.push(
+      `✉️ **${toConfirm.length} relance(s) à relire et confirmer**\n` +
+        `_Aucun mail n'est parti : ils attendent votre validation sur le hub._\n` +
+        listOf(
+          toConfirm,
+          (m) => `${m.typeLabel} · ${m.companyName} · échéance ${fmtShort(m.dueDate)}`,
+        ),
     );
   }
 
   if (overdue.length > 0) {
-    body.push(
-      textBlock(`⚠️ ${overdue.length} échéance(s) en retard`, {
-        weight: 'Bolder',
-        color: 'Attention',
-        spacing: 'Medium',
-      }),
-      ...listOf(overdue, (m) => `${m.typeLabel} · ${m.companyName} · ${Math.abs(m.daysUntilDue)} j de retard`),
+    blocks.push(
+      `⚠️ **${overdue.length} échéance(s) en retard**\n` +
+        listOf(
+          overdue,
+          (m) => `${m.typeLabel} · ${m.companyName} · ${Math.abs(m.daysUntilDue)} j de retard`,
+        ),
     );
   }
 
   if (upcoming.length > 0) {
-    body.push(
-      textBlock(`📅 ${upcoming.length} échéance(s) à venir`, {
-        weight: 'Bolder',
-        spacing: 'Medium',
-      }),
-      ...listOf(upcoming, (m) => `${m.typeLabel} · ${m.companyName} · dans ${m.daysUntilDue} j`),
+    blocks.push(
+      `📅 **${upcoming.length} échéance(s) à venir**\n` +
+        listOf(upcoming, (m) => `${m.typeLabel} · ${m.companyName} · dans ${m.daysUntilDue} j`),
     );
   }
 
   if (missingTutorEmail.length > 0) {
-    body.push(
-      textBlock(
-        `🚫 ${missingTutorEmail.length} contrat(s) sans email de tuteur — relance impossible tant que la fiche n'est pas complétée.`,
-        { color: 'Warning', spacing: 'Medium' },
-      ),
+    blocks.push(
+      `🚫 **${missingTutorEmail.length} contrat(s) sans email de tuteur** — relance ` +
+        `impossible tant que la fiche n'est pas complétée.`,
     );
   }
 
-  const card = buildAdaptiveCard(body, [
-    openUrlAction('Ouvrir le suivi', hubUrl('/alternants?tab=suivi')),
-  ]);
+  blocks.push(hubUrl('/alternants?tab=suivi'));
 
-  const sent = await sendTeamsCard(card);
-  if (!sent) log.warn('digest Teams non envoyé');
-  return sent;
+  const sent = await sendDiscordDM(recipient, blocks.join('\n\n'));
+  if (!sent) {
+    log.warn(`récapitulatif Discord non envoyé à ${recipient}`);
+    return { sent: false, skipped: 'send_failed' };
+  }
+  return { sent: true };
 }
