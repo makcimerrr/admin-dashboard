@@ -46,10 +46,10 @@ import {
   Settings2,
 } from "lucide-react";
 import {
+  KANBAN_COLUMNS,
   MILESTONE_STATUS_LABELS,
-  MILESTONE_STATUS_ORDER,
-  MILESTONE_STATUS_TONE,
   displayStatus,
+  milestoneColumnIndex,
   type ApiEnvelope,
   type FollowUpMilestone,
   type FollowUpStats,
@@ -98,8 +98,8 @@ const SORTERS: Record<SortKey, (a: FollowUpMilestone, b: FollowUpMilestone) => n
   lastReport: (a, b) =>
     (a.lastReportAt ? new Date(a.lastReportAt).getTime() : 0) -
     (b.lastReportAt ? new Date(b.lastReportAt).getTime() : 0),
-  status: (a, b) =>
-    MILESTONE_STATUS_ORDER.indexOf(a.status) - MILESTONE_STATUS_ORDER.indexOf(b.status),
+  // Même ordre que les colonnes du Kanban : « en retard » d'abord.
+  status: (a, b) => milestoneColumnIndex(a) - milestoneColumnIndex(b),
   reminders: (a, b) => a.reminderCount - b.reminderCount,
 };
 
@@ -630,15 +630,15 @@ export function FollowUpPanel({ onOpenStudent }: { onOpenStudent?: (studentId: n
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {MILESTONE_STATUS_ORDER.map((status) => {
-            const column = filtered.filter((m) => m.status === status);
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {KANBAN_COLUMNS.map(({ key, label, tone, match }) => {
+            const column = filtered.filter(match);
             return (
-              <Card key={status} className="flex flex-col">
+              <Card key={key} className="flex flex-col">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center justify-between">
-                    <span>{MILESTONE_STATUS_LABELS[status]}</span>
-                    <Badge variant="outline" className={PILL[MILESTONE_STATUS_TONE[status]]}>
+                    <span>{label}</span>
+                    <Badge variant="outline" className={PILL[tone]}>
                       {column.length}
                     </Badge>
                   </CardTitle>
