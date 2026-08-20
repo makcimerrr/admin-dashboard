@@ -94,7 +94,8 @@ const DEFAULT_SETTINGS: FollowUpSettings = {
   replyToEmail: null,
   emailSubjectTemplate: null,
   emailBodyTemplate: null,
-  teamsAlertsEnabled: true,
+  digestDiscordUserId: null,
+  digestEnabled: true,
   updatedAt: new Date(0),
   updatedBy: null,
 };

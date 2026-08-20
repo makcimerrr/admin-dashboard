@@ -390,18 +390,42 @@ export function FollowUpSettingsDialog({
                 </p>
               </div>
 
+              <Separator />
+
               <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
                 <div>
-                  <Label htmlFor="teamsAlertsEnabled">Digest Teams</Label>
+                  <Label htmlFor="digestEnabled">Récapitulatif quotidien</Label>
                   <p className="text-xs text-muted-foreground">
-                    Récapitulatif quotidien des retards et échéances proches sur Teams.
+                    Un message privé Discord chaque jour : relances à confirmer, retards
+                    et échéances proches.
                   </p>
                 </div>
                 <Switch
-                  id="teamsAlertsEnabled"
-                  checked={form.teamsAlertsEnabled ?? true}
-                  onCheckedChange={(v) => setForm({ ...form, teamsAlertsEnabled: v })}
+                  id="digestEnabled"
+                  checked={form.digestEnabled ?? true}
+                  onCheckedChange={(v) => setForm({ ...form, digestEnabled: v })}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="digestDiscordUserId">Destinataire (ID Discord)</Label>
+                <Input
+                  id="digestDiscordUserId"
+                  inputMode="numeric"
+                  placeholder="123456789012345678"
+                  className="w-72 font-mono"
+                  value={form.digestDiscordUserId ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, digestDiscordUserId: e.target.value.trim() })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Le bot Discord envoie le récapitulatif en message privé à cet
+                  identifiant. Pour le récupérer : Discord → Paramètres → Avancés → Mode
+                  développeur, puis clic droit sur la personne → « Copier l'identifiant ».
+                  Modifiable à tout moment ici — changer de destinataire ne demande aucun
+                  redéploiement. Vide = aucun récapitulatif envoyé.
+                </p>
               </div>
             </TabsContent>
 

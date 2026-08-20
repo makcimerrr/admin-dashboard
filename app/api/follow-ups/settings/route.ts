@@ -65,7 +65,8 @@ export const PUT = withErrorHandler(
       'replyToEmail',
       'emailSubjectTemplate',
       'emailBodyTemplate',
-      'teamsAlertsEnabled',
+      'digestDiscordUserId',
+      'digestEnabled',
     ];
     const patch = Object.fromEntries(
       Object.entries(body).filter(([k]) => allowed.includes(k)),

@@ -24,8 +24,9 @@ const log = makeLog('cron:follow-up-digest');
  *  1. RÉCONCILIER — reposer les échéances manquantes (nouveau contrat, dates
  *     corrigées, jalon reconfiguré), et rattacher les comptes rendus orphelins
  *     à l'échéance qu'ils clôturent. Idempotent.
- *  2. SIGNALER EN INTERNE — une carte Teams récapitulant les retards, les
- *     échéances proches et les relances à confirmer, avec un lien vers le hub.
+ *  2. SIGNALER EN INTERNE — un message privé Discord récapitulant les relances
+ *     à confirmer, les retards et les échéances proches, avec un lien vers le
+ *     hub. Le destinataire est réglé dans l'interface (ID Discord).
  *
  * Chaque mail au tuteur part d'un clic humain dans l'UI, après relecture du
  * message (cf. `sendMilestoneReminder`, qui exige `confirmedBy`). Ce cron
@@ -60,8 +61,8 @@ export async function GET(request: NextRequest) {
   /** Signalé à part : sans email de tuteur, aucune relance n'est possible. */
   const missingTutorEmail = toConfirm.filter((m) => !m.tutorEmail?.trim());
 
-  const digestSent = dry
-    ? false
+  const digest = dry
+    ? { sent: false, skipped: 'dry_run' as const }
     : await sendInternalDigest({ overdue, upcoming, toConfirm, missingTutorEmail });
 
   const summary = {
@@ -82,9 +83,9 @@ export async function GET(request: NextRequest) {
     overdue: overdue.length,
     upcoming: upcoming.length,
     missingTutorEmail: missingTutorEmail.length,
-    digestSent,
+    digest,
   };
 
-  log.info('digest calculé (aucun envoi tuteur)', summary);
+  log.info('digest calculé (aucun mail tuteur envoyé)', summary);
   return NextResponse.json({ success: true, ...summary });
 }

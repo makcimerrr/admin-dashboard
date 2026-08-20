@@ -214,7 +214,8 @@ export interface FollowUpSettings {
   replyToEmail: string | null;
   emailSubjectTemplate: string | null;
   emailBodyTemplate: string | null;
-  teamsAlertsEnabled: boolean;
+  digestDiscordUserId: string | null;
+  digestEnabled: boolean;
 }
 
 export const FOLLOW_UP_MODE_LABELS: Record<string, string> = {
