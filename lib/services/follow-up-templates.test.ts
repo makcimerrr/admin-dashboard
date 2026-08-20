@@ -5,7 +5,6 @@ import {
   isMilestoneRelevant,
   isSameDay,
   renderTemplate,
-  textToHtml,
 } from './follow-up-templates';
 
 describe('renderTemplate', () => {
@@ -44,20 +43,6 @@ describe('renderTemplate', () => {
     expect(rendered).not.toMatch(/\{\{/);
     expect(rendered).toContain('Lea Martin');
     expect(rendered).toContain('https://calendar.app.google/abc');
-  });
-});
-
-describe('textToHtml', () => {
-  it('échappe le HTML entrant', () => {
-    expect(textToHtml('<script>alert(1)</script>')).toContain('&lt;script&gt;');
-  });
-
-  it('rend les URLs cliquables', () => {
-    expect(textToHtml('Voir https://x.test/a')).toContain('<a href="https://x.test/a"');
-  });
-
-  it('conserve les sauts de ligne', () => {
-    expect(textToHtml('a\nb')).toContain('a<br>b');
   });
 });
 

@@ -52,18 +52,6 @@ export function renderTemplate(template: string, vars: Record<string, string>): 
   );
 }
 
-/** Échappe le HTML et rend les URLs cliquables, en conservant les sauts de ligne. */
-export function textToHtml(text: string): string {
-  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const linked = escaped.replace(
-    /(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" style="color:#2563eb">$1</a>',
-  );
-  return `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;line-height:1.6;color:#111">${linked
-    .split('\n')
-    .join('<br>')}</div>`;
-}
-
 // ─── Calcul des échéances ────────────────────────────────────────────────────
 
 /** Date d'échéance d'un jalon : début de contrat + N mois. */

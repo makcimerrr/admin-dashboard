@@ -1,6 +1,5 @@
 import 'server-only';
 import { makeLog } from '@/lib/log';
-import { isMailerConfigured, sendMail } from './mailer';
 import {
   buildAdaptiveCard,
   factSet,
@@ -21,7 +20,6 @@ import {
   DEFAULT_BODY_TEMPLATE,
   DEFAULT_SUBJECT_TEMPLATE,
   renderTemplate,
-  textToHtml,
 } from './follow-up-templates';
 
 export {
@@ -37,13 +35,16 @@ const log = makeLog('follow-up-notify');
  * Relances « suivi en entreprise » : mail au tuteur + alerte interne Teams.
  *
  * RÈGLE ABSOLUE : aucun mail ne part vers une entreprise partenaire sans
- * confirmation humaine explicite. Il n'existe aucun chemin d'envoi automatique
- * dans ce module — le cron se contente de calculer et de signaler ce qu'il y a
- * à relancer, un humain relit le mail et confirme.
+ * confirmation humaine explicite. Le hub n'ENVOIE d'ailleurs aucun mail : il
+ * prépare le message, l'ouvre dans la messagerie de l'utilisateur (`mailto:`),
+ * et enregistre la relance quand celui-ci confirme l'avoir envoyée.
  *
- * `sendMilestoneReminder()` exige donc `confirmedBy` (l'email de l'utilisateur
- * hub qui valide) : impossible de l'appeler « au nom de personne ». Chaque
- * envoi, réussi ou non, est tracé dans `follow_up_reminders`.
+ * Ce choix vaut mieux qu'un SMTP côté serveur : le mail part de la boîte réelle
+ * de la personne, donc les réponses du tuteur lui reviennent directement et la
+ * conversation reste là où elle doit être.
+ *
+ * `recordMilestoneReminder()` exige `confirmedBy` (l'email de l'utilisateur hub
+ * qui valide) : impossible de tracer une relance « au nom de personne ».
  */
 
 function formatDate(iso: string): string {
@@ -74,8 +75,8 @@ export function buildTemplateVars(
 
 export interface RenderedEmail {
   subject: string;
+  /** Texte brut : c'est ce que la messagerie de l'utilisateur recevra. */
   text: string;
-  html: string;
 }
 
 export function renderTutorEmail(
@@ -88,87 +89,65 @@ export function renderTutorEmail(
     vars,
   );
   const text = renderTemplate(settings.emailBodyTemplate || DEFAULT_BODY_TEMPLATE, vars);
-
-  // HTML minimal (meilleure délivrabilité qu'un template lourd).
-  return { subject, text, html: textToHtml(text) };
+  return { subject, text };
 }
 
 // ─── Envoi d'une relance tuteur ──────────────────────────────────────────────
 
-export interface SendReminderResult {
+export interface RecordReminderResult {
   ok: boolean;
-  skipped?: 'no_email' | 'mailer_unconfigured';
-  error?: string;
+  skipped?: 'no_email';
 }
 
-export interface SendReminderInput {
+export interface RecordReminderInput {
   kind: ReminderKind;
   /**
-   * Email de l'utilisateur hub qui CONFIRME l'envoi. Obligatoire : c'est la
-   * garantie qu'aucun mail ne part sans décision humaine, et la trace laissée
-   * dans `follow_up_reminders.sent_by`.
+   * Email de l'utilisateur hub qui déclare avoir envoyé le mail. Obligatoire :
+   * c'est toute la valeur de la trace — savoir QUI a relancé, et quand.
    */
   confirmedBy: string;
-  /** Objet relu / corrigé dans l'écran de confirmation (défaut : le modèle). */
+  /** Objet réellement envoyé (relu, éventuellement corrigé). */
   subject?: string;
-  /** Corps relu / corrigé dans l'écran de confirmation (défaut : le modèle). */
-  body?: string;
 }
 
 /**
- * Envoie la relance à un tuteur APRÈS confirmation humaine, trace l'envoi et
- * bascule l'échéance en `relance_envoyee`. Un échec est tracé aussi
- * (statut 'failed') pour pouvoir réessayer sans perdre l'information.
+ * Enregistre une relance que l'utilisateur vient d'envoyer depuis SA messagerie,
+ * et bascule l'échéance en `relance_envoyee`.
+ *
+ * Le hub ne peut pas vérifier qu'un `mailto:` a effectivement abouti : la trace
+ * reflète donc une DÉCLARATION humaine, pas un accusé technique. C'est assumé —
+ * mieux vaut une trace datée et attribuée qu'un envoi automatique que personne
+ * n'a relu.
  */
-export async function sendMilestoneReminder(
+export async function recordMilestoneReminder(
   milestone: MilestoneRow,
-  { kind, confirmedBy, subject: subjectOverride, body: bodyOverride }: SendReminderInput,
-): Promise<SendReminderResult> {
+  { kind, confirmedBy, subject }: RecordReminderInput,
+): Promise<RecordReminderResult> {
   if (!confirmedBy?.trim()) {
-    // Garde-fou : un appelant qui ne sait pas dire QUI confirme n'a rien à
-    // faire ici. Ne jamais assouplir.
-    throw new Error('sendMilestoneReminder : confirmedBy est obligatoire');
+    throw new Error('recordMilestoneReminder : confirmedBy est obligatoire');
   }
   if (!milestone.tutorEmail?.trim()) {
     return { ok: false, skipped: 'no_email' };
   }
-  if (!isMailerConfigured()) {
-    return { ok: false, skipped: 'mailer_unconfigured' };
-  }
 
   const settings = await getFollowUpSettings();
   const rendered = renderTutorEmail(milestone, settings);
-  const subject = subjectOverride?.trim() || rendered.subject;
-  const text = bodyOverride?.trim() || rendered.text;
-
-  const result = await sendMail({
-    to: milestone.tutorEmail.trim(),
-    subject,
-    text,
-    html: textToHtml(text),
-    replyTo: settings.replyToEmail || settings.senderEmail || undefined,
-    from:
-      settings.senderName && settings.senderEmail
-        ? `${settings.senderName} <${settings.senderEmail}>`
-        : undefined,
-  });
 
   await recordReminder({
     milestoneId: milestone.id,
     channel: 'email',
     kind,
     recipient: milestone.tutorEmail.trim(),
-    subject,
+    subject: subject?.trim() || rendered.subject,
     sentBy: confirmedBy,
-    status: result.ok ? 'sent' : 'failed',
-    error: result.error,
+    status: 'sent',
   });
 
-  if (result.ok && milestone.status === 'a_venir') {
+  if (milestone.status === 'a_venir') {
     await setMilestoneStatus(milestone.id, 'relance_envoyee');
   }
 
-  return { ok: result.ok, error: result.error };
+  return { ok: true };
 }
 
 // ─── Alerte interne (Teams) ──────────────────────────────────────────────────
