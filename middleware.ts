@@ -167,6 +167,7 @@ export async function middleware(req: NextRequest) {
   const adminOnlyPrefixes = [
     '/students',
     '/alternants',
+    '/piscines',
     '/specialties',
     '/code-reviews',
     '/promos',
