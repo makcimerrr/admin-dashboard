@@ -1,6 +1,8 @@
 "use client";
 
-import { useData } from "@/lib/client-cache";
+import { useState } from "react";
+import { useData, mutateKey } from "@/lib/client-cache";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +27,7 @@ import {
   type PiscineCandidate,
   type PiscineResultKind,
 } from "../types";
+import { CandidateReviews } from "./candidate-reviews";
 
 /**
  * Fiche candidat : sa progression épreuve par épreuve.
@@ -41,7 +44,16 @@ export function CandidateSheet({
 }) {
   const key = candidate ? `/api/piscines/candidates/${candidate.id}` : null;
   const { data, isLoading } = useData<ApiEnvelope<{ candidate: CandidateDetail }>>(key);
-  const detail = data?.success ? data.data.candidate : null;
+  /** Version locale après une saisie, pour ne pas attendre un aller-retour. */
+  const [saved, setSaved] = useState<CandidateDetail | null>(null);
+  // La saisie locale ne vaut que pour LE candidat ouvert : sans ce garde-fou,
+  // ouvrir quelqu'un d'autre afficherait le commentaire du précédent.
+  const detail =
+    saved && saved.id === candidate?.id
+      ? saved
+      : data?.success
+        ? data.data.candidate
+        : null;
 
   // Examens d'abord : c'est la moyenne d'examens qui décide de l'admission.
   const order: PiscineResultKind[] = ["exam", "project", "exercise"];
@@ -125,7 +137,29 @@ export function CandidateSheet({
           </Card>
         </div>
 
-        <div className="mt-6 space-y-5">
+        <Tabs defaultValue="resultats" className="mt-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="resultats">Résultats</TabsTrigger>
+            <TabsTrigger value="suivi">
+              Commentaire et CR
+              {detail && detail.reviews.length > 0 ? ` (${detail.reviews.length})` : ""}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="suivi" className="mt-4">
+            {candidate && (
+              <CandidateReviews
+                candidateId={candidate.id}
+                detail={detail}
+                onSaved={(updated) => {
+                  setSaved(updated);
+                  if (key) mutateKey(key);
+                }}
+              />
+            )}
+          </TabsContent>
+
+          <TabsContent value="resultats" className="mt-4 space-y-5">
           {isLoading ? (
             <LoadingCard height="md" />
           ) : !detail || detail.results.length === 0 ? (
@@ -187,7 +221,8 @@ export function CandidateSheet({
               );
             })
           )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

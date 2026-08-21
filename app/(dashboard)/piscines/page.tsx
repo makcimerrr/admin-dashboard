@@ -41,6 +41,7 @@ import { CandidateSheet } from "./_components/candidate-sheet";
 import {
   ADMISSION_LABELS,
   ADMISSION_TONE,
+  NOT_REGISTERED,
   candidateName,
   matchesAllWords,
   type AdmissionStatus,
@@ -83,14 +84,21 @@ export default function PiscinesPage() {
 
   const detailKey = sessionId ? `/api/piscines/${sessionId}` : null;
   const { data: detailData, isLoading: loadingDetail } = useData<
-    ApiEnvelope<{ candidates: PiscineCandidate[]; stats: PiscineStats; exams: string[] }>
+    ApiEnvelope<{
+      candidates: PiscineCandidate[];
+      stats: PiscineStats;
+      exams: { name: string; maxScore: number }[];
+      projects: string[];
+    }>
   >(detailKey);
 
   const candidates = detailData?.success ? detailData.data.candidates : [];
   const stats = detailData?.success ? detailData.data.stats : null;
-  // Une colonne par examen de la session, dans l'ordre où ils ont eu lieu.
-  // Les sessions n'ont pas toutes les mêmes épreuves : rien n'est codé en dur.
+  // Grille de lecture stable : les 4 examens et les 3 projets, quelle que soit
+  // la session. Une épreuve non tenue s'affiche « not register » au lieu de
+  // faire disparaître sa colonne.
   const exams = detailData?.success ? detailData.data.exams : [];
+  const projects = detailData?.success ? detailData.data.projects : [];
   const session = sessions.find((s) => s.eventId === sessionId) ?? null;
 
   const filtered = useMemo(() => {
@@ -355,8 +363,13 @@ export default function PiscinesPage() {
                             <TableHead>Candidat</TableHead>
                             <TableHead className="text-right">Niveau</TableHead>
                             <TableHead className="text-right">Exercices</TableHead>
-                            {exams.map((name) => (
-                              <TableHead key={name} className="text-right whitespace-nowrap">
+                            {exams.map((e) => (
+                              <TableHead key={e.name} className="text-right whitespace-nowrap">
+                                {e.name}
+                              </TableHead>
+                            ))}
+                            {projects.map((name) => (
+                              <TableHead key={name} className="whitespace-nowrap">
                                 {name}
                               </TableHead>
                             ))}
@@ -395,26 +408,44 @@ export default function PiscinesPage() {
                                 {c.exercisesDone}
                                 <span className="text-muted-foreground">/{c.exercisesTried}</span>
                               </TableCell>
-                              {exams.map((name) => {
-                                const sc = c.examScores[name];
+                              {exams.map((e) => {
+                                const sc = c.examScores[e.name];
                                 return (
                                   <TableCell
-                                    key={name}
+                                    key={e.name}
                                     className={cn(
-                                      "text-right tabular-nums",
-                                      // Un examen non passé n'est pas un zéro :
-                                      // la nuance compte pour lire un parcours.
+                                      "text-right tabular-nums whitespace-nowrap",
+                                      // Ne pas s'être présenté n'est pas un
+                                      // échec : on le dit, sans le noter.
                                       !sc
-                                        ? "text-muted-foreground"
+                                        ? "text-xs text-muted-foreground italic"
                                         : sc.passed === 0
                                           ? "text-destructive"
                                           : sc.passed >= sc.max / 2
                                             ? "text-success"
                                             : "text-warning",
                                     )}
-                                    title={sc ? undefined : "Examen non passé"}
                                   >
-                                    {sc ? `${sc.passed}/${sc.max}` : "—"}
+                                    {sc ? `${sc.passed}/${sc.max}` : NOT_REGISTERED}
+                                  </TableCell>
+                                );
+                              })}
+                              {projects.map((name) => {
+                                const r = c.projectResults[name];
+                                return (
+                                  <TableCell key={name} className="whitespace-nowrap">
+                                    {r === undefined ? (
+                                      <span className="text-xs italic text-muted-foreground">
+                                        {NOT_REGISTERED}
+                                      </span>
+                                    ) : (
+                                      <Badge
+                                        variant="outline"
+                                        className={r === "reussi" ? PILL.emerald : PILL.rose}
+                                      >
+                                        {r === "reussi" ? "Réussi" : "Échoué"}
+                                      </Badge>
+                                    )}
                                   </TableCell>
                                 );
                               })}

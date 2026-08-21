@@ -2,9 +2,12 @@ import 'server-only';
 import { and, asc, desc, eq, notInArray, sql } from 'drizzle-orm';
 import { db } from '../config';
 import {
+  piscineCandidateComments,
   piscineCandidates,
+  piscineProjectReviews,
   piscineResults,
   piscineSessions,
+  REVIEWED_PROJECTS,
   type AdmissionStatus,
   type PiscineResultKind,
   type PiscineSession,
@@ -61,6 +64,25 @@ const EXAM_MAX_SCORE: { suffix: string; max: number }[] = [
   { suffix: 'exam-03', max: 9 },
   { suffix: 'final-exam', max: 10 },
 ];
+
+/**
+ * Grille de lecture standard d'une piscine-go : les mêmes colonnes d'une
+ * session à l'autre.
+ *
+ * Une session de rattrapage ne tient parfois qu'une seule épreuve (août 2026
+ * n'a qu'un « Exam 02 ») : n'afficher que ce qu'elle contient donnait un
+ * tableau différent à chaque session, impossible à lire en diagonale.
+ * L'absence d'une épreuve devient une information affichée, pas une colonne
+ * manquante.
+ */
+export const STANDARD_EXAMS: { name: string; maxScore: number }[] = [
+  { name: 'Exam 01', maxScore: 5 },
+  { name: 'Exam 02', maxScore: 7 },
+  { name: 'Exam 03', maxScore: 9 },
+  { name: 'Final Exam', maxScore: 10 },
+];
+
+export const STANDARD_PROJECTS = ['quad', 'sudoku', 'quadchecker'] as const;
 
 function examMaxScore(eventPath: string | null): number | null {
   const p = (eventPath ?? '').toLowerCase();
@@ -286,8 +308,11 @@ export async function syncSession(
       (sum, e) => sum + (passedByExam.get(`${login}|${e.eventId}`) ?? 0),
       0,
     );
-    const hasExam = exams.length > 0;
-    const examTotal = hasExam ? sessionExamScale : 0;
+    // Ne pas s'être présenté vaut zéro, pas « non renseigné » : le barème de
+    // la session s'applique à tout le monde, sinon deux candidats ne se
+    // comparent pas. Le détail par épreuve, lui, distingue « non inscrit »
+    // d'un vrai échec.
+    const examTotal = sessionExamScale;
     const examAverage = examTotal > 0 ? examPassed / examTotal : null;
 
     const exercises = own.filter(
@@ -423,6 +448,11 @@ export interface CandidateRow {
   lastActivityAt: string | null;
   /** Note de chaque examen : réussis / barème (« Exam 01 » → 2/5). */
   examScores: Record<string, { passed: number; max: number }>;
+  /**
+   * Projets : réussi / échoué. Un projet ABSENT de cette table n'a pas été
+   * tenté — ce n'est pas un échec, et la nuance se voit dans le tableau.
+   */
+  projectResults: Record<string, 'reussi' | 'echoue'>;
   /** Cumul sur l'ensemble des examens passés. */
   examPassed: number | null;
   examTotal: number | null;
@@ -455,17 +485,21 @@ function riskOf(c: {
 }
 
 /**
- * Examens d'une session, dans l'ordre où ils ont eu lieu.
+ * Examens à afficher pour une session : la grille STANDARD, complétée par
+ * d'éventuelles épreuves propres à la session.
  *
- * L'ordre vient de l'`event_id` : les sous-événements sont créés dans l'ordre
- * chronologique (Exam 01 = 1023, Exam 02 = 1025, Final Exam = 1029), ce qui
- * donne les colonnes dans le bon sens sans dépendre du nom.
+ * Une session de rattrapage ne tient parfois qu'une épreuve (août 2026 n'a
+ * qu'un « Exam 02 ») : n'afficher que ce qu'elle contient donnait un tableau
+ * différent à chaque session, illisible en diagonale. L'absence d'une épreuve
+ * devient une information affichée, pas une colonne manquante.
  */
-export async function getSessionExams(sessionId: number): Promise<string[]> {
+export async function getSessionExams(
+  sessionId: number,
+): Promise<{ name: string; maxScore: number }[]> {
   const rows = await db
     .select({
       name: piscineResults.name,
-      firstEvent: sql<number>`min(${piscineResults.eventId})`,
+      maxScore: sql<number>`max(${piscineResults.maxScore})`,
     })
     .from(piscineResults)
     .innerJoin(piscineCandidates, eq(piscineCandidates.id, piscineResults.candidateId))
@@ -478,7 +512,31 @@ export async function getSessionExams(sessionId: number): Promise<string[]> {
     .groupBy(piscineResults.name)
     .orderBy(sql`min(${piscineResults.eventId})`);
 
-  return rows.map((r) => r.name);
+  const extras = rows
+    .filter((r) => r.maxScore !== null && !STANDARD_EXAMS.some((e) => e.name === r.name))
+    .map((r) => ({ name: r.name, maxScore: Number(r.maxScore) }));
+
+  return [...STANDARD_EXAMS, ...extras];
+}
+
+/** Projets à afficher : la grille standard, plus d'éventuels ajouts. */
+export async function getSessionProjects(sessionId: number): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ name: piscineResults.name })
+    .from(piscineResults)
+    .innerJoin(piscineCandidates, eq(piscineCandidates.id, piscineResults.candidateId))
+    .where(
+      and(
+        eq(piscineCandidates.sessionEventId, sessionId),
+        eq(piscineResults.kind, 'project'),
+      ),
+    );
+
+  const extras = rows
+    .map((r) => r.name)
+    .filter((n) => !(STANDARD_PROJECTS as readonly string[]).includes(n));
+
+  return [...STANDARD_PROJECTS, ...extras];
 }
 
 export async function getSessionCandidates(sessionId: number): Promise<CandidateRow[]> {
@@ -514,6 +572,28 @@ export async function getSessionCandidates(sessionId: number): Promise<Candidate
     examsByCandidate.set(r.candidateId, entry);
   }
 
+  const projectRows = await db
+    .select({
+      candidateId: piscineResults.candidateId,
+      name: piscineResults.name,
+      grade: piscineResults.grade,
+    })
+    .from(piscineResults)
+    .innerJoin(piscineCandidates, eq(piscineCandidates.id, piscineResults.candidateId))
+    .where(
+      and(
+        eq(piscineCandidates.sessionEventId, sessionId),
+        eq(piscineResults.kind, 'project'),
+      ),
+    );
+
+  const projectsByCandidate = new Map<number, Record<string, 'reussi' | 'echoue'>>();
+  for (const r of projectRows) {
+    const entry = projectsByCandidate.get(r.candidateId) ?? {};
+    entry[r.name] = (r.grade ?? 0) > 0 ? 'reussi' : 'echoue';
+    projectsByCandidate.set(r.candidateId, entry);
+  }
+
   return rows.map((c) => ({
     id: c.id,
     login: c.login,
@@ -527,6 +607,7 @@ export async function getSessionCandidates(sessionId: number): Promise<Candidate
     examAverage: c.examAverage,
     lastActivityAt: c.lastActivityAt?.toISOString() ?? null,
     examScores: examsByCandidate.get(c.id) ?? {},
+    projectResults: projectsByCandidate.get(c.id) ?? {},
     examPassed: c.examPassed,
     examTotal: c.examTotal,
     risk: riskOf({
@@ -637,6 +718,81 @@ export async function getSessionStats(sessionId: number): Promise<SessionStats> 
   };
 }
 
+// ─── Saisie humaine : commentaire et comptes rendus ──────────────────────────
+
+export interface ProjectReview {
+  project: string;
+  slot: number;
+  content: string;
+  author: string;
+  updatedAt: string;
+}
+
+/**
+ * Enregistre (ou efface) un compte rendu de projet.
+ *
+ * Un contenu vide SUPPRIME la ligne : sans ça, effacer un texte laisserait un
+ * compte rendu vide qui compterait comme rempli.
+ */
+export async function saveProjectReview(
+  candidateId: number,
+  project: string,
+  slot: number,
+  content: string,
+  author: string,
+): Promise<void> {
+  if (!(REVIEWED_PROJECTS as readonly string[]).includes(project)) {
+    throw new Error(`Projet inconnu : ${project}`);
+  }
+  if (slot < 1 || slot > 3) throw new Error('Le compte rendu doit être 1, 2 ou 3');
+
+  if (!content.trim()) {
+    await db
+      .delete(piscineProjectReviews)
+      .where(
+        and(
+          eq(piscineProjectReviews.candidateId, candidateId),
+          eq(piscineProjectReviews.project, project),
+          eq(piscineProjectReviews.slot, slot),
+        ),
+      );
+    return;
+  }
+
+  await db
+    .insert(piscineProjectReviews)
+    .values({ candidateId, project, slot, content: content.trim(), author })
+    .onConflictDoUpdate({
+      target: [
+        piscineProjectReviews.candidateId,
+        piscineProjectReviews.project,
+        piscineProjectReviews.slot,
+      ],
+      set: { content: content.trim(), author, updatedAt: new Date() },
+    });
+}
+
+/** Commentaire libre sur un candidat ; vide = suppression. */
+export async function saveCandidateComment(
+  candidateId: number,
+  comment: string,
+  author: string,
+): Promise<void> {
+  if (!comment.trim()) {
+    await db
+      .delete(piscineCandidateComments)
+      .where(eq(piscineCandidateComments.candidateId, candidateId));
+    return;
+  }
+  await db
+    .insert(piscineCandidateComments)
+    .values({ candidateId, comment: comment.trim(), author })
+    .onConflictDoUpdate({
+      target: piscineCandidateComments.candidateId,
+      set: { comment: comment.trim(), author, updatedAt: new Date() },
+    });
+}
+
 export interface CandidateDetail extends CandidateRow {
   results: {
     name: string;
@@ -648,6 +804,9 @@ export interface CandidateDetail extends CandidateRow {
     isDone: boolean;
     updatedAt: string | null;
   }[];
+  /** Saisie humaine, jamais écrasée par la synchro. */
+  comment: { content: string; author: string; updatedAt: string } | null;
+  reviews: ProjectReview[];
 }
 
 export async function getCandidateDetail(candidateId: number): Promise<CandidateDetail | null> {
@@ -658,11 +817,23 @@ export async function getCandidateDetail(candidateId: number): Promise<Candidate
     .limit(1);
   if (!row) return null;
 
-  const results = await db
-    .select()
-    .from(piscineResults)
-    .where(eq(piscineResults.candidateId, candidateId))
-    .orderBy(asc(piscineResults.updatedAt));
+  const [results, comment, reviews] = await Promise.all([
+    db
+      .select()
+      .from(piscineResults)
+      .where(eq(piscineResults.candidateId, candidateId))
+      .orderBy(asc(piscineResults.updatedAt)),
+    db
+      .select()
+      .from(piscineCandidateComments)
+      .where(eq(piscineCandidateComments.candidateId, candidateId))
+      .limit(1),
+    db
+      .select()
+      .from(piscineProjectReviews)
+      .where(eq(piscineProjectReviews.candidateId, candidateId))
+      .orderBy(asc(piscineProjectReviews.project), asc(piscineProjectReviews.slot)),
+  ]);
 
   return {
     id: row.id,
@@ -681,6 +852,14 @@ export async function getCandidateDetail(candidateId: number): Promise<Candidate
         .filter((r) => r.kind === 'exam' && r.maxScore !== null)
         .map((r) => [r.name, { passed: r.score ?? 0, max: r.maxScore! }]),
     ),
+    projectResults: Object.fromEntries(
+      results
+        .filter((r) => r.kind === 'project')
+        .map((r) => [r.name, (r.grade ?? 0) > 0 ? 'reussi' : 'echoue'] as [
+          string,
+          'reussi' | 'echoue',
+        ]),
+    ),
     examPassed: row.examPassed,
     examTotal: row.examTotal,
     risk: riskOf({
@@ -690,6 +869,20 @@ export async function getCandidateDetail(candidateId: number): Promise<Candidate
       admission: row.admission as AdmissionStatus,
       lastActivityAt: row.lastActivityAt,
     }),
+    comment: comment[0]
+      ? {
+          content: comment[0].comment,
+          author: comment[0].author,
+          updatedAt: comment[0].updatedAt.toISOString(),
+        }
+      : null,
+    reviews: reviews.map((r) => ({
+      project: r.project,
+      slot: r.slot,
+      content: r.content,
+      author: r.author,
+      updatedAt: r.updatedAt.toISOString(),
+    })),
     results: results.map((r) => ({
       name: r.name,
       kind: r.kind as PiscineResultKind,

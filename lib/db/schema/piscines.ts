@@ -142,6 +142,59 @@ export const piscineResults = pgTable(
   }),
 );
 
+// ─── Saisie humaine ──────────────────────────────────────────────────────────
+
+/**
+ * Commentaire libre sur un candidat, et comptes rendus de projet.
+ *
+ * ⚠️ Tables SÉPARÉES du miroir : la synchro réécrit `piscine_candidates` et
+ * `piscine_results` à chaque passage. Ranger une saisie humaine dedans
+ * reviendrait à la perdre au prochain cron.
+ */
+export const piscineCandidateComments = pgTable('piscine_candidate_comments', {
+  candidateId: integer('candidate_id')
+    .primaryKey()
+    .references(() => piscineCandidates.id, { onDelete: 'cascade' }),
+  comment: text('comment').notNull(),
+  author: text('author').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+/** Projets faisant l'objet de comptes rendus. */
+export const REVIEWED_PROJECTS = ['quad', 'sudoku', 'quadchecker'] as const;
+export type ReviewedProject = (typeof REVIEWED_PROJECTS)[number];
+
+/** Trois comptes rendus attendus par projet. */
+export const REVIEW_SLOTS = [1, 2, 3] as const;
+
+export const piscineProjectReviews = pgTable(
+  'piscine_project_reviews',
+  {
+    id: serial('id').primaryKey(),
+    candidateId: integer('candidate_id')
+      .notNull()
+      .references(() => piscineCandidates.id, { onDelete: 'cascade' }),
+    project: text('project').notNull(),
+    /** 1, 2 ou 3. */
+    slot: integer('slot').notNull(),
+    content: text('content').notNull(),
+    author: text('author').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueSlot: uniqueIndex('idx_piscine_review_unique').on(
+      table.candidateId,
+      table.project,
+      table.slot,
+    ),
+    byCandidate: index('idx_piscine_review_candidate').on(table.candidateId),
+  }),
+);
+
+export type PiscineCandidateComment = typeof piscineCandidateComments.$inferSelect;
+export type PiscineProjectReview = typeof piscineProjectReviews.$inferSelect;
+
 export type PiscineSession = typeof piscineSessions.$inferSelect;
 export type NewPiscineSession = typeof piscineSessions.$inferInsert;
 export type PiscineCandidate = typeof piscineCandidates.$inferSelect;
