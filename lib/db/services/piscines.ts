@@ -226,13 +226,23 @@ export async function syncSession(
   }
 
   /**
-   * Barème complet de la session : somme des barèmes de TOUS ses examens.
-   * C'est le dénominateur commun qui rend les candidats comparables.
+   * Barème complet de la session : somme des barèmes de ses examens, comptés
+   * une seule fois PAR NOM.
+   *
+   * Certaines sessions rejouent une épreuve (Février 2026 a deux « Exam 02» et
+   * deux « Exam 03 », sur des événements distincts). Les additionner portait le
+   * barème à 47 au lieu de 31 et écrasait le pourcentage de tous les candidats
+   * de la session — 18 % contre 30 % ailleurs, sans que personne n'ait moins
+   * bien réussi. Un examen rejoué reste le même examen.
    */
-  const sessionExamScale = children.reduce(
-    (sum, c) => sum + (kindOfEvent(c.path) === 'exam' ? (examMaxScore(c.path) ?? 0) : 0),
-    0,
-  );
+  const scaleByExamName = new Map<string, number>();
+  for (const c of children) {
+    if (kindOfEvent(c.path) !== 'exam') continue;
+    const max = examMaxScore(c.path);
+    if (max === null || !c.objectName) continue;
+    scaleByExamName.set(c.objectName, max);
+  }
+  const sessionExamScale = [...scaleByExamName.values()].reduce((a, b) => a + b, 0);
 
   /** (login|eventId) → exercices réussis pendant cet examen. */
   const passedByExam = new Map<string, number>();
@@ -267,6 +277,10 @@ export async function syncSession(
      *
      * `null` si le candidat n'a passé aucun examen : ce n'est pas un zéro,
      * c'est une absence.
+     *
+     * Quand une épreuve a été rejouée, c'est la DERNIÈRE tentative qui compte
+     * (cf. la déduplication par nom plus haut) : c'est le dernier mot de la
+     * plateforme sur cette épreuve.
      */
     const examPassed = exams.reduce(
       (sum, e) => sum + (passedByExam.get(`${login}|${e.eventId}`) ?? 0),
