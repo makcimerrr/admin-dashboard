@@ -48,6 +48,16 @@ export interface PiscineCandidate {
   risk: string | null;
 }
 
+export interface CandidateMatch {
+  id: number;
+  login: string;
+  firstName: string | null;
+  lastName: string | null;
+  sessionEventId: number;
+  sessionLabel: string;
+  admission: AdmissionStatus;
+}
+
 export interface PiscineStats {
   candidates: number;
   admitted: number;
@@ -83,6 +93,33 @@ export interface ApiEnvelope<T> {
   success: boolean;
   data: T;
   error?: { code: string; message: string };
+}
+
+/**
+ * Normalise pour la recherche : minuscules, sans accents, ponctuation réduite
+ * à des espaces. « Dubois » et « DUBOIS » se rejoignent, « Le Guen » aussi.
+ */
+export function normalizeSearch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Vrai si TOUS les mots de la requête apparaissent dans le texte, quel que soit
+ * leur ordre.
+ *
+ * « Maxime Dubois » et « Dubois Maxime » doivent tous deux trouver la personne :
+ * une simple sous-chaîne ne marche que dans le sens où le nom est stocké.
+ */
+export function matchesAllWords(haystack: string, query: string): boolean {
+  const words = normalizeSearch(query).split(' ').filter(Boolean);
+  if (words.length === 0) return true;
+  const target = normalizeSearch(haystack);
+  return words.every((w) => target.includes(w));
 }
 
 /** Nom affichable d'un candidat : l'identité si connue, sinon le login. */

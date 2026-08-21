@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useData, mutateKey } from "@/lib/client-cache";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,8 +42,10 @@ import {
   ADMISSION_LABELS,
   ADMISSION_TONE,
   candidateName,
+  matchesAllWords,
   type AdmissionStatus,
   type ApiEnvelope,
+  type CandidateMatch,
   type PiscineCandidate,
   type PiscineSession,
   type PiscineStats,
@@ -69,6 +71,10 @@ export default function PiscinesPage() {
   const [admissionFilter, setAdmissionFilter] = useState<AdmissionStatus | "all" | "risk">("all");
   const [selected, setSelected] = useState<PiscineCandidate | null>(null);
   const [syncing, setSyncing] = useState(false);
+  /** Candidat mis en évidence après une recherche (id), et sa ligne. */
+  const [highlighted, setHighlighted] = useState<number | null>(null);
+  const [matches, setMatches] = useState<CandidateMatch[]>([]);
+  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
 
   // Ouvre la session la plus récente dès que la liste arrive.
   useEffect(() => {
@@ -88,13 +94,13 @@ export default function PiscinesPage() {
   const session = sessions.find((s) => s.eventId === sessionId) ?? null;
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = search.trim();
     return candidates.filter((c) => {
+      // Tous les mots doivent être présents, dans n'importe quel ordre :
+      // « Maxime Dubois » et « Dubois Maxime » trouvent la même personne.
       const matchesSearch =
         q === "" ||
-        c.login.toLowerCase().includes(q) ||
-        candidateName(c).toLowerCase().includes(q) ||
-        (c.email?.toLowerCase().includes(q) ?? false);
+        matchesAllWords(`${c.firstName ?? ""} ${c.lastName ?? ""} ${c.login} ${c.email ?? ""}`, q);
 
       const matchesAdmission =
         admissionFilter === "all"
@@ -106,6 +112,44 @@ export default function PiscinesPage() {
       return matchesSearch && matchesAdmission;
     });
   }, [candidates, search, admissionFilter]);
+
+  /**
+   * Recherche transversale : un candidat peut être dans n'importe quelle
+   * session, et on ne sait pas forcément laquelle. On interroge donc toutes
+   * les sessions dès que la requête est un peu spécifique.
+   */
+  useEffect(() => {
+    const q = search.trim();
+    if (q.length < 3) {
+      setMatches([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const res = await fetch(`/api/piscines/search?q=${encodeURIComponent(q)}`);
+      const json = (await res.json()) as ApiEnvelope<{ matches: CandidateMatch[] }>;
+      if (json.success) setMatches(json.data.matches);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  /**
+   * Ouvre un candidat trouvé par la recherche : bascule sur SA session, vide
+   * le filtre pour montrer toute la promo, et met sa ligne en évidence.
+   */
+  const goToCandidate = (m: CandidateMatch) => {
+    setSessionId(m.sessionEventId);
+    setSearch("");
+    setAdmissionFilter("all");
+    setMatches([]);
+    setHighlighted(m.id);
+  };
+
+  // Fait défiler jusqu'à la ligne mise en évidence, une fois la session chargée.
+  useEffect(() => {
+    if (highlighted === null) return;
+    const row = rowRefs.current.get(highlighted);
+    if (row) row.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [highlighted, candidates]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -165,6 +209,7 @@ export default function PiscinesPage() {
               onValueChange={(v) => {
                 setSessionId(Number(v));
                 setSelected(null);
+                setHighlighted(null);
               }}
             >
               <SelectTrigger className="w-full lg:w-[340px]">
@@ -224,11 +269,42 @@ export default function PiscinesPage() {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Nom, login ou email..."
+                    placeholder="Nom, login ou email — « Maxime Dubois » ou « Dubois Maxime »"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pl-10"
                   />
+
+                  {/* Résultats des AUTRES sessions : c'est ce qui permet de
+                      retrouver quelqu'un sans savoir dans quelle piscine il
+                      était. */}
+                  {matches.filter((m) => m.sessionEventId !== sessionId).length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border bg-popover shadow-md">
+                      <p className="border-b px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+                        Trouvé dans d&apos;autres sessions
+                      </p>
+                      {matches
+                        .filter((m) => m.sessionEventId !== sessionId)
+                        .slice(0, 6)
+                        .map((m) => (
+                          <button
+                            key={m.id}
+                            onClick={() => goToCandidate(m)}
+                            className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50"
+                          >
+                            <span>
+                              <span className="font-medium">{candidateName(m)}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {m.login}
+                              </span>
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {m.sessionLabel}
+                            </span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
                 </div>
                 <Select
                   value={admissionFilter}
@@ -296,7 +372,16 @@ export default function PiscinesPage() {
                           {filtered.map((c) => (
                             <TableRow
                               key={c.id}
-                              className="cursor-pointer"
+                              ref={(el) => {
+                                if (el) rowRefs.current.set(c.id, el);
+                                else rowRefs.current.delete(c.id);
+                              }}
+                              className={cn(
+                                "cursor-pointer",
+                                // Surbrillance persistante : on vient d'arriver
+                                // ici en cherchant cette personne précisément.
+                                highlighted === c.id && "bg-primary/10 ring-1 ring-primary/40",
+                              )}
                               onClick={() => setSelected(c)}
                             >
                               <TableCell>
