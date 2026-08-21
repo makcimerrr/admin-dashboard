@@ -39,6 +39,8 @@ export interface PiscineCandidate {
   exercisesTried: number;
   examAverage: number | null;
   lastActivityAt: string | null;
+  /** Note de chaque examen, indexée par son nom (« Exam 01 » → 0.27). */
+  examGrades: Record<string, number | null>;
   /** Motif d'alerte, ou null si rien à signaler. */
   risk: string | null;
 }

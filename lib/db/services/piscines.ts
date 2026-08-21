@@ -1,5 +1,5 @@
 import 'server-only';
-import { asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, notInArray, sql } from 'drizzle-orm';
 import { db } from '../config';
 import {
   piscineCandidates,
@@ -38,16 +38,17 @@ function sessionLabel(path: string, startAt: Date | null): string {
 }
 
 /**
- * Nature d'une épreuve, déduite de son nom.
+ * Nature d'une épreuve, déduite du CHEMIN de son événement.
  *
- * Zone01 ne distingue pas les examens des exercices dans `object.type` (tout est
- * `exercise`) : c'est le nom qui porte l'information, et c'est cette distinction
- * qui rend la moyenne d'examens comparable entre candidats.
+ * Les examens sont des sous-événements dédiés — `/rouen/piscine-go/exam-01`,
+ * `…/exam-02`, `…/final-exam` — et c'est le chemin qui fait foi. Zone01 met
+ * `object.type = 'exercise'` sur tout, se fier au nom ne tiendrait qu'aussi
+ * longtemps que personne ne nomme un exercice « examen ».
  */
-function resultKind(name: string): PiscineResultKind {
-  const n = name.toLowerCase();
-  if (n.includes('exam')) return 'exam';
-  if (['quad', 'sudoku', 'quadchecker'].some((p) => n.includes(p))) return 'project';
+function kindOfEvent(eventPath: string | null): PiscineResultKind {
+  const p = (eventPath ?? '').toLowerCase();
+  if (/\/(final-)?exam(-\d+)?$/.test(p)) return 'exam';
+  if (/\/(quad|sudoku|quadchecker)$/.test(p)) return 'project';
   return 'exercise';
 }
 
@@ -103,7 +104,7 @@ export async function syncPiscines(
       });
 
     try {
-      const counts = await syncSession(s.id);
+      const counts = await syncSession(s.id, { objectName: s.objectName });
       result.sessions++;
       result.candidates += counts.candidates;
       result.results += counts.results;
@@ -119,6 +120,7 @@ export async function syncPiscines(
 /** Synchronise UNE session : roster, progressions, examens, admissions. */
 export async function syncSession(
   sessionId: number,
+  sessionRoot?: { objectName: string | null },
 ): Promise<{ candidates: number; results: number }> {
   const [participants, children, admissions] = await Promise.all([
     fetchSessionParticipants(sessionId),
@@ -129,13 +131,48 @@ export async function syncSession(
   // Progressions de la session ET de ses sous-événements, en une seule requête.
   const progress = await fetchSessionProgress([sessionId, ...children.map((c) => c.id)]);
 
+  // Chemin ET nom d'objet de chaque événement : le chemin donne la nature de
+  // l'épreuve, le nom permet de reconnaître SA note d'ensemble.
+  const pathByEvent = new Map<number, string | null>(children.map((c) => [c.id, c.path]));
+  const objectNameByEvent = new Map<number, string | null>(
+    children.map((c) => [c.id, c.objectName]),
+  );
+
+  /**
+   * La progression portant le nom de la session elle-même (« Piscine Go ») est
+   * l'avancement global, pas un exercice : la compter gonflait le total de
+   * chaque candidat et polluait la liste des exercices.
+   */
+  const sessionObjectName = sessionRoot?.objectName ?? null;
+
   const admissionByLogin = new Map(admissions.map((a) => [a.userLogin, a.grade]));
 
   // Dernier enregistrement par (candidat, épreuve) : Zone01 en produit un par
   // tentative, garder le plus récent est la seule lecture juste.
+  /**
+   * ⚠️ Sous un événement d'examen, Zone01 range DEUX natures de lignes :
+   *   - les exercices tentés pendant l'épreuve (`only1`, `printif`… notés 0/1)
+   *   - la note de l'examen lui-même (objet « Exam 01 », ex. 0.30)
+   *
+   * Seule la seconde est une note d'examen. Les moyenner ensemble gonflait la
+   * moyenne — 0.85 au lieu de 0.31 pour un candidat — ce qui peut fausser une
+   * décision de sélection. Et les tentatives portent les mêmes noms que les
+   * exercices du quotidien, donc les stocker les écrasait.
+   *
+   * Règle : sous un sous-événement, on ne garde que la ligne dont l'objet porte
+   * le nom de l'événement. Sur la racine, l'inverse — sa propre ligne est
+   * l'avancement global, les autres sont les exercices du quotidien.
+   */
   const latest = new Map<string, PiscineProgressRaw>();
   for (const p of progress) {
     if (!p.objectName) continue;
+
+    const isChild = p.eventId != null && objectNameByEvent.has(p.eventId);
+    if (isChild) {
+      if (p.objectName !== objectNameByEvent.get(p.eventId!)) continue;
+    } else if (sessionObjectName && p.objectName === sessionObjectName) {
+      continue;
+    }
     const key = `${p.userLogin}|${p.objectName}`;
     const prev = latest.get(key);
     if (!prev || (p.updatedAt ?? '') >= (prev.updatedAt ?? '')) latest.set(key, p);
@@ -159,9 +196,15 @@ export async function syncSession(
     const info = participantByLogin.get(login);
     const own = byLogin.get(login) ?? [];
 
-    const exams = own.filter((p) => resultKind(p.objectName!) === 'exam' && p.grade !== null);
+    const exams = own.filter(
+      (p) => kindOfEvent(pathByEvent.get(p.eventId ?? -1) ?? null) === 'exam' && p.grade !== null,
+    );
     const examAverage =
       exams.length > 0 ? exams.reduce((sum, e) => sum + (e.grade ?? 0), 0) / exams.length : null;
+
+    const exercises = own.filter(
+      (p) => kindOfEvent(pathByEvent.get(p.eventId ?? -1) ?? null) === 'exercise',
+    );
 
     const lastActivity = own.reduce<string | null>(
       (max, p) => (p.updatedAt && (!max || p.updatedAt > max) ? p.updatedAt : max),
@@ -182,8 +225,8 @@ export async function syncSession(
         email: info?.email ?? null,
         level: info?.level ?? null,
         admission,
-        exercisesDone: own.filter((p) => p.isDone).length,
-        exercisesTried: own.length,
+        exercisesDone: exercises.filter((p) => p.isDone).length,
+        exercisesTried: exercises.length,
         examAverage,
         lastActivityAt: lastActivity ? new Date(lastActivity) : null,
         syncedAt: new Date(),
@@ -196,14 +239,32 @@ export async function syncSession(
           email: info?.email ?? null,
           level: info?.level ?? null,
           admission,
-          exercisesDone: own.filter((p) => p.isDone).length,
-          exercisesTried: own.length,
+          exercisesDone: exercises.filter((p) => p.isDone).length,
+          exercisesTried: exercises.length,
           examAverage,
           lastActivityAt: lastActivity ? new Date(lastActivity) : null,
           syncedAt: new Date(),
         },
       })
       .returning({ id: piscineCandidates.id });
+
+    /**
+     * Le miroir doit REFLÉTER Zone01, pas s'y ajouter : une épreuve qui n'est
+     * plus produite (exercice retiré de la piscine, ligne mal classée par une
+     * version précédente) doit disparaître. Sans cet élagage, un upsert seul
+     * accumule indéfiniment.
+     */
+    const keptNames = own.map((p) => p.objectName!);
+    await db
+      .delete(piscineResults)
+      .where(
+        keptNames.length > 0
+          ? and(
+              eq(piscineResults.candidateId, candidate.id),
+              notInArray(piscineResults.name, keptNames),
+            )
+          : eq(piscineResults.candidateId, candidate.id),
+      );
 
     if (own.length > 0) {
       await db
@@ -212,7 +273,7 @@ export async function syncSession(
           own.map((p) => ({
             candidateId: candidate.id,
             name: p.objectName!,
-            kind: resultKind(p.objectName!),
+            kind: kindOfEvent(pathByEvent.get(p.eventId ?? -1) ?? null),
             grade: p.grade,
             isDone: p.isDone,
             eventId: p.eventId,
@@ -259,6 +320,8 @@ export interface CandidateRow {
   exercisesTried: number;
   examAverage: number | null;
   lastActivityAt: string | null;
+  /** Note de chaque examen, indexée par son nom (« Exam 01 » → 0.27). */
+  examGrades: Record<string, number | null>;
   /** Motif d'alerte, ou null si rien à signaler. */
   risk: string | null;
 }
@@ -287,12 +350,63 @@ function riskOf(c: {
   return null;
 }
 
+/**
+ * Examens d'une session, dans l'ordre où ils ont eu lieu.
+ *
+ * L'ordre vient de l'`event_id` : les sous-événements sont créés dans l'ordre
+ * chronologique (Exam 01 = 1023, Exam 02 = 1025, Final Exam = 1029), ce qui
+ * donne les colonnes dans le bon sens sans dépendre du nom.
+ */
+export async function getSessionExams(sessionId: number): Promise<string[]> {
+  const rows = await db
+    .select({
+      name: piscineResults.name,
+      firstEvent: sql<number>`min(${piscineResults.eventId})`,
+    })
+    .from(piscineResults)
+    .innerJoin(piscineCandidates, eq(piscineCandidates.id, piscineResults.candidateId))
+    .where(
+      and(
+        eq(piscineCandidates.sessionEventId, sessionId),
+        eq(piscineResults.kind, 'exam'),
+      ),
+    )
+    .groupBy(piscineResults.name)
+    .orderBy(sql`min(${piscineResults.eventId})`);
+
+  return rows.map((r) => r.name);
+}
+
 export async function getSessionCandidates(sessionId: number): Promise<CandidateRow[]> {
   const rows = await db
     .select()
     .from(piscineCandidates)
     .where(eq(piscineCandidates.sessionEventId, sessionId))
     .orderBy(desc(piscineCandidates.examAverage), desc(piscineCandidates.exercisesDone));
+
+  // Notes d'examen de toute la session en une requête : une par candidat
+  // ferait autant d'allers-retours qu'il y a de lignes.
+  const examRows = await db
+    .select({
+      candidateId: piscineResults.candidateId,
+      name: piscineResults.name,
+      grade: piscineResults.grade,
+    })
+    .from(piscineResults)
+    .innerJoin(piscineCandidates, eq(piscineCandidates.id, piscineResults.candidateId))
+    .where(
+      and(
+        eq(piscineCandidates.sessionEventId, sessionId),
+        eq(piscineResults.kind, 'exam'),
+      ),
+    );
+
+  const examsByCandidate = new Map<number, Record<string, number | null>>();
+  for (const r of examRows) {
+    const entry = examsByCandidate.get(r.candidateId) ?? {};
+    entry[r.name] = r.grade;
+    examsByCandidate.set(r.candidateId, entry);
+  }
 
   return rows.map((c) => ({
     id: c.id,
@@ -306,6 +420,7 @@ export async function getSessionCandidates(sessionId: number): Promise<Candidate
     exercisesTried: c.exercisesTried,
     examAverage: c.examAverage,
     lastActivityAt: c.lastActivityAt?.toISOString() ?? null,
+    examGrades: examsByCandidate.get(c.id) ?? {},
     risk: riskOf({
       level: c.level,
       exercisesDone: c.exercisesDone,
@@ -378,6 +493,9 @@ export async function getCandidateDetail(candidateId: number): Promise<Candidate
     exercisesTried: row.exercisesTried,
     examAverage: row.examAverage,
     lastActivityAt: row.lastActivityAt?.toISOString() ?? null,
+    examGrades: Object.fromEntries(
+      results.filter((r) => r.kind === 'exam').map((r) => [r.name, r.grade]),
+    ),
     risk: riskOf({
       level: row.level,
       exercisesDone: row.exercisesDone,
