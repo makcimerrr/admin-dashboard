@@ -41,6 +41,8 @@ export interface PiscineCandidate {
   lastActivityAt: string | null;
   /** Note de chaque examen : exercices réussis / barème (« Exam 01 » → 2/5). */
   examScores: Record<string, { passed: number; max: number }>;
+  /** Projets réussis ou échoués ; absent = non inscrit. */
+  projectResults: Record<string, 'reussi' | 'echoue'>;
   /** Cumul sur l'ensemble des examens passés. */
   examPassed: number | null;
   examTotal: number | null;
@@ -69,11 +71,26 @@ export interface PiscineStats {
 
 export type PiscineResultKind = 'exercise' | 'exam' | 'project';
 
+/** Libellé affiché quand un candidat n'a pas passé une épreuve. */
+export const NOT_REGISTERED = 'not register';
+
 export const RESULT_KIND_LABELS: Record<PiscineResultKind, string> = {
   exercise: 'Exercice',
   exam: 'Examen',
   project: 'Projet',
 };
+
+export interface ProjectReview {
+  project: string;
+  slot: number;
+  content: string;
+  author: string;
+  updatedAt: string;
+}
+
+/** Projets faisant l'objet de comptes rendus, et nombre attendu par projet. */
+export const REVIEWED_PROJECTS = ['quad', 'sudoku', 'quadchecker'] as const;
+export const REVIEW_SLOTS = [1, 2, 3] as const;
 
 export interface CandidateDetail extends PiscineCandidate {
   results: {
@@ -86,6 +103,9 @@ export interface CandidateDetail extends PiscineCandidate {
     isDone: boolean;
     updatedAt: string | null;
   }[];
+  /** Saisie humaine, jamais écrasée par la synchro. */
+  comment: { content: string; author: string; updatedAt: string } | null;
+  reviews: ProjectReview[];
 }
 
 /** Enveloppe standard des routes /api (lib/api/response.ts). */
