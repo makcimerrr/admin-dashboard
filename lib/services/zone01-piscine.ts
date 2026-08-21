@@ -26,6 +26,8 @@ export interface PiscineSessionRaw {
   path: string | null;
   startAt: string | null;
   endAt: string | null;
+  /** Nom de l'objet de l'événement (« Piscine Go », « Exam 01 »…). */
+  objectName: string | null;
 }
 
 export interface PiscineParticipantRaw {
@@ -67,32 +69,43 @@ async function paginate<T>(
   }
 }
 
+/** Aplatit `{ object: { name } }` en `objectName`. */
+function toSession(e: any): PiscineSessionRaw {
+  return {
+    id: e.id,
+    path: e.path,
+    startAt: e.startAt,
+    endAt: e.endAt,
+    objectName: e.object?.name ?? null,
+  };
+}
+
 /** Sessions de piscine-go (événements racines), de la plus récente à la plus ancienne. */
 export async function fetchPiscineSessions(): Promise<PiscineSessionRaw[]> {
-  const data = await zone01Graphql<{ event: PiscineSessionRaw[] }>(
+  const data = await zone01Graphql<{ event: any[] }>(
     `query($p:String!) {
       event(
         where: { parentId: { _is_null: true }, path: { _like: $p } }
         order_by: { startAt: desc }
         limit: 100
-      ) { id path startAt endAt }
+      ) { id path startAt endAt object { name } }
     }`,
     { p: PISCINE_PATH_PATTERN },
   );
-  return data.event;
+  return data.event.map(toSession);
 }
 
 /** Sous-événements d'une session : exercices notés et examens. */
 export async function fetchSessionChildEvents(sessionId: number): Promise<PiscineSessionRaw[]> {
-  const data = await zone01Graphql<{ event: PiscineSessionRaw[] }>(
+  const data = await zone01Graphql<{ event: any[] }>(
     `query($p:Int!) {
       event(where: { parentId: { _eq: $p } }, order_by: { startAt: asc }) {
-        id path startAt endAt
+        id path startAt endAt object { name }
       }
     }`,
     { p: sessionId },
   );
-  return data.event;
+  return data.event.map(toSession);
 }
 
 /**

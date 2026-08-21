@@ -77,11 +77,14 @@ export default function PiscinesPage() {
 
   const detailKey = sessionId ? `/api/piscines/${sessionId}` : null;
   const { data: detailData, isLoading: loadingDetail } = useData<
-    ApiEnvelope<{ candidates: PiscineCandidate[]; stats: PiscineStats }>
+    ApiEnvelope<{ candidates: PiscineCandidate[]; stats: PiscineStats; exams: string[] }>
   >(detailKey);
 
   const candidates = detailData?.success ? detailData.data.candidates : [];
   const stats = detailData?.success ? detailData.data.stats : null;
+  // Une colonne par examen de la session, dans l'ordre où ils ont eu lieu.
+  // Les sessions n'ont pas toutes les mêmes épreuves : rien n'est codé en dur.
+  const exams = detailData?.success ? detailData.data.exams : [];
   const session = sessions.find((s) => s.eventId === sessionId) ?? null;
 
   const filtered = useMemo(() => {
@@ -260,7 +263,8 @@ export default function PiscinesPage() {
                     <CardTitle>Candidats</CardTitle>
                     <CardDescription>
                       {filtered.length} candidat{filtered.length > 1 ? "s" : ""} — classés par
-                      moyenne d&apos;examens. Cliquez pour voir le détail.
+                      moyenne d&apos;examens, une colonne par épreuve. Cliquez pour voir le
+                      détail.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -271,7 +275,12 @@ export default function PiscinesPage() {
                             <TableHead>Candidat</TableHead>
                             <TableHead className="text-right">Niveau</TableHead>
                             <TableHead className="text-right">Exercices</TableHead>
-                            <TableHead className="text-right">Moy. examens</TableHead>
+                            {exams.map((name) => (
+                              <TableHead key={name} className="text-right whitespace-nowrap">
+                                {name}
+                              </TableHead>
+                            ))}
+                            <TableHead className="text-right">Moyenne</TableHead>
                             <TableHead>Dernière activité</TableHead>
                             <TableHead>Décision</TableHead>
                             <TableHead>Alerte</TableHead>
@@ -295,7 +304,30 @@ export default function PiscinesPage() {
                                 {c.exercisesDone}
                                 <span className="text-muted-foreground">/{c.exercisesTried}</span>
                               </TableCell>
-                              <TableCell className="text-right tabular-nums">
+                              {exams.map((name) => {
+                                const g = c.examGrades[name];
+                                return (
+                                  <TableCell
+                                    key={name}
+                                    className={cn(
+                                      "text-right tabular-nums",
+                                      // Un examen non passé n'est pas un zéro :
+                                      // la nuance compte pour lire un parcours.
+                                      g === undefined
+                                        ? "text-muted-foreground"
+                                        : g === null
+                                          ? "text-muted-foreground"
+                                          : g > 0
+                                            ? "text-success"
+                                            : "text-destructive",
+                                    )}
+                                    title={g === undefined ? "Examen non passé" : undefined}
+                                  >
+                                    {g === undefined || g === null ? "—" : g.toFixed(2)}
+                                  </TableCell>
+                                );
+                              })}
+                              <TableCell className="text-right tabular-nums font-medium">
                                 {c.examAverage !== null ? c.examAverage.toFixed(2) : "—"}
                               </TableCell>
                               <TableCell className="text-sm">
