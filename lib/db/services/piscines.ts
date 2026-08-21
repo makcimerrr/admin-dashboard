@@ -525,6 +525,72 @@ export async function getSessionCandidates(sessionId: number): Promise<Candidate
   }));
 }
 
+export interface CandidateMatch {
+  id: number;
+  login: string;
+  firstName: string | null;
+  lastName: string | null;
+  sessionEventId: number;
+  sessionLabel: string;
+  admission: AdmissionStatus;
+}
+
+/**
+ * Recherche d'un candidat dans TOUTES les sessions, insensible à l'ordre des
+ * mots : « Maxime Dubois » et « Dubois Maxime » trouvent la même personne.
+ *
+ * Le filtrage par mot se fait en SQL (chaque mot doit apparaître dans le nom,
+ * le login ou l'email), pour ne pas rapatrier 1275 candidats à chaque frappe.
+ */
+export async function searchCandidates(query: string): Promise<CandidateMatch[]> {
+  const words = query
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+
+  if (words.length === 0) return [];
+
+  // `translate` plutôt que l'extension `unaccent` : elle n'est pas installée
+  // sur cette base, et une recherche ne justifie pas d'en dépendre.
+  const haystack = sql`lower(translate(
+    coalesce(${piscineCandidates.firstName}, '') || ' ' ||
+    coalesce(${piscineCandidates.lastName}, '') || ' ' ||
+    ${piscineCandidates.login} || ' ' ||
+    coalesce(${piscineCandidates.email}, ''),
+    'àâäãáéèêëíìîïóòôöõúùûüçñÀÂÄÃÁÉÈÊËÍÌÎÏÓÒÔÖÕÚÙÛÜÇÑ',
+    'aaaaaeeeeiiiiooooouuuucnAAAAAEEEEIIIIOOOOOUUUUCN'
+  ))`;
+
+  const rows = await db
+    .select({
+      id: piscineCandidates.id,
+      login: piscineCandidates.login,
+      firstName: piscineCandidates.firstName,
+      lastName: piscineCandidates.lastName,
+      sessionEventId: piscineCandidates.sessionEventId,
+      sessionLabel: piscineSessions.label,
+      admission: piscineCandidates.admission,
+      startAt: piscineSessions.startAt,
+    })
+    .from(piscineCandidates)
+    .innerJoin(piscineSessions, eq(piscineSessions.eventId, piscineCandidates.sessionEventId))
+    .where(and(...words.map((w) => sql`${haystack} LIKE ${'%' + w + '%'}`)))
+    .orderBy(desc(piscineSessions.startAt))
+    .limit(20);
+
+  return rows.map((r) => ({
+    id: r.id,
+    login: r.login,
+    firstName: r.firstName,
+    lastName: r.lastName,
+    sessionEventId: r.sessionEventId,
+    sessionLabel: r.sessionLabel,
+    admission: r.admission as AdmissionStatus,
+  }));
+}
+
 export interface SessionStats {
   candidates: number;
   admitted: number;
