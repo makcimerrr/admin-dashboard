@@ -18,7 +18,9 @@ const log = makeLog('cron:piscine-sync');
  * toutes les 4 h serait du gaspillage pur.
  *
  * `?all=true` force une reprise complète (après un changement de mapping, ou
- * pour rattraper un historique).
+ * pour rattraper un historique) — long, à réserver aux appels manuels.
+ * `?session=<id>` ne reprend qu'une session : requêtes courtes, utilisable en
+ * boucle pour rattraper l'historique sans risquer un timeout du proxy.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -34,8 +36,18 @@ export async function GET(request: NextRequest) {
   }
 
   const all = request.nextUrl.searchParams.get('all') === 'true';
-  const result = await syncPiscines({ onlyOngoing: !all });
+  const sessionParam = request.nextUrl.searchParams.get('session');
+  const sessionId = sessionParam ? Number(sessionParam) : undefined;
+
+  const result = await syncPiscines({
+    onlyOngoing: !all && sessionId === undefined,
+    sessionId,
+  });
 
   log.info('synchro piscines terminée', result);
-  return NextResponse.json({ success: true, scope: all ? 'toutes' : 'en cours', ...result });
+  return NextResponse.json({
+    success: true,
+    scope: sessionId !== undefined ? `session ${sessionId}` : all ? 'toutes' : 'en cours',
+    ...result,
+  });
 }

@@ -111,10 +111,15 @@ export function CandidateSheet({
           <Card>
             <CardContent className="p-3">
               <div className="text-2xl font-bold tabular-nums">
-                {candidate.examAverage !== null ? candidate.examAverage.toFixed(2) : "—"}
+                {candidate.examPassed !== null && candidate.examTotal
+                  ? `${candidate.examPassed}/${candidate.examTotal}`
+                  : "—"}
               </div>
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                moy. examens
+                examens{" "}
+                {candidate.examAverage !== null
+                  ? `· ${Math.round(candidate.examAverage * 100)} %`
+                  : ""}
               </div>
             </CardContent>
           </Card>
@@ -151,22 +156,29 @@ export function CandidateSheet({
                           </span>
                         </span>
                         <span className="flex shrink-0 items-center gap-2">
-                          {r.grade !== null && (
+                          {/* Un examen se lit « réussis / barème » ; le grade
+                              Zone01 n'est pas exploitable pour les épreuves. */}
+                          {r.maxScore !== null ? (
                             <span
                               className={cn(
                                 "tabular-nums text-sm",
-                                r.grade > 0 ? "text-success" : "text-destructive",
+                                (r.score ?? 0) === 0
+                                  ? "text-destructive"
+                                  : (r.score ?? 0) >= r.maxScore / 2
+                                    ? "text-success"
+                                    : "text-warning",
                               )}
                             >
-                              {r.grade.toFixed(2)}
+                              {r.score ?? 0}/{r.maxScore}
                             </span>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className={r.isDone ? PILL.emerald : PILL.rose}
+                            >
+                              {r.isDone ? "rendu" : "non rendu"}
+                            </Badge>
                           )}
-                          <Badge
-                            variant="outline"
-                            className={r.isDone ? PILL.emerald : PILL.rose}
-                          >
-                            {r.isDone ? "rendu" : "non rendu"}
-                          </Badge>
                         </span>
                       </div>
                     ))}
