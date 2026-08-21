@@ -160,12 +160,9 @@ export const piscineCandidateComments = pgTable('piscine_candidate_comments', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-/** Projets faisant l'objet de comptes rendus. */
+/** Projets faisant l'objet d'un compte rendu. */
 export const REVIEWED_PROJECTS = ['quad', 'sudoku', 'quadchecker'] as const;
 export type ReviewedProject = (typeof REVIEWED_PROJECTS)[number];
-
-/** Trois comptes rendus attendus par projet. */
-export const REVIEW_SLOTS = [1, 2, 3] as const;
 
 export const piscineProjectReviews = pgTable(
   'piscine_project_reviews',
@@ -175,18 +172,16 @@ export const piscineProjectReviews = pgTable(
       .notNull()
       .references(() => piscineCandidates.id, { onDelete: 'cascade' }),
     project: text('project').notNull(),
-    /** 1, 2 ou 3. */
-    slot: integer('slot').notNull(),
     content: text('content').notNull(),
     author: text('author').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => ({
-    uniqueSlot: uniqueIndex('idx_piscine_review_unique').on(
+    /** Un compte rendu par projet et par candidat. */
+    uniquePerProject: uniqueIndex('idx_piscine_review_unique').on(
       table.candidateId,
       table.project,
-      table.slot,
     ),
     byCandidate: index('idx_piscine_review_candidate').on(table.candidateId),
   }),

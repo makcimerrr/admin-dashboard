@@ -7,16 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Check, Loader2 } from "lucide-react";
-import {
-  REVIEWED_PROJECTS,
-  REVIEW_SLOTS,
-  type CandidateDetail,
-  type ProjectReview,
-} from "../types";
+import { REVIEWED_PROJECTS, type CandidateDetail, type ProjectReview } from "../types";
 
 /**
- * Saisie humaine sur un candidat : commentaire libre et trois comptes rendus
- * par projet (quad, sudoku, quadchecker).
+ * Saisie humaine sur un candidat : commentaire libre et un compte rendu par
+ * projet (quad, sudoku, quadchecker).
  *
  * Ces textes ne viennent pas de Zone01 et ne sont jamais écrasés par la
  * synchronisation — ils vivent dans leurs propres tables.
@@ -42,7 +37,7 @@ export function CandidateReviews({
   useEffect(() => {
     setComment(detail?.comment?.content ?? "");
     const map: Record<string, string> = {};
-    for (const r of detail?.reviews ?? []) map[`${r.project}-${r.slot}`] = r.content;
+    for (const r of detail?.reviews ?? []) map[r.project] = r.content;
     setReviews(map);
   }, [detail]);
 
@@ -68,8 +63,8 @@ export function CandidateReviews({
     }
   };
 
-  const existing = (project: string, slot: number): ProjectReview | undefined =>
-    detail?.reviews.find((r) => r.project === project && r.slot === slot);
+  const existing = (project: string): ProjectReview | undefined =>
+    detail?.reviews.find((r) => r.project === project);
 
   return (
     <div className="space-y-6">
@@ -107,54 +102,48 @@ export function CandidateReviews({
       </div>
 
       {REVIEWED_PROJECTS.map((project) => {
-        const filled = REVIEW_SLOTS.filter((slot) => existing(project, slot)).length;
+        const saved = existing(project);
+        const value = reviews[project] ?? "";
         return (
           <div key={project} className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="capitalize">{project}</Label>
-              <Badge variant="outline" className="text-[11px]">
-                {filled}/3 comptes rendus
-              </Badge>
+              <Label htmlFor={`review-${project}`} className="capitalize">
+                {project}
+              </Label>
+              {saved && (
+                <Badge variant="outline" className="text-[11px]">
+                  {saved.author} · {new Date(saved.updatedAt).toLocaleDateString("fr-FR")}
+                </Badge>
+              )}
             </div>
 
-            {REVIEW_SLOTS.map((slot) => {
-              const key = `${project}-${slot}`;
-              const saved = existing(project, slot);
-              const value = reviews[key] ?? "";
-              return (
-                <div key={key} className="space-y-1">
-                  <Textarea
-                    rows={2}
-                    placeholder={`Compte rendu ${slot}`}
-                    value={value}
-                    onChange={(e) => setReviews({ ...reviews, [key]: e.target.value })}
-                  />
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-muted-foreground">
-                      {saved
-                        ? `${saved.author} · ${new Date(saved.updatedAt).toLocaleDateString("fr-FR")}`
-                        : "—"}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={saving === key || value === (saved?.content ?? "")}
-                      onClick={() => save({ project, slot, content: value }, key)}
-                    >
-                      {saving === key ? (
-                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                      ) : (
-                        <Check className="mr-2 h-3 w-3" />
-                      )}
-                      Enregistrer
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+            <Textarea
+              id={`review-${project}`}
+              rows={3}
+              placeholder={`Compte rendu de l'audit ${project}`}
+              value={value}
+              onChange={(e) => setReviews({ ...reviews, [project]: e.target.value })}
+            />
+
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={saving === project || value === (saved?.content ?? "")}
+                onClick={() => save({ project, content: value }, project)}
+              >
+                {saving === project ? (
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-3 w-3" />
+                )}
+                Enregistrer
+              </Button>
+            </div>
           </div>
         );
       })}
+
     </div>
   );
 }

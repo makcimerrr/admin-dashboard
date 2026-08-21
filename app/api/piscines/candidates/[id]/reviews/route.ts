@@ -14,7 +14,7 @@ type Ctx = { params: Promise<{ id: string }> };
 /**
  * PUT /api/piscines/candidates/[id]/reviews — saisie humaine sur un candidat.
  *
- * Body : { comment } et/ou { project, slot, content }.
+ * Body : { comment } et/ou { project, content }.
  *
  * Ces données vivent hors du miroir Zone01 : la synchro réécrit les résultats,
  * elle ne touche jamais aux commentaires ni aux comptes rendus.
@@ -25,7 +25,6 @@ export const PUT = withErrorHandler(
     const body = (await req.json()) as {
       comment?: string;
       project?: string;
-      slot?: number;
       content?: string;
     };
 
@@ -35,8 +34,8 @@ export const PUT = withErrorHandler(
       if (body.comment !== undefined) {
         await saveCandidateComment(candidateId, body.comment, author);
       }
-      if (body.project !== undefined && body.slot !== undefined) {
-        await saveProjectReview(candidateId, body.project, body.slot, body.content ?? '', author);
+      if (body.project !== undefined) {
+        await saveProjectReview(candidateId, body.project, body.content ?? '', author);
       }
     } catch (e) {
       return apiError('BAD_REQUEST', e instanceof Error ? e.message : 'Saisie invalide');
