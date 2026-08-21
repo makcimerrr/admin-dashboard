@@ -210,9 +210,13 @@ export default function PiscinesPage() {
                   accent="var(--warning)"
                 />
                 <StatCard
-                  label="Moyenne examens"
-                  value={stats?.averageExam !== null && stats ? stats.averageExam!.toFixed(2) : "—"}
-                  hint="sur la session"
+                  label="Moyenne absolue"
+                  value={
+                    stats?.averageExam !== null && stats
+                      ? `${Math.round(stats.averageExam! * 100)} %`
+                      : "—"
+                  }
+                  hint="exercices réussis / barème"
                 />
               </div>
 
@@ -262,9 +266,9 @@ export default function PiscinesPage() {
                   <CardHeader>
                     <CardTitle>Candidats</CardTitle>
                     <CardDescription>
-                      {filtered.length} candidat{filtered.length > 1 ? "s" : ""} — classés par
-                      moyenne d&apos;examens, une colonne par épreuve. Cliquez pour voir le
-                      détail.
+                      {filtered.length} candidat{filtered.length > 1 ? "s" : ""} — note =
+                      exercices réussis pendant l&apos;épreuve, sur son barème. Cliquez pour
+                      voir le détail.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -280,7 +284,9 @@ export default function PiscinesPage() {
                                 {name}
                               </TableHead>
                             ))}
-                            <TableHead className="text-right">Moyenne</TableHead>
+                            <TableHead className="text-right whitespace-nowrap">
+                              Total
+                            </TableHead>
                             <TableHead>Dernière activité</TableHead>
                             <TableHead>Décision</TableHead>
                             <TableHead>Alerte</TableHead>
@@ -305,7 +311,7 @@ export default function PiscinesPage() {
                                 <span className="text-muted-foreground">/{c.exercisesTried}</span>
                               </TableCell>
                               {exams.map((name) => {
-                                const g = c.examGrades[name];
+                                const sc = c.examScores[name];
                                 return (
                                   <TableCell
                                     key={name}
@@ -313,22 +319,31 @@ export default function PiscinesPage() {
                                       "text-right tabular-nums",
                                       // Un examen non passé n'est pas un zéro :
                                       // la nuance compte pour lire un parcours.
-                                      g === undefined
+                                      !sc
                                         ? "text-muted-foreground"
-                                        : g === null
-                                          ? "text-muted-foreground"
-                                          : g > 0
+                                        : sc.passed === 0
+                                          ? "text-destructive"
+                                          : sc.passed >= sc.max / 2
                                             ? "text-success"
-                                            : "text-destructive",
+                                            : "text-warning",
                                     )}
-                                    title={g === undefined ? "Examen non passé" : undefined}
+                                    title={sc ? undefined : "Examen non passé"}
                                   >
-                                    {g === undefined || g === null ? "—" : g.toFixed(2)}
+                                    {sc ? `${sc.passed}/${sc.max}` : "—"}
                                   </TableCell>
                                 );
                               })}
                               <TableCell className="text-right tabular-nums font-medium">
-                                {c.examAverage !== null ? c.examAverage.toFixed(2) : "—"}
+                                {c.examPassed !== null && c.examTotal ? (
+                                  <>
+                                    {c.examPassed}/{c.examTotal}
+                                    <span className="ml-2 text-xs text-muted-foreground">
+                                      {Math.round((c.examAverage ?? 0) * 100)} %
+                                    </span>
+                                  </>
+                                ) : (
+                                  "—"
+                                )}
                               </TableCell>
                               <TableCell className="text-sm">
                                 {fmtDate(c.lastActivityAt)}

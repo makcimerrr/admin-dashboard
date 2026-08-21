@@ -39,8 +39,11 @@ export interface PiscineCandidate {
   exercisesTried: number;
   examAverage: number | null;
   lastActivityAt: string | null;
-  /** Note de chaque examen, indexée par son nom (« Exam 01 » → 0.27). */
-  examGrades: Record<string, number | null>;
+  /** Note de chaque examen : exercices réussis / barème (« Exam 01 » → 2/5). */
+  examScores: Record<string, { passed: number; max: number }>;
+  /** Cumul sur l'ensemble des examens passés. */
+  examPassed: number | null;
+  examTotal: number | null;
   /** Motif d'alerte, ou null si rien à signaler. */
   risk: string | null;
 }
@@ -67,6 +70,9 @@ export interface CandidateDetail extends PiscineCandidate {
     name: string;
     kind: PiscineResultKind;
     grade: number | null;
+    /** Examens : exercices réussis et barème. */
+    score: number | null;
+    maxScore: number | null;
     isDone: boolean;
     updatedAt: string | null;
   }[];

@@ -81,8 +81,17 @@ export const piscineCandidates = pgTable(
     /** Nombre d'exercices validés / tentés : la progression brute. */
     exercisesDone: integer('exercises_done').notNull().default(0),
     exercisesTried: integer('exercises_tried').notNull().default(0),
-    /** Moyenne des examens, seul indicateur comparable entre candidats. */
+    /**
+     * Moyenne ABSOLUE des examens : `examPassed / examTotal` sur l'ensemble
+     * des épreuves, et non la moyenne des ratios par examen. Un candidat qui
+     * réussit 2/5 puis 7/10 vaut 9/15, pas (0.4 + 0.7)/2 — les examens n'ont
+     * pas le même poids.
+     */
     examAverage: real('exam_average'),
+    /** Exercices réussis, tous examens confondus. */
+    examPassed: integer('exam_passed'),
+    /** Barème cumulé des examens passés (5 + 7 + 9 + 10 = 31 au complet). */
+    examTotal: integer('exam_total'),
     lastActivityAt: timestamp('last_activity_at'),
     syncedAt: timestamp('synced_at').defaultNow().notNull(),
   },
@@ -110,6 +119,10 @@ export const piscineResults = pgTable(
     name: text('name').notNull(),
     kind: varchar('kind', { length: 20 }).notNull(),
     grade: real('grade'),
+    /** Examens : exercices réussis pendant l'épreuve. */
+    score: integer('score'),
+    /** Examens : barème de l'épreuve (5, 7, 9 ou 10). */
+    maxScore: integer('max_score'),
     isDone: boolean('is_done').notNull().default(false),
     /** Événement Zone01 d'origine : permet de remonter à la source. */
     eventId: integer('event_id'),
