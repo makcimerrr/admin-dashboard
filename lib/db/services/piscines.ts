@@ -722,7 +722,6 @@ export async function getSessionStats(sessionId: number): Promise<SessionStats> 
 
 export interface ProjectReview {
   project: string;
-  slot: number;
   content: string;
   author: string;
   updatedAt: string;
@@ -737,14 +736,12 @@ export interface ProjectReview {
 export async function saveProjectReview(
   candidateId: number,
   project: string,
-  slot: number,
   content: string,
   author: string,
 ): Promise<void> {
   if (!(REVIEWED_PROJECTS as readonly string[]).includes(project)) {
     throw new Error(`Projet inconnu : ${project}`);
   }
-  if (slot < 1 || slot > 3) throw new Error('Le compte rendu doit être 1, 2 ou 3');
 
   if (!content.trim()) {
     await db
@@ -753,7 +750,6 @@ export async function saveProjectReview(
         and(
           eq(piscineProjectReviews.candidateId, candidateId),
           eq(piscineProjectReviews.project, project),
-          eq(piscineProjectReviews.slot, slot),
         ),
       );
     return;
@@ -761,13 +757,9 @@ export async function saveProjectReview(
 
   await db
     .insert(piscineProjectReviews)
-    .values({ candidateId, project, slot, content: content.trim(), author })
+    .values({ candidateId, project, content: content.trim(), author })
     .onConflictDoUpdate({
-      target: [
-        piscineProjectReviews.candidateId,
-        piscineProjectReviews.project,
-        piscineProjectReviews.slot,
-      ],
+      target: [piscineProjectReviews.candidateId, piscineProjectReviews.project],
       set: { content: content.trim(), author, updatedAt: new Date() },
     });
 }
@@ -832,7 +824,7 @@ export async function getCandidateDetail(candidateId: number): Promise<Candidate
       .select()
       .from(piscineProjectReviews)
       .where(eq(piscineProjectReviews.candidateId, candidateId))
-      .orderBy(asc(piscineProjectReviews.project), asc(piscineProjectReviews.slot)),
+      .orderBy(asc(piscineProjectReviews.project)),
   ]);
 
   return {
@@ -878,7 +870,6 @@ export async function getCandidateDetail(candidateId: number): Promise<Candidate
       : null,
     reviews: reviews.map((r) => ({
       project: r.project,
-      slot: r.slot,
       content: r.content,
       author: r.author,
       updatedAt: r.updatedAt.toISOString(),

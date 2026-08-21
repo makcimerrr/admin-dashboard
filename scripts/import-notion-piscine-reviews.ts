@@ -406,7 +406,7 @@ async function importSource(source: SourceRef, index: CandidateIndex, stats: Sta
       continue;
     }
 
-    // Comptes rendus de projet, emplacement 1 (Notion n'en porte qu'un).
+    // Un compte rendu par projet — Notion n'en porte qu'un, le hub non plus.
     for (const col of PROJECT_COLUMNS) {
       const content = text(props, ...col.aliases);
       if (!content) continue;
@@ -418,7 +418,6 @@ async function importSource(source: SourceRef, index: CandidateIndex, stats: Sta
           and(
             eq(piscineProjectReviews.candidateId, candidate.id),
             eq(piscineProjectReviews.project, col.project),
-            eq(piscineProjectReviews.slot, 1),
           ),
         )
         .limit(1);
@@ -437,7 +436,6 @@ async function importSource(source: SourceRef, index: CandidateIndex, stats: Sta
         await db.insert(piscineProjectReviews).values({
           candidateId: candidate.id,
           project: col.project,
-          slot: 1,
           content,
           author: 'Import Notion',
         });

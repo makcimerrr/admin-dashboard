@@ -82,15 +82,13 @@ export const RESULT_KIND_LABELS: Record<PiscineResultKind, string> = {
 
 export interface ProjectReview {
   project: string;
-  slot: number;
   content: string;
   author: string;
   updatedAt: string;
 }
 
-/** Projets faisant l'objet de comptes rendus, et nombre attendu par projet. */
+/** Projets faisant l'objet d'un compte rendu. */
 export const REVIEWED_PROJECTS = ['quad', 'sudoku', 'quadchecker'] as const;
-export const REVIEW_SLOTS = [1, 2, 3] as const;
 
 export interface CandidateDetail extends PiscineCandidate {
   results: {
